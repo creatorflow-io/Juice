@@ -1,0 +1,297 @@
+# EditorConfig is awesome:http://EditorConfig.org
+
+# top-most EditorConfig file
+root = true
+
+# Don't use tabs for indentation.
+[*]
+indent_style = space
+# (Please don't specify an indent_size here; that has too many unintended consequences.)
+trim_trailing_whitespace = true
+
+# Code files
+[*.{cs,csx,vb,vbx}]
+indent_size = 4
+insert_final_newline = true
+charset = utf-8-bom
+
+# Xml project files
+[*.{csproj,vbproj,vcxproj,vcxproj.filters,proj,projitems,shproj}]
+indent_size = 2
+
+# Xml config files
+[*.{props,targets,ruleset,config,nuspec,resx,vsixmanifest,vsct}]
+indent_size = 2
+
+# JSON files
+[*.json]
+indent_size = 2
+charset = utf-8-bom
+
+#########################################################################################
+#                                 Language conventions                                  #
+#                               .NET Code Style Settings                                #
+#########################################################################################
+
+#-------------------------------------------------------
+# Prefer "this." and "Me." if not necessary
+#-------------------------------------------------------
+# dotnet_style_qualification_for_field = true
+# this.capacity = 0;
+#
+# dotnet_style_qualification_for_field = false
+# capacity = 0;
+#-------------------------------------------------------
+[*.{cs,vb}]
+dotnet_style_qualification_for_field = false:suggestion
+dotnet_style_qualification_for_property = false:suggestion
+dotnet_style_qualification_for_method = false:suggestion
+dotnet_style_qualification_for_event = false:suggestion
+
+#-----------------------------------------------------------------------
+# Language keywords instead of framework type names for type references
+#-----------------------------------------------------------------------
+# We prefer language predefined type like int, long over Int32, Int64
+# private int _member; 
+#-----------------------------------------------------------------------
+[*.{cs,vb}]
+dotnet_style_predefined_type_for_locals_parameters_members = true:warning 
+dotnet_style_predefined_type_for_member_access = true:warning 
+
+#------------------------------------------------------
+# Modifier preferences
+#------------------------------------------------------
+
+# Prefer accessibility modifiers to be specified and ordered
+# eg:  private const string thisFieldIsConst= "constant";
+[*.{cs,vb}]
+dotnet_style_require_accessibility_modifiers = for_non_interface_members:warning
+
+[*.cs]
+csharp_preferred_modifier_order = public,private,protected,internal,static,extern,new,virtual,abstract,sealed,override,readonly,unsafe,volatile,async:suggestion
+
+[*.vb]
+visual_basic_preferred_modifier_order = Partial,Default,Private,Protected,Public,Friend,NotOverridable,Overridable,MustOverride,Overloads,Overrides,MustInherit,NotInheritable,Static,Shared,Shadows,ReadOnly,WriteOnly,Dim,Const,WithEvents,Widening,Narrowing,Custom,Async:suggestion
+
+#-------------------------------------------------------------- 
+# Expression-level preferences
+#-------------------------------------------------------------- 
+[*.{cs,vb}]
+dotnet_style_object_initializer = true:suggestion               ; var c = new Customer() { Age = 21 };      <=====> var c = new Customer(); c.Age = 21;
+dotnet_style_collection_initializer = true:suggestion           ; var list = new List<int> { 1, 2, 3 };     <=====> var list = new List<int>(); list.Add(1); list.Add(2);
+dotnet_style_coalesce_expression = true:suggestion              ; var v = x ?? y;                           <=====> var v = o != null ? o.String() : null;
+dotnet_style_null_propagation = true:suggestion                 ; var v = o?.ToString();                    <=====> var v = x == null ? y : x;
+
+# preferred use tuple name instead of Item1, Item2
+; (string name, int age) customer = GetCustomer();
+dotnet_style_explicit_tuple_names = true:suggestion             ; var name = customer.name;                 <=====> var name = customer.Item1;
+
+dotnet_prefer_inferred_tuple_names = true:suggestion            ; var tuple = (age, name);                  <=====> var tuple = (age: age, name: name);
+dotnet_style_prefer_inferred_anonymous_type_member_names = true:suggestion ; var anon = new { age, name };  <=====> var anon = new { age = age, name = name };
+
+
+#########################################################################################
+#                                 Language conventions                                  #
+#                                C# code style settings                                 #
+#########################################################################################
+[*.cs]
+
+#------------------------------------------------------------
+# Implicit and explicit types
+# Prefer "var" everywhere
+#------------------------------------------------------------
+csharp_style_var_for_built_in_types = true:suggestion 
+csharp_style_var_when_type_is_apparent = true:suggestion 
+csharp_style_var_elsewhere = true:suggestion 
+
+#------------------------------------------------------------
+# Expression-bodied members
+# Prefer method-like constructs to have a block body
+#------------------------------------------------------------
+csharp_style_expression_bodied_methods = when_on_single_line:suggestion         ; public int GetAge() => this.Age;
+csharp_style_expression_bodied_constructors = false:none                        ; public Customer(int age) { Age = age; }
+csharp_style_expression_bodied_operators = false:none
+
+csharp_style_expression_bodied_properties = when_on_single_line:suggestion      ; public int Age => _age;                                       <===> public int Age { get { return _age; }}
+csharp_style_expression_bodied_indexers = when_on_single_line:suggestion        ; public T this[int i] => _value[i];
+csharp_style_expression_bodied_accessors = true:none                            ; public int Age { get { return _age; } set { _age = value; } } <===> public int Age { get => _age; set => _age = value; }
+
+#------------------------------------------------------------
+# Pattern matching
+#------------------------------------------------------------
+# if (o is string s) {
+#     // dont need to cast o to string and check s != null here
+# }
+csharp_style_pattern_matching_over_is_with_cast_check = true:suggestion
+csharp_style_pattern_matching_over_as_with_null_check = true:suggestion
+
+#------------------------------------------------------------
+# Inlined variable declarations
+#------------------------------------------------------------ 
+csharp_style_inlined_variable_declaration = true:suggestion                     ; if (int.TryParse(value, out int i) {...}
+
+#------------------------------------------------------------
+# Expression-level preferences
+#------------------------------------------------------------
+#
+csharp_prefer_simple_default_expression = true:suggestion                       ; void DoWork(CancellationToken cancellationToken = default) { ... }
+csharp_style_deconstructed_variable_declaration = true:suggestion               ; var (name, age) = GetPersonTuple();       <===> var person = GetPersonTuple();
+csharp_style_pattern_local_over_anonymous_function = true:suggestion            ; preferred local function over anonymous delegate/function
+
+#------------------------------------------------------------
+# "Null" checking preferences
+#------------------------------------------------------------
+csharp_style_throw_expression = true:suggestion                                 ; this.s = s ?? throw new ArgumentNullException(nameof(s));
+csharp_style_conditional_delegate_call = true:suggestion                        ; func?.Invoke(args);
+
+#------------------------------------------------------------
+# Code block preferences
+#------------------------------------------------------------
+csharp_prefer_braces = true:warning                                             ; if (test) { this.Display(); }         <===> if (test) this.Display();
+
+#########################################################################################
+#                             Formatting conventions                                    #
+#                            .NET Formatting Settings                                   #
+#########################################################################################
+
+#------------------------------------------------------------
+# Organize usings
+#------------------------------------------------------------
+[*.{cs,vb}]
+# Sort using and Import directives with System.* appearing first
+dotnet_sort_system_directives_first = true
+
+#########################################################################################
+#                             Formatting conventions                                    #
+#                             C# Formatting Settings                                    #
+#########################################################################################
+
+#------------------------------------------------------------
+# Newline Options
+#------------------------------------------------------------
+[*.cs]
+csharp_new_line_before_open_brace =  all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+csharp_new_line_before_members_in_object_initializers = true
+csharp_new_line_before_members_in_anonymous_types = true
+csharp_new_line_between_query_expression_clauses = true
+
+#------------------------------------------------------------
+# csharp_indent_case_contents
+#------------------------------------------------------------
+[*.cs]
+csharp_indent_case_contents = true:warning
+csharp_indent_switch_labels = true:warning
+csharp_indent_labels = flush_left
+
+#------------------------------------------------------------
+# CSharp formatting settings
+#------------------------------------------------------------
+[*.cs]
+csharp_space_after_cast = false
+csharp_space_after_keywords_in_control_flow_statements = true
+csharp_space_between_method_declaration_parameter_list_parentheses = false
+csharp_space_between_method_call_parameter_list_parentheses = false
+csharp_space_between_parentheses = false
+
+#------------------------------------------------------------
+# Wrapping options
+#------------------------------------------------------------
+[*.cs]
+csharp_preserve_single_line_statements = true
+csharp_preserve_single_line_blocks = true
+
+
+#########################################################################################
+#                             .NET naming conventions                                   #
+#########################################################################################
+# We enforce following rule:
+#   - Private or Internal Field must be camel case and start with underscore (current not enforce)
+#   - Interface must start with I
+#   - Async methods must end in Async
+#   - Generic typed parameter must start with T         (cannot write in editorconfig)
+#   - Custom Attribute type must end with Attribute     (cannot write in editorconfig)
+#   - Exception Type must end with Exception            (cannot write in editorconfig)
+#   - All upper only use if it is const
+#   - Type must be capitalized/pascal_case
+#   - All Public members must be capitalized/pascal_case
+#   - Non-Field members must be capitalized/pascal_case
+#   - Parameter must be camel case
+#   - rule not enforce if it is interop case (class/struct to call c++ dll)
+#########################################################################################
+
+# Private or Internal Field must be camel case and start with underscore
+dotnet_naming_rule.private_or_internal_field_rule.severity = suggestion
+dotnet_naming_rule.private_or_internal_field_rule.symbols  = private_or_internal_field_symbols
+dotnet_naming_rule.private_or_internal_field_rule.style    = private_or_internal_field_style
+
+dotnet_naming_symbols.private_or_internal_field_symbols.applicable_kinds           = field
+dotnet_naming_symbols.private_or_internal_field_symbols.applicable_accessibilities = private,internal
+
+dotnet_naming_style.private_or_internal_field_style.capitalization  = camel_case
+dotnet_naming_style.private_or_internal_field_style.required_prefix = _
+
+# Interface must start with I
+dotnet_naming_rule.interface_must_start_with_i.severity = error
+dotnet_naming_rule.interface_must_start_with_i.symbols  = interface_symbols
+dotnet_naming_rule.interface_must_start_with_i.style    = interface_style
+
+dotnet_naming_symbols.interface_symbols.applicable_kinds            = interface
+dotnet_naming_symbols.interface_symbols.applicable_accessibilities  = *
+
+dotnet_naming_style.interface_style.capitalization  = pascal_case
+dotnet_naming_style.interface_style.required_prefix = I
+
+# Async methods must end in Async
+dotnet_naming_rule.async_methods_must_end_with_async.severity = error
+dotnet_naming_rule.async_methods_must_end_with_async.symbols  = async_method_symbols
+dotnet_naming_rule.async_methods_must_end_with_async.style    = async_method_style
+
+dotnet_naming_symbols.async_method_symbols.applicable_kinds           = method
+dotnet_naming_symbols.async_method_symbols.applicable_accessibilities = *
+dotnet_naming_symbols.async_method_symbols.required_modifiers         = async
+
+dotnet_naming_style.async_method_style.capitalization  = pascal_case
+dotnet_naming_style.async_method_style.required_suffix = Async
+
+# Type must be capitalized
+dotnet_naming_rule.type_must_be_pascal_case.severity = error
+dotnet_naming_rule.type_must_be_pascal_case.symbols  = type_symbols
+dotnet_naming_rule.type_must_be_pascal_case.style    = type_style
+
+dotnet_naming_symbols.type_symbols.applicable_kinds            = class,struct,interface,enum,delegate
+dotnet_naming_symbols.type_symbols.applicable_accessibilities  = *
+
+dotnet_naming_style.type_style.capitalization  = pascal_case
+
+# Public members must be capitalized
+dotnet_naming_rule.public_member_must_be_capitalized.severity = error
+dotnet_naming_rule.public_member_must_be_capitalized.symbols  = public_member_symbols
+dotnet_naming_rule.public_member_must_be_capitalized.style    = public_member_style
+
+dotnet_naming_symbols.public_member_symbols.applicable_kinds   = class,struct,interface,enum,property,method,field,event,delegate
+dotnet_naming_symbols.public_member_symbols.applicable_accessibilities = public,internal,protected,protected_internal
+
+dotnet_naming_style.public_member_style.capitalization  = pascal_case
+
+# Non-Field members must be pascal case
+dotnet_naming_rule.non_field_member_must_be_pascal_case.severity = error
+dotnet_naming_rule.non_field_member_must_be_pascal_case.symbols  = non_field_member_symbols
+dotnet_naming_rule.non_field_member_must_be_pascal_case.style    = non_field_member_style
+
+dotnet_naming_symbols.non_field_member_symbols.applicable_kinds           = method,property,event
+dotnet_naming_symbols.non_field_member_symbols.applicable_accessibilities = *
+
+dotnet_naming_style.non_field_member_style.capitalization  = pascal_case
+
+# Parameter must be camel case
+dotnet_naming_rule.parameter_must_be_camel_case.severity = error
+dotnet_naming_rule.parameter_must_be_camel_case.symbols  = parameter_symbols
+dotnet_naming_rule.parameter_must_be_camel_case.style    = parameter_style
+
+dotnet_naming_symbols.parameter_symbols.applicable_kinds = parameter
+
+dotnet_naming_style.parameter_style.capitalization  = camel_case
+

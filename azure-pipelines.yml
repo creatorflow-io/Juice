@@ -1,0 +1,309 @@
+# ASP.NET Core (.NET Framework)
+# Build and test ASP.NET Core projects targeting the full .NET Framework.
+# Add steps that publish symbols, save build artifacts, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
+
+name: 5.0.0-ci.$(Date:yyyyMMdd).$(Rev:r)
+
+
+trigger:
+  batch: true
+  branches:
+    include:
+      - '*'
+  paths:
+    include:
+      - "*"
+    exclude:
+      - "*.md"
+      - "demo/*"
+      - "docs/*"
+
+stages:
+- stage: build
+  displayName: Build and run Unit Test
+
+  variables:
+    solution: '*.sln'
+    buildPlatform: 'Any CPU'
+
+  jobs:  
+  - job: linux
+    displayName: Linux Build
+    
+    strategy:
+      maxParallel: 2
+      matrix:
+        Release:
+          buildConfiguration: Release
+        Debug:
+          buildConfiguration: Debug
+
+    workspace:
+      clean: all
+
+    pool:
+      name: 'rhel'
+      demands:
+      - agent.os -equals Linux
+
+    steps:
+    - task: DeleteFiles@1
+      displayName: 'Cleanup Agent Temp Directory'
+      inputs:
+        SourceFolder: '$(Agent.TempDirectory)'
+        Contents: '*'
+
+    - task: UseDotNet@2
+      displayName: 'Install .NET Core SDK'
+      inputs:
+        packageType: 'sdk'
+        version: '5.0.x'
+        performMultiLevelLookup: true
+
+    - task: DotNetCoreCLI@2
+      displayName: Restore
+      inputs:
+        command: restore
+        projects: '$(solution)'
+        feedsToUse: 'config'
+        nugetConfigPath: 'NuGet.Config'
+        configuration: '$(buildConfiguration)'
+        workingDirectory: $(Build.SourcesDirectory)
+
+    - task: DotNetCoreCLI@2
+      displayName: Build
+      inputs:
+        command: build
+        projects: '$(solution)'
+        nugetConfigPath: NuGet.config
+        configuration: '$(buildConfiguration)'
+        arguments: '--configuration $(buildConfiguration) /p:GeneratePackageOnBuild=false'
+        versioningScheme: byBuildNumber
+        workingDirectory: $(Build.SourcesDirectory)
+
+    - task: DotNetCoreCLI@2
+      displayName: Unit Test
+      inputs:
+        command: 'test'
+        arguments: '--no-build --configuration $(buildConfiguration) /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura --collect:"XPlat Code Coverage" '
+        publishTestResults: true
+        testRunTitle: 'Unit Test - $(Build.BuildNumber)'
+        workingDirectory: $(Build.SourcesDirectory)
+        configuration: $(buildConfiguration)
+
+    - task: reportgenerator@4
+      displayName: 'Merge Coverage Report'
+      inputs:
+        reports: '$(Agent.TempDirectory)/*/coverage.cobertura.xml'
+        targetdir: '$(Common.TestResultsDirectory)/coveragereport'
+        reporttypes: 'Cobertura'
+
+    - task: PublishCodeCoverageResults@1
+      displayName: 'Publish code coverage report'
+      inputs:
+        codeCoverageTool: 'Cobertura'
+        summaryFileLocation: '$(Common.TestResultsDirectory)/coveragereport/Cobertura.xml'
+        failIfCoverageEmpty: true
+
+    - task: PublishCodeCoverageResults@1
+      enabled: false
+      displayName: 'Publish code coverage report'
+      inputs:
+        codeCoverageTool: 'Cobertura'
+        summaryFileLocation: '$(Agent.TempDirectory)/**/coverage.cobertura.xml'
+
+  - job: visualstudio
+    displayName: Visual Studio Build
+    strategy:
+      maxParallel: 2
+      matrix:
+        Release:
+          buildConfiguration: Release
+        Debug:
+          buildConfiguration: Debug
+
+    workspace:
+      clean: all
+
+    pool:
+      name: 'windows'
+      demands:
+      - VisualStudio
+      - VSTest
+
+    steps:
+    - task: NuGetToolInstaller@1
+
+    - task: NuGetCommand@2
+      displayName: NuGet Restore
+      inputs:
+        command: 'restore'
+        restoreSolution: '**/*.sln'
+        feedsToUse: 'config'
+        nugetConfigPath: 'NuGet.Config'
+        configuration: '$(buildConfiguration)'
+
+
+    - task: VSBuild@1
+      displayName: Visual Studio Build
+      inputs:
+        solution: '$(solution)'
+        msbuildArgs: '/p:SkipInvalidConfigurations=true /p:GeneratePackageOnBuild=false'
+        platform: '$(buildPlatform)'
+        configuration: '$(buildConfiguration)'
+        clean: true
+        msbuildArchitecture: 'x64'
+        vsVersion: latest
+
+    - task: VSTest@2
+      inputs:
+        testSelector: 'testAssemblies'
+        testAssemblyVer2: |
+          **\*.Test.dll
+          !**\ref\**
+          !**\testhost.dll
+          !**\*TestPlatform*.dll
+          !**\*TestAdapter.dll
+          !**\obj\**
+        searchFolder: '$(Build.BinariesDirectory)'
+        vsTestVersion: latest
+        codeCoverageEnabled: true
+        testRunTitle: 'Unit Test'
+        platform: '$(buildPlatform)'
+        configuration: '$(buildConfiguration)'
+        publishRunAttachments: true
+        diagnosticsEnabled: true
+        resultsFolder: $(Common.TestResultsDirectory)
+
+- stage: pack
+  displayName: Pack Release and Publish to Feed
+  condition: and(succeeded(), eq(variables['build.sourceBranch'], 'refs/heads/master'))
+  dependsOn: build
+
+  variables:
+    solution: '*.sln'
+    buildPlatform: 'Any CPU'
+    buildConfiguration: 'Release'
+
+  jobs:
+  - job: pack
+    displayName: Pack and Publish to Feed
+    workspace:
+      clean: all
+
+    pool:
+      name: 'rhel'
+
+    steps:
+    - task: DeleteFiles@1
+      displayName: 'Cleanup Agent Temp Directory'
+      inputs:
+        SourceFolder: '$(Agent.TempDirectory)'
+        Contents: '*'
+
+    - task: UseDotNet@2
+      displayName: 'Install .NET Core SDK'
+      inputs:
+        packageType: 'sdk'
+        version: '5.0.x'
+        performMultiLevelLookup: true
+
+    - task: DotNetCoreCLI@2
+      displayName: Restore
+      inputs:
+        command: restore
+        projects: '$(solution)'
+        feedsToUse: 'config'
+        nugetConfigPath: 'NuGet.Config'
+        configuration: '$(buildConfiguration)'
+        workingDirectory: $(Build.SourcesDirectory)
+
+    - task: DotNetCoreCLI@2
+      displayName: Build
+      inputs:
+        command: build
+        projects: '$(solution)'
+        nugetConfigPath: NuGet.config
+        configuration: '$(buildConfiguration)'
+        arguments: '--configuration $(buildConfiguration)'
+        versioningScheme: byBuildNumber
+        workingDirectory: $(Build.SourcesDirectory)
+
+    - task: DotNetCoreCLI@2
+      displayName: Unit Test
+      inputs:
+        command: 'test'
+        arguments: '--no-build --configuration $(buildConfiguration) /p:GeneratePackageOnBuild=false /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura --collect:"XPlat Code Coverage" '
+        publishTestResults: true
+        testRunTitle: 'Unit Test - $(Build.BuildNumber)'
+        workingDirectory: $(Build.SourcesDirectory)
+
+    - task: reportgenerator@4
+      displayName: 'Merge Coverage Report'
+      inputs:
+        reports: '$(Agent.TempDirectory)/*/coverage.cobertura.xml'
+        targetdir: '$(Common.TestResultsDirectory)/coveragereport'
+        reporttypes: 'Cobertura'
+
+    - task: PublishCodeCoverageResults@1
+      displayName: 'Publish code coverage report'
+      inputs:
+        codeCoverageTool: 'Cobertura'
+        summaryFileLocation: '$(Common.TestResultsDirectory)/coveragereport/Cobertura.xml'
+        failIfCoverageEmpty: true
+
+    - task: PublishCodeCoverageResults@1
+      enabled: false
+      displayName: 'Publish code coverage report'
+      inputs:
+        codeCoverageTool: 'Cobertura'
+        summaryFileLocation: '$(Agent.TempDirectory)/**/coverage.cobertura.xml'
+        failIfCoverageEmpty: true
+        
+    - task: CopyFiles@2
+      displayName: 'Copy Build Artifact to Staging Folder'
+      inputs:
+        SourceFolder: '$(Build.BinariesDirectory)/bin'
+        Contents: |
+          **/*
+          !**/*.Test/**
+          !**/*Demo/**
+        TargetFolder: '$(Build.ArtifactStagingDirectory)/bin'
+        CleanTargetFolder: true
+        OverWrite: true
+        flattenFolders: false
+        preserveTimestamp: true
+
+    - task: CopyFiles@2
+      displayName: 'Copy nuget package to Staging Folder'
+      inputs:
+        SourceFolder: '$(Build.ArtifactStagingDirectory)/bin'
+        Contents: |
+          **/*.nupkg
+        TargetFolder: '$(Build.ArtifactStagingDirectory)/pkg'
+        CleanTargetFolder: true
+        OverWrite: true
+        flattenFolders: true
+        preserveTimestamp: true
+
+    - task: DeleteFiles@1
+      displayName: 'Delete nuget package from binary folder'
+      inputs:
+        SourceFolder: '$(Build.ArtifactStagingDirectory)/bin'
+        Contents: '**/*.nupkg'
+
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Build Artifacts'
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)/bin/Release'
+        ArtifactName: 'build-drop'
+        publishLocation: 'Container'
+
+    - task: DotNetCoreCLI@2
+      displayName: 'Publish Nuget package'
+      inputs:
+        command: 'push'
+        packagesToPush: '$(Build.ArtifactStagingDirectory)/pkg/*.nupkg'
+        nuGetFeedType: 'internal'
+        publishVstsFeed: 'fd53fd08-0c53-4f3b-91e4-19d72cbaa138'
