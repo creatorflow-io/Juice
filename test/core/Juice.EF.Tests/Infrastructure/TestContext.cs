@@ -1,8 +1,8 @@
 ﻿using System;
-using Juice.EF.Test.Domain;
+using Juice.EF.Tests.Domain;
 using Microsoft.EntityFrameworkCore;
 
-namespace Juice.EF.Test.Infrastructure
+namespace Juice.EF.Tests.Infrastructure
 {
     public class TestDbOptions : DbOptions
     {

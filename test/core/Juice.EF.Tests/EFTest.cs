@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Juice.EF.Test.Domain;
-using Juice.EF.Test.Infrastructure;
-using Juice.EF.Test.Migrations;
+using Juice.EF.Tests.Domain;
+using Juice.EF.Tests.Infrastructure;
+using Juice.EF.Tests.Migrations;
 using Juice.Extensions.DependencyInjection;
 using Juice.Services;
 using Juice.XUnit;
@@ -13,15 +13,15 @@ using Microsoft.Extensions.Logging;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Juice.EF.Test
+namespace Juice.EF.Tests
 {
     [TestCaseOrderer("Juice.XUnit.PriorityOrderer", "Juice.EF.Test")]
-    public class EFTests
+    public class EFTest
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly ILogger _logger;
 
-        public EFTests(ITestOutputHelper testOutput)
+        public EFTest(ITestOutputHelper testOutput)
         {
             var resolver = new DependencyResolver
             {
@@ -57,7 +57,7 @@ namespace Juice.EF.Test
             });
 
             _serviceProvider = resolver.ServiceProvider;
-            _logger = _serviceProvider.GetRequiredService<ILogger<EFTests>>();
+            _logger = _serviceProvider.GetRequiredService<ILogger<EFTest>>();
         }
 
         [Fact(DisplayName = "DynamicEntity migration"), TestPriority(10)]

@@ -1,7 +1,7 @@
 ﻿using System;
 using Juice.Domain;
 
-namespace Juice.EF.Test.Domain
+namespace Juice.EF.Tests.Domain
 {
     public class Content : DynamicEntity<Guid>
     {

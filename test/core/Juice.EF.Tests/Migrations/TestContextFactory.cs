@@ -1,12 +1,12 @@
 ﻿using System;
-using Juice.EF.Test.Infrastructure;
+using Juice.EF.Tests.Infrastructure;
 using Juice.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Juice.EF.Test.Migrations
+namespace Juice.EF.Tests.Migrations
 {
     public class TestContextFactory : IDesignTimeDbContextFactory<TestContext>
     {

@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Juice.EF.Test.Infrastructure;
+using Juice.EF.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
-namespace Juice.EF.Test.Migrations
+namespace Juice.EF.Tests.Migrations
 {
     public static class DbContextMigrationExtension
     {

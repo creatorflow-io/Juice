@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Juice.EF.Test.Migrations
+namespace Juice.EF.Tests.Migrations
 {
     public partial class InitialCreate : Migration
     {
