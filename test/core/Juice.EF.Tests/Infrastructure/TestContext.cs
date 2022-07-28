@@ -4,10 +4,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Juice.EF.Tests.Infrastructure
 {
-    public class TestDbOptions : DbOptions
-    {
-
-    }
 
     public class TestContext : DbContextBase
     {

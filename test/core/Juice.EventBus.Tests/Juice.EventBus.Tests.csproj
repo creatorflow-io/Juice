@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>$(AppTargetFramework)</TargetFramework>
@@ -20,17 +20,33 @@
     </PackageReference>
   </ItemGroup>
 
+
+  <ItemGroup Label="Migrations">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="$(EFVersion)">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="$(EFVersion)">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  
+
   <ItemGroup>
+    <ProjectReference Include="..\..\..\src\core\Juice.EventBus.IntegrationEventLog.EF\Juice.EventBus.IntegrationEventLog.EF.csproj" />
     <ProjectReference Include="..\..\..\src\core\Juice.EventBus.RabbitMQ\Juice.EventBus.RabbitMQ.csproj" />
     <ProjectReference Include="..\..\..\src\core\Juice\Juice.csproj" />
+    <ProjectReference Include="..\Juice.EF.Tests\Juice.EF.Tests.csproj" />
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="appsettings.Development.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
-
-  <Import Project="..\..\Juice.XUnit\Juice.XUnit.projitems" Label="Shared" />
 
 </Project>

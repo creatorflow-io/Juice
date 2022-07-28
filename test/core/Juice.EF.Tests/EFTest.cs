@@ -23,6 +23,8 @@ namespace Juice.EF.Tests
 
         public EFTest(ITestOutputHelper testOutput)
         {
+            Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
+
             var resolver = new DependencyResolver
             {
                 CurrentDirectory = AppContext.BaseDirectory

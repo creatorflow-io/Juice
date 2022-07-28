@@ -17,6 +17,7 @@ namespace Juice.EventBus.Tests
         public RabbitMQEventBusTest(ITestOutputHelper testOutput)
         {
             _output = testOutput;
+            Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
         }
 
 

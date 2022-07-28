@@ -228,7 +228,7 @@ dotnet_naming_rule.private_or_internal_field_rule.symbols  = private_or_internal
 dotnet_naming_rule.private_or_internal_field_rule.style    = private_or_internal_field_style
 
 dotnet_naming_symbols.private_or_internal_field_symbols.applicable_kinds           = field
-dotnet_naming_symbols.private_or_internal_field_symbols.applicable_accessibilities = private,internal
+dotnet_naming_symbols.private_or_internal_field_symbols.applicable_accessibilities = private,internal,protected,protected_internal
 
 dotnet_naming_style.private_or_internal_field_style.capitalization  = camel_case
 dotnet_naming_style.private_or_internal_field_style.required_prefix = _
@@ -272,7 +272,7 @@ dotnet_naming_rule.public_member_must_be_capitalized.symbols  = public_member_sy
 dotnet_naming_rule.public_member_must_be_capitalized.style    = public_member_style
 
 dotnet_naming_symbols.public_member_symbols.applicable_kinds   = class,struct,interface,enum,property,method,field,event,delegate
-dotnet_naming_symbols.public_member_symbols.applicable_accessibilities = public,internal,protected,protected_internal
+dotnet_naming_symbols.public_member_symbols.applicable_accessibilities = public
 
 dotnet_naming_style.public_member_style.capitalization  = pascal_case
 

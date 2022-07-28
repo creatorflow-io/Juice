@@ -3,7 +3,6 @@
     public record ContentPublishedIntegrationEvent : IntegrationEvent
     {
         public ContentPublishedIntegrationEvent(string message)
-            : base()
         {
             Message = message;
         }

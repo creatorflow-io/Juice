@@ -11,10 +11,13 @@ using Newtonsoft.Json.Linq;
 
 namespace Juice.EF
 {
-    public abstract partial class DbContextBase : DbContext
+    public abstract partial class DbContextBase : DbContext, IDbContextSchema
     {
-        private IHttpContextAccessor _httpContextAccessor;
-        private ILogger _logger;
+
+        public string Schema { get; private set; } = "dbo";
+
+        private IHttpContextAccessor? _httpContextAccessor;
+        private ILogger? _logger;
         private IServiceProvider _serviceProvider;
         private CancellationTokenSource _cts = new CancellationTokenSource();
         private bool _hasChanged;
@@ -211,7 +214,7 @@ namespace Juice.EF
         #endregion
 
         #region Audit
-        public IEnumerable<IDataEventHandler> AuditHandlers { get; set; }
+        public IEnumerable<IDataEventHandler>? AuditHandlers { get; set; }
 
         private void SetAuditInformation()
         {
@@ -242,7 +245,7 @@ namespace Juice.EF
             }
             catch (Exception ex)
             {
-                _logger?.LogDebug(ex, "[DbContextBase][SetAuditInformation][Failed]");
+                _logger?.LogWarning(ex, $"[DbContextBase][SetAuditInformation][Failed] {ex.StackTrace}");
             }
 
         }

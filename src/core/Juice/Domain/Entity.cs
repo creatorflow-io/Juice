@@ -110,12 +110,11 @@ namespace Juice.Domain
 
         public void SetOnceCreatedUser(string creator)
         {
-            Validator.NotNullOrWhiteSpace(creator, nameof(creator));
             if (string.IsNullOrEmpty(CreatedUser))
             {
                 CreatedUser = creator;
-                CreatedDate = DateTimeOffset.Now;
             }
+            CreatedDate = DateTimeOffset.Now;
         }
 
         public void UpdateModifiedUser(string user)

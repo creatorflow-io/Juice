@@ -22,7 +22,7 @@ namespace Juice.EF.Tests.Migrations
                 // Register DbContext class
                 services.AddTransient(provider =>
                 {
-                    var configService = provider.GetService<IConfigurationService>();
+                    var configService = provider.GetRequiredService<IConfigurationService>();
                     var connectionString = configService.GetConfiguration().GetConnectionString("Default");
                     var builder = new DbContextOptionsBuilder<TestContext>();
                     builder.UseSqlServer(connectionString);
