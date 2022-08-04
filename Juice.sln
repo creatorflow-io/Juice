@@ -35,11 +35,21 @@ Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Juice.Shared.EF", "src\core
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.BgService", "src\core\Juice.BgService\Juice.BgService.csproj", "{D87F98A0-9790-4FCA-845B-12891D3DF30F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.BgService.Tests", "test\core\Juice.BgService.Tests\Juice.BgService.Tests.csproj", "{663B2111-1F11-4188-80FB-4B7F30300A2C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.BgService.Tests", "test\core\Juice.BgService.Tests\Juice.BgService.Tests.csproj", "{663B2111-1F11-4188-80FB-4B7F30300A2C}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.MediatR.IdentifiedCommands.EF", "src\core\Juice.MediatR.IdentifiedCommands.EF\Juice.MediatR.IdentifiedCommands.EF.csproj", "{8EB99891-0C0D-413B-9519-65079682B8BA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.MediatR.Tests", "test\core\Juice.MediatR.Tests\Juice.MediatR.Tests.csproj", "{819046F4-6EBA-4E4B-BC13-A802D0E1F6ED}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.MediatR.Tests", "test\core\Juice.MediatR.Tests\Juice.MediatR.Tests.csproj", "{819046F4-6EBA-4E4B-BC13-A802D0E1F6ED}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Storage", "Storage", "{C8EDF434-F756-4733-9240-D8F1BC687DAE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.Storage.Abstractions", "src\services\storage\Juice.Storage.Abstractions\Juice.Storage.Abstractions.csproj", "{201362C7-7D28-45B7-8F5D-E205C9711980}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.Storage.Local", "src\services\storage\Juice.Storage.Local\Juice.Storage.Local.csproj", "{8D1133B7-B3D7-4D14-9178-EA3445D4D450}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Services", "Services", "{6A22FFEE-6F7E-44D4-B5FE-20FC041F0362}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.Storage.Tests", "test\services\Juice.Storage.Tests\Juice.Storage.Tests.csproj", "{9ABEE106-1F26-461D-92D6-A00F888BD94C}"
 EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
@@ -102,6 +112,18 @@ Global
 		{819046F4-6EBA-4E4B-BC13-A802D0E1F6ED}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{819046F4-6EBA-4E4B-BC13-A802D0E1F6ED}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{819046F4-6EBA-4E4B-BC13-A802D0E1F6ED}.Release|Any CPU.Build.0 = Release|Any CPU
+		{201362C7-7D28-45B7-8F5D-E205C9711980}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{201362C7-7D28-45B7-8F5D-E205C9711980}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{201362C7-7D28-45B7-8F5D-E205C9711980}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{201362C7-7D28-45B7-8F5D-E205C9711980}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8D1133B7-B3D7-4D14-9178-EA3445D4D450}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8D1133B7-B3D7-4D14-9178-EA3445D4D450}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8D1133B7-B3D7-4D14-9178-EA3445D4D450}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8D1133B7-B3D7-4D14-9178-EA3445D4D450}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9ABEE106-1F26-461D-92D6-A00F888BD94C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9ABEE106-1F26-461D-92D6-A00F888BD94C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9ABEE106-1F26-461D-92D6-A00F888BD94C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9ABEE106-1F26-461D-92D6-A00F888BD94C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -124,6 +146,11 @@ Global
 		{663B2111-1F11-4188-80FB-4B7F30300A2C} = {CA70CAB2-84FB-48B9-BAA8-52C64FC7D0C0}
 		{8EB99891-0C0D-413B-9519-65079682B8BA} = {F74AAFDA-54FE-4335-9B75-6E355B6941F5}
 		{819046F4-6EBA-4E4B-BC13-A802D0E1F6ED} = {CA70CAB2-84FB-48B9-BAA8-52C64FC7D0C0}
+		{C8EDF434-F756-4733-9240-D8F1BC687DAE} = {3695D8D8-7E11-4A35-9DE0-C175CD812297}
+		{201362C7-7D28-45B7-8F5D-E205C9711980} = {C8EDF434-F756-4733-9240-D8F1BC687DAE}
+		{8D1133B7-B3D7-4D14-9178-EA3445D4D450} = {C8EDF434-F756-4733-9240-D8F1BC687DAE}
+		{6A22FFEE-6F7E-44D4-B5FE-20FC041F0362} = {F0C1DDC9-295A-4DD8-AB19-3CE592CFA928}
+		{9ABEE106-1F26-461D-92D6-A00F888BD94C} = {6A22FFEE-6F7E-44D4-B5FE-20FC041F0362}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DD654E02-538D-4E29-A098-413DEBAE4D98}
