@@ -1,17 +1,23 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using Juice.Storage.Abstractions;
+using Juice.Storage.Dto;
+using Juice.Storage.Extensions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Juice.Storage.Tests
 {
     public static class SharedTests
     {
-        public static async Task File_should_create_Async(IStorage storage)
+        #region StorageProvider
+        public static async Task File_should_create_Async(IStorageProvider storage)
         {
             var generator = new Services.DefaultStringIdGenerator();
-            var file = @"Test\" + generator.GenerateRandomId(26) + ".mxf";
+            var file = @"Test\" + generator.GenerateRandomId(26) + ".txt";
 
             var createdFile = await storage.CreateAsync(file, new CreateFileOptions { FileExistsBehavior = FileExistsBehavior.RaiseError }, default);
 
@@ -39,10 +45,10 @@ namespace Juice.Storage.Tests
             await storage.DeleteAsync(createdFile, default);
         }
 
-        public static async Task File_create_should_error_Async(IStorage storage)
+        public static async Task File_create_should_error_Async(IStorageProvider storage)
         {
             var generator = new Services.DefaultStringIdGenerator();
-            var file = generator.GenerateRandomId(26) + ".mxf";
+            var file = generator.GenerateRandomId(26) + ".txt";
             var createdFile = await storage.CreateAsync(file, new CreateFileOptions { FileExistsBehavior = FileExistsBehavior.RaiseError }, default);
 
             Assert.True(storage.ExistsAsync(createdFile, default).GetAwaiter().GetResult());
@@ -56,14 +62,14 @@ namespace Juice.Storage.Tests
             await storage.DeleteAsync(createdFile, default);
         }
 
-        public static async Task File_create_should_add_copy_number_Async(IStorage storage)
+        public static async Task File_create_should_add_copy_number_Async(IStorageProvider storage)
         {
             var generator = new Services.DefaultStringIdGenerator();
             var name = generator.GenerateRandomId(26);
-            var file = name + ".mxf";
-            var file1 = name + "(1).mxf";
-            var file2 = name + "(2).mxf";
-            var file3 = name + "(3).mxf";
+            var file = name + ".txt";
+            var file1 = name + "(1).txt";
+            var file2 = name + "(2).txt";
+            var file3 = name + "(3).txt";
 
             var createdFile = await storage.CreateAsync(file, new CreateFileOptions { FileExistsBehavior = FileExistsBehavior.RaiseError }, default);
 
@@ -92,5 +98,80 @@ namespace Juice.Storage.Tests
             await storage.DeleteAsync(createdFile3, default);
 
         }
+
+        #endregion
+
+        #region UploadManager
+
+        public static async Task File_upload_Async(IUploadManager uploadManager, ITestOutputHelper testOutput)
+        {
+
+            var file = new FileInfo(@"C:\Workspace\dotnet-sdk.exe");
+            if (file.Exists)
+            {
+
+                var generator = new Services.DefaultStringIdGenerator();
+                var fileName = @"Test\" + generator.GenerateRandomId(26) + ".zzz";
+
+                var fileInfo = new InitialFileInfo(fileName, file.Length, FileExistsBehavior.AscendedCopyNumber);
+
+                var operationResult = await uploadManager.InitAsync(fileInfo, default);
+
+                var uploadId = operationResult.UploadId;
+                var sectionSize = operationResult.SectionSize;
+                var createdFileName = operationResult.Name;
+
+                testOutput.WriteLine("Section size {0}", sectionSize);
+                long offset = 0;
+
+                while (offset < file.Length)
+                {
+                    using var istream = File.OpenRead(file.FullName);
+                    istream.Seek(offset, SeekOrigin.Begin);
+
+                    var bufferSize = (int)Math.Min(sectionSize, (file.Length - offset));
+                    testOutput.WriteLine("Buffer size {0}", bufferSize);
+
+                    var buffer = new byte[bufferSize];
+                    await istream.ReadAsync(buffer, 0, bufferSize);
+
+                    using var memStream = new MemoryStream(buffer);
+
+                    await uploadManager.UploadAsync(uploadId, memStream, offset, default);
+
+                    testOutput.WriteLine("Uploaded from {0} to {1}", offset, offset + memStream.Length);
+                    offset += memStream.Length;
+
+                }
+
+                var md5 = MD5.Create();
+                {
+                    using var src = File.OpenRead(file.FullName);
+                    var srcHash = ToHex(await md5.ComputeHashAsync(src));
+                    var destHash = await uploadManager.StorageProvider.GetMD5Async(createdFileName, default);
+
+                    testOutput.WriteLine("Original file hash {0}", srcHash);
+                    testOutput.WriteLine("Uploaded file hash {0}", destHash);
+                    Assert.Equal(srcHash, destHash);
+                }
+
+                await uploadManager.StorageProvider.DeleteAsync(createdFileName, default);
+            }
+        }
+
+        private static string ToHex(byte[] bytes, bool upperCase = false)
+        {
+            StringBuilder result = new StringBuilder(bytes.Length * 2);
+
+            for (int i = 0; i < bytes.Length; i++)
+            {
+                result.Append(bytes[i].ToString(upperCase ? "X2" : "x2"));
+            }
+
+            return result.ToString();
+        }
+
+        #endregion
+
     }
 }

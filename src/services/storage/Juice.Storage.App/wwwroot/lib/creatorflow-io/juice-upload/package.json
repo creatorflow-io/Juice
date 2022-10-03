@@ -1,0 +1,46 @@
+{
+  "name": "@creatorflow-io/juice-upload",
+  "version": "1.0.3",
+  "description": "Upload library for Juice Storage",
+  "main": "src/JUpload.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack",
+    "serve": "webpack serve --config webpack.config.serve.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/creatorflow-io/juice-upload.git"
+  },
+  "keywords": [
+    "upload",
+    "large",
+    "file"
+  ],
+  "author": "jack@creatorflow.io",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/creatorflow-io/juice-upload/issues"
+  },
+  "homepage": "https://github.com/creatorflow-io/juice-upload#readme",
+  "dependencies": {
+    "jquery": "^3.6.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.18.10",
+    "@babel/preset-env": "^7.18.10",
+    "babel-loader": "^8.2.5",
+    "webpack": "^5.74.0",
+    "webpack-cli": "^4.10.0",
+    "webpack-dev-server": "^4.10.0"
+  },
+  "directories": {
+    "test": "test"
+  },
+  "files": [
+    "./dist/*.*",
+    "./public/*.*",
+    "./src/*.*",
+    "./README.md"
+  ]
+}

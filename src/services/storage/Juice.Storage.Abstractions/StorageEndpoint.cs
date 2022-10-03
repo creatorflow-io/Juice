@@ -2,6 +2,7 @@
 {
     public class StorageEndpoint
     {
+        public StorageEndpoint() { }
         public StorageEndpoint(string uri, string? basePath)
         {
             Uri = uri;

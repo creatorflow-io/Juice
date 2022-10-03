@@ -16,7 +16,7 @@
   <PropertyGroup Label="Versioning">
     <LibraryTargetFramework>netstandard2.1</LibraryTargetFramework>
     <AppTargetFramework>net6.0</AppTargetFramework>
-    <!--<NetCoreVersion>5.0.5</NetCoreVersion>-->
+    <AspNetCoreVersion>2.2.0</AspNetCoreVersion>
     <MicrosoftExtensionsVersion>6.0.0</MicrosoftExtensionsVersion>
     <EFVersion>6.0.0</EFVersion>
     <OrchardCoreVersion>1.2.2</OrchardCoreVersion>

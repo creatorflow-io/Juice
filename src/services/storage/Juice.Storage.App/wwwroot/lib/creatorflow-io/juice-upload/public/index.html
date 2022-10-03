@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Juice.Storage</title>
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+            <div class="container">
+                <a class="navbar-brand" asp-area="" asp-page="/Index">Juice.Storage</a>
+                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                   
+                </div>
+            </div>
+        </nav>
+    </header>
+    <div class="container">
+        <main role="main" class="pb-3">
+            
+        <div class="text-center">
+            <h1 class="display-4">Welcome</h1>
+            <form>
+                <label>Upload file: <input type="file" id="file"/></label>
+                <label>Upload id: <input readonly type="text" id="uploadId"/></label>
+                <input type="button" id="resume" value="Resume" />
+                <input type="button" id="clear" value="Clear" />
+            </form>
+            <span id="message"></span>
+        </div>
+
+        </main>
+    </div>
+
+    <footer class="border-top footer text-muted" >
+        <div class="container">
+            &copy; 2022 - Juice.Storage
+        </div>
+    </footer>
+
+    <!-- To run this mode, use serve command to start-->
+    <!-- <script src="/dist/jupload.js"></script>
+    <script src="./site.js" ></script>  -->
+    <script src="site.bundle.js" ></script>  
+
+   
+</body>
+</html>

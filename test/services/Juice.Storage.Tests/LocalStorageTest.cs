@@ -1,17 +1,52 @@
 ﻿
+using System;
 using System.IO;
 using System.Threading.Tasks;
+using Juice.Extensions.DependencyInjection;
 using Juice.Storage.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Juice.Storage.Tests
 {
     public class LocalStorageTest
     {
         private bool _test = false;
-        public LocalStorageTest()
+        private readonly ITestOutputHelper _output;
+        private readonly IServiceProvider _serviceProvider;
+        public LocalStorageTest(ITestOutputHelper testOutput)
         {
             _test = true;
+            Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
+            _output = testOutput;
+            var resolver = new DependencyResolver
+            {
+                CurrentDirectory = AppContext.BaseDirectory
+            };
+
+            resolver.ConfigureServices(services =>
+            {
+
+                var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
+                var configuration = configService.GetConfiguration();
+
+                services.AddSingleton(_output);
+
+                services.AddLogging(builder =>
+                {
+                    builder.ClearProviders()
+                    .AddTestOutputLogger()
+                    .AddConfiguration(configuration.GetSection("Logging"));
+                });
+
+
+                services.AddScoped<IStorageProvider, Local.LocalStorageProvider>();
+
+            });
+
+            _serviceProvider = resolver.ServiceProvider;
         }
 
         [Fact(DisplayName = "File not exists and should be create")]
@@ -22,7 +57,7 @@ namespace Juice.Storage.Tests
                 return;
             }
 
-            var storage = new Local.LocalStorage()
+            var storage = _serviceProvider.GetRequiredService<IStorageProvider>()
                 .Configure(new StorageEndpoint(@"C:\Workspace\Storage", default));
 
             await SharedTests.File_should_create_Async(storage);
@@ -35,7 +70,7 @@ namespace Juice.Storage.Tests
             {
                 return;
             }
-            var storage = new Local.LocalStorage()
+            var storage = _serviceProvider.GetRequiredService<IStorageProvider>()
                  .Configure(new StorageEndpoint(@"C:\Workspace\Storage", default));
 
             await SharedTests.File_create_should_error_Async(storage);
@@ -49,7 +84,7 @@ namespace Juice.Storage.Tests
                 return;
             }
 
-            var storage = new Local.LocalStorage()
+            var storage = _serviceProvider.GetRequiredService<IStorageProvider>()
                  .Configure(new StorageEndpoint(@"C:\Workspace\Storage", default));
 
             await SharedTests.File_create_should_add_copy_number_Async(storage);
@@ -63,8 +98,8 @@ namespace Juice.Storage.Tests
                 return;
             }
             var generator = new Services.DefaultStringIdGenerator();
-            var file = @"Test\" + generator.GenerateRandomId(26) + ".mxf";
-            var storage = new Local.LocalStorage()
+            var file = @"Test\" + generator.GenerateRandomId(26) + ".txt";
+            var storage = _serviceProvider.GetRequiredService<IStorageProvider>()
                 .Configure(new StorageEndpoint(@"\\172.16.201.171\Demo\XUnit", @"\\172.16.201.171", "demonas", "demonas"));
             var createdFile = await storage.CreateAsync(file, new CreateFileOptions { FileExistsBehavior = FileExistsBehavior.RaiseError }, default);
 
@@ -82,8 +117,8 @@ namespace Juice.Storage.Tests
                 return;
             }
             var generator = new Services.DefaultStringIdGenerator();
-            var file = @"Test\" + generator.GenerateRandomId(26) + ".mxf";
-            var storage = new Local.LocalStorage()
+            var file = @"Test\" + generator.GenerateRandomId(26) + ".txt";
+            var storage = _serviceProvider.GetRequiredService<IStorageProvider>()
                 .Configure(new StorageEndpoint(@"\\test.juice.lan", default));
 
             // It should throw IOException if the path is exists and inaccessible
@@ -92,7 +127,7 @@ namespace Juice.Storage.Tests
                 var createdFile = await storage.CreateAsync(file, new CreateFileOptions { FileExistsBehavior = FileExistsBehavior.RaiseError }, default);
             });
 
-            var storage1 = new Local.LocalStorage()
+            var storage1 = _serviceProvider.GetRequiredService<IStorageProvider>()
                 .Configure(new StorageEndpoint(@"\\172.16.201.171\Demo\Xunit", @"\\172.16.201.171", "demonas", "demonas1"));
             await Assert.ThrowsAsync<System.ComponentModel.Win32Exception>(async () =>
             {

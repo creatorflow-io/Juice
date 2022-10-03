@@ -7,10 +7,10 @@ namespace Juice.Services
         // Some confusing chars are ignored: http://www.crockford.com/wrmg/base32.html
         private const string _encode32Chars = "0123456789abcdefghjkmnpqrstvwxyz";
         private const string _encode32CaseSensitiveChars = "0123456789AaBbCcDdEeFfGgHhJjKkMmNnPpQqRrSsTtVvWwXxYyZz";
-        public string GenerateUniqueId()
+        public string GenerateUniqueId(Guid? id = default)
         {
             // Generate a base32 Guid value
-            var guid = Guid.NewGuid().ToByteArray();
+            var guid = (id ?? Guid.NewGuid()).ToByteArray();
             return ToBase32(guid);
         }
 

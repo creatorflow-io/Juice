@@ -6,7 +6,7 @@
         /// Generate an Base32 unique string based on GUID
         /// </summary>
         /// <returns></returns>
-        string GenerateUniqueId();
+        string GenerateUniqueId(Guid? id = default);
 
         /// <summary>
         /// Generate a random string with specified length
