@@ -3,7 +3,7 @@
 # Add steps that publish symbols, save build artifacts, and more:
 # https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
 
-name: 5.0.0-ci.$(Date:yyyyMMdd).$(Rev:r)
+name: 6.0.0-ci.$(Date:yyyyMMdd).$(Rev:r)
 
 
 trigger:
@@ -58,7 +58,7 @@ stages:
       displayName: 'Install .NET Core SDK'
       inputs:
         packageType: 'sdk'
-        version: '5.0.x'
+        version: '6.0.x'
         performMultiLevelLookup: true
 
     - task: DotNetCoreCLI@2

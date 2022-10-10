@@ -1,16 +1,17 @@
 <Project>
   <PropertyGroup Label="Product Infomation">
-    <Company>MMS Development Team.</Company>
-    <Product>MMS</Product>
+    <Company>Creatorflow.io</Company>
+    <Product>Juice core</Product>
     <Copyright>© $(Company). All rights reserved.</Copyright>
     <Authors>$(Company)</Authors>
-    <MMSDescription>$(Product) is a media management framework based on OrchardCore framework</MMSDescription>
+    <JuiceDescription>$(Product) is a media management framework</JuiceDescription>
     <Description>$(Product) - Media Managment System.</Description>
     <PackageTags>$(PackageTags); $(Company); $(Product); Media Management</PackageTags>
     <!--<PackageIconUrl></PackageIconUrl>-->
 
     <VersionPrefix>6.0.0</VersionPrefix>
-    <VersionSuffix>local.$([System.DateTime]::Now.ToString(`yyyyMMdd`)).1</VersionSuffix>
+    <BuildTag>local</BuildTag>
+    <VersionSuffix>$(BuildTag).$([System.DateTime]::Now.ToString(`yyyyMMdd`)).1</VersionSuffix>
   </PropertyGroup>
 
   <PropertyGroup Label="Versioning">
@@ -40,7 +41,7 @@
 
   <ItemGroup Label="CI Build Library" Condition="'$(UsingMicrosoftNETSdk)' == 'true' and '$(TF_BUILD)' == 'true'">
     <PackageReference Include="Microsoft.SourceLink.AzureDevOpsServer.Git" Version="1.*" PrivateAssets="All"/>
-    <SourceLinkAzureDevOpsServerGitHost Include="devops.mms-dev.app" VirtualDirectory=""/>
+    <SourceLinkAzureDevOpsServerGitHost Include="creatorflow.io" VirtualDirectory=""/>
   </ItemGroup>
 
   <PropertyGroup Label="CI Build" Condition="'$(TF_BUILD)' == 'true'">

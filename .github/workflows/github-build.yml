@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ "master" ]
 
+env:
+  BuildTag: pre
+
 jobs:
   build:
 
@@ -23,7 +26,3 @@ jobs:
       run: dotnet build --no-restore --configuration Release
     #- name: Test
     #  run: dotnet test --no-build --verbosity normal
-    - name: Pack
-      run: dotnet pack --no-build --configuration Release
-    - name: PushNuget
-      run: dotnet nuget push **/*.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_ORG_KEY }} --skip-duplicate
