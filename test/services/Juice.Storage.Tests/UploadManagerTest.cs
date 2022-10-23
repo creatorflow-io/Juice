@@ -13,17 +13,22 @@ namespace Juice.Storage.Tests
     public class UploadManagerTest
     {
         private readonly ITestOutputHelper _output;
+        private bool _test = false;
 
         public UploadManagerTest(ITestOutputHelper testOutput)
         {
             _output = testOutput;
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
-
+            _test = !"true".Equals(Environment.GetEnvironmentVariable("CI"));
         }
 
         [Fact(DisplayName = "InMemory - local storage")]
         public async Task InMemory_Local_Test_Async()
         {
+            if (!_test)
+            {
+                return;
+            }
             var resolver = new DependencyResolver
             {
                 CurrentDirectory = AppContext.BaseDirectory
@@ -67,6 +72,10 @@ namespace Juice.Storage.Tests
         [Fact(DisplayName = "InMemory - network storage")]
         public async Task InMemory_Smb_Test_Async()
         {
+            if (!_test)
+            {
+                return;
+            }
             var resolver = new DependencyResolver
             {
                 CurrentDirectory = AppContext.BaseDirectory
@@ -109,6 +118,10 @@ namespace Juice.Storage.Tests
         [Fact(DisplayName = "InMemory - ftp storage")]
         public async Task InMemory_Ftp_Test_Async()
         {
+            if (!_test)
+            {
+                return;
+            }
             var resolver = new DependencyResolver
             {
                 CurrentDirectory = AppContext.BaseDirectory

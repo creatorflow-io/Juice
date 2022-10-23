@@ -18,7 +18,7 @@ namespace Juice.Storage.Tests
         private readonly IServiceProvider _serviceProvider;
         public LocalStorageTest(ITestOutputHelper testOutput)
         {
-            _test = true;
+            _test = _test = !"true".Equals(Environment.GetEnvironmentVariable("CI"));
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
             _output = testOutput;
             var resolver = new DependencyResolver

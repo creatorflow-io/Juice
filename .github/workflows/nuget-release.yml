@@ -1,0 +1,14 @@
+name: Nuget.org Release
+
+on:
+  release:
+    types:
+      - published
+
+
+jobs:
+    build:
+      uses: creatorflow-io/shared-workflows/.github/workflows/shared-publish.yml@master
+      with:
+        JuiceRefVersion: 6.0.0
+      secrets: inherit

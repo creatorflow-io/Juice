@@ -1,0 +1,14 @@
+name: Pack alpha packages
+
+on:
+  pull_request:
+    branches:
+       - 'master'
+
+jobs:
+  build:
+    uses: creatorflow-io/shared-workflows/.github/workflows/shared-pack.yml@master
+    with:
+       Stage: alpha
+       JuiceRefVersion: 6.0.0
+    secrets: inherit

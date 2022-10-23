@@ -61,8 +61,14 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.gitignore = .gitignore
 		azure-pipelines.yml = azure-pipelines.yml
 		Directory.Build.props = Directory.Build.props
-		.github\workflows\github-build.yml = .github\workflows\github-build.yml
-		.github\workflows\github-publish.yml = .github\workflows\github-publish.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{AE9C2C13-ECD6-4990-B85B-9F12A5F6B2CE}"
+	ProjectSection(SolutionItems) = preProject
+		.github\workflows\alpha.yml = .github\workflows\alpha.yml
+		.github\workflows\beta.yml = .github\workflows\beta.yml
+		.github\workflows\build-test.yml = .github\workflows\build-test.yml
+		.github\workflows\nuget-release.yml = .github\workflows\nuget-release.yml
 	EndProjectSection
 EndProject
 Global
@@ -176,6 +182,7 @@ Global
 		{9ABEE106-1F26-461D-92D6-A00F888BD94C} = {6A22FFEE-6F7E-44D4-B5FE-20FC041F0362}
 		{ACD4EC59-3B93-4B99-AD06-5B319817D309} = {C8EDF434-F756-4733-9240-D8F1BC687DAE}
 		{49C9EDB8-F7C7-461E-A7F9-75BF6ED6A3F7} = {C8EDF434-F756-4733-9240-D8F1BC687DAE}
+		{AE9C2C13-ECD6-4990-B85B-9F12A5F6B2CE} = {CD84B6B7-9A64-4E5E-80A4-462AF323BD97}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DD654E02-538D-4E29-A098-413DEBAE4D98}

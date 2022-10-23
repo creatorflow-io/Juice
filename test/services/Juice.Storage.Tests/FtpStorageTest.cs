@@ -15,7 +15,7 @@ namespace Juice.Storage.Tests
         private IServiceProvider _serviceProvider;
         public FtpStorageTest(ITestOutputHelper testOutput)
         {
-            _test = true;
+            _test = !"true".Equals(Environment.GetEnvironmentVariable("CI"));
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
             var resolver = new DependencyResolver
             {
