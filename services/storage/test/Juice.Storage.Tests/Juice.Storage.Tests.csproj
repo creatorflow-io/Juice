@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>$(AppTargetFramework)</TargetFramework>
@@ -21,11 +21,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\src\core\Juice\Juice.csproj" />
-    <ProjectReference Include="..\..\..\src\services\storage\Juice.Storage.Local\Juice.Storage.Local.csproj" />
-    <ProjectReference Include="..\..\..\src\services\storage\Juice.Storage\Juice.Storage.csproj" />
+    <ProjectReference Include="..\..\..\..\core\src\Juice\Juice.csproj" />
+    <ProjectReference Include="..\..\src\Juice.Storage.Local\Juice.Storage.Local.csproj" />
+    <ProjectReference Include="..\..\src\Juice.Storage\Juice.Storage.csproj" />
   </ItemGroup>
 
-  <Import Project="..\..\Juice.XUnit\Juice.XUnit.projitems" Label="Shared" />
+  <Import Project="..\..\..\..\test\Juice.XUnit\Juice.XUnit.projitems" Label="Shared" />
 
 </Project>

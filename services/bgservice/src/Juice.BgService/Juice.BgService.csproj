@@ -11,8 +11,4 @@
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="$(MicrosoftExtensionsVersion)" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Juice\Juice.csproj" />
-  </ItemGroup>
-
 </Project>

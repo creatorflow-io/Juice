@@ -1,6 +1,4 @@
-﻿using Juice.Extensions;
-
-namespace Juice.BgService.Scheduled
+﻿namespace Juice.BgService.Scheduled
 {
     public class ScheduledServiceOptions
     {
@@ -507,14 +505,14 @@ namespace Juice.BgService.Scheduled
 
         public static DateTimeOffset StartingOfWeek(this DateTimeOffset dt, IEnumerable<DayOfWeek> daysOfWeek, TimeSpan startingAt)
         {
-            var startDayOfWeek = daysOfWeek.OrderBy(d => d.IntValue()).First();
+            var startDayOfWeek = daysOfWeek.OrderBy(d => (int)d).First();
             var startOfWeek = dt.StartOfWeek(startDayOfWeek);
             return new DateTimeOffset(startOfWeek.Year, startOfWeek.Month, startOfWeek.Day, startingAt.Hours, startingAt.Minutes, startingAt.Seconds, dt.Offset);
         }
 
         public static DateTimeOffset EndingOfWeekByStarting(this DateTimeOffset dt, IEnumerable<DayOfWeek> daysOfWeek, TimeSpan startingAt, TimeSpan duration)
         {
-            var endDayOfWeek = daysOfWeek.OrderByDescending(d => d.IntValue()).First();
+            var endDayOfWeek = daysOfWeek.OrderByDescending(d => (int)d).First();
             var endOfWeek = dt.StartOfWeek(endDayOfWeek);
             var end = new DateTimeOffset(endOfWeek.Year, endOfWeek.Month, endOfWeek.Day, startingAt.Hours, startingAt.Minutes, startingAt.Seconds, dt.Offset).Add(duration);
             return end > dt ? end : end.AddDays(7);
@@ -539,7 +537,7 @@ namespace Juice.BgService.Scheduled
             {
                 if (specialDay == SpecialDay.day)
                 {
-                    var day = on.IntValue();
+                    var day = (int)on;
 
                     if (day > 0)
                     {
@@ -552,7 +550,7 @@ namespace Juice.BgService.Scheduled
                 }
                 else if (specialDay == SpecialDay.weekDay)
                 {
-                    var day = on.IntValue();
+                    var day = (int)on;
 
                     if (day > 0)
                     {
@@ -584,7 +582,7 @@ namespace Juice.BgService.Scheduled
                 else
                 //if(specialDay == SpecialDay.weekendDay)
                 {
-                    var week = on.IntValue();
+                    var week = (int)on;
 
                     if (week > 0)
                     {
@@ -613,7 +611,7 @@ namespace Juice.BgService.Scheduled
             else
             {
                 dayOfWeek = dayOfWeek ?? DayOfWeek.Monday;
-                var week = on.IntValue();
+                var week = (int)on;
 
                 if (week > 0)
                 {

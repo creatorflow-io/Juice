@@ -12,10 +12,10 @@ namespace Juice.BgService.Tests
             ScheduleOptions.OccursInterval(TimeSpan.FromSeconds(3));
         }
 
-        public override async Task<OperationResult> InvokeAsync()
+        public override async Task<(bool Succeeded, string? Message)> InvokeAsync()
         {
             Console.WriteLine("Hello... next invoke time is {0}", NextProcessing);
-            return OperationResult.Success;
+            return (true, default);
         }
 
         protected override void Cleanup() => throw new NotImplementedException();

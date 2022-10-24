@@ -4,21 +4,29 @@ namespace Juice
 {
     public interface IOperationResult
     {
-        public string Message { get; set; }
+        public string? Message { get; }
         public bool Succeeded { get; }
     }
     public interface IOperationResult<T> : IOperationResult
     {
-        public T Data { get; set; }
+        public T? Data { get; set; }
     }
 
     public class OperationResult : IOperationResult
     {
-        public string Message { get; set; }
+        protected string? _message;
+        public string? Message
+        {
+            get { return _message ?? Exception?.InnerException?.Message ?? Exception?.Message; }
+            set
+            {
+                _message = value;
+            }
+        }
         public bool Succeeded { get; protected set; }
 
         [JsonIgnore]
-        public Exception Exception { get; protected set; }
+        public Exception? Exception { get; protected set; }
 
         private static readonly OperationResult _success = new OperationResult { Succeeded = true };
         public static OperationResult Success => _success;
@@ -63,22 +71,6 @@ namespace Juice
                 Succeeded = false,
                 Message = message
             };
-
-        /// <summary>
-        /// Return new operation result without <see cref="Exception"/> but keep <c>exception.Message</c> if exsit
-        /// </summary>
-        /// <returns></returns>
-        public OperationResult FailureWithoutException()
-        {
-            Succeeded = false;
-            if (Exception != null)
-            {
-                var message = Exception.InnerException?.Message ?? Exception.Message;
-                return new OperationResult() { Succeeded = false, Message = message + Exception.StackTrace };
-            }
-            return this;
-        }
-
 
         #endregion
 
@@ -131,16 +123,13 @@ namespace Juice
         #endregion
 
         public override string? ToString()
-        {
-            return Message ?? Exception?.InnerException?.Message ?? Exception?.Message ?? (Succeeded ? "Succeeded" : base.ToString());
-        }
+            => Message ?? base.ToString();
 
     }
 
-
-    public class OperationResult<T> : OperationResult, IOperationResult<T>
+    public class OperationResult<T> : OperationResult, IOperationResult<T?>
     {
-        public T Data { get; set; }
+        public T? Data { get; set; }
 
     }
 }

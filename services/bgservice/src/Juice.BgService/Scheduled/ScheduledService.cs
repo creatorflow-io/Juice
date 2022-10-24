@@ -34,8 +34,8 @@ namespace Juice.BgService.Scheduled
                         var invokeState = await InvokeAsync();
                         if (!invokeState.Succeeded)
                         {
-                            _logger.LogError(invokeState.Exception,
-                                $"Error occurred invoke service. {invokeState.ToString()}");
+                            _logger.LogError(
+                                $"Error occurred invoke service. {invokeState.Message}");
                         }
 
                         if (ScheduleOptions.Frequencies.Any(f => f.Occurs == OccursType.Once))
@@ -143,7 +143,7 @@ namespace Juice.BgService.Scheduled
             _waitCancel?.Cancel();
         }
 
-        public abstract Task<OperationResult> InvokeAsync();
+        public abstract Task<(bool Succeeded, string? Message)> InvokeAsync();
 
     }
 

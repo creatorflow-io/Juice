@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\src\core\Juice.BgService\Juice.BgService.csproj" />
+    <ProjectReference Include="..\..\src\Juice.BgService\Juice.BgService.csproj" />
   </ItemGroup>
 
 </Project>

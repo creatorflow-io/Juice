@@ -52,20 +52,12 @@ namespace Juice.Extensions
         public static string StringValue(this Enum value) => value.GetCustomAttribute<EnumMemberAttribute>()?.Value ?? value.ToString();
 
         /// <summary>
-        /// Return Int value of enum member
-        /// </summary>
-        /// <param name="value"></param>
-        /// <returns></returns>
-        public static int IntValue(this Enum value) => Convert.ToInt32(value);
-
-
-        /// <summary>
         /// Retrieve the custom attribute apply to an enum value
         /// </summary>
         /// <typeparam name="TAttribute">The attribute type need to retrieve</typeparam>
         /// <param name="value">The enum value</param>
         /// <returns></returns>
-        public static TAttribute GetCustomAttribute<TAttribute>(this Enum value) where TAttribute : Attribute
+        public static TAttribute? GetCustomAttribute<TAttribute>(this Enum value) where TAttribute : Attribute
         {
             var field = value.GetType()
                 .GetField(value.ToString());

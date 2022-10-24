@@ -14,16 +14,15 @@ namespace Juice.BgService.Tests
             _options = options.Value;
         }
 
-        public override void OnFileDeleted(FileSystemEventArgs e)
+        public override async Task OnFileDeletedAsync(FileSystemEventArgs e)
         {
             Console.WriteLine("File deleted {0}", e.FullPath);
         }
-        public override Task<OperationResult> OnFileReadyAsync(string fullPath)
+        public override async Task OnFileReadyAsync(string fullPath)
         {
             Console.WriteLine("File ready! {0}", fullPath);
-            return Task.FromResult(OperationResult.Success);
         }
-        public override void OnFileRenamed(RenamedEventArgs e)
+        public override async Task OnFileRenamedAsync(RenamedEventArgs e)
         {
             Console.WriteLine("File renamed {0}", e.FullPath);
         }

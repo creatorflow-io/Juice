@@ -127,8 +127,15 @@ namespace Juice.BgService.FileWatcher
                         _logger.LogInformation($"File: {e.FullPath} {e.ChangeType}");
 
                         Monitoring.TryRemove(e.FullPath, out FileWatcherStatus status);
-
-                        OnFileDeleted(e);
+                        try
+                        {
+                            OnFileDeletedAsync(e).Wait();
+                            _logger.LogInformation($"[Deleted] File {e.FullPath} invoke success");
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogInformation($"[Deleted] File {e.FullPath} invoke error. {ex.Message}");
+                        }
                         break;
                     case WatcherChangeTypes.Changed:
                         FileAttributes attr = File.GetAttributes(e.FullPath);
@@ -169,15 +176,23 @@ namespace Juice.BgService.FileWatcher
                     Monitoring.TryAdd(e.FullPath, oldStatus != FileWatcherStatus.Monitoring ? oldStatus : FileWatcherStatus.Changed);
                     Monitoring.TryRemove(e.OldFullPath, out oldStatus);
                 }
-                OnFileRenamed(e);
+                try
+                {
+                    OnFileRenamedAsync(e).Wait();
+                    _logger.LogInformation($"[Renamed] File {e.FullPath} invoke success");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogInformation($"[Renamed] File {e.FullPath} invoke error. {ex.Message}");
+                }
             }
         }
 
-        public abstract void OnFileRenamed(RenamedEventArgs e);
+        public abstract Task OnFileRenamedAsync(RenamedEventArgs e);
 
-        public abstract void OnFileDeleted(FileSystemEventArgs e);
+        public abstract Task OnFileDeletedAsync(FileSystemEventArgs e);
 
-        public abstract Task<OperationResult> OnFileReadyAsync(string fullPath);
+        public abstract Task OnFileReadyAsync(string fullPath);
 
         protected async Task<bool> FileIsReadyAsync(string filePath, int timeout = 5000)
         {
@@ -245,14 +260,14 @@ namespace Juice.BgService.FileWatcher
                 Monitoring.TryRemove(fullPath, out FileWatcherStatus status);
 
                 _logger.LogInformation($"File {fullPath} is ready");
-                var invokeState = await OnFileReadyAsync(fullPath);
-                if (invokeState.Succeeded)
+                try
                 {
-                    _logger.LogInformation($"File {fullPath} invoke success");
+                    await OnFileReadyAsync(fullPath);
+                    _logger.LogInformation($"[Ready] File {fullPath} invoke success");
                 }
-                else
+                catch (Exception ex)
                 {
-                    _logger.LogInformation($"File {fullPath} invoke error. {invokeState.ToString()}");
+                    _logger.LogInformation($"[Ready] File {fullPath} invoke error. {ex.Message}");
                 }
             }
             else
