@@ -2,17 +2,19 @@
 using System.IO;
 using System.Threading.Tasks;
 using Juice.BgService.FileWatcher;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 namespace Juice.BgService.Tests
 {
     public class WatchFolderService : FileWatcherService
     {
-        public WatchFolderService(ILogger<WatchFolderService> logger, IOptions<FileWatcherServiceOptions> options) : base(logger)
+        public WatchFolderService(IServiceProvider serviceProvider) : base(serviceProvider)
         {
-            _options = options.Value;
+            _options = serviceProvider.GetRequiredService<IOptions<FileWatcherServiceOptions>>().Value;
         }
+
+        public override Task<(bool Healthy, string Message)> HealthCheckAsync() => throw new NotImplementedException();
 
         public override async Task OnFileDeletedAsync(FileSystemEventArgs e)
         {
@@ -27,6 +29,9 @@ namespace Juice.BgService.Tests
             Console.WriteLine("File renamed {0}", e.FullPath);
         }
 
-        protected override void Cleanup() => throw new NotImplementedException();
+        protected override void Cleanup()
+        {
+            Console.WriteLine("Cleanup");
+        }
     }
 }

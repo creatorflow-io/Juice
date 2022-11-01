@@ -5,9 +5,11 @@
     <Nullable>enable</Nullable>
 
     <IsPackable>false</IsPackable>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Juice.BgService.Api\Juice.BgService.Api.csproj" />
     <ProjectReference Include="..\..\src\Juice.BgService\Juice.BgService.csproj" />
   </ItemGroup>
 

@@ -26,9 +26,9 @@
     {
         public bool RunOnStartup { get; set; }
         public OccursType Occurs { get; set; }
-        public DailyFrequency Daily { get; set; } = new DailyFrequency();
-        public WeeklyFrequency Weekly { get; set; } = new WeeklyFrequency();
-        public MonthlyFrequency Monthly { get; set; } = new MonthlyFrequency();
+        public DailyFrequency Daily { get; set; }
+        public WeeklyFrequency Weekly { get; set; }
+        public MonthlyFrequency Monthly { get; set; }
         private bool _occurred;
         public bool IsOccurred => _occurred;
         public void Occurred()
