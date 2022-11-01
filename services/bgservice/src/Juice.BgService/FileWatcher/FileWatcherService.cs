@@ -1,5 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
+using Juice.BgService.Extensions;
+using Juice.Extensions;
 using Microsoft.Extensions.Logging;
 
 namespace Juice.BgService.FileWatcher
@@ -9,7 +11,7 @@ namespace Juice.BgService.FileWatcher
         protected FileWatcherServiceOptions? _options;
 
         public ConcurrentDictionary<string, FileWatcherStatus> Monitoring = new ConcurrentDictionary<string, FileWatcherStatus>();
-        public FileWatcherService(ILogger logger) : base(logger)
+        public FileWatcherService(IServiceProvider serviceProvider) : base(serviceProvider)
         {
         }
 
@@ -19,8 +21,7 @@ namespace Juice.BgService.FileWatcher
             var filter = _options?.FileFilter;
             if (string.IsNullOrEmpty(monitorPath))
             {
-                _logger.LogError("MonitorPath was not configured");
-                State = ServiceState.Stopped;
+                SetState(ServiceState.Stopped, "MonitorPath was not configured");
             }
             try
             {
@@ -33,8 +34,8 @@ namespace Juice.BgService.FileWatcher
             }
             catch (Exception ex)
             {
-                _logger.LogError($"MonitorPath cannot access {ex.Message}");
-                State = ServiceState.StoppedUnexpectedly;
+                SetState(ServiceState.StoppedUnexpectedly, "MonitorPath cannot be access");
+                Message = ex.Message;
                 return;
             }
             State = ServiceState.Waiting;
@@ -61,12 +62,16 @@ namespace Juice.BgService.FileWatcher
 
                 // Begin watching.
                 watcher.EnableRaisingEvents = true;
-                _logger.LogInformation($"Begin watching folder: {monitorPath}, filter: {filter}");
+                Message = $"Begin watching folder: {monitorPath}, filter: {filter}";
 
                 try
                 {
-                    while (!_shutdown.IsCancellationRequested && State != ServiceState.Stopping && State != ServiceState.RestartPending)
+                    while (!_stopRequest.IsCancellationRequested)
                     {
+                        if (State == ServiceState.Stopping || State == ServiceState.Restarting || State == ServiceState.RestartPending)
+                        {
+                            break;
+                        }
                         foreach (var kvp in Monitoring)
                         {
                             if (Monitoring.TryGetValue(kvp.Key, out FileWatcherStatus status) &&
@@ -87,27 +92,17 @@ namespace Juice.BgService.FileWatcher
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex,
-                        $"Error occurred invoke job. CancellationRequested={_shutdown.IsCancellationRequested}, StopPending={State != ServiceState.Stopping}");
+                    _logger.FailedToInvoke(ex.Message, ex);
                 }
             }
-            if (_shutdown.IsCancellationRequested || State == ServiceState.Stopping || State == ServiceState.RestartPending)
+            if (_shutdown.IsCancellationRequested || State == ServiceState.Stopping
+                || State == ServiceState.Restarting || State == ServiceState.RestartPending)
             {
-                if (State == ServiceState.RestartPending)
-                {
-                    State = ServiceState.Restarting;
-                    _logger.LogInformation("Service restart.");
-                }
-                else
-                {
-                    State = ServiceState.Stopped;
-                    _logger.LogInformation("Service stopped successfully.");
-                }
+                State = ServiceState.Stopped;
             }
             else
             {
                 State = ServiceState.StoppedUnexpectedly;
-                _logger.LogError("Service stopped unexpectedly.");
             }
         }
 
@@ -120,21 +115,21 @@ namespace Juice.BgService.FileWatcher
                 switch (e.ChangeType)
                 {
                     case WatcherChangeTypes.Created:
-                        _logger.LogInformation($"File: {e.FullPath} {e.ChangeType}");
+                        _logger.FileChanged(e.FullPath, e.ChangeType.DisplayValue());
                         Monitoring.TryAdd(e.FullPath, FileWatcherStatus.Created);
                         break;
                     case WatcherChangeTypes.Deleted:
-                        _logger.LogInformation($"File: {e.FullPath} {e.ChangeType}");
+                        _logger.FileChanged(e.FullPath, e.ChangeType.DisplayValue());
 
                         Monitoring.TryRemove(e.FullPath, out FileWatcherStatus status);
                         try
                         {
                             OnFileDeletedAsync(e).Wait();
-                            _logger.LogInformation($"[Deleted] File {e.FullPath} invoke success");
+                            _logger.FileProcessed("Deleted", e.FullPath);
                         }
                         catch (Exception ex)
                         {
-                            _logger.LogInformation($"[Deleted] File {e.FullPath} invoke error. {ex.Message}");
+                            _logger.FileProcessedFailure("Deleted", e.FullPath, ex);
                         }
                         break;
                     case WatcherChangeTypes.Changed:
@@ -142,7 +137,7 @@ namespace Juice.BgService.FileWatcher
                         var isDirectory = (attr & FileAttributes.Directory) == FileAttributes.Directory;
                         if (!isDirectory && e.ChangeType == WatcherChangeTypes.Changed)
                         {
-                            _logger.LogInformation($"File: {e.FullPath} {e.ChangeType}");
+                            _logger.FileChanged(e.FullPath, e.ChangeType.DisplayValue());
 
                             if (Monitoring.ContainsKey(e.FullPath) && Monitoring.TryGetValue(e.FullPath, out FileWatcherStatus mstatus)
                                 && (mstatus == FileWatcherStatus.Changed || mstatus == FileWatcherStatus.NotReady))
@@ -170,7 +165,7 @@ namespace Juice.BgService.FileWatcher
                 || Regex.IsMatch(e.FullPath, filter, RegexOptions.IgnoreCase)
                 || Regex.IsMatch(e.OldFullPath, filter, RegexOptions.IgnoreCase))
             {
-                _logger.LogInformation($"File: {e.OldFullPath} renamed to {e.FullPath}");
+                _logger.FileRenamed(e.OldFullPath, e.FullPath);
                 if (Monitoring.ContainsKey(e.OldFullPath) && Monitoring.TryGetValue(e.OldFullPath, out FileWatcherStatus oldStatus))
                 {
                     Monitoring.TryAdd(e.FullPath, oldStatus != FileWatcherStatus.Monitoring ? oldStatus : FileWatcherStatus.Changed);
@@ -179,11 +174,11 @@ namespace Juice.BgService.FileWatcher
                 try
                 {
                     OnFileRenamedAsync(e).Wait();
-                    _logger.LogInformation($"[Renamed] File {e.FullPath} invoke success");
+                    _logger.FileProcessed("Renamed", e.FullPath);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogInformation($"[Renamed] File {e.FullPath} invoke error. {ex.Message}");
+                    _logger.FileProcessedFailure("Renamed", e.FullPath, ex);
                 }
             }
         }
@@ -243,12 +238,12 @@ namespace Juice.BgService.FileWatcher
             {
                 if (Monitoring.ContainsKey(fullPath))
                 {
-                    _logger.LogInformation($"File {fullPath} is not ready");
+                    Logging($"File {fullPath} is not ready", LogLevel.Debug);
                     Monitoring.TryUpdate(fullPath, FileWatcherStatus.NotReady, FileWatcherStatus.Monitoring);
                 }
                 else
                 {
-                    _logger.LogInformation($"File {fullPath} not exist in monitoring list");
+                    Logging($"File {fullPath} not exist in monitoring list", LogLevel.Debug);
                 }
             }
         }
@@ -259,20 +254,21 @@ namespace Juice.BgService.FileWatcher
             {
                 Monitoring.TryRemove(fullPath, out FileWatcherStatus status);
 
-                _logger.LogInformation($"File {fullPath} is ready");
+                Logging($"File {fullPath} is ready", LogLevel.Debug);
                 try
                 {
                     await OnFileReadyAsync(fullPath);
-                    _logger.LogInformation($"[Ready] File {fullPath} invoke success");
+
+                    _logger.FileProcessed("Ready", fullPath);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogInformation($"[Ready] File {fullPath} invoke error. {ex.Message}");
+                    _logger.FileProcessedFailure("Ready", fullPath, ex);
                 }
             }
             else
             {
-                _logger.LogInformation($"File {fullPath} not exist in monitoring list");
+                Logging($"File {fullPath} not exist in monitoring list", LogLevel.Debug);
             }
         }
 

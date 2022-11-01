@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Juice.BgService.Extensions;
 
 namespace Juice.BgService.Scheduled
 {
@@ -9,10 +9,13 @@ namespace Juice.BgService.Scheduled
 
         public bool SkipWaiting { get; protected set; }
 
-        private ScheduledServiceOptions _scheduleOptions = new ScheduledServiceOptions().OccursInterval(TimeSpan.FromSeconds(10));
+        private CancellationTokenSource _waitCancel;
+
+
+        private ScheduledServiceOptions _scheduleOptions = new ScheduledServiceOptions();
         public virtual ScheduledServiceOptions ScheduleOptions => _scheduleOptions;
 
-        public ScheduledService(ILogger logger) : base(logger)
+        public ScheduledService(IServiceProvider serviceProvider) : base(serviceProvider)
         {
         }
 
@@ -20,12 +23,16 @@ namespace Juice.BgService.Scheduled
         {
             var lastLog = DateTimeOffset.Now;
             _nextProcessing = ScheduleOptions.Frequencies.NextOccursAt(null, true);
-            _logger.LogInformation("Starting service...");
+            _waitCancel = CancellationTokenSource.CreateLinkedTokenSource(_stopRequest.Token);
 
-            while (!_shutdown.IsCancellationRequested && State != ServiceState.Stopping && State != ServiceState.RestartPending)
+            while (!_stopRequest.IsCancellationRequested)
             {
                 try
                 {
+                    if (State == ServiceState.Stopping || State == ServiceState.Restarting || State == ServiceState.RestartPending)
+                    {
+                        break;
+                    }
                     if (_nextProcessing.HasValue && _nextProcessing <= DateTimeOffset.Now)
                     {
                         _nextProcessing = ScheduleOptions.Frequencies.NextOccursAt(_nextProcessing);
@@ -34,8 +41,7 @@ namespace Juice.BgService.Scheduled
                         var invokeState = await InvokeAsync();
                         if (!invokeState.Succeeded)
                         {
-                            _logger.LogError(
-                                $"Error occurred invoke service. {invokeState.Message}");
+                            _logger.FailedToInvoke(invokeState.Message, default!);
                         }
 
                         if (ScheduleOptions.Frequencies.Any(f => f.Occurs == OccursType.Once))
@@ -57,7 +63,7 @@ namespace Juice.BgService.Scheduled
                         {
                             SkipWaiting = false;
                             _nextProcessing = DateTimeOffset.Now;
-                            await Task.Delay(300);
+                            await Task.Delay(300, _stopRequest.Token);
                             continue;
                         }
                         else
@@ -83,35 +89,26 @@ namespace Juice.BgService.Scheduled
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex,
-                        $"Error occurred invoke job. CancellationRequested={_shutdown.IsCancellationRequested}, State={State}");
+                    _logger.FailedToInvoke(ex.Message, ex);
                 }
             }
-            if (_shutdown.IsCancellationRequested || State == ServiceState.Stopping || State == ServiceState.RestartPending)
+            if (_shutdown.IsCancellationRequested || State == ServiceState.Stopping
+                || State == ServiceState.Restarting || State == ServiceState.RestartPending)
             {
-                if (State == ServiceState.RestartPending)
-                {
-                    State = ServiceState.Restarting;
-                    _logger.LogInformation("Service restart.");
-                }
-                else
-                {
-                    State = ServiceState.Stopped;
-                    _logger.LogInformation("Service stopped successfully.");
-                }
+                State = ServiceState.Stopped;
             }
             else
             {
                 State = ServiceState.StoppedUnexpectedly;
-                _logger.LogError("Service stopped unexpectedly.");
             }
         }
 
-        private CancellationTokenSource _waitCancel = new CancellationTokenSource();
-
         private async Task WaitAsync()
         {
-            _waitCancel = CancellationTokenSource.CreateLinkedTokenSource(_shutdown.Token);
+            if (State == ServiceState.Stopping || State == ServiceState.Restarting || State == ServiceState.RestartPending)
+            {
+                return;
+            }
             State = ServiceState.Scheduled;
             try
             {
@@ -145,6 +142,10 @@ namespace Juice.BgService.Scheduled
 
         public abstract Task<(bool Succeeded, string? Message)> InvokeAsync();
 
+        protected override void Cleanup()
+        {
+            _waitCancel?.Dispose();
+        }
     }
 
 }

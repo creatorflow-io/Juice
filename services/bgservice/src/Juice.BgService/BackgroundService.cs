@@ -1,9 +1,11 @@
-﻿using Microsoft.Extensions.Hosting;
+﻿using Juice.BgService.Extensions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace Juice.BgService
 {
-    public abstract class BackgroundService : IDisposable, IHostedService, IManagedService
+    public abstract class BackgroundService : IHostedService, IManagedService
     {
         public virtual Guid Id { get; protected set; } = Guid.NewGuid();
 
@@ -11,21 +13,22 @@ namespace Juice.BgService
 
         protected string? _message;
         public string? Message { get => _message; protected set { _message = value; TriggerChanged(nameof(Message)); } }
-        public string? Data { get; protected set; }
+        public string? Data { get; private set; }
 
         protected static int globalCounter = 0;
 
         protected ILogger _logger;
+        protected CancellationTokenSource _stopRequest;
         protected CancellationTokenSource _shutdown;
         protected Task? _backgroundTask;
 
-        protected readonly object stateLock = new object();
+        protected readonly object _stateLock = new();
         protected ServiceState _state;
         public ServiceState State
         {
             get
             {
-                lock (stateLock)
+                lock (_stateLock)
                 {
                     return _state;
                 }
@@ -33,133 +36,183 @@ namespace Juice.BgService
             protected set
             {
                 var changed = _state != value;
-                lock (stateLock)
+                lock (_stateLock)
                 {
                     _state = value;
+                    _message = default;
                 }
                 if (changed) TriggerChanged(nameof(State));
             }
         }
 
-        public BackgroundService(ILogger logger)
+        internal bool _restartFlag = false;
+
+        public bool NeedStart => _restartFlag;
+
+        public BackgroundService(IServiceProvider serviceProvider)
         {
-            _logger = logger;
-            _state = ServiceState.Empty;
-            _shutdown = new CancellationTokenSource();
-            _backgroundTask = Task.CompletedTask;
+            _logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(GetType());
+            OnChanged += BackgroundService_OnChanged;
             Interlocked.Increment(ref globalCounter);
         }
 
-        public virtual Task StartAsync(CancellationToken cancellationToken)
+        internal bool IsNotRunning()
         {
-            if (!State.IsInWorkingStates())
-            {
-                _logger.LogInformation("Service is starting");
-                State = ServiceState.Starting;
-                _shutdown = new CancellationTokenSource();
-                _backgroundTask = Task.Run(ExecuteAsync);
-                _logger.LogInformation("Service has started");
-            }
-            return Task.CompletedTask;
+            return this.IsStopped()
+                || _backgroundTask == null;
         }
 
-        protected abstract Task ExecuteAsync();
-
-        public virtual async Task StopAsync(CancellationToken cancellationToken)
-        {
-            if (_backgroundTask == null || State == ServiceState.Stopped || State == ServiceState.StoppedUnexpectedly)
-
-            {
-                if (State != ServiceState.Stopped && State != ServiceState.StoppedUnexpectedly)
-                {
-                    State = ServiceState.Stopped;
-                }
-                _logger.LogInformation("Service already stopped.");
-            }
-
-            else
-            {
-                _logger.LogInformation("Service is stopping...");
-
-                State = ServiceState.Stopping;
-                _shutdown.Cancel();
-
-                await Task.WhenAny(_backgroundTask,
-                    Task.Delay(Timeout.Infinite, cancellationToken));
-                if (_backgroundTask.Status == TaskStatus.RanToCompletion || _backgroundTask.Status == TaskStatus.Canceled || _backgroundTask.Status == TaskStatus.Faulted)
-                {
-                    State = ServiceState.Stopped;
-                    _logger.LogInformation($"Service stopped. {_backgroundTask.Status}");
-                }
-            }
-        }
-
-        public virtual void SetState(ServiceState state, string message, string data)
+        public virtual void SetState(ServiceState state, string? message, string? data = default)
         {
             var stateChanged = false;
-            lock (stateLock)
+            lock (_stateLock)
             {
                 stateChanged = _state != state;
                 _state = state;
             }
 
+            if (state == ServiceState.RestartPending)
+            {
+                _restartFlag = true;
+            }
+
+            var messageChanged = _message != message;
             _message = message;
             Data = data;
             if (stateChanged)
             {
                 TriggerChanged(nameof(State));
             }
+            else if (messageChanged)
+            {
+                TriggerChanged(nameof(Message));
+            }
         }
 
-        public virtual async Task RestartAsync(CancellationToken cancellationToken)
+        public virtual void SetDescription(string description)
         {
-            State = ServiceState.Restarting;
-            await StopAsync(cancellationToken);
-            await StartAsync(default(CancellationToken));
+            Description = description;
+        }
+
+        public virtual Task StartAsync(CancellationToken cancellationToken)
+        {
+            if (!_restartFlag)
+            {
+                Message = "Service received a start command.";
+            }
+            _restartFlag = false;
+            if (!State.IsInWorkingStates() || State == ServiceState.Restarting)
+            {
+                State = ServiceState.Starting;
+                _shutdown = new CancellationTokenSource();
+                _stopRequest = CancellationTokenSource.CreateLinkedTokenSource(_shutdown.Token);
+                _backgroundTask = Task.Run(ExecuteAsync);
+                Message = "Service has started";
+            }
+            return Task.CompletedTask;
+        }
+
+        public virtual async Task StopAsync(CancellationToken cancellationToken)
+        {
+            if (!_restartFlag)
+            {
+                Message = "Service received a stop command.";
+            }
+
+            if (IsNotRunning())
+            {
+                Message = "Service is already stopped.";
+                if (State != ServiceState.Stopped && State != ServiceState.StoppedUnexpectedly)
+                {
+                    State = ServiceState.Stopped;
+                }
+                return;
+            }
+
+            State = ServiceState.Stopping;
+
+            _shutdown.Cancel();
+
+            await Task.WhenAny(_backgroundTask,
+                Task.Delay(Timeout.Infinite, cancellationToken));
+
         }
 
         public virtual Task RequestStopAsync(CancellationToken cancellationToken)
         {
-            if (State == ServiceState.Waiting || State == ServiceState.Scheduled)
+            if (!_restartFlag)
             {
-                return StopAsync(cancellationToken);
+                Message = "Service received a stop request.";
             }
 
-            _logger.LogInformation("Service stop pending...");
-            if (_backgroundTask == null || State == ServiceState.Stopped)
+            if (IsNotRunning())
             {
-                _logger.LogInformation("Service stopped.");
-                State = ServiceState.Stopped;
+                Message = "Service is already stopped.";
+                if (State != ServiceState.Stopped && State != ServiceState.StoppedUnexpectedly)
+                {
+                    State = ServiceState.Stopped;
+                }
                 return Task.CompletedTask;
             }
-            State = State == ServiceState.RestartPending ? State : ServiceState.Stopping;
+
+            State = ServiceState.Stopping;
+
+            _stopRequest.Cancel();
             return Task.CompletedTask;
         }
 
-        public virtual async Task RequestRestartAsync(CancellationToken cancellationToken)
+        protected abstract Task ExecuteAsync();
+
+        public abstract Task<(bool Healthy, string Message)> HealthCheckAsync();
+
+        #region Logging
+        public virtual void Logging(string message, LogLevel level = LogLevel.Information)
         {
-            if (State != ServiceState.Restarting && State != ServiceState.RestartPending)
+            if (_logger.IsEnabled(level))
             {
-                State = ServiceState.RestartPending;
-                await RequestStopAsync(cancellationToken);
+                _logger.Log(level, message);
             }
         }
+        #endregion
 
         #region Events
 
         public event EventHandler<ServiceEventArgs>? OnChanged;
 
+        private void BackgroundService_OnChanged(object? sender, ServiceEventArgs e)
+        {
+            if (sender is IManagedService managedService && e.EventName == "State"
+                 && (e.State == ServiceState.Stopped || e.State == ServiceState.StoppedUnexpectedly)
+            )
+            {
+                try
+                {
+                    Cleanup();
+                }
+                catch (NotImplementedException) { }
+                if (managedService.NeedStart)
+                {
+                    Task.Delay(500).Wait();
+                    managedService.StartAsync(default).Wait();
+                }
+            }
+        }
+
+
         protected virtual void TriggerChanged(string eventName)
         {
+            var evt = new ServiceEventArgs(eventName, Id, Description, State, Message, Data);
+
+            _logger.ServiceChanged(evt);
+
             var handler = OnChanged;
             if (handler != null)
             {
-                handler(this, new ServiceEventArgs(eventName, Id, Description, State, Message, Data));
+                handler(this, evt);
             }
         }
 
         #endregion
-
 
         #region IDisposable Support
 
@@ -176,8 +229,10 @@ namespace Juice.BgService
                     //  dispose managed state (managed objects).
                     try
                     {
+                        _stopRequest?.Dispose();
                         _shutdown?.Dispose();
                         _backgroundTask?.Dispose();
+                        OnChanged -= OnChanged;
                     }
                     catch { }
                     try

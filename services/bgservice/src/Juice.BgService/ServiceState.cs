@@ -22,31 +22,46 @@
         /// Service is processing a job
         /// </summary>
         Processing = 4,
-        Suspending = 5,
-        Suspended = 6,
-        Resuming = 7,
-        Stopping = 8,
-        Stopped = 9,
-        StoppedUnexpectedly = 10,
-        RestartPending = 11,
-        Restarting = 12
+        /// <summary>
+        /// Service is working properly
+        /// </summary>
+        Running = 5,
+        Suspending = 6,
+        Suspended = 7,
+        Resuming = 8,
+        Stopping = 9,
+        Stopped = 10,
+        StoppedUnexpectedly = 11,
+        RestartPending = 12,
+        Restarting = 13
     }
 
     public static class ServiceStateExtensions
     {
-        private static ServiceState[] _workingStates = new ServiceState[] {
+        private static readonly ServiceState[] _workingStates = new ServiceState[] {
             ServiceState.Starting,
             ServiceState.Waiting,
             ServiceState.Scheduled,
             ServiceState.Processing,
+            ServiceState.Running,
             ServiceState.Resuming,
             ServiceState.RestartPending,
             ServiceState.Restarting
         };
 
+
+        private static readonly ServiceState[] _failureStates = new ServiceState[] {
+            ServiceState.StoppedUnexpectedly
+        };
+
         public static bool IsInWorkingStates(this ServiceState state)
         {
             return _workingStates.Contains(state);
+        }
+
+        public static bool IsInFailureStates(this ServiceState state)
+        {
+            return _failureStates.Contains(state);
         }
     }
 }
