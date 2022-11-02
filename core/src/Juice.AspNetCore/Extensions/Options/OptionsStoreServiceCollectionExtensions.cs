@@ -8,7 +8,7 @@ namespace Juice.Extensions.Options
     {
         public static IServiceCollection UseDefaultOptionsMutableStore(this IServiceCollection services, string? file = default)
         {
-            services.TryAddScoped<IOptionsMutableStore>(sp =>
+            services.TryAddTransient<IOptionsMutableStore>(sp =>
             {
                 var env = sp.GetRequiredService<IWebHostEnvironment>();
                 return new DefaultOptionsMutableStore(env, file);
@@ -18,7 +18,7 @@ namespace Juice.Extensions.Options
 
         public static IServiceCollection UseDefaultOptionsMutableStore<T>(this IServiceCollection services, string? file = default)
         {
-            services.TryAddScoped<IOptionsMutableStore<T>>(sp =>
+            services.TryAddTransient<IOptionsMutableStore<T>>(sp =>
             {
                 var env = sp.GetRequiredService<IWebHostEnvironment>();
                 return new DefaultOptionsMutableStore<T>(env, file);
