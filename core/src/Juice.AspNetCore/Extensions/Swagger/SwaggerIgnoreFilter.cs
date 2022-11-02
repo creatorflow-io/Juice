@@ -2,7 +2,7 @@
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
-namespace Juice.Swagger
+namespace Juice.Extensions.Swagger
 {
     /// <summary>
     /// If you wan to ignore property in swagger doc but need property for JSON serialize/deserialize

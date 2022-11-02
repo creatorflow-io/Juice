@@ -2,7 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace Juice.GraphQL
+namespace Juice.Extensions.GraphQL
 {
     public static class GraphQLServiceCollectionExtensions
     {
