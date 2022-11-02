@@ -13,7 +13,7 @@ namespace Juice.Extensions.Configuration
         /// <typeparam name="T"></typeparam>
         /// <param name="configuration"></param>
         /// <returns>T object</returns>
-        public static T GetScalaredConfig<T>(this IConfigurationSection configuration)
+        public static T? GetScalaredConfig<T>(this IConfigurationSection configuration)
         {
             ExpandoObject obj = GetExpandoObject(configuration);
             var json = JsonConvert.SerializeObject(obj);

@@ -9,6 +9,7 @@
     <Import_RootNamespace>Juice.XUnit</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)IgnoreOnCIFactAttribute.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)PriorityOrderer.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)TestOutputLogger.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)TestPriorityAttribute.cs" />

@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Juice.Extensions.DependencyInjection;
 using Juice.Storage.Abstractions;
+using Juice.XUnit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit;
@@ -13,12 +14,10 @@ namespace Juice.Storage.Tests
 {
     public class LocalStorageTest
     {
-        private bool _test = false;
         private readonly ITestOutputHelper _output;
         private readonly IServiceProvider _serviceProvider;
         public LocalStorageTest(ITestOutputHelper testOutput)
         {
-            _test = _test = !"true".Equals(Environment.GetEnvironmentVariable("CI"));
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
             _output = testOutput;
             var resolver = new DependencyResolver
@@ -49,13 +48,9 @@ namespace Juice.Storage.Tests
             _serviceProvider = resolver.ServiceProvider;
         }
 
-        [Fact(DisplayName = "File not exists and should be create")]
+        [IgnoreOnCIFact(DisplayName = "File not exists and should be create")]
         public async Task File_should_create_Async()
         {
-            if (!_test)
-            {
-                return;
-            }
 
             var storage = _serviceProvider.GetRequiredService<IStorageProvider>()
                 .Configure(new StorageEndpoint(@"C:\Workspace\Storage", default));
@@ -63,40 +58,28 @@ namespace Juice.Storage.Tests
             await SharedTests.File_should_create_Async(storage);
         }
 
-        [Fact(DisplayName = "File exists and raise an error")]
+        [IgnoreOnCIFact(DisplayName = "File exists and raise an error")]
         public async Task File_create_should_error_Async()
         {
-            if (!_test)
-            {
-                return;
-            }
+
             var storage = _serviceProvider.GetRequiredService<IStorageProvider>()
                  .Configure(new StorageEndpoint(@"C:\Workspace\Storage", default));
 
             await SharedTests.File_create_should_error_Async(storage);
         }
 
-        [Fact(DisplayName = "File exists and add copy number")]
+        [IgnoreOnCIFact(DisplayName = "File exists and add copy number")]
         public async Task File_create_should_add_copy_number_Async()
         {
-            if (!_test)
-            {
-                return;
-            }
-
             var storage = _serviceProvider.GetRequiredService<IStorageProvider>()
                  .Configure(new StorageEndpoint(@"C:\Workspace\Storage", default));
 
             await SharedTests.File_create_should_add_copy_number_Async(storage);
         }
 
-        [Fact(DisplayName = "Network share access with credential")]
+        [IgnoreOnCIFact(DisplayName = "Network share access with credential")]
         public async Task File_create_on_network_Async()
         {
-            if (!_test)
-            {
-                return;
-            }
             var generator = new Services.DefaultStringIdGenerator();
             var file = @"Test\" + generator.GenerateRandomId(26) + ".txt";
             var storage = _serviceProvider.GetRequiredService<IStorageProvider>()
@@ -109,13 +92,9 @@ namespace Juice.Storage.Tests
             await storage.DeleteAsync(createdFile, default);
         }
 
-        [Fact(DisplayName = "Network share is inaccessible")]
+        [IgnoreOnCIFact(DisplayName = "Network share is inaccessible")]
         public async Task File_create_network_inaccessible_Async()
         {
-            if (!_test)
-            {
-                return;
-            }
             var generator = new Services.DefaultStringIdGenerator();
             var file = @"Test\" + generator.GenerateRandomId(26) + ".txt";
             var storage = _serviceProvider.GetRequiredService<IStorageProvider>()

@@ -10,12 +10,12 @@ namespace Juice.Extensions.Options
     /// Implementation for <see cref="IOptionsMutable{T}"/>, use registerd <see cref="IOptionsMutableStore"/> to save change
     /// </summary>
     /// <typeparam name="T"></typeparam>
-	public class OptionsMutable<T> : IOptionsMutable<T> where T : class, new()
+	internal class OptionsMutable<T> : IOptionsMutable<T> where T : class, new()
     {
         private readonly IOptionsMonitor<T> _options;
         private readonly string _section;
         private readonly Action<T> _configureOptions;
-        private readonly ITenant _tenant;
+        private readonly ITenant? _tenant;
         private readonly IOptionsMutableStore _store;
 
         public OptionsMutable(
@@ -24,20 +24,16 @@ namespace Juice.Extensions.Options
             )
         {
             _tenant = provider.GetService<ITenant>();
-            _store = provider.GetRequiredService<IOptionsMutableStore>();
-            _options = provider.GetService<IOptionsMonitor<T>>();
+            _store = provider.GetService<IOptionsMutableStore<T>>() ?? provider.GetRequiredService<IOptionsMutableStore>();
+            _options = provider.GetRequiredService<IOptionsMonitor<T>>();
             _section = section;
         }
 
         public OptionsMutable(
             IServiceProvider provider,
             string section,
-            Action<T> configureOptions)
+            Action<T> configureOptions) : this(provider, section)
         {
-            _tenant = provider.GetService<ITenant>();
-            _store = provider.GetRequiredService<IOptionsMutableStore>();
-            _options = provider.GetService<IOptionsMonitor<T>>();
-            _section = section;
             _configureOptions = configureOptions;
         }
 
@@ -94,7 +90,10 @@ namespace Juice.Extensions.Options
                     _updatedValue = sectionObject;
                 });
 
-                await _tenant.TriggerConfigurationChangedAsync();
+                if (_tenant != null)
+                {
+                    await _tenant.TriggerConfigurationChangedAsync();
+                }
                 _valueUpdated = true;
 
                 return true;
