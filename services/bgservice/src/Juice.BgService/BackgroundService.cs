@@ -1,5 +1,4 @@
 ﻿using Juice.BgService.Extensions;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -18,6 +17,7 @@ namespace Juice.BgService
         protected static int globalCounter = 0;
 
         protected ILogger _logger;
+        private IDisposable _logScope;
         protected CancellationTokenSource _stopRequest;
         protected CancellationTokenSource _shutdown;
         protected Task? _backgroundTask;
@@ -49,9 +49,9 @@ namespace Juice.BgService
 
         public bool NeedStart => _restartFlag;
 
-        public BackgroundService(IServiceProvider serviceProvider)
+        public BackgroundService(ILogger logger)
         {
-            _logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(GetType());
+            _logger = logger;
             OnChanged += BackgroundService_OnChanged;
             Interlocked.Increment(ref globalCounter);
         }
@@ -92,6 +92,7 @@ namespace Juice.BgService
         public virtual void SetDescription(string description)
         {
             Description = description;
+            InitLogScope();
         }
 
         public virtual Task StartAsync(CancellationToken cancellationToken)
@@ -166,6 +167,23 @@ namespace Juice.BgService
         public abstract Task<(bool Healthy, string Message)> HealthCheckAsync();
 
         #region Logging
+
+        protected virtual List<KeyValuePair<string, object>> CreateLogScope()
+        {
+            return new List<KeyValuePair<string, object>>
+            {
+                new KeyValuePair<string, object>("ServiceId", Id),
+                new KeyValuePair<string, object>("ServiceType", GetType()?.FullName ?? ""),
+                new KeyValuePair<string, object>("ServiceDescription", Description)
+            };
+        }
+
+        internal void InitLogScope()
+        {
+            _logScope?.Dispose();
+            _logScope = _logger.BeginScope(CreateLogScope());
+        }
+
         public virtual void Logging(string message, LogLevel level = LogLevel.Information)
         {
             if (_logger.IsEnabled(level))
@@ -232,6 +250,7 @@ namespace Juice.BgService
                         _stopRequest?.Dispose();
                         _shutdown?.Dispose();
                         _backgroundTask?.Dispose();
+                        _logScope?.Dispose();
                         OnChanged -= OnChanged;
                     }
                     catch { }

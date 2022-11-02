@@ -1,4 +1,5 @@
 ﻿using Juice.BgService.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace Juice.BgService.Scheduled
 {
@@ -15,7 +16,7 @@ namespace Juice.BgService.Scheduled
         private ScheduledServiceOptions _scheduleOptions = new ScheduledServiceOptions();
         public virtual ScheduledServiceOptions ScheduleOptions => _scheduleOptions;
 
-        public ScheduledService(IServiceProvider serviceProvider) : base(serviceProvider)
+        public ScheduledService(ILogger logger) : base(logger)
         {
         }
 
