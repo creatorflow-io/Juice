@@ -24,12 +24,14 @@ namespace Juice.BgService.Management.Extensions
         public static IServiceCollection UseFileStore(this IServiceCollection services,
             IConfigurationSection configuration)
         {
-
             services.ConfigureMutable<FileStoreOptions>(configuration,
                 options =>
                 {
                     var cfg = configuration.GetScalaredConfig<FileStoreOptions>();
-                    options.Services = cfg.Services;
+                    if (cfg != null)
+                    {
+                        options.Services = cfg.Services;
+                    }
                 });
             services.AddSingleton<IServiceStore, FileStore>();
 

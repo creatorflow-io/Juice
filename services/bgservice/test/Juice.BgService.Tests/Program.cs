@@ -1,7 +1,8 @@
 ﻿using Juice.BgService.Api.Extensions;
 using Juice.BgService.FileWatcher;
 using Juice.BgService.Management.Extensions;
-using Juice.BgService.Tests;
+using Juice.Extensions.Options;
+using Juice.Extensions.Swagger;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -9,14 +10,15 @@ using Microsoft.Extensions.Hosting;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-//builder.Services.AddTransient<RecurringService>();
 
 builder.Services.Configure<FileWatcherServiceOptions>(options => { options.MonitorPath = @"C:\Workspace\WatchFolder"; options.FileFilter = "."; });
 
-builder.Services.AddTransient<WatchFolderService>();
-
 builder.Services.AddBgService(builder.Configuration.GetSection("BackgroundService"))
     .UseFileStore(builder.Configuration.GetSection("File"));
+
+builder.SeparateStoreFile("Store");
+
+builder.Services.UseDefaultOptionsMutableStore();
 
 builder.Services.AddControllers();
 
