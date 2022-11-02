@@ -34,9 +34,10 @@ namespace Juice.MediatR.Tests
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
         }
 
-        [Fact(DisplayName = "Contents schema migration"), TestPriority(10)]
+        [IgnoreOnCIFact(DisplayName = "Contents schema migration"), TestPriority(10)]
         public async Task ContentsSchemaMigrationAsync()
         {
+
             var resolver = new DependencyResolver
             {
                 CurrentDirectory = AppContext.BaseDirectory
@@ -87,7 +88,7 @@ namespace Juice.MediatR.Tests
             }
         }
 
-        [Fact(DisplayName = "Cms schema migration"), TestPriority(9)]
+        [IgnoreOnCIFact(DisplayName = "Cms schema migration"), TestPriority(9)]
         public async Task CmsSchemaMigrationAsync()
         {
             var resolver = new DependencyResolver
@@ -140,7 +141,7 @@ namespace Juice.MediatR.Tests
             }
         }
 
-        [Fact(DisplayName = "Test RequestManager"), TestPriority(1)]
+        [IgnoreOnCIFact(DisplayName = "Test RequestManager"), TestPriority(1)]
         public async Task EventLogServiceTestAsync()
         {
             var resolver = new DependencyResolver

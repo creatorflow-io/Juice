@@ -62,7 +62,7 @@ namespace Juice.EF.Tests
             _logger = _serviceProvider.GetRequiredService<ILogger<EFTest>>();
         }
 
-        [Fact(DisplayName = "DynamicEntity migration"), TestPriority(10)]
+        [IgnoreOnCIFact(DisplayName = "DynamicEntity migration"), TestPriority(10)]
         public async Task EF_should_be_migration_Async()
         {
             var dbContext = _serviceProvider.GetRequiredService<TestContext>();
@@ -73,7 +73,7 @@ namespace Juice.EF.Tests
 
         }
 
-        [Fact(DisplayName = "DynamicEntity unique Code"), TestPriority(1)]
+        [IgnoreOnCIFact(DisplayName = "DynamicEntity unique Code"), TestPriority(1)]
         public async Task Dynamic_entity_unique_code_Async()
         {
             var dbContext = _serviceProvider.GetRequiredService<TestContext>();
@@ -107,7 +107,7 @@ namespace Juice.EF.Tests
             });
         }
 
-        [Fact(DisplayName = "DynamicEntity update property"), TestPriority(1)]
+        [IgnoreOnCIFact(DisplayName = "DynamicEntity update property"), TestPriority(1)]
         public async Task Dynamic_entity_update_property_Async()
         {
             var dbContext = _serviceProvider.GetRequiredService<TestContext>();

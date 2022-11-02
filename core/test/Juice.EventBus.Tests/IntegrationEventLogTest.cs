@@ -36,7 +36,7 @@ namespace Juice.EventBus.Tests
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
         }
 
-        [Fact(DisplayName = "Contents schema migration"), TestPriority(10)]
+        [IgnoreOnCIFact(DisplayName = "Contents schema migration"), TestPriority(10)]
         public async Task ContentsSchemaMigrationAsync()
         {
             var resolver = new DependencyResolver
@@ -89,7 +89,7 @@ namespace Juice.EventBus.Tests
             }
         }
 
-        [Fact(DisplayName = "Cms schema migration"), TestPriority(9)]
+        [IgnoreOnCIFact(DisplayName = "Cms schema migration"), TestPriority(9)]
         public async Task CmsSchemaMigrationAsync()
         {
             var resolver = new DependencyResolver
@@ -142,7 +142,7 @@ namespace Juice.EventBus.Tests
             }
         }
 
-        [Fact(DisplayName = "Test event log service"), TestPriority(9)]
+        [IgnoreOnCIFact(DisplayName = "Test event log service"), TestPriority(9)]
         public async Task EventLogServiceTestAsync()
         {
             var resolver = new DependencyResolver
@@ -249,7 +249,7 @@ namespace Juice.EventBus.Tests
 
         }
 
-        [Fact(DisplayName = "Test read an event log"), TestPriority(1)]
+        [IgnoreOnCIFact(DisplayName = "Test read an event log"), TestPriority(1)]
         public async Task EventLogReadAsync()
         {
             var resolver = new DependencyResolver

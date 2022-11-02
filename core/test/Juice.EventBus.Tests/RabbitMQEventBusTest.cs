@@ -3,9 +3,9 @@ using System.Threading.Tasks;
 using Juice.EventBus.Tests.Events;
 using Juice.EventBus.Tests.Handlers;
 using Juice.Extensions.DependencyInjection;
+using Juice.XUnit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Xunit;
 using Xunit.Abstractions;
 
 namespace Juice.EventBus.Tests
@@ -21,7 +21,7 @@ namespace Juice.EventBus.Tests
         }
 
 
-        [Fact(DisplayName = "Integration Event with RabbitMQ")]
+        [IgnoreOnCIFact(DisplayName = "Integration Event with RabbitMQ")]
         public async Task IntegrationEventTestAsync()
         {
             var resolver = new DependencyResolver

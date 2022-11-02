@@ -3,9 +3,9 @@ using System.Threading.Tasks;
 using Juice.EventBus.Tests.Events;
 using Juice.EventBus.Tests.Handlers;
 using Juice.Extensions.DependencyInjection;
+using Juice.XUnit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Xunit;
 using Xunit.Abstractions;
 
 namespace Juice.EventBus.Tests
@@ -46,7 +46,7 @@ namespace Juice.EventBus.Tests
             _logger = _serviceProvider.GetRequiredService<ILogger<InMemoryEventBusTest>>();
         }
 
-        [Fact(DisplayName = "IntegrationEvent with InMemory event bus")]
+        [IgnoreOnCIFact(DisplayName = "IntegrationEvent with InMemory event bus")]
         public async Task InMemoryTestAsync()
         {
             var eventBus = _serviceProvider.GetService<IEventBus>();
