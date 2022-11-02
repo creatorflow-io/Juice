@@ -1,4 +1,7 @@
-﻿using Microsoft.AspNetCore.Builder;
+﻿using Juice.BgService.Management.File;
+using Juice.Extensions.Options;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Configuration;
 
 namespace Juice.BgService.Api.Extensions
 {
@@ -11,6 +14,17 @@ namespace Juice.BgService.Api.Extensions
             {
                 c.SwaggerEndpoint("bgservice-v1/swagger.json", "Background Service API V1");
                 c.RoutePrefix = "bgservice/swagger";
+            });
+        }
+
+
+        public static void SeparateStoreFile(this WebApplicationBuilder builder, string name)
+        {
+            builder.Services.UseDefaultOptionsMutableStore<FileStoreOptions>(name);
+
+            builder.Host.ConfigureAppConfiguration((context, config) =>
+            {
+                config.AddJsonFile($"appsettings.{name}.{context.HostingEnvironment.EnvironmentName}.json");
             });
         }
     }

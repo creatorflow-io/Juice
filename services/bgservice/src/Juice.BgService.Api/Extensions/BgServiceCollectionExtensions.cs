@@ -1,4 +1,4 @@
-﻿using Juice.Swagger;
+﻿using Juice.Extensions.Swagger;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
 
@@ -21,5 +21,6 @@ namespace Juice.BgService.Api.Extensions
             });
             return services;
         }
+
     }
 }
