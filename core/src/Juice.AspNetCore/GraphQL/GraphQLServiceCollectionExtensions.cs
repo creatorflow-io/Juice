@@ -1,7 +1,8 @@
 ﻿using GraphQL.Server;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.Extensions.DependencyInjection
+namespace Juice.GraphQL
 {
     public static class GraphQLServiceCollectionExtensions
     {

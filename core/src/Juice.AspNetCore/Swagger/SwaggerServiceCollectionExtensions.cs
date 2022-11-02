@@ -1,6 +1,6 @@
-﻿using Juice.Swagger;
+﻿using Microsoft.Extensions.DependencyInjection;
 
-namespace Microsoft.Extensions.DependencyInjection
+namespace Juice.Swagger
 {
     public static class SwaggerServiceCollectionExtensions
     {
