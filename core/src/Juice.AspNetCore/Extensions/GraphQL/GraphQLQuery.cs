@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json.Linq;
 
-namespace Juice.GraphQL
+namespace Juice.Extensions.GraphQL
 {
     public class GraphQLQuery
     {
