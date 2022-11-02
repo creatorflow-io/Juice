@@ -4,5 +4,6 @@
     {
         event EventHandler<EventArgs> OnChanged;
         Task<IEnumerable<IServiceModel>> GetServicesModelAsync(CancellationToken token);
+
     }
 }

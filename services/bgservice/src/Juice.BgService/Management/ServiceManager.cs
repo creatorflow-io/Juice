@@ -1,5 +1,6 @@
 ﻿using Juice.BgService.Extensions;
 using Juice.Extensions;
+using Juice.Extensions.Options;
 using Microsoft.Extensions.Logging;
 
 namespace Juice.BgService.Management
@@ -12,11 +13,17 @@ namespace Juice.BgService.Management
         public List<IManagedService> ManagedServices => _services;
         private List<IManagedService> _services = new List<IManagedService>();
 
+        private readonly IOptionsMutable<ServiceManagerOptions> _options;
+
+        public override Guid Id => _options.Value.Id;
+
         public ServiceManager(
-            IServiceProvider serviceProvider,
+            IOptionsMutable<ServiceManagerOptions> options,
+            ILogger<ServiceManager> logger,
             IServiceFactory serviceFactory,
-            IServiceStore serviceStore) : base(serviceProvider)
+            IServiceStore serviceStore) : base(logger)
         {
+            _options = options;
             _serviceStore = serviceStore;
             _serviceStore.OnChanged += ServiceStore_OnChanged;
             _serviceFactory = serviceFactory;
@@ -33,6 +40,16 @@ namespace Juice.BgService.Management
         #endregion
 
         #region Controls
+
+        public override async Task StartAsync(CancellationToken cancellationToken)
+        {
+            if (Id == Guid.Empty)
+            {
+                await _options.UpdateAsync(o => o.Id = Guid.NewGuid());
+            }
+            await base.StartAsync(cancellationToken);
+        }
+
         protected override async Task ExecuteAsync()
         {
             State = ServiceState.Running;

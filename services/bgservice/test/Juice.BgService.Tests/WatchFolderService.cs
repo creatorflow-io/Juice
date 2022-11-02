@@ -2,16 +2,16 @@
 using System.IO;
 using System.Threading.Tasks;
 using Juice.BgService.FileWatcher;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Juice.BgService.Tests
 {
     public class WatchFolderService : FileWatcherService
     {
-        public WatchFolderService(IServiceProvider serviceProvider) : base(serviceProvider)
+        public WatchFolderService(ILogger<WatchFolderService> logger, IOptions<FileWatcherServiceOptions> options) : base(logger)
         {
-            _options = serviceProvider.GetRequiredService<IOptions<FileWatcherServiceOptions>>().Value;
+            _options = options.Value;
         }
 
         public override Task<(bool Healthy, string Message)> HealthCheckAsync() => throw new NotImplementedException();

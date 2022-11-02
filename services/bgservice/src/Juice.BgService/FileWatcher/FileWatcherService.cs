@@ -11,7 +11,7 @@ namespace Juice.BgService.FileWatcher
         protected FileWatcherServiceOptions? _options;
 
         public ConcurrentDictionary<string, FileWatcherStatus> Monitoring = new ConcurrentDictionary<string, FileWatcherStatus>();
-        public FileWatcherService(IServiceProvider serviceProvider) : base(serviceProvider)
+        public FileWatcherService(ILogger logger) : base(logger)
         {
         }
 
