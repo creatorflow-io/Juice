@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>$(AppTargetFramework)</TargetFramework>
     <Nullable>enable</Nullable>
 
     <IsPackable>false</IsPackable>
@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Juice.AspNetCore\Juice.AspNetCore.csproj" />
+    <ProjectReference Include="..\..\src\Juice.Extensions.Logging\Juice.Extensions.Logging.csproj" />
     <ProjectReference Include="..\..\src\Juice\Juice.csproj" />
   </ItemGroup>
 

@@ -9,8 +9,8 @@
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="*" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="$(MicrosoftExtensionsVersion)" />
-    <PackageReference Include="Microsoft.Extensions.Options" Version="$(MicrosoftExtensionsVersion)" />
-    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="$(MicrosoftExtensionsVersion)" />
+    <!--<PackageReference Include="Microsoft.Extensions.Options" Version="$(MicrosoftExtensionsVersion)" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="$(MicrosoftExtensionsVersion)" />-->
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="$(MicrosoftExtensionsVersion)" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="$(MicrosoftExtensionsVersion)" />
     <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="$(MicrosoftExtensionsVersion)" />
