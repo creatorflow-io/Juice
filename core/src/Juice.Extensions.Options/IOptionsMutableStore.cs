@@ -8,7 +8,7 @@ namespace Juice.Extensions.Options
     /// </summary>
 	public interface IOptionsMutableStore
     {
-        Task UpdateAsync(string? tenant, Action<JObject> applyChanges);
+        Task UpdateAsync(Action<JObject> applyChanges);
     }
 
     public interface IOptionsMutableStore<T> : IOptionsMutableStore { }

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Hosting;
+﻿using Juice.Tenants;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -10,8 +11,9 @@ namespace Juice.Extensions.Options
         {
             services.TryAddTransient<IOptionsMutableStore>(sp =>
             {
+                var tenant = sp.GetService<ITenant>();
                 var env = sp.GetRequiredService<IWebHostEnvironment>();
-                return new DefaultOptionsMutableStore(env, file);
+                return new DefaultOptionsMutableStore(tenant, env, file);
             });
             return services;
         }
@@ -20,8 +22,9 @@ namespace Juice.Extensions.Options
         {
             services.TryAddTransient<IOptionsMutableStore<T>>(sp =>
             {
+                var tenant = sp.GetService<ITenant>();
                 var env = sp.GetRequiredService<IWebHostEnvironment>();
-                return new DefaultOptionsMutableStore<T>(env, file);
+                return new DefaultOptionsMutableStore<T>(tenant, env, file);
             });
             return services;
         }
