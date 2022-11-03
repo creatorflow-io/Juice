@@ -29,7 +29,7 @@ namespace Juice.Extensions.Logging
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
         {
             var logEntry = new LogEntry<TState>(logLevel, Category, eventId, state, exception, formatter);
-            Provider.WriteLog(logEntry);
+            Provider.WriteLog(logEntry, formatter(state, exception));
         }
     }
 }

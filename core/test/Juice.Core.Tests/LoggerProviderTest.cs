@@ -18,16 +18,18 @@ namespace Juice.Core.Tests
         {
             _output = testOutput;
         }
-        public override void WriteLog<TState>(LogEntry<TState> entry)
+        public override void WriteLog<TState>(LogEntry<TState> entry, string formattedMessage)
         {
-            var scopes = new List<object>();
+            var scopes = new List<object?>();
             ScopeProvider.ForEachScope((value, loggingProps) =>
             {
                 scopes.Add(value);
             },
             entry.State);
-            _output.WriteLine($"Custom provider {entry.Category} scopes {JsonConvert.SerializeObject(scopes)} {entry.Formatter(entry.State, entry.Exception)}");
+            _output.WriteLine($"Custom provider {entry.Category} scopes {JsonConvert.SerializeObject(scopes)} {formattedMessage}");
         }
+
+        protected override void Cleanup() { }
     }
 
     public class LoggerProviderTest
