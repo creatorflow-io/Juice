@@ -39,7 +39,7 @@ namespace Juice.BgService.Extensions.Logging
             #endregion
 
             #region Check job scope to fork new log file for this job
-            if (log.Scopes?.Any(s => s.Properties != null && s.Properties.ContainsKey("JobId")) ?? false)
+            if (Options.ForkJobLog && (log.Scopes?.Any(s => s.Properties != null && s.Properties.ContainsKey("JobId")) ?? false))
             {
                 var jobScope = log.Scopes.Last(s => s.Properties != null
                        && s.Properties.ContainsKey("JobId"));
