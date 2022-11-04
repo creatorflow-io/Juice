@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Juice.BgService.Scheduled;
 using Microsoft.Extensions.Logging;
@@ -17,9 +19,15 @@ namespace Juice.BgService.Tests
 
         public override async Task<(bool Succeeded, string? Message)> InvokeAsync()
         {
-            using (_logger.BeginScope("Tasks invoke"))
+            var stopWatch = new Stopwatch();
+            stopWatch.Start();
+            _logger.LogInformation("Begin invoke");
+            using (_logger.BeginScope(new List<KeyValuePair<string, object>>
             {
-
+                new KeyValuePair<string, object>("JobId", Guid.NewGuid()),
+                new KeyValuePair<string, object>("JobDescription", "Invoke recurring task")
+            }))
+            {
                 _logger.LogInformation("Hello... next invoke {0} time is {1}. Instances count: {2}", Description, NextProcessing, globalCounter);
                 for (var i = 0; i < 10000; i++)
                 {
@@ -28,6 +36,9 @@ namespace Juice.BgService.Tests
                 }
                 _logger.LogInformation("End");
             }
+
+            stopWatch.Stop();
+            _logger.LogInformation("Invoked take {time}", stopWatch.Elapsed);
             return (true, default);
         }
 

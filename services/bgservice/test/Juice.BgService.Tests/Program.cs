@@ -1,4 +1,5 @@
 ﻿using Juice.BgService.Api.Extensions;
+using Juice.BgService.Extensions.Logging;
 using Juice.BgService.FileWatcher;
 using Juice.BgService.Management.Extensions;
 using Juice.Extensions.Options;
@@ -8,6 +9,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Logging.AddBgServiceFileLogger(builder.Configuration.GetSection("Logging:File"));
 
 // Add services to the container.
 
