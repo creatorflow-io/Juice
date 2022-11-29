@@ -12,6 +12,7 @@
         public string Message { get; init; }
         public string Category { get; init; }
         public string? FileName { get; protected set; }
+        public string? State { get; protected set; }
         public List<LogScope>? Scopes { get; protected set; }
         public void PushScope(LogScope scope)
         {
@@ -24,6 +25,10 @@
         public void ForkNewFile(string name)
         {
             FileName = name;
+        }
+        public void SetState(string? state)
+        {
+            State = state;
         }
     }
 

@@ -1,6 +1,8 @@
-﻿using Juice.BgService.Api.Extensions;
+﻿using System;
+using Juice.BgService.Api.Extensions;
 using Juice.BgService.Extensions.Logging;
 using Juice.BgService.FileWatcher;
+using Juice.BgService.Management;
 using Juice.BgService.Management.Extensions;
 using Juice.Extensions.Options;
 using Juice.Extensions.Swagger;
@@ -28,6 +30,9 @@ builder.Services.AddControllers();
 builder.Services.AddSwaggerWithDefaultConfigs()
     .ConfigureBgServiceSwaggerGen();
 
+
+builder.Host.UseConsoleLifetime();
+
 var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
@@ -46,5 +51,23 @@ app.UseEndpoints(endpoints =>
 });
 
 app.UseBgServiceSwaggerUI();
+
+app.Lifetime.ApplicationStopping.Register(async () =>
+{
+    Console.WriteLine($"Trying to stop services...");
+    var service = app.Services.GetService<ServiceManager>();
+    if (service != null)
+    {
+        try
+        {
+            await service.StopAsync(default);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to stop services. {ex.Message}");
+        }
+        Console.WriteLine($"Services stopped.");
+    }
+});
 
 app.Run();
