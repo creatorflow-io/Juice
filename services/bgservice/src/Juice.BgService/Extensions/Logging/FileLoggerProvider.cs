@@ -65,6 +65,9 @@ namespace Juice.BgService.Extensions.Logging
                 {
                     log.ForkNewFile(fileName);
                 }
+
+                var jobState = (jobScope.Properties?.ContainsKey("JobState") ?? false) ? jobScope.Properties?["JobState"]?.ToString() : default;
+                log.SetState(jobState);
             }
             #endregion
 

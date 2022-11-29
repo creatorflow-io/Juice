@@ -37,6 +37,16 @@ namespace Juice.BgService.Tests
                 _logger.LogInformation("End");
             }
 
+            using (_logger.BeginScope(new List<KeyValuePair<string, object>>
+            {
+                new KeyValuePair<string, object>("JobId", Guid.NewGuid()),
+                new KeyValuePair<string, object>("JobDescription", "Invoke recurring task"),
+                new KeyValuePair<string, object>("JobState", "Succeeded")
+            }))
+            {
+                _logger.LogInformation("End");
+            }
+
             stopWatch.Stop();
             _logger.LogInformation("Invoked take {time}", stopWatch.Elapsed);
             return (true, default);

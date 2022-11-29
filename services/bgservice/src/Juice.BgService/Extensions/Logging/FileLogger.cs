@@ -80,11 +80,15 @@ namespace Juice.BgService.Extensions.Logging
             BeginFile(fileName);
         }
 
-        private void RestoreOriginFile()
+        private void RestoreOriginFile(string? state)
         {
             _forked = false;
             if (!string.IsNullOrEmpty(_originFilePath))
             {
+                if (!string.IsNullOrEmpty(state))
+                {
+                    File.Move(_filePath, Path.Combine(Path.GetDirectoryName(_filePath), Path.GetFileNameWithoutExtension(_filePath) + "_" + state + Path.GetExtension(_filePath)));
+                }
                 _filePath = _originFilePath;
                 _originFilePath = default;
             }
@@ -117,6 +121,7 @@ namespace Juice.BgService.Extensions.Logging
         private async Task WriteFromQueueAsync()
         {
             var sb = new StringBuilder();
+            string? state = default!;
             while (_logQueue.TryDequeue(out var log))
             {
                 if (log.FileName == null)
@@ -125,7 +130,7 @@ namespace Juice.BgService.Extensions.Logging
                     {
                         await WriteLineAsync(sb.ToString());
                         sb.Clear();
-                        RestoreOriginFile();
+                        RestoreOriginFile(state);
                     }
                 }
                 else
@@ -135,6 +140,10 @@ namespace Juice.BgService.Extensions.Logging
                         await WriteLineAsync(sb.ToString());
                         sb.Clear();
                         ForkNewFile(log.FileName);
+                    }
+                    if (!string.IsNullOrEmpty(log.State))
+                    {
+                        state = log.State;
                     }
                 }
                 sb.AppendLine(log.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.ff") + ": " + log.Message);
