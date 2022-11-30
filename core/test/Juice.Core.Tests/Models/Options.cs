@@ -3,5 +3,6 @@
     public class Options
     {
         public string? Time { get; set; }
+        public string? Name { get; set; }
     }
 }

@@ -23,7 +23,7 @@ builder.Services.AddBgService(builder.Configuration.GetSection("BackgroundServic
 
 builder.SeparateStoreFile("Store");
 
-builder.Services.UseDefaultOptionsMutableStore();
+builder.Services.UseFileOptionsMutableStore("appsettings.Development.json");
 
 builder.Services.AddControllers();
 

@@ -20,7 +20,7 @@ namespace Juice.BgService.Api.Extensions
 
         public static void SeparateStoreFile(this WebApplicationBuilder builder, string name)
         {
-            builder.Services.UseDefaultOptionsMutableStore<FileStoreOptions>(name);
+            builder.Services.UseFileOptionsMutableStore<FileStoreOptions>($"appsettings.{name}.{builder.Environment.EnvironmentName}.json");
 
             builder.Host.ConfigureAppConfiguration((context, config) =>
             {
