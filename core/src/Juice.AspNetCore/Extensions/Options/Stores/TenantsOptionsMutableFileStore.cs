@@ -1,6 +1,6 @@
 ﻿using Juice.Tenants;
 
-namespace Juice.Extensions.Options
+namespace Juice.Extensions.Options.Stores
 {
     internal class TenantsOptionsMutableFileStore : OptionsMutableFileStore, ITenantsOptionsMutableStore
     {
