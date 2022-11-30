@@ -6,11 +6,11 @@ namespace Juice.MediatR.IdentifiedCommands.EF
 {
     public class ClientRequestContext : DbContext, IDbContextSchema
     {
-        public string Schema { get; private set; }
+        public string? Schema { get; private set; }
         public ClientRequestContext(DbOptions<ClientRequestContext> dbOptions,
             DbContextOptions<ClientRequestContext> options) : base(options)
         {
-            Schema = dbOptions.Schema;
+            Schema = dbOptions?.Schema;
         }
 
         public DbSet<ClientRequest> ClientRequests { get; set; }

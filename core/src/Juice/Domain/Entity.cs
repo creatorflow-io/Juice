@@ -49,7 +49,7 @@ namespace Juice.Domain
         public DateTimeOffset CreatedDate { get; protected set; }
         public DateTimeOffset? ModifiedDate { get; protected set; }
 
-        public void SetOnceCreatedUser(string creator)
+        public void SetOnceCreatedUser(string? creator)
         {
             if (string.IsNullOrEmpty(CreatedUser))
             {
@@ -57,7 +57,7 @@ namespace Juice.Domain
             }
             CreatedDate = DateTimeOffset.Now;
         }
-        public void UpdateModifiedUser(string user)
+        public void UpdateModifiedUser(string? user)
         {
             ModifiedUser = user;
             ModifiedDate = DateTimeOffset.Now;

@@ -16,7 +16,7 @@ namespace Microsoft.Extensions.Logging
         private readonly string _name;
         private readonly ITestOutputHelper _output;
         public TestOutputLogger(string name, ITestOutputHelper outputHelper) => (_name, _output) = (name, outputHelper);
-        public IDisposable BeginScope<TState>(TState state) => default;
+        public IDisposable BeginScope<TState>(TState state) => default!;
         public bool IsEnabled(LogLevel logLevel) => true;
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception, string> formatter)
         {
