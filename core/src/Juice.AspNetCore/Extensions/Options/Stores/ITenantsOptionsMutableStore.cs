@@ -1,4 +1,4 @@
-﻿namespace Juice.Extensions.Options
+﻿namespace Juice.Extensions.Options.Stores
 {
     public interface ITenantsOptionsMutableStore : IOptionsMutableStore
     {

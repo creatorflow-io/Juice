@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json.Linq;
 
-namespace Juice.Extensions.Options
+namespace Juice.Extensions.Options.Stores
 {
     /// <summary>
     /// Define store interface to save option provided by <see cref="IOptionsMutable{T}"/>

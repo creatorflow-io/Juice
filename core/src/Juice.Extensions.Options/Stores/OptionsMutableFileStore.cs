@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace Juice.Extensions.Options
+namespace Juice.Extensions.Options.Stores
 {
     public abstract class OptionsMutableFileStore : IOptionsMutableStore
     {

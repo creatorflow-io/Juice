@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Juice.Extensions.Options.Stores;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -9,7 +10,7 @@ namespace Juice.Extensions.Options
     /// Implementation for <see cref="IOptionsMutable{T}"/>, use registerd <see cref="IOptionsMutableStore"/> to save change
     /// </summary>
     /// <typeparam name="T"></typeparam>
-	public class OptionsMutable<T> : IOptionsMutable<T> where T : class, new()
+	internal class OptionsMutable<T> : IOptionsMutable<T> where T : class, new()
     {
         private readonly IOptionsMonitor<T> _options;
         private readonly string _section;

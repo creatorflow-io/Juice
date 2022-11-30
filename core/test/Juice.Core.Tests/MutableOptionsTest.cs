@@ -38,7 +38,7 @@ namespace Juice.Core.Tests
                 .AddConfiguration(configuration.GetSection("Logging"));
             });
 
-            services.UseFileOptionsMutableStore("appsettings.Development.json");
+            services.UseOptionsMutableFileStore("appsettings.Development.json");
 
             services.ConfigureMutable<Options>(configuration.GetSection("Options"));
 
@@ -71,7 +71,7 @@ namespace Juice.Core.Tests
                 .AddConfiguration(configuration.GetSection("Logging"));
             });
 
-            services.UseFileOptionsMutableStore<Options>($"appsettings.Separated.{builder.Environment.EnvironmentName}.json");
+            services.UseOptionsMutableFileStore<Options>($"appsettings.Separated.{builder.Environment.EnvironmentName}.json");
 
             services.ConfigureMutable<Options>(configuration.GetSection("Options"));
 
