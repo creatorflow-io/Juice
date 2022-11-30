@@ -16,7 +16,7 @@ namespace Juice.Extensions.Configuration
         {
             return services.AddScoped<ITenantsConfigurationSource>(sp =>
             {
-                var tenant = sp.GetService<ITenant>();
+                var tenant = sp.GetRequiredService<ITenant>();
                 var source = new TenantsJsonConfigurationSource
                 {
                     Tenant = tenant,
