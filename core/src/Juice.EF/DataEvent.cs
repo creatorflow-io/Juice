@@ -9,7 +9,7 @@
         }
         public string Name { get; private set; }
 
-        public AuditRecord AuditRecord { get; private set; }
+        public AuditRecord? AuditRecord { get; private set; }
 
         public DataEvent SetAuditRecord(AuditRecord record)
         {

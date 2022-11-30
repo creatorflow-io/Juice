@@ -64,6 +64,7 @@ namespace Juice.EF
             var cts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, cancellationToken);
             SetAuditInformation();
             var changes = TrackingChanges();
+
             try
             {
                 var (updates, args) = await GetExpandablePropertiesUpdateSqlAsync().ConfigureAwait(false);
@@ -90,7 +91,10 @@ namespace Juice.EF
             }
             finally
             {
-                NotificationChanges(changes);
+                if (changes != null)
+                {
+                    NotificationChanges(changes);
+                }
             }
         }
 
@@ -125,7 +129,10 @@ namespace Juice.EF
             }
             finally
             {
-                NotificationChanges(changes);
+                if (changes != null)
+                {
+                    NotificationChanges(changes);
+                }
             }
         }
 
@@ -159,9 +166,9 @@ namespace Juice.EF
 
                         // Get Key value
                         var primaryKey = entry.Metadata.FindPrimaryKey();
-                        var keyProp = primaryKey.Properties.Select(p => p.PropertyInfo).Single();
-                        var keyColumn = primaryKey.Properties.Select(p => p.GetColumnName(tableIdentifier.Value)).Single();
-                        var key = keyProp.GetValue(expandable, null);
+                        var keyProp = primaryKey?.Properties?.Select(p => p.PropertyInfo)?.Single();
+                        var keyColumn = primaryKey?.Properties?.Select(p => p.GetColumnName(tableIdentifier.Value))?.Single();
+                        var key = keyProp?.GetValue(expandable, null);
                         if (key != null && !string.IsNullOrEmpty(keyColumn))
                         {
                             foreach (var kvp in expandable.OriginalPropertyValues)
@@ -188,7 +195,10 @@ namespace Juice.EF
                                     updates.Add(sql);
                                     args.Add(value);
                                     args.Add(key);
-                                    _logger?.LogDebug(sql);
+                                    if (_logger?.IsEnabled(LogLevel.Debug) ?? false)
+                                    {
+                                        _logger?.LogDebug(sql);
+                                    }
                                 }
                             }
                         }
@@ -250,14 +260,14 @@ namespace Juice.EF
 
         }
 
-        private IEnumerable<AuditEntry> TrackingChanges()
+        private IEnumerable<AuditEntry>? TrackingChanges()
         {
             try
             {
                 if (AuditHandlers?.Any() ?? false)
                 {
                     ChangeTracker.DetectChanges();
-                    var user = _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.Name)?.Value;
+                    var user = _httpContextAccessor?.HttpContext?.User?.FindFirst(ClaimTypes.Name)?.Value;
                     var auditEntries = new List<AuditEntry>();
                     foreach (var entry in ChangeTracker.Entries())
                     {
@@ -268,9 +278,9 @@ namespace Juice.EF
 
                         var auditEntry = new AuditEntry(entry)
                         {
-                            Table = entry.Metadata.GetTableName(),
+                            Table = entry.Metadata?.GetTableName(),
                             Database = Database.GetDbConnection().Database,
-                            Schema = entry.Metadata.GetSchema(),
+                            Schema = entry.Metadata?.GetSchema(),
                             User = user,
                             DataEvent = entry.State == EntityState.Added ? DataEvents.Inserted
                             : entry.State == EntityState.Deleted ? DataEvents.Deleted
@@ -281,7 +291,8 @@ namespace Juice.EF
 
                         auditEntries.Add(auditEntry);
 
-                        var tableIdentifier = StoreObjectIdentifier.Create(entry.Metadata, StoreObjectType.Table);
+                        var tableIdentifier = entry.Metadata != null ? StoreObjectIdentifier.Create(entry.Metadata, StoreObjectType.Table)
+                            : default;
                         foreach (var property in entry.Properties)
                         {
                             if (property.IsTemporary)
@@ -389,17 +400,19 @@ namespace Juice.EF
                                 auditEntry.CurrentValues[prop.Metadata.Name] = prop.CurrentValue;
                             }
                         }
-
-                        // Save the Audit entry
-                        foreach (var handler in AuditHandlers)
+                        if (auditEntry.DataEvent != null)
                         {
-                            try
+                            // Save the Audit entry
+                            foreach (var handler in AuditHandlers)
                             {
-                                handler.HandleAsync(auditEntry.DataEvent.Create(auditEntry.ToAudit())).GetAwaiter().GetResult();
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger?.LogWarning(ex, $"[DbContextBase] failed to handle audit event on {handler.GetType().FullName}. {ex.Message}");
+                                try
+                                {
+                                    handler.HandleAsync(auditEntry.DataEvent.Create(auditEntry.ToAudit())).GetAwaiter().GetResult();
+                                }
+                                catch (Exception ex)
+                                {
+                                    _logger?.LogWarning(ex, $"[DbContextBase] failed to handle audit event on {handler.GetType().FullName}. {ex.Message}");
+                                }
                             }
                         }
                     }
@@ -418,14 +431,14 @@ namespace Juice.EF
                 Entry = entry;
             }
             public EntityEntry Entry { get; }
-            public DataEvent DataEvent { get; set; }
-            public string User { get; set; }
-            public string Database { get; set; }
-            public string Schema { get; set; }
-            public string Table { get; set; }
-            public Dictionary<string, object> KeyValues { get; } = new Dictionary<string, object>();
-            public Dictionary<string, object> OriginalValues { get; } = new Dictionary<string, object>();
-            public Dictionary<string, object> CurrentValues { get; } = new Dictionary<string, object>();
+            public DataEvent? DataEvent { get; set; }
+            public string? User { get; set; }
+            public string? Database { get; set; }
+            public string? Schema { get; set; }
+            public string? Table { get; set; }
+            public Dictionary<string, object?> KeyValues { get; } = new Dictionary<string, object?>();
+            public Dictionary<string, object?> OriginalValues { get; } = new Dictionary<string, object?>();
+            public Dictionary<string, object?> CurrentValues { get; } = new Dictionary<string, object?>();
             public List<PropertyEntry> TemporaryProperties { get; } = new List<PropertyEntry>();
 
             public bool HasTemporaryProperties => TemporaryProperties.Any();
