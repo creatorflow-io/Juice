@@ -30,8 +30,7 @@ namespace Juice.Core.Tests
             using IHost host = Host.CreateDefaultBuilder()
                 .ConfigureAppConfiguration((hostContext, configApp) =>
                 {
-                    var configurationRoot = configApp.Build();
-
+                    configApp.Sources.Clear();
                     configApp.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
                 })
              .ConfigureServices((context, services) =>
@@ -75,8 +74,7 @@ namespace Juice.Core.Tests
             using var host = Host.CreateDefaultBuilder()
                  .ConfigureAppConfiguration((hostContext, configApp) =>
                  {
-                     var configurationRoot = configApp.Build();
-
+                     configApp.Sources.Clear();
                      configApp.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
                  })
              .ConfigureServices((context, services) =>
