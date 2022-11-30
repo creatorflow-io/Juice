@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Juice.Core.Tests.Models;
-using Juice.Extensions.DependencyInjection;
 using Juice.Extensions.Options;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
@@ -39,7 +38,7 @@ namespace Juice.Core.Tests
                 .AddConfiguration(configuration.GetSection("Logging"));
             });
 
-            services.UseDefaultOptionsMutableStore();
+            services.UseFileOptionsMutableStore("appsettings.Development.json");
 
             services.ConfigureMutable<Options>(configuration.GetSection("Options"));
 
@@ -72,7 +71,7 @@ namespace Juice.Core.Tests
                 .AddConfiguration(configuration.GetSection("Logging"));
             });
 
-            services.UseDefaultOptionsMutableStore<Options>("Separated");
+            services.UseFileOptionsMutableStore<Options>($"appsettings.Separated.{builder.Environment.EnvironmentName}.json");
 
             services.ConfigureMutable<Options>(configuration.GetSection("Options"));
 

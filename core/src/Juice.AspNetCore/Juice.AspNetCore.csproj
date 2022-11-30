@@ -26,6 +26,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Juice.Extensions.Configuration\Juice.Extensions.Configuration.csproj" />
     <ProjectReference Include="..\Juice.Extensions.Options\Juice.Extensions.Options.csproj" />
     <ProjectReference Include="..\Juice\Juice.csproj" />
   </ItemGroup>

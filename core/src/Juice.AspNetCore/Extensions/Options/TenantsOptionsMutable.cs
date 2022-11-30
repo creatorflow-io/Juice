@@ -1,56 +1,58 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
+﻿using Juice.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace Juice.Extensions.Options
 {
-    /// <summary>
-    /// Implementation for <see cref="IOptionsMutable{T}"/>, use registerd <see cref="IOptionsMutableStore"/> to save change
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-	public class OptionsMutable<T> : IOptionsMutable<T> where T : class, new()
+    internal class TenantsOptionsMutable<T> : ITenantsOptionsMutable<T>
+        where T : class, new()
     {
-        private readonly IOptionsMonitor<T> _options;
         private readonly string _section;
-        private readonly Action<T> _configureOptions;
+        private readonly ITenantsConfiguration _tenantsConfiguration;
+        private readonly Action<T>? _configureOptions;
         private readonly IOptionsMutableStore _store;
-
-        public OptionsMutable(
-            IServiceProvider provider,
+        public TenantsOptionsMutable(
+            IServiceProvider serviceProvider,
             string section
             )
         {
-            _store = provider.GetService<IOptionsMutableStore<T>>() ?? provider.GetRequiredService<IOptionsMutableStore>();
-            _options = provider.GetRequiredService<IOptionsMonitor<T>>();
+            _store = serviceProvider.GetService<ITenantsOptionsMutableStore<T>>() ?? serviceProvider.GetRequiredService<ITenantsOptionsMutableStore>();
+            _tenantsConfiguration = serviceProvider.GetRequiredService<ITenantsConfiguration>();
             _section = section;
         }
 
-        public OptionsMutable(
-            IServiceProvider provider,
+        public TenantsOptionsMutable(
+            IServiceProvider serviceProvider,
             string section,
-            Action<T> configureOptions) : this(provider, section)
+            Action<T>? configureOptions) : this(serviceProvider, section)
         {
             _configureOptions = configureOptions;
         }
 
-        private T _updatedValue = default(T);
-        private bool _valueUpdated = false;
         public T Value
         {
             get
             {
-                if (_valueUpdated)
-                {
-                    return _updatedValue;
-                }
-                var options = _options.CurrentValue;
-                _configureOptions?.Invoke(options);
-                return options;
+                return Get(_section);
             }
         }
-        public T Get(string name) => _options.Get(name);
 
+        public T Get(string name)
+        {
+            if (_valueUpdated)
+            {
+                return _updatedValue;
+            }
+            var options = _tenantsConfiguration
+                    .GetSection(name).Get<T>();
+            _configureOptions?.Invoke(options);
+            return options;
+        }
+
+        private T _updatedValue = default(T);
+        private bool _valueUpdated = false;
         public async Task<bool> UpdateAsync(Action<T> applyChanges)
         {
             try
