@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Juice.EventBus.IntegrationEventLog.EF.Migrations
+namespace Juice.EventBus.IntegrationEventLog.EF.SqlServer.Migrations
 {
     public partial class InitEventLog : Migration
     {

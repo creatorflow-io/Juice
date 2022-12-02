@@ -1,14 +1,14 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>$(AppTargetFramework)</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
+    <TargetFramework>net6.0</TargetFramework>
     <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MediatR.Extensions.Microsoft.DependencyInjection" Version="10.0.1" />
-    <PackageReference Include="MediatR" Version="10.0.1" />
+    <ProjectReference Include="..\..\core\src\Juice.EventBus.IntegrationEventLog.EF.PostgreSQL\Juice.EventBus.IntegrationEventLog.EF.PostgreSQL.csproj" />
+    <ProjectReference Include="..\..\core\src\Juice.EventBus.IntegrationEventLog.EF.SqlServer\Juice.EventBus.IntegrationEventLog.EF.SqlServer.csproj" />
   </ItemGroup>
 
   <ItemGroup Label="Migrations">
@@ -21,14 +21,4 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
   </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="$(EFVersion)" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="$(EFVersion)" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Juice.EF\Juice.EF.csproj" />
-  </ItemGroup>
-
 </Project>

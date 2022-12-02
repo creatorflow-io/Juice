@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Data.Common;
 using System.Linq;
 using System.Threading.Tasks;
 using Juice.EF.Tests.Domain;
@@ -9,15 +8,12 @@ using Juice.EventBus.Tests.Events;
 using Juice.EventBus.Tests.Handlers;
 using Juice.Extensions.DependencyInjection;
 using Juice.Services;
-using Juice.Shared.EF;
 using Juice.XUnit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -52,20 +48,7 @@ namespace Juice.EventBus.Tests
 
                 // Register DbContext class
 
-                var connectionString = configService.GetConfiguration().GetConnectionString("Default");
-
-                services.Configure<IntegrationEventLogContextOptions>(options => options.Schema = schema);
-
-                services.AddDbContext<IntegrationEventLogContext>(options =>
-                {
-                    options.UseSqlServer(connectionString, x =>
-                        {
-                            x.MigrationsHistoryTable("__EFMigrationsHistory", schema);
-                            x.MigrationsAssembly("Juice.EventBus.IntegrationEventLog.EF");
-                        })
-                    .ReplaceService<IMigrationsAssembly, DbSchemaAwareMigrationAssembly>()
-                    .ReplaceService<IModelCacheKeyFactory, DbSchemaAwareModelCacheKeyFactory>();
-                });
+                services.AddTestEventLogContext("SqlServer", configuration, schema);
 
                 services.AddSingleton(provider => _testOutput);
 
@@ -83,10 +66,12 @@ namespace Juice.EventBus.Tests
 
             if (pendingMigrations.Any())
             {
-                Console.WriteLine($"[{schema}][IntegrationEventLogContext] You have {pendingMigrations.Count()} pending migrations to apply.");
-                Console.WriteLine("[IntegrationEventLogContext] Applying pending migrations now");
+                _testOutput.WriteLine($"[{schema}][IntegrationEventLogContext] You have {pendingMigrations.Count()} pending migrations to apply.");
+                _testOutput.WriteLine("[IntegrationEventLogContext] Applying pending migrations now");
                 await context.Database.MigrateAsync();
             }
+
+            _testOutput.WriteLine(context.Database.ProviderName);
         }
 
         [IgnoreOnCIFact(DisplayName = "Cms schema migration"), TestPriority(9)]
@@ -105,20 +90,8 @@ namespace Juice.EventBus.Tests
 
                 // Register DbContext class
 
-                var connectionString = configService.GetConfiguration().GetConnectionString("Default");
 
-                services.Configure<IntegrationEventLogContextOptions>(options => options.Schema = schema);
-
-                services.AddDbContext<IntegrationEventLogContext>(options =>
-                {
-                    options.UseSqlServer(connectionString, x =>
-                    {
-                        x.MigrationsHistoryTable("__EFMigrationsHistory", schema);
-                        x.MigrationsAssembly("Juice.EventBus.IntegrationEventLog.EF");
-                    })
-                    .ReplaceService<IMigrationsAssembly, DbSchemaAwareMigrationAssembly>()
-                    .ReplaceService<IModelCacheKeyFactory, DbSchemaAwareModelCacheKeyFactory>();
-                });
+                services.AddTestEventLogContext("PostgreSQL", configuration, schema);
 
                 services.AddSingleton(provider => _testOutput);
 
@@ -136,10 +109,12 @@ namespace Juice.EventBus.Tests
 
             if (pendingMigrations.Any())
             {
-                Console.WriteLine($"[{schema}][IntegrationEventLogContext] You have {pendingMigrations.Count()} pending migrations to apply.");
-                Console.WriteLine("[IntegrationEventLogContext] Applying pending migrations now");
+                _testOutput.WriteLine($"[{schema}][IntegrationEventLogContext] You have {pendingMigrations.Count()} pending migrations to apply.");
+                _testOutput.WriteLine("[IntegrationEventLogContext] Applying pending migrations now");
                 await context.Database.MigrateAsync();
             }
+
+            _testOutput.WriteLine(context.Database.ProviderName);
         }
 
         [IgnoreOnCIFact(DisplayName = "Test event log service"), TestPriority(9)]
@@ -178,15 +153,8 @@ namespace Juice.EventBus.Tests
 
                 services.AddDefaultStringIdGenerator();
 
-                services.Configure<IntegrationEventLogContextOptions>(options => options.Schema = TestSchema1);
-
-                services.AddTransient<Func<DbConnection, IIntegrationEventLogService>>(provider => (DbConnection connection) =>
-                {
-                    var options = provider.GetRequiredService<IOptionsSnapshot<IntegrationEventLogContextOptions>>();
-
-                    return new IntegrationEventLogService(connection, options);
-                });
-
+                services.AddIntegrationEventLog()
+                   .RegisterContext<TestContext>(TestSchema1);
 
                 services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"), options => options.SubscriptionClientName = "event_bus_test1");
 
@@ -200,14 +168,12 @@ namespace Juice.EventBus.Tests
             {
                 eventBus.Subscribe<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler>();
 
-                var context = resolver.ServiceProvider.GetRequiredService<TestContext>();
+                using var scope = resolver.ServiceProvider.CreateScope();
+                var context = scope.ServiceProvider.GetRequiredService<TestContext>();
 
-                var integrationEventLogServiceFactory = resolver.ServiceProvider.GetRequiredService<Func<DbConnection, IIntegrationEventLogService>>();
+                var eventLogService = scope.ServiceProvider.GetRequiredService<IIntegrationEventLogService<TestContext>>();
 
-                var eventLogService = integrationEventLogServiceFactory(context.Database.GetDbConnection());
-
-
-                var idGenerator = resolver.ServiceProvider.GetRequiredService<IStringIdGenerator>();
+                var idGenerator = scope.ServiceProvider.GetRequiredService<IStringIdGenerator>();
 
                 var code1 = idGenerator.GenerateRandomId(6);
 
@@ -220,6 +186,8 @@ namespace Juice.EventBus.Tests
                 context.Add(content);
 
                 logger.LogInformation("----- IntegrationEventLogTest - Saving changes and integrationEvent: {IntegrationEventId}", evt.Id);
+
+                eventLogService.EnsureAssociatedConnection(context);
 
                 //Use of an EF Core resiliency strategy when using multiple DbContexts within an explicit BeginTransaction():
                 //See: https://docs.microsoft.com/en-us/ef/core/miscellaneous/connection-resiliency            

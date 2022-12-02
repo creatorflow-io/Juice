@@ -1,8 +1,7 @@
-﻿using Juice.EF;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 
-namespace Juice.Shared.EF
+namespace Juice.EF.Migrations
 {
     public class DbSchemaAwareModelCacheKeyFactory : IModelCacheKeyFactory
     {

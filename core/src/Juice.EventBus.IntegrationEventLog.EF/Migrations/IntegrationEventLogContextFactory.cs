@@ -21,13 +21,25 @@ namespace Juice.EventBus.IntegrationEventLog.EF.Migrations
                 // Register DbContext class
                 var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
 
+                var configuration = configService.GetConfiguration(args);
+
+                var provider = configuration.GetSection("Provider").Get<string>() ?? "SqlServer";
+
                 services.Configure<IntegrationEventLogContextOptions>(options => options.Schema = "EventBus");
 
-                var connectionString = configService.GetConfiguration().GetConnectionString("Default");
-                services.AddDbContext<IntegrationEventLogContext>(options =>
-                {
-                    options.UseSqlServer(connectionString);
-                });
+                services.AddDbContext<IntegrationEventLogContext>(
+                    options => _ = provider switch
+                    {
+                        "PostgreSQL" => options.UseNpgsql(
+                            configuration.GetConnectionString("PostgreConnection"),
+                            x => x.MigrationsAssembly("Juice.EventBus.IntegrationEventLog.EF.PostgreSQL")),
+
+                        "SqlServer" => options.UseSqlServer(
+                            configuration.GetConnectionString("SqlServerConnection"),
+                            x => x.MigrationsAssembly("Juice.EventBus.IntegrationEventLog.EF.SqlServer")),
+
+                        _ => throw new NotSupportedException($"Unsupported provider: {provider}")
+                    });
             });
 
             return resolver.ServiceProvider.GetRequiredService<IntegrationEventLogContext>();

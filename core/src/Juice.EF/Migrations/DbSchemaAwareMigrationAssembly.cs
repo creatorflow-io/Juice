@@ -1,13 +1,11 @@
-﻿using System;
-using System.Reflection;
-using Juice.EF;
+﻿using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Migrations.Internal;
 
-namespace Juice.Shared.EF
+namespace Juice.EF.Migrations
 {
     public class DbSchemaAwareMigrationAssembly : MigrationsAssembly
     {

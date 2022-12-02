@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="*" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="$(MicrosoftExtensionsVersion)" />
   </ItemGroup>
 
   <ItemGroup Label="Migrations">
@@ -29,7 +30,6 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="$(EFVersion)" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="$(EFVersion)" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="$(NpgsqlVersion)" />
   </ItemGroup>
-
-  <Import Project="..\Juice.Shared.EF\Juice.Shared.EF.projitems" Label="Shared" />
 </Project>
