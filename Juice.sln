@@ -35,8 +35,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.EF", "core\src\Juice.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.EventBus", "core\src\Juice.EventBus\Juice.EventBus.csproj", "{B552F4E0-6DB1-4FDA-833A-06B0CBB3CF26}"
 EndProject
-Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Juice.Shared.EF", "core\src\Juice.Shared.EF\Juice.Shared.EF.shproj", "{4763DF4B-52BF-4B00-B741-E4CF4DEA0A40}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.EventBus.IntegrationEventLog.EF", "core\src\Juice.EventBus.IntegrationEventLog.EF\Juice.EventBus.IntegrationEventLog.EF.csproj", "{0EED7827-F67C-4477-B6ED-E5F8F5E12E2B}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.EventBus.RabbitMQ", "core\src\Juice.EventBus.RabbitMQ\Juice.EventBus.RabbitMQ.csproj", "{F1855338-A8AD-4870-89A7-715D5D0CB093}"
@@ -77,16 +75,19 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Extensions.Logging", 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Extensions.Options", "core\src\Juice.Extensions.Options\Juice.Extensions.Options.csproj", "{51E9661A-0CFD-484F-8F29-6119E2CA46AF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.Extensions.Configuration", "core\src\Juice.Extensions.Configuration\Juice.Extensions.Configuration.csproj", "{A6F126C7-139F-413A-8063-B983899DE5B3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Extensions.Configuration", "core\src\Juice.Extensions.Configuration\Juice.Extensions.Configuration.csproj", "{A6F126C7-139F-413A-8063-B983899DE5B3}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.EventBus.IntegrationEventLog.EF.SqlServer", "core\src\Juice.EventBus.IntegrationEventLog.EF.SqlServer\Juice.EventBus.IntegrationEventLog.EF.SqlServer.csproj", "{1CC0F6B8-6980-47B6-9A92-E597632E7C90}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.EventBus.IntegrationEventLog.EF.PostgreSQL", "core\src\Juice.EventBus.IntegrationEventLog.EF.PostgreSQL\Juice.EventBus.IntegrationEventLog.EF.PostgreSQL.csproj", "{0A63598B-330D-4476-85FC-9B961C627328}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.Tests.Host", "test\Juice.Tests.Host\Juice.Tests.Host.csproj", "{105FC53C-6066-4C80-8FF9-4472761E98E4}"
 EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		test\Juice.XUnit\Juice.XUnit.projitems*{04534853-a342-49c9-96d7-94d174a8f98d}*SharedItemsImports = 5
-		core\src\Juice.Shared.EF\Juice.Shared.EF.projitems*{0eed7827-f67c-4477-b6ed-e5f8f5e12e2b}*SharedItemsImports = 5
 		test\Juice.XUnit\Juice.XUnit.projitems*{3c5739a5-f7bf-4d1e-8727-fc0c11c5bd21}*SharedItemsImports = 13
-		core\src\Juice.Shared.EF\Juice.Shared.EF.projitems*{4763df4b-52bf-4b00-b741-e4cf4dea0a40}*SharedItemsImports = 13
 		test\Juice.XUnit\Juice.XUnit.projitems*{a4ede74a-d8ee-410f-8a87-6f55a9fa6a31}*SharedItemsImports = 5
-		core\src\Juice.Shared.EF\Juice.Shared.EF.projitems*{b60e5d7d-ea24-47c6-bd0e-88cc0bffd297}*SharedItemsImports = 5
 		test\Juice.XUnit\Juice.XUnit.projitems*{c7fe1197-8aa2-4155-a011-5968245578f7}*SharedItemsImports = 5
 	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -182,6 +183,18 @@ Global
 		{A6F126C7-139F-413A-8063-B983899DE5B3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A6F126C7-139F-413A-8063-B983899DE5B3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A6F126C7-139F-413A-8063-B983899DE5B3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1CC0F6B8-6980-47B6-9A92-E597632E7C90}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1CC0F6B8-6980-47B6-9A92-E597632E7C90}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1CC0F6B8-6980-47B6-9A92-E597632E7C90}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1CC0F6B8-6980-47B6-9A92-E597632E7C90}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0A63598B-330D-4476-85FC-9B961C627328}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0A63598B-330D-4476-85FC-9B961C627328}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0A63598B-330D-4476-85FC-9B961C627328}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0A63598B-330D-4476-85FC-9B961C627328}.Release|Any CPU.Build.0 = Release|Any CPU
+		{105FC53C-6066-4C80-8FF9-4472761E98E4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{105FC53C-6066-4C80-8FF9-4472761E98E4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{105FC53C-6066-4C80-8FF9-4472761E98E4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{105FC53C-6066-4C80-8FF9-4472761E98E4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -193,7 +206,6 @@ Global
 		{F0DAAAF8-5E72-46FF-87BF-6741365193C8} = {9E4FFBBB-2E8E-4463-B502-260D502D43E1}
 		{E86D44AE-525E-4424-9E0C-F5BD29C4F248} = {9E4FFBBB-2E8E-4463-B502-260D502D43E1}
 		{B552F4E0-6DB1-4FDA-833A-06B0CBB3CF26} = {9E4FFBBB-2E8E-4463-B502-260D502D43E1}
-		{4763DF4B-52BF-4B00-B741-E4CF4DEA0A40} = {9E4FFBBB-2E8E-4463-B502-260D502D43E1}
 		{0EED7827-F67C-4477-B6ED-E5F8F5E12E2B} = {9E4FFBBB-2E8E-4463-B502-260D502D43E1}
 		{F1855338-A8AD-4870-89A7-715D5D0CB093} = {9E4FFBBB-2E8E-4463-B502-260D502D43E1}
 		{B60E5D7D-EA24-47C6-BD0E-88CC0BFFD297} = {9E4FFBBB-2E8E-4463-B502-260D502D43E1}
@@ -214,6 +226,9 @@ Global
 		{60325046-C98C-474E-AB59-20FAF21C1C3B} = {9E4FFBBB-2E8E-4463-B502-260D502D43E1}
 		{51E9661A-0CFD-484F-8F29-6119E2CA46AF} = {9E4FFBBB-2E8E-4463-B502-260D502D43E1}
 		{A6F126C7-139F-413A-8063-B983899DE5B3} = {9E4FFBBB-2E8E-4463-B502-260D502D43E1}
+		{1CC0F6B8-6980-47B6-9A92-E597632E7C90} = {9E4FFBBB-2E8E-4463-B502-260D502D43E1}
+		{0A63598B-330D-4476-85FC-9B961C627328} = {9E4FFBBB-2E8E-4463-B502-260D502D43E1}
+		{105FC53C-6066-4C80-8FF9-4472761E98E4} = {F0C1DDC9-295A-4DD8-AB19-3CE592CFA928}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DD654E02-538D-4E29-A098-413DEBAE4D98}

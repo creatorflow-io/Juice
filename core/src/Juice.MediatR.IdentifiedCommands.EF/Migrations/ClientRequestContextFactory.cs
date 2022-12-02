@@ -1,5 +1,5 @@
-﻿using Juice.Extensions.DependencyInjection;
-using Juice.Shared.EF;
+﻿using Juice.EF.Migrations;
+using Juice.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.EntityFrameworkCore.Migrations;

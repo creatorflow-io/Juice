@@ -5,14 +5,14 @@ namespace Juice.Extensions.DependencyInjection
 {
     public interface IConfigurationService
     {
-        IConfiguration GetConfiguration();
+        IConfiguration GetConfiguration(params string[] args);
     }
 
     public class ConfigurationService : IConfigurationService
     {
         public string CurrentDirectory { get; set; }
 
-        public IConfiguration GetConfiguration()
+        public IConfiguration GetConfiguration(params string[] args)
         {
             CurrentDirectory = CurrentDirectory ?? Directory.GetCurrentDirectory();
             var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
@@ -36,6 +36,7 @@ namespace Juice.Extensions.DependencyInjection
             }
             return cb
                 .AddEnvironmentVariables()
+                .AddCommandLine(args)
                 .Build();
         }
     }

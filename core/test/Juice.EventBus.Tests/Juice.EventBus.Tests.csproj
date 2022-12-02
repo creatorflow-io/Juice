@@ -34,6 +34,8 @@
   
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Juice.EventBus.IntegrationEventLog.EF.PostgreSQL\Juice.EventBus.IntegrationEventLog.EF.PostgreSQL.csproj" />
+    <ProjectReference Include="..\..\src\Juice.EventBus.IntegrationEventLog.EF.SqlServer\Juice.EventBus.IntegrationEventLog.EF.SqlServer.csproj" />
     <ProjectReference Include="..\..\src\Juice.EventBus.IntegrationEventLog.EF\Juice.EventBus.IntegrationEventLog.EF.csproj" />
     <ProjectReference Include="..\..\src\Juice.EventBus.RabbitMQ\Juice.EventBus.RabbitMQ.csproj" />
     <ProjectReference Include="..\Juice.EF.Tests\Juice.EF.Tests.csproj" />

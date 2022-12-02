@@ -1,25 +1,19 @@
-﻿using System.Data.Common;
-using System.Reflection;
+﻿using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
-using Microsoft.Extensions.Options;
 
 namespace Juice.EventBus.IntegrationEventLog.EF
 {
-    public class IntegrationEventLogService : IIntegrationEventLogService, IDisposable
+    internal class IntegrationEventLogService : IIntegrationEventLogService, IDisposable
     {
+        public IntegrationEventLogContext LogContext => _integrationEventLogContext;
         private readonly IntegrationEventLogContext _integrationEventLogContext;
-        private readonly DbConnection _dbConnection;
         private readonly List<Type> _eventTypes;
         private volatile bool disposedValue;
 
-        public IntegrationEventLogService(DbConnection dbConnection, IOptionsSnapshot<IntegrationEventLogContextOptions> optionsSnapshot)
+        public IntegrationEventLogService(IntegrationEventLogContext integrationEventLogContext)
         {
-            _dbConnection = dbConnection ?? throw new ArgumentNullException(nameof(dbConnection));
-            _integrationEventLogContext = new IntegrationEventLogContext(optionsSnapshot,
-                new DbContextOptionsBuilder<IntegrationEventLogContext>()
-                    .UseSqlServer(_dbConnection)
-                    .Options);
+            _integrationEventLogContext = integrationEventLogContext;
 
             _eventTypes = Assembly.Load(Assembly.GetEntryAssembly().FullName)
                 .GetTypes()
@@ -49,7 +43,14 @@ namespace Juice.EventBus.IntegrationEventLog.EF
 
             var eventLogEntry = new IntegrationEventLogEntry(@event, transaction.TransactionId);
 
-            _integrationEventLogContext.Database.UseTransaction(transaction.GetDbTransaction());
+            try
+            {
+                _integrationEventLogContext.Database.UseTransaction(transaction.GetDbTransaction());
+            }
+            catch (InvalidOperationException ex)
+            {
+                throw new InvalidOperationException("Please verify that your DBContext is in same scope with IntegrationEventLogContext or call IIntegrationEventLogService.EnsureAssociatedConnection(your DBContext) before.", ex);
+            }
             _integrationEventLogContext.IntegrationEventLogs.Add(eventLogEntry);
 
             return _integrationEventLogContext.SaveChangesAsync();

@@ -73,7 +73,7 @@ namespace Juice.EF.Tests
 
         }
 
-        [IgnoreOnCIFact(DisplayName = "DynamicEntity unique Code"), TestPriority(1)]
+        [IgnoreOnCIFact(DisplayName = "DynamicEntity unique Code"), TestPriority(2)]
         public async Task Dynamic_entity_unique_code_Async()
         {
             var dbContext = _serviceProvider.GetRequiredService<TestContext>();

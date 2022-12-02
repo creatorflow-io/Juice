@@ -7,11 +7,17 @@ namespace Juice.EventBus.IntegrationEventLog.EF
 {
     public class IntegrationEventLogContext : DbContext, IDbContextSchema
     {
-        public string Schema { get; private set; }
-        public IntegrationEventLogContext(IOptionsSnapshot<IntegrationEventLogContextOptions> snapshot,
+        public string? Schema { get; private set; }
+        public IntegrationEventLogContext(IntegrationEventLogContextOptions dbOptions,
             DbContextOptions<IntegrationEventLogContext> options) : base(options)
         {
-            Schema = snapshot.Value.Schema ?? "EventBus";
+            Schema = dbOptions.Schema;
+        }
+
+        public IntegrationEventLogContext(IOptions<IntegrationEventLogContextOptions> dbOptions,
+            DbContextOptions<IntegrationEventLogContext> options) : base(options)
+        {
+            Schema = dbOptions.Value.Schema;
         }
 
         public DbSet<IntegrationEventLogEntry> IntegrationEventLogs { get; set; }

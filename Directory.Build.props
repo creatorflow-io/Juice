@@ -19,7 +19,8 @@
     <AppTargetFramework>net6.0</AppTargetFramework>
     <AspNetCoreVersion>2.2.0</AspNetCoreVersion>
     <MicrosoftExtensionsVersion>6.0.0</MicrosoftExtensionsVersion>
-    <EFVersion>6.0.0</EFVersion>
+    <EFVersion>6.0.1</EFVersion>
+    <NpgsqlVersion>6.0.2</NpgsqlVersion>
     <OrchardCoreVersion>1.2.2</OrchardCoreVersion>
     <JuiceRefVersion Condition="$(JuiceRefVersion)==''">6.0.0-alpha.*</JuiceRefVersion>
   </PropertyGroup>
