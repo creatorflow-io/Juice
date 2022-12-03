@@ -1,11 +1,12 @@
 ﻿using Juice.EF.Migrations;
+using Juice.EventBus.IntegrationEventLog.EF.FeatureBuilder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace Juice.EventBus.IntegrationEventLog.EF
+namespace Juice.EventBus.IntegrationEventLog.EF.DependencyInjection
 {
     public static class IntegrationEventLogServiceCollectionExtensions
     {
@@ -90,26 +91,31 @@ namespace Juice.EventBus.IntegrationEventLog.EF
 
             services.AddDbContext<IntegrationEventLogContext>(options =>
             {
-                _ = provider switch
+                switch (provider)
                 {
-                    "PostgreSQL" => options.UseNpgsql(
+                    case "PostgreSQL":
+                        options.UseNpgsql(
                         configuration.GetConnectionString("PostgreConnection"),
                          x =>
                          {
                              x.MigrationsHistoryTable("__EFMigrationsHistory", schema);
                              x.MigrationsAssembly("Juice.EventBus.IntegrationEventLog.EF.PostgreSQL");
-                         }),
+                         });
+                        AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+                        break;
 
-                    "SqlServer" => options.UseSqlServer(
+                    case "SqlServer":
+                        options.UseSqlServer(
                         configuration.GetConnectionString("SqlServerConnection"),
                         x =>
                         {
                             x.MigrationsHistoryTable("__EFMigrationsHistory", schema);
                             x.MigrationsAssembly("Juice.EventBus.IntegrationEventLog.EF.SqlServer");
-                        }),
-
-                    _ => throw new NotSupportedException($"Unsupported provider: {provider}")
-                };
+                        });
+                        break;
+                    default:
+                        throw new NotSupportedException($"Unsupported provider: {provider}");
+                }
 
 
                 options

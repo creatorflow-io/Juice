@@ -1,18 +1,14 @@
 ﻿using System;
-using System.Data.Common;
 using System.Linq;
 using System.Threading.Tasks;
-using Juice.EF;
-using Juice.EF.Migrations;
 using Juice.EF.Tests.Infrastructure;
 using Juice.Extensions.DependencyInjection;
-using Juice.MediatR.IdentifiedCommands.EF;
+using Juice.MediatR.RequestManager.EF;
+using Juice.MediatR.RequestManager.EF.DependencyInjection;
 using Juice.Services;
 using Juice.XUnit;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -51,19 +47,11 @@ namespace Juice.MediatR.Tests
 
                 // Register DbContext class
 
-                var connectionString = configService.GetConfiguration().GetConnectionString("Default");
-
-                services.AddTransient(p => new DbOptions<ClientRequestContext> { Schema = schema });
-
-                services.AddDbContext<ClientRequestContext>(options =>
+                services.AddRequestManager(configuration, options =>
                 {
-                    options.UseSqlServer(connectionString, x =>
-                    {
-                        x.MigrationsHistoryTable("__EFMigrationsHistory", schema);
-                        x.MigrationsAssembly("Juice.MediatR.IdentifiedCommands.EF");
-                    })
-                    .ReplaceService<IMigrationsAssembly, DbSchemaAwareMigrationAssembly>()
-                    .ReplaceService<IModelCacheKeyFactory, DbSchemaAwareModelCacheKeyFactory>();
+                    options.DatabaseProvider = "SqlServer";
+                    options.Schema = schema;
+                    options.ConnectionName = "SqlServerConnection";
                 });
 
                 services.AddSingleton(provider => _testOutput);
@@ -104,19 +92,11 @@ namespace Juice.MediatR.Tests
 
                 // Register DbContext class
 
-                var connectionString = configService.GetConfiguration().GetConnectionString("Default");
-
-                services.AddTransient(p => new DbOptions<ClientRequestContext> { Schema = schema });
-
-                services.AddDbContext<ClientRequestContext>(options =>
+                services.AddRequestManager(configuration, options =>
                 {
-                    options.UseSqlServer(connectionString, x =>
-                    {
-                        x.MigrationsHistoryTable("__EFMigrationsHistory", schema);
-                        x.MigrationsAssembly("Juice.MediatR.IdentifiedCommands.EF");
-                    })
-                    .ReplaceService<IMigrationsAssembly, DbSchemaAwareMigrationAssembly>()
-                    .ReplaceService<IModelCacheKeyFactory, DbSchemaAwareModelCacheKeyFactory>();
+                    options.DatabaseProvider = "PostgreSQL";
+                    options.Schema = schema;
+                    options.ConnectionName = "PostgreConnection";
                 });
 
                 services.AddSingleton(provider => _testOutput);
@@ -149,7 +129,7 @@ namespace Juice.MediatR.Tests
                 CurrentDirectory = AppContext.BaseDirectory
             };
 
-            var schema = TestSchema1;
+            var schema = TestSchema2;
 
             resolver.ConfigureServices(services =>
             {
@@ -167,7 +147,7 @@ namespace Juice.MediatR.Tests
                 });
 
                 // Register DbContext class
-                services.AddTransient(provider =>
+                services.AddScoped(provider =>
                 {
                     var configService = provider.GetRequiredService<IConfigurationService>();
                     var connectionString = configService.GetConfiguration().GetConnectionString("Default");
@@ -178,27 +158,19 @@ namespace Juice.MediatR.Tests
 
                 services.AddDefaultStringIdGenerator();
 
-                services.AddTransient(p => new DbOptions<ClientRequestContext> { Schema = schema });
-
-                services.AddTransient<Func<DbConnection, IRequestManager>>(provider => (DbConnection connection) =>
+                services.AddRequestManager(configuration, options =>
                 {
-                    var options = provider.GetRequiredService<DbOptions<ClientRequestContext>>();
-
-                    var context = new ClientRequestContext(options, new DbContextOptionsBuilder<ClientRequestContext>()
-                        .UseSqlServer(connection).Options);
-
-                    return new RequestManager(context);
+                    options.DatabaseProvider = "PostgreSQL";
+                    options.Schema = schema;
+                    options.ConnectionName = "PostgreConnection";
                 });
-
             });
 
             var logger = resolver.ServiceProvider.GetRequiredService<ILogger<IdentifiedCommandTest>>();
 
             var context = resolver.ServiceProvider.GetRequiredService<TestContext>();
 
-            var requestServiceFactory = resolver.ServiceProvider.GetRequiredService<Func<DbConnection, IRequestManager>>();
-
-            var requestManager = requestServiceFactory(context.Database.GetDbConnection());
+            var requestManager = resolver.ServiceProvider.GetRequiredService<IRequestManager>(); ;
 
             var id = Guid.NewGuid();
 

@@ -3,11 +3,11 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Juice.MediatR.IdentifiedCommands.EF.Migrations
+namespace Juice.MediatR.RequestManager.EF.SqlServer.Migrations
 {
     public partial class AddCompletedTime : Migration
     {
-        private readonly string _schema = "dbo";
+        private readonly string? _schema;
 
         public AddCompletedTime() { }
 
@@ -24,7 +24,6 @@ namespace Juice.MediatR.IdentifiedCommands.EF.Migrations
                 table: "ClientRequest",
                 type: "datetimeoffset",
                 nullable: false,
-                defaultValueSql: "sysdatetimeoffset()",
                 oldClrType: typeof(DateTimeOffset),
                 oldType: "datetimeoffset");
 

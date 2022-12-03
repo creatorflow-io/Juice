@@ -1,8 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 
-namespace Juice.MediatR.IdentifiedCommands.EF
+namespace Juice.MediatR.RequestManager.EF
 {
-    public class RequestManager : IRequestManager
+    internal class RequestManager : IRequestManager
     {
         private ClientRequestContext _context;
         public RequestManager(ClientRequestContext context)

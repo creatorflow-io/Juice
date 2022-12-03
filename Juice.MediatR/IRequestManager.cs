@@ -1,4 +1,4 @@
-﻿namespace Juice.MediatR.IdentifiedCommands.EF
+﻿namespace Juice.MediatR
 {
     public interface IRequestManager
     {
