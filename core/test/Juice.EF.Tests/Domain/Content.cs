@@ -5,8 +5,9 @@ namespace Juice.EF.Tests.Domain
 {
     public class Content : DynamicEntity<Guid>
     {
-        public Content(string code, string name) : base(name)
+        public Content(string code, string name)
         {
+            Name = name;
             Code = code;
         }
 
