@@ -58,6 +58,7 @@ namespace Juice.EventBus.IntegrationEventLog.EF.DependencyInjection
                         });
                         break;
                     case "Npgsql.EntityFrameworkCore.PostgreSQL":
+                        AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
                         optionsBuilder.UseNpgsql(context.Database.GetDbConnection(), x =>
                         {
                             x.MigrationsHistoryTable("__EFMigrationsHistory", schema);
