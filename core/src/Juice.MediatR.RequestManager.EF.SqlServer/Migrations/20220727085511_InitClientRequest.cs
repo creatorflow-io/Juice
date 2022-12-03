@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Juice.MediatR.IdentifiedCommands.EF.Migrations
+namespace Juice.MediatR.RequestManager.EF.SqlServer.Migrations
 {
     public partial class InitClientRequest : Migration
     {

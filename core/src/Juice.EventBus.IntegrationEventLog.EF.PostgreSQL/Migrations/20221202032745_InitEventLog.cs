@@ -9,6 +9,8 @@ namespace Juice.EventBus.IntegrationEventLog.EF.PostgreSQL.Migrations
     {
         private readonly IDbContextSchema _schema;
 
+        public InitEventLog() { }
+
         public InitEventLog(IDbContextSchema schema)
         {
             _schema = schema;

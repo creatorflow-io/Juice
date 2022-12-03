@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 
-namespace Juice.EventBus.IntegrationEventLog.EF
+namespace Juice.EventBus.IntegrationEventLog.EF.FeatureBuilder
 {
     public interface IIntegrationEventLogBuilder
     {

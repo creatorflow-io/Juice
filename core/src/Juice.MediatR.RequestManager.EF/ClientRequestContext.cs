@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace Juice.MediatR.IdentifiedCommands.EF
+namespace Juice.MediatR.RequestManager.EF
 {
     public class ClientRequestContext : DbContext, IDbContextSchema
     {
@@ -30,7 +30,7 @@ namespace Juice.MediatR.IdentifiedCommands.EF
                 .IsRequired();
 
             builder.Property(e => e.Time)
-                .HasDefaultValueSql("sysdatetimeoffset()")
+                .HasDefaultValue(DateTimeOffset.Now)
                 .IsRequired();
 
             builder.Property(e => e.State)
