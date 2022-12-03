@@ -15,7 +15,7 @@ namespace Juice.Extensions.Options.Stores
         }
 
         protected override Task<string> GetPhysicalPathAsync()
-            => Task.FromResult(Path.Combine("tenants", _tenant.Name, _file));
+            => Task.FromResult(Path.Combine("tenants", _tenant.Identifier, _file));
     }
 
     internal class TenantsOptionsMutableFileStore<T> : TenantsOptionsMutableFileStore,

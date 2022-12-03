@@ -44,7 +44,7 @@ namespace Juice.Core.Tests
                          .AddConfiguration(context.Configuration.GetSection("Logging"));
                      });
 
-                     services.AddScoped<ITenant>(sp => new MyTenant { Name = DateTime.Now.Millisecond % 2 == 0 ? "TenantA" : "TenantB" });
+                     services.AddScoped<ITenant>(sp => new MyTenant { Identifier = DateTime.Now.Millisecond % 2 == 0 ? "TenantA" : "TenantB" });
                      services.AddTenantsConfiguration().AddTenantsJsonFile("appsettings.Development.json");
                      services.ConfigureTenantsOptions<Models.Options>("Options");
                  })
@@ -88,7 +88,7 @@ namespace Juice.Core.Tests
                      .AddConfiguration(context.Configuration.GetSection("Logging"));
                  });
 
-                 services.AddScoped<ITenant>(sp => new MyTenant { Name = DateTime.Now.Millisecond % 2 == 0 ? "TenantA" : "TenantB" });
+                 services.AddScoped<ITenant>(sp => new MyTenant { Identifier = DateTime.Now.Millisecond % 2 == 0 ? "TenantA" : "TenantB" });
                  services.AddTenantsConfiguration().AddTenantsJsonFile("appsettings.Development.json");
 
                  services.UseTenantsOptionsMutableFileStore("appsettings.Development.json");
@@ -120,7 +120,8 @@ namespace Juice.Core.Tests
 
     internal class MyTenant : ITenant
     {
-        public string Name { get; set; }
+        public string? Name { get; set; }
+        public string? Identifier { get; set; }
 
         public Task TriggerConfigurationChangedAsync() => Task.CompletedTask;
     }

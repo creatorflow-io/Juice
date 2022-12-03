@@ -10,15 +10,9 @@ namespace Juice.Domain
 {
     public abstract class Entity<TKey> : IIdentifiable<TKey> where TKey : IEquatable<TKey>
     {
-        public Entity(string name)
-        {
-            Validator.NotNullOrWhiteSpace(name, nameof(name));
-            Name = name;
-        }
-
         [Key]
         public virtual TKey Id { get; private set; }
-        public string Name { get; protected set; }
+        public string? Name { get; protected set; }
         public bool Disabled { get; protected set; }
 
         public virtual void UpdateName(string name)
@@ -40,10 +34,6 @@ namespace Juice.Domain
 
     public abstract class AuditEntity<TKey> : Entity<TKey>, IAuditable where TKey : IEquatable<TKey>
     {
-        protected AuditEntity(string name) : base(name)
-        {
-        }
-
         public string? CreatedUser { get; protected set; }
         public string? ModifiedUser { get; protected set; }
         public DateTimeOffset CreatedDate { get; protected set; }
@@ -67,11 +57,6 @@ namespace Juice.Domain
     public abstract class DynamicEntity<TKey> : DynamicObject, IExpandable, IDynamic, IAuditable, IIdentifiable<TKey>
         where TKey : IEquatable<TKey>
     {
-        public DynamicEntity(string name)
-        {
-            Validator.NotNullOrWhiteSpace(name, nameof(name));
-            Name = name;
-        }
 
         #region Identifiable
         [Key]
@@ -79,7 +64,7 @@ namespace Juice.Domain
         #endregion
 
         #region Bassic info
-        public string Name { get; set; }
+        public string? Name { get; set; }
 
         public bool Disabled { get; protected set; }
 
