@@ -10,7 +10,7 @@ namespace Juice.MultiTenant.DependencyInjection
             where TTenantInfo : class, ITenantInfo, ITenant, new()
         {
 
-            builder.Services.AddScoped<ITenant>(sp => sp.GetService<TTenantInfo>());
+            builder.Services.AddScoped<ITenant>(sp => sp.GetService<TTenantInfo>()!);
 
             return builder;
         }
