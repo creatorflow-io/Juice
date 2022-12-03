@@ -2,7 +2,8 @@
 {
     public interface ITenant
     {
-        string Name { get; }
+        public string? Name { get; }
+        string? Identifier { get; }
         Task TriggerConfigurationChangedAsync();
     }
 }
