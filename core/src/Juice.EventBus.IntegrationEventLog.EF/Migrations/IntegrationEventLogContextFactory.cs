@@ -1,4 +1,5 @@
-﻿using Juice.Extensions.DependencyInjection;
+﻿using Juice.EF;
+using Juice.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
@@ -25,7 +26,7 @@ namespace Juice.EventBus.IntegrationEventLog.EF.Migrations
 
                 var provider = configuration.GetSection("Provider").Get<string>() ?? "SqlServer";
 
-                services.Configure<IntegrationEventLogContextOptions>(options => options.Schema = "EventBus");
+                services.AddScoped(sp => new DbOptions<IntegrationEventLogContext> { Schema = "EventBus" });
 
                 services.AddDbContext<IntegrationEventLogContext>(
                     options => _ = provider switch

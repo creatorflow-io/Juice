@@ -15,7 +15,7 @@ using Xunit.Abstractions;
 
 namespace Juice.EF.Tests
 {
-    [TestCaseOrderer("Juice.XUnit.PriorityOrderer", "Juice.EF.Test")]
+    [TestCaseOrderer("Juice.XUnit.PriorityOrderer", "Juice.EF.Tests")]
     public class EFTest
     {
         private readonly IServiceProvider _serviceProvider;
@@ -41,7 +41,10 @@ namespace Juice.EF.Tests
                     var configService = provider.GetRequiredService<IConfigurationService>();
                     var connectionString = configService.GetConfiguration().GetConnectionString("Default");
                     var builder = new DbContextOptionsBuilder<TestContext>();
-                    builder.UseSqlServer(connectionString);
+                    builder.UseSqlServer(connectionString, options =>
+                    {
+                        options.MigrationsHistoryTable("__EFTestMigrationsHistory", "Contents");
+                    });
                     return new TestContext(provider, builder.Options);
                 });
 

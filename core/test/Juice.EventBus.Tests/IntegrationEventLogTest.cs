@@ -118,6 +118,10 @@ namespace Juice.EventBus.Tests
             _testOutput.WriteLine(context.Database.ProviderName);
         }
 
+        /// <summary>
+        /// This test required EF Tests to create Contents.Content
+        /// </summary>
+        /// <returns></returns>
         [IgnoreOnCIFact(DisplayName = "Test event log service"), TestPriority(9)]
         public async Task EventLogServiceTestAsync()
         {
@@ -244,13 +248,7 @@ namespace Juice.EventBus.Tests
 
                 // Register DbContext class
 
-                services.Configure<IntegrationEventLogContextOptions>(options => options.Schema = TestSchema1);
-
-                var connectionString = configService.GetConfiguration().GetConnectionString("Default");
-                services.AddDbContext<IntegrationEventLogContext>(options =>
-                {
-                    options.UseSqlServer(connectionString);
-                });
+                services.AddTestEventLogContext("PostgreSQL", configuration, schema);
 
             });
 
