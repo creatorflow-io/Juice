@@ -18,7 +18,7 @@ namespace Juice.Extensions.Options
             services.TryAddTransient<ITenantsOptionsMutableStore>(sp =>
             {
                 var tenant = sp.GetRequiredService<ITenant>();
-                return new TenantsOptionsMutableFileStore(tenant, file);
+                return new TenantsOptionsMutableJsonFileStore(tenant, file);
             });
             return services;
         }

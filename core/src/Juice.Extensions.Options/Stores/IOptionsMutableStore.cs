@@ -1,6 +1,4 @@
-﻿using Newtonsoft.Json.Linq;
-
-namespace Juice.Extensions.Options.Stores
+﻿namespace Juice.Extensions.Options.Stores
 {
     /// <summary>
     /// Define store interface to save option provided by <see cref="IOptionsMutable{T}"/>
@@ -8,8 +6,11 @@ namespace Juice.Extensions.Options.Stores
     /// </summary>
 	public interface IOptionsMutableStore
     {
-        Task UpdateAsync(Action<JObject> applyChanges);
+        Task UpdateAsync(string section, object options);
     }
 
-    public interface IOptionsMutableStore<T> : IOptionsMutableStore { }
+    public interface IOptionsMutableStore<T> : IOptionsMutableStore
+    {
+        //Task<T> UpdateAsync(string section, T current, Action<T> applyChanges);
+    }
 }

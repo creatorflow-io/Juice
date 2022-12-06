@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 
 namespace Juice.EventBus.IntegrationEventLog.EF
 {
-    public class IntegrationEventLogContext : DbContext, IDbContextSchema
+    public class IntegrationEventLogContext : DbContext, ISchemaDbContext
     {
         public string? Schema { get; private set; }
         public IntegrationEventLogContext(IntegrationEventLogContextOptions dbOptions,

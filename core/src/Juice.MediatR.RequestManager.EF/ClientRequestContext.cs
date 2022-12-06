@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Juice.MediatR.RequestManager.EF
 {
-    public class ClientRequestContext : DbContext, IDbContextSchema
+    public class ClientRequestContext : DbContext, ISchemaDbContext
     {
         public string? Schema { get; private set; }
         public ClientRequestContext(DbOptions<ClientRequestContext> dbOptions,

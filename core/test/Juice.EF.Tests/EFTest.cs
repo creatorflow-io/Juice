@@ -96,6 +96,9 @@ namespace Juice.EF.Tests
 
             Assert.NotNull(addedContent);
 
+            addedContent.Disable();
+            await dbContext.SaveChangesAsync();
+
             _logger.LogInformation("Content {code} was verified", code1);
 
             await Assert.ThrowsAsync<DbUpdateException>(async () =>

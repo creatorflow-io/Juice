@@ -7,9 +7,9 @@ namespace Juice.EventBus.IntegrationEventLog.EF.SqlServer.Migrations
 {
     public partial class InitEventLog : Migration
     {
-        private readonly IDbContextSchema _schema;
+        private readonly ISchemaDbContext _schema;
 
-        public InitEventLog(IDbContextSchema schema)
+        public InitEventLog(ISchemaDbContext schema)
         {
             _schema = schema;
         }

@@ -11,7 +11,7 @@ namespace Juice.MediatR.RequestManager.EF.SqlServer.Migrations
 
         public InitClientRequest() { }
 
-        public InitClientRequest(IDbContextSchema schema)
+        public InitClientRequest(ISchemaDbContext schema)
         {
             _schema = schema.Schema;
         }

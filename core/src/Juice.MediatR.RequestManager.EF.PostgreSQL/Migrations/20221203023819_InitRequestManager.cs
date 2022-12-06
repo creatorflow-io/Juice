@@ -7,11 +7,11 @@ namespace Juice.MediatR.RequestManager.EF.PostgreSQL.Migrations
 {
     public partial class InitRequestManager : Migration
     {
-        private readonly IDbContextSchema _schema;
+        private readonly ISchemaDbContext _schema;
 
         public InitRequestManager() { }
 
-        public InitRequestManager(IDbContextSchema schema)
+        public InitRequestManager(ISchemaDbContext schema)
         {
             _schema = schema;
         }
