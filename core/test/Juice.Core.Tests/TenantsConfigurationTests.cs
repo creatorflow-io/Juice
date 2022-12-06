@@ -13,6 +13,7 @@ using Xunit.Abstractions;
 
 namespace Juice.Core.Tests
 {
+    [TestCaseOrderer("Juice.XUnit.PriorityOrderer", "Juice.Core.Tests")]
     public class TenantsConfigurationTests
     {
         private readonly ITestOutputHelper _output;
@@ -89,7 +90,8 @@ namespace Juice.Core.Tests
                  });
 
                  services.AddScoped<ITenant>(sp => new MyTenant { Identifier = DateTime.Now.Millisecond % 2 == 0 ? "TenantA" : "TenantB" });
-                 services.AddTenantsConfiguration().AddTenantsJsonFile("appsettings.Development.json");
+                 services.AddTenantsConfiguration()
+                    .AddTenantsJsonFile("appsettings.Development.json");
 
                  services.UseTenantsOptionsMutableFileStore("appsettings.Development.json");
 

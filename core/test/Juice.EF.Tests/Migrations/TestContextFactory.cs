@@ -12,6 +12,7 @@ namespace Juice.EF.Tests.Migrations
     {
         public TestContext CreateDbContext(string[] args)
         {
+            Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
             var resolver = new DependencyResolver
             {
                 CurrentDirectory = AppContext.BaseDirectory

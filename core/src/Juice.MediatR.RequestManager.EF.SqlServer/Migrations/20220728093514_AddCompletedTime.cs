@@ -11,7 +11,7 @@ namespace Juice.MediatR.RequestManager.EF.SqlServer.Migrations
 
         public AddCompletedTime() { }
 
-        public AddCompletedTime(IDbContextSchema schema)
+        public AddCompletedTime(ISchemaDbContext schema)
         {
             _schema = schema.Schema;
         }

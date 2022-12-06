@@ -1,6 +1,6 @@
 ﻿namespace Juice.EF
 {
-    public interface IDbContextSchema
+    public interface ISchemaDbContext
     {
         string? Schema { get; }
     }

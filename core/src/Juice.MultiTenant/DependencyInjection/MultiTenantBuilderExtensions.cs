@@ -7,10 +7,9 @@ namespace Juice.MultiTenant.DependencyInjection
     public static class MultiTenantBuilderExtensions
     {
         public static FinbuckleMultiTenantBuilder<TTenantInfo> JuiceIntegration<TTenantInfo>(this FinbuckleMultiTenantBuilder<TTenantInfo> builder)
-            where TTenantInfo : class, ITenantInfo, ITenant, new()
+            where TTenantInfo : class, ITenantInfo, new()
         {
-
-            builder.Services.AddScoped<ITenant>(sp => sp.GetService<TTenantInfo>()!);
+            builder.Services.AddScoped<ITenant>(sp => sp.GetService<Tenant>()!);
 
             return builder;
         }

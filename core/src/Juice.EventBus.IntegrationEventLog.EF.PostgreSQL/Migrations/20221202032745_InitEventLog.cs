@@ -7,11 +7,11 @@ namespace Juice.EventBus.IntegrationEventLog.EF.PostgreSQL.Migrations
 {
     public partial class InitEventLog : Migration
     {
-        private readonly IDbContextSchema _schema;
+        private readonly ISchemaDbContext _schema;
 
         public InitEventLog() { }
 
-        public InitEventLog(IDbContextSchema schema)
+        public InitEventLog(ISchemaDbContext schema)
         {
             _schema = schema;
         }

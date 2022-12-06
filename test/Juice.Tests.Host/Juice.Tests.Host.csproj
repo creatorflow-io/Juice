@@ -27,6 +27,8 @@
     <ProjectReference Include="..\..\core\src\Juice.EventBus.IntegrationEventLog.EF.SqlServer\Juice.EventBus.IntegrationEventLog.EF.SqlServer.csproj" />
     <ProjectReference Include="..\..\core\src\Juice.MediatR.RequestManager.EF.PostgreSQL\Juice.MediatR.RequestManager.EF.PostgreSQL.csproj" />
     <ProjectReference Include="..\..\core\src\Juice.MediatR.RequestManager.EF.SqlServer\Juice.MediatR.RequestManager.EF.SqlServer.csproj" />
+    <ProjectReference Include="..\..\core\src\Juice.MultiTenant.EF.PostgreSQL\Juice.MultiTenant.EF.PostgreSQL.csproj" />
+    <ProjectReference Include="..\..\core\src\Juice.MultiTenant.EF.SqlServer\Juice.MultiTenant.EF.SqlServer.csproj" />
     <ProjectReference Include="..\..\core\src\Juice.MultiTenant\Juice.MultiTenant.csproj" />
   </ItemGroup>
 

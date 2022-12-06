@@ -1,9 +1,13 @@
-﻿using Juice.EventBus.IntegrationEventLog.EF.DependencyInjection;
+﻿using Finbuckle.MultiTenant;
+using Juice.EventBus.IntegrationEventLog.EF.DependencyInjection;
 using Juice.Extensions.Configuration;
 using Juice.Extensions.Options;
 using Juice.MediatR.RequestManager.EF.DependencyInjection;
 using Juice.MultiTenant;
 using Juice.MultiTenant.DependencyInjection;
+using Juice.MultiTenant.EF;
+using Juice.MultiTenant.EF.ConfigurationProviders.DependencyInjection;
+using Juice.MultiTenant.EF.DependencyInjection;
 using Juice.Tests.Host;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Caching.Distributed;
@@ -23,9 +27,14 @@ builder.Services.AddRequestManager(builder.Configuration, options =>
 builder.Services.AddMultiTenant<Tenant>()
     .JuiceIntegration()
     .WithBasePathStrategy(options => options.RebaseAspNetCorePathBase = true)
-    .WithConfigurationStore();
+    .WithEFStore(builder.Configuration, options =>
+    {
+        options.DatabaseProvider = "PostgreSQL";
+        options.ConnectionName = "PostgreConnection";
+    }, true)
+    ;
 
-ConfigureTenantOptions(builder.Services);
+ConfigureTenantOptions(builder.Services, builder.Configuration);
 
 ConfigureDataProtection(builder.Services, builder.Configuration.GetSection("Redis:ConfigurationOptions"));
 
@@ -41,11 +50,22 @@ app.UseEndpoints(endpoints =>
 {
     endpoints.MapGet("/", async (context) =>
     {
-        var tenant = context.RequestServices.GetService<Tenant>();
+        var tenant = context.GetMultiTenantContext<Tenant>()?.TenantInfo;
+        ;
+        var tenant1 = context.RequestServices.GetRequiredService<IMultiTenantContextAccessor<Tenant>>().MultiTenantContext?.TenantInfo!;
+        var tenant2 = context.RequestServices.GetService<Tenant>();
+        var tenant3 = context.RequestServices.GetService<ITenantInfo>();
+        if (tenant == null)
+        {
+            context.Response.StatusCode = StatusCodes.Status404NotFound;
+            return;
+        }
         var options = context.RequestServices.GetRequiredService<ITenantsOptions<Options>>();
 
+        var db = context.RequestServices.GetService<TenantStoreDbContext<Tenant>>()?.GetType()?.Name;
+
         await
-           context.Response.WriteAsync("Hello " + (tenant?.Name ?? "Host") + ". Your options name is " + (options.Value?.Name ?? ""));
+           context.Response.WriteAsync("Hello " + (tenant?.Name ?? "Host") + ". Your options name is " + (options.Value?.Name ?? "") + " " + db ?? "");
     });
 
     endpoints.MapGet("/protect", async (context) =>
@@ -85,9 +105,14 @@ app.UseEndpoints(endpoints =>
 app.Run();
 
 
-static void ConfigureTenantOptions(IServiceCollection services)
+static void ConfigureTenantOptions(IServiceCollection services, IConfiguration configuration)
 {
-    services.AddTenantsConfiguration().AddTenantsJsonFile("appsettings.Development.json");
+    services.AddTenantsConfiguration()
+        .AddTenantsJsonFile("appsettings.Development.json")
+        .AddTenantsEntityConfiguration(configuration, options =>
+        {
+            options.DatabaseProvider = "PostgreSQL";
+        });
 
     services.ConfigureTenantsOptions<Options>("Options");
 }

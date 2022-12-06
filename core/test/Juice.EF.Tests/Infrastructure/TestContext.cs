@@ -5,16 +5,16 @@ using Microsoft.EntityFrameworkCore;
 namespace Juice.EF.Tests.Infrastructure
 {
 
-    public class TestContext : DbContextBase
+    public class TestContext : DbContext
     {
         public const string SCHEMA = "Contents";
         public DbSet<Content> Contents { get; set; }
 
-        public TestContext(IServiceProvider serviceProvider, DbContextOptions<TestContext> options) : base(serviceProvider, options)
+        public TestContext(IServiceProvider serviceProvider, DbContextOptions<TestContext> options) : base(options)
         {
         }
 
-        protected override void ConfigureModel(ModelBuilder modelBuilder)
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Content>(entity =>
             {

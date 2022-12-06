@@ -8,7 +8,7 @@ namespace Juice.EF.Migrations
         /// <inheritdoc />
         public object Create(DbContext context)
         {
-            return new { Type = context.GetType(), Schema = context is IDbContextSchema schema ? schema.Schema : null };
+            return new { Type = context.GetType(), Schema = context is ISchemaDbContext schema ? schema.Schema : null };
         }
     }
 }

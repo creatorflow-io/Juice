@@ -24,7 +24,7 @@ namespace Juice.EF.Tests.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder, 1L, 1);
 
-            modelBuilder.Entity("Juice.EF.Test.Domain.Content", b =>
+            modelBuilder.Entity("Juice.EF.Tests.Domain.Content", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()

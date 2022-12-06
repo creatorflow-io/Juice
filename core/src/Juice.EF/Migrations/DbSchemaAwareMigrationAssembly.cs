@@ -26,9 +26,9 @@ namespace Juice.EF.Migrations
                 throw new ArgumentNullException(nameof(activeProvider));
 
             var hasCtorWithSchema = migrationClass
-                    .GetConstructor(new[] { typeof(IDbContextSchema) }) != null;
+                    .GetConstructor(new[] { typeof(ISchemaDbContext) }) != null;
 
-            if (hasCtorWithSchema && _context is IDbContextSchema schema)
+            if (hasCtorWithSchema && _context is ISchemaDbContext schema)
             {
                 var instance = (Migration)Activator.CreateInstance(migrationClass.AsType(), schema);
                 instance.ActiveProvider = activeProvider;
