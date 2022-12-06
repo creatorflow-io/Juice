@@ -1,4 +1,5 @@
-﻿using Juice.EF.Migrations;
+﻿using Juice.EF;
+using Juice.EF.Migrations;
 using Juice.EventBus.IntegrationEventLog.EF.FeatureBuilder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Migrations;
@@ -45,7 +46,7 @@ namespace Juice.EventBus.IntegrationEventLog.EF.DependencyInjection
             services.TryAddScoped<Func<TContext, IntegrationEventLogContext>>(provider => (TContext context) =>
             {
                 var providerName = context.Database.ProviderName;
-                var dbOptions = new IntegrationEventLogContextOptions { Schema = schema };
+                var dbOptions = new DbOptions<IntegrationEventLogContext> { Schema = schema };
                 var optionsBuilder = new DbContextOptionsBuilder<IntegrationEventLogContext>();
 
                 switch (providerName)
@@ -53,7 +54,7 @@ namespace Juice.EventBus.IntegrationEventLog.EF.DependencyInjection
                     case "Microsoft.EntityFrameworkCore.SqlServer":
                         optionsBuilder.UseSqlServer(context.Database.GetDbConnection(), x =>
                         {
-                            x.MigrationsHistoryTable("__EFMigrationsHistory", schema);
+                            x.MigrationsHistoryTable("__EFEventLogMigrationsHistory", schema);
                             x.MigrationsAssembly("Juice.EventBus.IntegrationEventLog.EF.SqlServer");
                         });
                         break;
@@ -61,7 +62,7 @@ namespace Juice.EventBus.IntegrationEventLog.EF.DependencyInjection
                         AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
                         optionsBuilder.UseNpgsql(context.Database.GetDbConnection(), x =>
                         {
-                            x.MigrationsHistoryTable("__EFMigrationsHistory", schema);
+                            x.MigrationsHistoryTable("__EFEventLogMigrationsHistory", schema);
                             x.MigrationsAssembly("Juice.EventBus.IntegrationEventLog.EF.PostgreSQL");
                         });
                         break;
@@ -88,7 +89,7 @@ namespace Juice.EventBus.IntegrationEventLog.EF.DependencyInjection
             IConfiguration configuration,
             string? schema = default)
         {
-            services.Configure<IntegrationEventLogContextOptions>(options => options.Schema = schema);
+            services.AddScoped(sp => new DbOptions<IntegrationEventLogContext> { Schema = schema });
 
             services.AddDbContext<IntegrationEventLogContext>(options =>
             {
@@ -99,7 +100,7 @@ namespace Juice.EventBus.IntegrationEventLog.EF.DependencyInjection
                         configuration.GetConnectionString("PostgreConnection"),
                          x =>
                          {
-                             x.MigrationsHistoryTable("__EFMigrationsHistory", schema);
+                             x.MigrationsHistoryTable("__EFEventLogMigrationsHistory", schema);
                              x.MigrationsAssembly("Juice.EventBus.IntegrationEventLog.EF.PostgreSQL");
                          });
                         AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
@@ -110,7 +111,7 @@ namespace Juice.EventBus.IntegrationEventLog.EF.DependencyInjection
                         configuration.GetConnectionString("SqlServerConnection"),
                         x =>
                         {
-                            x.MigrationsHistoryTable("__EFMigrationsHistory", schema);
+                            x.MigrationsHistoryTable("__EFEventLogMigrationsHistory", schema);
                             x.MigrationsAssembly("Juice.EventBus.IntegrationEventLog.EF.SqlServer");
                         });
                         break;

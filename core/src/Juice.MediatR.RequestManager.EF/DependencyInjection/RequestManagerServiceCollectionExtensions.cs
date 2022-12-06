@@ -43,7 +43,7 @@ namespace Juice.MediatR.RequestManager.EF.DependencyInjection
                            configuration.GetConnectionString(connectionName),
                             x =>
                             {
-                                x.MigrationsHistoryTable("__EFMigrationsHistory", schema);
+                                x.MigrationsHistoryTable("__EFMediatRRequestMigrationsHistory", schema);
                                 x.MigrationsAssembly("Juice.MediatR.RequestManager.EF.PostgreSQL");
                             });
                         break;
@@ -53,7 +53,7 @@ namespace Juice.MediatR.RequestManager.EF.DependencyInjection
                         configuration.GetConnectionString(connectionName),
                         x =>
                         {
-                            x.MigrationsHistoryTable("__EFMigrationsHistory", schema);
+                            x.MigrationsHistoryTable("__EFMediatRRequestMigrationsHistory", schema);
                             x.MigrationsAssembly("Juice.MediatR.RequestManager.EF.SqlServer");
                         });
                         break;

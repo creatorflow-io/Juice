@@ -1,23 +1,17 @@
 ﻿using Juice.EF;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Microsoft.Extensions.Options;
 
 namespace Juice.EventBus.IntegrationEventLog.EF
 {
     public class IntegrationEventLogContext : DbContext, ISchemaDbContext
     {
         public string? Schema { get; private set; }
-        public IntegrationEventLogContext(IntegrationEventLogContextOptions dbOptions,
+
+        public IntegrationEventLogContext(DbOptions<IntegrationEventLogContext> dbOptions,
             DbContextOptions<IntegrationEventLogContext> options) : base(options)
         {
             Schema = dbOptions.Schema;
-        }
-
-        public IntegrationEventLogContext(IOptions<IntegrationEventLogContextOptions> dbOptions,
-            DbContextOptions<IntegrationEventLogContext> options) : base(options)
-        {
-            Schema = dbOptions.Value.Schema;
         }
 
         public DbSet<IntegrationEventLogEntry> IntegrationEventLogs { get; set; }
