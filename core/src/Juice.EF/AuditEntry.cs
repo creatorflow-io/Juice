@@ -6,9 +6,9 @@ namespace Juice.EF
     {
         public AuditEntry(EntityEntry entry)
         {
-            Entry = entry;
+            Entity = entry.Entity;
         }
-        public EntityEntry Entry { get; }
+        public object? Entity { get; }
         public DataEvent? DataEvent { get; set; }
         public string? User { get; set; }
         public string? Database { get; set; }
@@ -32,7 +32,7 @@ namespace Juice.EF
                 KeyValues = KeyValues,
                 CurrentValues = CurrentValues,
                 OriginalValues = OriginalValues,
-                Entity = Entry.Entity
+                Entity = Entity
             };
 
             return audit;

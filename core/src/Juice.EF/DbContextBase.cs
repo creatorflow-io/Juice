@@ -19,6 +19,7 @@ namespace Juice.EF
         private CancellationTokenSource _cts = new CancellationTokenSource();
         private bool _hasChanged;
         public bool HasChanged => _hasChanged;
+        private readonly DbOptions? _options;
         public DbContextBase(IServiceProvider serviceProvider, DbContextOptions options)
             : base(options)
         {
@@ -30,6 +31,7 @@ namespace Juice.EF
             }
             var loggerFactory = serviceProvider.GetService<ILoggerFactory>();
             _logger = loggerFactory != null ? loggerFactory.CreateLogger(GetType()) : null;
+            _logger?.LogInformation("Logger initialized for {type}", GetType().Name);
             try
             {
                 AuditHandlers = serviceProvider.GetServices<IDataEventHandler>();
@@ -39,8 +41,8 @@ namespace Juice.EF
                 _logger?.LogWarning(ex, $"[DbContextBase] failed to receive audit handlers. {ex.Message}");
             }
 
-            var dbOptions = serviceProvider.GetService(typeof(DbOptions<>).MakeGenericType(GetType())) as DbOptions;
-            Schema = dbOptions?.Schema;
+            _options = serviceProvider.GetService(typeof(DbOptions<>).MakeGenericType(GetType())) as DbOptions;
+            Schema = _options?.Schema;
         }
 
         protected abstract void ConfigureModel(ModelBuilder modelBuilder);
@@ -63,21 +65,35 @@ namespace Juice.EF
         public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default(CancellationToken))
         {
             var cts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, cancellationToken);
-            this.SetAuditInformation();
-            var changes = this.TrackingChanges();
+            this.SetAuditInformation(_logger);
+            var changes = this.TrackingChanges(_logger);
 
             try
             {
+                if (_options != null && _options.JsonPropertyBehavior == JsonPropertyBehavior.UpdateALL)
+                {
+                    return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cts.Token);
+                }
                 using (var transaction = Database.BeginTransaction())
                 {
-                    var (affects, refeshEntries) = await this.TryUpdateDynamicPropertyAsync(_logger);
-                    if (this.HasUnsavedChanges())
+                    try
                     {
-                        affects = await base.SaveChangesAsync(acceptAllChangesOnSuccess, cts.Token);
+                        var (affects, refeshEntries) = await this.TryUpdateDynamicPropertyAsync(_logger);
+                        if (this.HasUnsavedChanges())
+                        {
+                            affects = await base.SaveChangesAsync(acceptAllChangesOnSuccess, cts.Token);
+                        }
+
+                        transaction.Commit();
+
+                        await refeshEntries.RefreshEntriesAsync();
+                        return affects;
                     }
-                    await refeshEntries.RefreshEntriesAsync();
-                    transaction.Commit();
-                    return affects;
+                    catch (Exception)
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
                 }
             }
             finally
@@ -91,20 +107,34 @@ namespace Juice.EF
 
         public override int SaveChanges(bool acceptAllChangesOnSuccess)
         {
-            this.SetAuditInformation();
-            var changes = this.TrackingChanges();
+            this.SetAuditInformation(_logger);
+            var changes = this.TrackingChanges(_logger);
             try
             {
+                if (_options != null && _options.JsonPropertyBehavior == JsonPropertyBehavior.UpdateALL)
+                {
+                    return base.SaveChanges(acceptAllChangesOnSuccess);
+                }
                 using (var transaction = Database.BeginTransaction())
                 {
-                    var (affects, refeshEntries) = this.TryUpdateDynamicPropertyAsync(_logger).GetAwaiter().GetResult();
-                    if (this.HasUnsavedChanges())
+                    try
                     {
-                        affects = base.SaveChanges(acceptAllChangesOnSuccess);
+                        var (affects, refeshEntries) = this.TryUpdateDynamicPropertyAsync(_logger).GetAwaiter().GetResult();
+                        if (this.HasUnsavedChanges())
+                        {
+                            affects = base.SaveChanges(acceptAllChangesOnSuccess);
+                        }
+
+                        transaction.Commit();
+
+                        refeshEntries.RefreshEntriesAsync().GetAwaiter().GetResult();
+                        return affects;
                     }
-                    refeshEntries.RefreshEntriesAsync().GetAwaiter().GetResult();
-                    transaction.Commit();
-                    return affects;
+                    catch (Exception)
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
                 }
             }
             finally

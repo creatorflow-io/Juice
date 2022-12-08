@@ -84,7 +84,7 @@
     {
         public int RecursEvery { get; set; } // day(s)/week(s)/month(s)
         public TimeSpan? OccursOnceAt { get; set; }
-        public TimeSpan? OccursEvery { get; set; } // miliseconds
+        public TimeSpan? OccursEvery { get; set; } // milliseconds
         public TimeSpan? StartingAt { get; set; }
         public TimeSpan? Duration { get; set; }
     }
@@ -151,7 +151,7 @@
                 else
                 {
 
-                    var occursEvery = daily.OccursEvery ?? new TimeSpan(0, 0, 30); // miliseconds
+                    var occursEvery = daily.OccursEvery ?? new TimeSpan(0, 0, 30); // milliseconds
                     var last = lastProcessed ?? Now;
                     if (last < Now && (Now - last).TotalDays > 10) // max 10 day(s) from last to now
                     {
@@ -264,7 +264,7 @@
                 }
                 else
                 {
-                    var occursEvery = daily.OccursEvery ?? new TimeSpan(0, 0, 30); // miliseconds
+                    var occursEvery = daily.OccursEvery ?? new TimeSpan(0, 0, 30); // milliseconds
                     var last = lastProcessed ?? Now;
                     if (last < Now && (Now - last).TotalDays > 10) // max 10 day(s) from last to now
                     {
@@ -407,7 +407,7 @@
                 }
                 else
                 {
-                    var occursEvery = daily.OccursEvery ?? new TimeSpan(0, 0, 30); // miliseconds
+                    var occursEvery = daily.OccursEvery ?? new TimeSpan(0, 0, 30); // milliseconds
                     var last = lastProcessed ?? Now;
 
                     var startingAt = daily.StartingAt ?? new TimeSpan(0, 0, 0);

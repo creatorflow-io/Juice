@@ -8,39 +8,63 @@ using Newtonsoft.Json.Linq;
 
 namespace Juice.EF.Extensions
 {
-    public static class AuditableDbContextExtensions
+    public static class DbContextExtensions
     {
         public static void SetAuditInformation<TContext>(this TContext context, ILogger? logger = default)
             where TContext : DbContext, IAuditableDbContext
         {
             try
             {
-                var addedEntities = context.ChangeTracker.Entries<IAuditable>().Where(entry => entry.State == EntityState.Added).ToList();
+                var addedEntities = context.ChangeTracker.Entries()
+                    .Where(entry => entry.Metadata.IsAuditable())
+                    .Where(entry => entry.State == EntityState.Added).ToList();
                 var user = context.User;
+
+                if (logger?.IsEnabled(LogLevel.Debug) ?? false)
+                {
+                    logger.LogDebug("[Audit] Found {count} Added entries", addedEntities.Count);
+                }
 
                 addedEntities.ForEach(entry =>
                 {
-                    entry.Entity.SetOnceCreatedUser(user);
+                    if (user != null && entry.Property(nameof(IAuditable.CreatedUser)).CurrentValue == null)
+                    {
+                        entry.Property(nameof(IAuditable.CreatedUser)).CurrentValue = user;
+                    }
+                    entry.Property(nameof(IAuditable.CreatedDate)).CurrentValue = DateTimeOffset.Now;
 
-                    entry.Entity.UpdateModifiedUser(user);
+                    entry.Property(nameof(IAuditable.ModifiedUser)).CurrentValue = user;
+                    entry.Property(nameof(IAuditable.ModifiedDate)).CurrentValue = DateTimeOffset.Now;
+
+                    if (logger?.IsEnabled(LogLevel.Debug) ?? false)
+                    {
+                        logger.LogDebug("Setted audit info for entry " + entry.Property("Id").CurrentValue ?? "");
+                    }
                 });
 
-                var editedEntities = context.ChangeTracker.Entries<IAuditable>().Where(entry => entry.State == EntityState.Modified).ToList();
 
+                var editedEntities = context.ChangeTracker.Entries()
+                    .Where(entry => entry.Metadata.IsAuditable())
+                    .Where(entry => entry.State == EntityState.Modified).ToList();
+                if (logger?.IsEnabled(LogLevel.Debug) ?? false)
+                {
+                    logger.LogDebug("[Audit] Found {count} Modified entries", editedEntities.Count);
+                }
                 editedEntities.ForEach(entry =>
                 {
                     entry.Property(nameof(IAuditable.CreatedDate)).IsModified = false;
                     entry.Property(nameof(IAuditable.CreatedUser)).IsModified = false;
                     entry.Property(nameof(IAuditable.ModifiedDate)).CurrentValue = DateTimeOffset.Now;
-
-                    entry.Entity.UpdateModifiedUser(user);
-
+                    entry.Property(nameof(IAuditable.ModifiedUser)).CurrentValue = user;
+                    if (logger?.IsEnabled(LogLevel.Debug) ?? false)
+                    {
+                        logger.LogDebug("Setted audit info for entry " + entry.Property("Id").CurrentValue ?? "");
+                    }
                 });
-
             }
             catch (Exception ex)
             {
-                logger?.LogWarning(ex, $"[DbContextBase][SetAuditInformation][Failed] {ex.StackTrace}");
+                logger?.LogWarning(ex, $"[Audit][SetAuditInformation][Failed] {ex.StackTrace}");
             }
         }
 
@@ -57,6 +81,10 @@ namespace Juice.EF.Extensions
                     foreach (var entry in context.ChangeTracker.Entries())
                     {
                         if (entry.State == EntityState.Detached || entry.State == EntityState.Unchanged)
+                        {
+                            continue;
+                        }
+                        if (!entry.Metadata.IsAuditable())
                         {
                             continue;
                         }
@@ -136,13 +164,29 @@ namespace Juice.EF.Extensions
                                         {
                                             foreach (var kvp in expandable1.OriginalPropertyValues)
                                             {
-                                                if (expandable1.CurrentPropertyValues.ContainsKey(kvp.Key) && expandable1.CurrentPropertyValues[kvp.Key] != kvp.Value)
+                                                // removed or modified property
+                                                if (!expandable1.CurrentPropertyValues.ContainsKey(kvp.Key) ||
+                                                    expandable1.CurrentPropertyValues[kvp.Key]?.ToString() != kvp.Value?.ToString())
                                                 {
                                                     auditEntry.OriginalValues[kvp.Key] = kvp.Value;
-                                                    auditEntry.CurrentValues[kvp.Key] = expandable1.CurrentPropertyValues[kvp.Key];
+                                                    auditEntry.CurrentValues[kvp.Key] =
+                                                        expandable1.CurrentPropertyValues.ContainsKey(kvp.Key) ?
+                                                        expandable1.CurrentPropertyValues[kvp.Key] : null;
                                                 }
                                             }
-
+                                            foreach (var kvp in expandable1.CurrentPropertyValues)
+                                            {
+                                                // added property
+                                                if (!expandable1.OriginalPropertyValues.ContainsKey(kvp.Key))
+                                                {
+                                                    auditEntry.OriginalValues[kvp.Key] = null;
+                                                    auditEntry.CurrentValues[kvp.Key] = kvp.Value;
+                                                }
+                                            }
+                                            if (logger?.IsEnabled(LogLevel.Debug) ?? false)
+                                            {
+                                                logger?.LogDebug("[DbContextBase][TrackingChanges] found {count} changed dynamic properties", auditEntry.CurrentValues.Count);
+                                            }
                                             break;
                                         }
                                         auditEntry.OriginalValues[propertyName] = property.OriginalValue;
@@ -152,12 +196,24 @@ namespace Juice.EF.Extensions
                             }
                         }
                     }
+
+                    if (logger?.IsEnabled(LogLevel.Debug) ?? false)
+                    {
+                        logger?.LogDebug("[DbContextBase][TrackingChanges] collected {count} audit entries", auditEntries.Count);
+                    }
                     return auditEntries;
+                }
+                else
+                {
+                    if (logger?.IsEnabled(LogLevel.Debug) ?? false)
+                    {
+                        logger?.LogDebug("[DbContextBase][TrackingChanges] context.AuditHandlers is empty");
+                    }
                 }
             }
             catch (Exception ex)
             {
-                logger?.LogDebug(ex, "[DbContextBase][TrackingChanges][Failed]");
+                logger?.LogError(ex, $"[DbContextBase][TrackingChanges] {ex.Message}");
             }
             return null;
         }
@@ -225,7 +281,7 @@ namespace Juice.EF.Extensions
             if (updates.Any())
             {
                 var sql = string.Join(";", updates);
-                var affects = context.Database.ExecuteSqlRaw(sql, args);
+                var affects = await context.Database.ExecuteSqlRawAsync(sql, args);
 
                 return (affects, refresh);
             }
@@ -241,6 +297,8 @@ namespace Juice.EF.Extensions
             await Task.Yield();
             var _refreshEntries = new HashSet<EntityEntry>();
 
+            var provider = context.Database.ProviderName;
+
             var editedEntities = context.ChangeTracker.Entries<IExpandable>().Where(entry => entry.State == EntityState.Modified).ToList();
             var updates = new List<string>();
             var args = new List<object>();
@@ -250,8 +308,8 @@ namespace Juice.EF.Extensions
                 if (tableIdentifier.HasValue)
                 {
                     // Finding property that map to Properties column
-                    var colName = "Properties";
-                    var property = entry.Properties.Where(p => p.Metadata.GetColumnName(tableIdentifier.Value) == colName).FirstOrDefault();
+                    var propertyColumn = "Properties";
+                    var property = entry.Properties.Where(p => p.Metadata.GetColumnName(tableIdentifier.Value) == propertyColumn).FirstOrDefault();
                     if (property != null)
                     {
                         property.IsModified = false;
@@ -271,24 +329,13 @@ namespace Juice.EF.Extensions
                                 if (currentValue != kvp.Value)
                                 {
                                     var value = JsonConvert.SerializeObject(currentValue);
-                                    var sql = "";
 
-                                    var token = JToken.Parse(value);
-
-                                    if (token is JArray || token is JObject)
-                                    {
-                                        value = token.ToString(Formatting.None);
-                                        sql = $"Update {entry.Metadata.GetSchema()}.[{entry.Metadata.GetTableName()}] set {colName}=JSON_MODIFY({colName}, '$.\"{kvp.Key}\"', JSON_QUERY  ({{{args.Count}}})) where {keyColumn} = {{{args.Count + 1}}}";
-                                    }
-                                    else
-                                    {
-                                        value = value.Trim('"');
-                                        sql = $"Update {entry.Metadata.GetSchema()}.[{entry.Metadata.GetTableName()}] set {colName}=JSON_MODIFY({colName}, '$.\"{kvp.Key}\"', {{{args.Count}}}) where {keyColumn} = {{{args.Count + 1}}}";
-                                    }
+                                    var (sql, sqlargs) = provider == "Npgsql.EntityFrameworkCore.PostgreSQL" ?
+                                         PostgreSQLJsonModify(entry.Metadata, args.Count, kvp.Key, value, keyColumn, key, propertyColumn)
+                                        : SqlServerJsonModify(entry.Metadata, args.Count, kvp.Key, value, keyColumn, key, propertyColumn);
 
                                     updates.Add(sql);
-                                    args.Add(value);
-                                    args.Add(key);
+                                    args.AddRange(sqlargs);
                                     if (logger?.IsEnabled(LogLevel.Debug) ?? false)
                                     {
                                         logger?.LogDebug(sql);
@@ -302,6 +349,47 @@ namespace Juice.EF.Extensions
             return (_refreshEntries, updates, args.ToArray());
         }
 
+        private static (string SQL, object[] ARGs) SqlServerJsonModify(IEntityType metadata,
+            int argCount, string propertyKey, string propertyValue,
+            string keyColumn, object keyValue, string propertyColumn)
+        {
+            var token = JToken.Parse(propertyValue);
+            if (token is JArray || token is JObject)
+            {
+                propertyValue = token.ToString(Formatting.None);
+                var sql = $"Update [{metadata.GetSchema()}].[{metadata.GetTableName()}] set [{propertyColumn}]=JSON_MODIFY([{propertyColumn}], '$.\"{propertyKey}\"', JSON_QUERY  ({{{argCount}}})) where [{keyColumn}] = {{{argCount + 1}}}";
+
+                return (sql, new object[] { propertyValue, keyValue });
+            }
+            else
+            {
+                propertyValue = propertyValue.Trim('"');
+                var sql = $"Update [{metadata.GetSchema()}].[{metadata.GetTableName()}] set [{propertyColumn}]=JSON_MODIFY([{propertyColumn}], '$.\"{propertyKey}\"', {{{argCount}}}) where [{keyColumn}] = {{{argCount + 1}}}";
+
+                return (sql, new object[] { propertyValue, keyValue });
+            }
+        }
+
+        private static (string SQL, object[] ARGs) PostgreSQLJsonModify(IEntityType metadata,
+            int argCount, string propertyKey, string propertyValue,
+            string keyColumn, object keyValue, string propertyColumn)
+        {
+            var token = JToken.Parse(propertyValue);
+            propertyValue = token.ToString(Formatting.None);
+            if (token is JObject)
+            {
+                var sql = $"Update \"{metadata.GetSchema()}\".\"{metadata.GetTableName()}\" set \"{propertyColumn}\"=jsonb_set(\"{propertyColumn}\", '{{{{{propertyKey}}}}}', jsonb '{{{propertyValue}}}', true) where \"{keyColumn}\" = {{{argCount}}}";
+
+                return (sql, new object[] { keyValue });
+            }
+            else
+            {
+                var sql = $"Update \"{metadata.GetSchema()}\".\"{metadata.GetTableName()}\" set \"{propertyColumn}\"=jsonb_set(\"{propertyColumn}\", '{{{{{propertyKey}}}}}', jsonb '{propertyValue}', true) where \"{keyColumn}\" = {{{argCount}}}";
+
+                return (sql, new object[] { keyValue });
+            }
+
+        }
 
         #region Expandable entity based on JSON column
 

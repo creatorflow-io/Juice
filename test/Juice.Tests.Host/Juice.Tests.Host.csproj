@@ -48,4 +48,5 @@
     <PackageReference Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" Version="6.0.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="6.0.0" />
   </ItemGroup>
+
 </Project>

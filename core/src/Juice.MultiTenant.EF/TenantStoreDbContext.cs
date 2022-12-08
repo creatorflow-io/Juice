@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 namespace Juice.MultiTenant.EF
 {
     public class TenantStoreDbContext<TTenantInfo> : EFCoreStoreDbContext<TTenantInfo>, ISchemaDbContext, IAuditableDbContext
-        where TTenantInfo : class, IDynamic, IAuditable, ITenantInfo, new()
+        where TTenantInfo : class, IDynamic, ITenantInfo, new()
     {
         #region Audit/Schema
         public string? Schema { get; protected set; }
@@ -23,13 +23,16 @@ namespace Juice.MultiTenant.EF
 
         private IHttpContextAccessor? _httpContextAccessor;
         private ILogger? _logger;
+        private readonly DbOptions? _options;
 
         public TenantStoreDbContext(
             IServiceProvider serviceProvider, DbContextOptions<TenantStoreDbContext<TTenantInfo>> options) : base(options)
         {
-            var dbOptions = serviceProvider.GetService<DbOptions<TenantStoreDbContext<TTenantInfo>>>();
-            Schema ??= dbOptions?.Schema ?? "App";
+            _options = serviceProvider.GetService<DbOptions<TenantStoreDbContext<TTenantInfo>>>();
+            Schema ??= _options?.Schema ?? "App";
             _httpContextAccessor = serviceProvider.GetService<IHttpContextAccessor>();
+            _logger = serviceProvider.GetService<ILogger<TenantStoreDbContext<TTenantInfo>>>();
+            AuditHandlers = serviceProvider.GetServices<IDataEventHandler>();
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -38,7 +41,10 @@ namespace Juice.MultiTenant.EF
             {
                 entity.ToTable(nameof(Tenant), Schema);
 
-                new DynamicConfiguration<TTenantInfo, string>().Configure(entity);
+                entity.MarkAsDynamicExpandable(this);
+
+                entity.MarkAsAuditable();
+
                 entity.Property(ti => ti.Id).HasMaxLength(Constants.TenantIdMaxLength);
 
                 entity.Property(ti => ti.Identifier).HasMaxLength(Constants.TenantIdentifierMaxLength);
@@ -49,11 +55,15 @@ namespace Juice.MultiTenant.EF
 
         public override int SaveChanges(bool acceptAllChangesOnSuccess)
         {
-            this.SetAuditInformation();
+            this.SetAuditInformation(_logger);
 
-            var changes = this.TrackingChanges();
+            var changes = this.TrackingChanges(_logger);
             try
             {
+                if (_options != null && _options.JsonPropertyBehavior == JsonPropertyBehavior.UpdateALL)
+                {
+                    return base.SaveChanges(acceptAllChangesOnSuccess);
+                }
                 using (var transaction = Database.BeginTransaction())
                 {
                     var (affects, refeshEntries) = this.TryUpdateDynamicPropertyAsync(_logger).GetAwaiter().GetResult();
@@ -78,13 +88,17 @@ namespace Juice.MultiTenant.EF
         public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            this.SetAuditInformation();
+            this.SetAuditInformation(_logger);
             //this.EnforceMultiTenant(); //enforce mutitenant be must after audit
 
-            var changes = this.TrackingChanges();
+            var changes = this.TrackingChanges(_logger);
 
             try
             {
+                if (_options != null && _options.JsonPropertyBehavior == JsonPropertyBehavior.UpdateALL)
+                {
+                    return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+                }
                 using (var transaction = Database.BeginTransaction())
                 {
                     var (affects, refeshEntries) = await this.TryUpdateDynamicPropertyAsync(_logger);

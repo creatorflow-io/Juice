@@ -6,8 +6,5 @@
         string? ModifiedUser { get; }
         DateTimeOffset CreatedDate { get; }
         DateTimeOffset? ModifiedDate { get; }
-
-        void SetOnceCreatedUser(string? creator);
-        void UpdateModifiedUser(string? user);
     }
 }

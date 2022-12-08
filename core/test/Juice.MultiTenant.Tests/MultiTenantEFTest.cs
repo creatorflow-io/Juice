@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Finbuckle.MultiTenant;
+using Juice.EF;
+using Juice.EF.Tests.EventHandlers;
 using Juice.Extensions.Configuration;
 using Juice.Extensions.DependencyInjection;
 using Juice.Extensions.Options;
@@ -61,10 +64,11 @@ namespace Juice.MultiTenant.Tests
                     .AddTestOutputLogger()
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
-
+                services.AddScoped<IDataEventHandler, DataEventHandler>();
                 services.AddTenantDbContext<Tenant>(configuration, options =>
                 {
                     options.DatabaseProvider = provider;
+                    //options.JsonPropertyBehavior = JsonPropertyBehavior.UpdateALL;
                 }, true);
 
                 services.AddTenantSettingsDbContext(configuration, options =>
@@ -83,6 +87,21 @@ namespace Juice.MultiTenant.Tests
             var context1 = resolver.ServiceProvider.
                 CreateScope().ServiceProvider.GetRequiredService<TenantSettingsDbContext>();
             await context1.MigrateAsync();
+
+            var stopwatch = new Stopwatch();
+
+            var tenant = await context.TenantInfo.FirstOrDefaultAsync();
+
+            _output.WriteLine("Read tenant take {0} milliseconds", stopwatch.ElapsedMilliseconds);
+            stopwatch.Restart();
+            if (tenant != null)
+            {
+                tenant["DynamicProperty1"] = new { Time = DateTimeOffset.Now };
+                tenant["DynamicProperty2"] = 1;
+                tenant["DynamicProperty3"] = "abc";
+                await context.SaveChangesAsync();
+                _output.WriteLine("Update tenant properties take {0} milliseconds", stopwatch.ElapsedMilliseconds);
+            }
         }
 
         [IgnoreOnCITheory(DisplayName = "Read/write tenants configuration"), TestPriority(1)]

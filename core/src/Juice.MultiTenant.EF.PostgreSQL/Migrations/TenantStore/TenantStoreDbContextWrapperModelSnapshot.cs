@@ -32,9 +32,7 @@ namespace Juice.MultiTenant.EF.PostgreSQL.Migrations.TenantStore
                         .HasColumnType("text");
 
                     b.Property<DateTimeOffset>("CreatedDate")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValue(new DateTimeOffset(new DateTime(2022, 12, 6, 15, 51, 39, 515, DateTimeKind.Unspecified).AddTicks(6336), new TimeSpan(0, 7, 0, 0, 0)));
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedUser")
                         .HasMaxLength(256)
@@ -57,11 +55,11 @@ namespace Juice.MultiTenant.EF.PostgreSQL.Migrations.TenantStore
                     b.Property<string>("Name")
                         .HasColumnType("text");
 
-                    b.Property<string>("SerializedProperties")
+                    b.Property<string>("Properties")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("text")
-                        .HasDefaultValue("'{}'");
+                        .HasColumnType("jsonb")
+                        .HasDefaultValue("{}");
 
                     b.HasKey("Id");
 
@@ -69,6 +67,10 @@ namespace Juice.MultiTenant.EF.PostgreSQL.Migrations.TenantStore
                         .IsUnique();
 
                     b.ToTable("Tenant", "App");
+
+                    b
+                        .HasAnnotation("Juice:Auditable", true)
+                        .HasAnnotation("Juice:Expandable", true);
                 });
 #pragma warning restore 612, 618
         }

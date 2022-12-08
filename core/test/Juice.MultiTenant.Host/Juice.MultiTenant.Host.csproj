@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>$(AppTargetFramework)</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>juice.multitenant.host</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Juice.MultiTenant.EF.PostgreSQL\Juice.MultiTenant.EF.PostgreSQL.csproj" />
+    <ProjectReference Include="..\..\src\Juice.MultiTenant.EF.SqlServer\Juice.MultiTenant.EF.SqlServer.csproj" />
+  </ItemGroup>
+  <ItemGroup Label="gRPC">
+    <PackageReference Include="Grpc.AspNetCore" Version="$(GrpcVersion)" />
+  </ItemGroup>
+</Project>
