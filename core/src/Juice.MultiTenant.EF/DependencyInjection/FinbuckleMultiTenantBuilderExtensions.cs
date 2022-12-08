@@ -17,7 +17,7 @@ namespace Juice.MultiTenant.EF.DependencyInjection
         /// <returns>The same MultiTenantBuilder passed into the method.</returns>
         // ReSharper disable once InconsistentNaming
         public static FinbuckleMultiTenantBuilder<TTenantInfo> WithEFStore<TTenantInfo>(this FinbuckleMultiTenantBuilder<TTenantInfo> builder, IConfiguration configuration, Action<Juice.EF.DbOptions> configureOptions, bool migrate)
-            where TTenantInfo : class, IDynamic, IAuditable, ITenantInfo, new()
+            where TTenantInfo : class, IDynamic, ITenantInfo, new()
         {
             builder.Services.AddTenantDbContext<TTenantInfo>(configuration, configureOptions, migrate);
             builder.WithStore<EFCoreStore<TenantStoreDbContext<TTenantInfo>, TTenantInfo>>(ServiceLifetime.Scoped);

@@ -4,6 +4,7 @@ using Juice.MultiTenant.EF;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Juice.MultiTenant.EF.SqlServer.Migrations.TenantStore
 {
     [DbContext(typeof(TenantStoreDbContextWrapper))]
-    partial class TenantStoreDbContextWrapperModelSnapshot : ModelSnapshot
+    [Migration("20221208064413_ChangePropertiesBehavior")]
+    partial class ChangePropertiesBehavior
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

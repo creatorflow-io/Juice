@@ -5,5 +5,6 @@
         public static int TenantIdMaxLength = 64;
         public static int TenantIdentifierMaxLength = 16;
         public static int ConfigurationKeyMaxLength = 250;
+        public static string TenantToken = "__tenant__";
     }
 }

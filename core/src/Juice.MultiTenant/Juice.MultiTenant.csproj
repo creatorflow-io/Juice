@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>$(AppTargetFramework)</TargetFramework>
@@ -13,4 +13,14 @@
   <ItemGroup>
     <PackageReference Include="Finbuckle.MultiTenant" Version="6.*" />
   </ItemGroup>
+
+  <ItemGroup Label="gRPC">
+    <Protobuf Include="Protos\tenant.proto" />
+    <PackageReference Include="Google.Protobuf" Version="3.18.1" />
+    <PackageReference Include="Grpc.Tools" Version="$(GrpcVersion)" PrivateAssets="All" />
+    <PackageReference Include="Grpc.Core.Api" Version="$(GrpcVersion)" />
+    <PackageReference Include="Grpc.Net.ClientFactory" Version="$(GrpcVersion)" />
+
+  </ItemGroup>
+
 </Project>

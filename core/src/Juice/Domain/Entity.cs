@@ -38,23 +38,23 @@ namespace Juice.Domain
         public string? ModifiedUser { get; protected set; }
         public DateTimeOffset CreatedDate { get; protected set; }
         public DateTimeOffset? ModifiedDate { get; protected set; }
-
-        public void SetOnceCreatedUser(string? creator)
-        {
-            if (string.IsNullOrEmpty(CreatedUser))
-            {
-                CreatedUser = creator;
-            }
-            CreatedDate = DateTimeOffset.Now;
-        }
-        public void UpdateModifiedUser(string? user)
-        {
-            ModifiedUser = user;
-            ModifiedDate = DateTimeOffset.Now;
-        }
     }
 
-    public abstract class DynamicEntity<TKey> : DynamicObject, IExpandable, IDynamic, IAuditable, IIdentifiable<TKey>
+    public abstract class DynamicAuditEntity<TKey> : DynamicEntity<TKey>, IAuditable, IIdentifiable<TKey>
+        where TKey : IEquatable<TKey>
+    {
+        #region Auditable
+
+        public string? CreatedUser { get; protected set; }
+        public string? ModifiedUser { get; protected set; }
+        public DateTimeOffset CreatedDate { get; protected set; }
+        public DateTimeOffset? ModifiedDate { get; protected set; }
+
+        #endregion
+    }
+
+
+    public abstract class DynamicEntity<TKey> : DynamicObject, IDynamic, IIdentifiable<TKey>
         where TKey : IEquatable<TKey>
     {
 
@@ -86,32 +86,9 @@ namespace Juice.Domain
 
         #endregion
 
-        #region Auditable
-
-        public string? CreatedUser { get; protected set; }
-        public string? ModifiedUser { get; protected set; }
-        public DateTimeOffset CreatedDate { get; protected set; }
-        public DateTimeOffset? ModifiedDate { get; protected set; }
-
-        public void SetOnceCreatedUser(string? creator)
-        {
-            if (string.IsNullOrEmpty(CreatedUser))
-            {
-                CreatedUser = creator;
-            }
-            CreatedDate = DateTimeOffset.Now;
-        }
-
-        public void UpdateModifiedUser(string? user)
-        {
-            ModifiedUser = user;
-            ModifiedDate = DateTimeOffset.Now;
-        }
-
-        #endregion
-
         #region Dynamic
 
+        [NotMapped]
         public string SerializedProperties
         {
             get
@@ -124,7 +101,7 @@ namespace Juice.Domain
             }
         }
 
-        protected virtual JObject Properties { get; set; } = new JObject();
+        public virtual JObject Properties { get; set; } = new JObject();
 
         [NotMapped]
         [JsonIgnore]
@@ -135,8 +112,6 @@ namespace Juice.Domain
         [JsonIgnore]
         [System.Text.Json.Serialization.JsonIgnore]
         public virtual Dictionary<string, object> CurrentPropertyValues { get; set; } = new Dictionary<string, object>();
-
-
 
         public virtual T? GetProperty<T>(Func<T>? defaultValue = null, [CallerMemberName] string? name = null)
         {
@@ -150,9 +125,9 @@ namespace Juice.Domain
             return item != null ? (T)item.ToObject(type) : defaultValue != null ? defaultValue() : default;
         }
 
-        public virtual void SetProperty(object value, [CallerMemberName] string name = null)
+        public virtual void SetProperty(object value, [CallerMemberName] string? name = null)
         {
-            Properties ??= new JObject();
+            Properties = new JObject(Properties);
 
             OriginalPropertyValues[name] = Properties[name];
 

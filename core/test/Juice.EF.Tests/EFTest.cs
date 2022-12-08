@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Juice.EF.Tests.Domain;
+using Juice.EF.Tests.EventHandlers;
 using Juice.EF.Tests.Infrastructure;
 using Juice.EF.Tests.Migrations;
 using Juice.Extensions.DependencyInjection;
@@ -47,6 +49,8 @@ namespace Juice.EF.Tests
                     });
                     return new TestContext(provider, builder.Options);
                 });
+
+                services.AddScoped<IDataEventHandler, DataEventHandler>();
 
                 services.AddDefaultStringIdGenerator();
 
@@ -95,11 +99,14 @@ namespace Juice.EF.Tests
 
             _logger.LogInformation("Content {code} was added", code1);
 
-            var addedContent = await dbContext.Contents.FirstOrDefaultAsync(code1 => code1.Equals(code1));
+            var addedContent = await dbContext.Contents.FirstOrDefaultAsync(c => c.Code == code1);
 
-            Assert.NotNull(addedContent);
+            addedContent.Should().NotBeNull();
+
+            addedContent.CreatedDate.Should().NotBe(DateTimeOffset.MinValue);
 
             addedContent.Disable();
+
             await dbContext.SaveChangesAsync();
 
             _logger.LogInformation("Content {code} was verified", code1);
@@ -153,5 +160,6 @@ namespace Juice.EF.Tests
 
             Assert.Equal("New value", addedContent[property]);
         }
+
     }
 }

@@ -1,7 +1,7 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>$(AppTargetFramework)</TargetFramework>
     <Nullable>enable</Nullable>
 
     <IsPackable>false</IsPackable>
@@ -25,6 +25,10 @@
     <ProjectReference Include="..\..\src\Juice.MultiTenant.EF.PostgreSQL\Juice.MultiTenant.EF.PostgreSQL.csproj" />
     <ProjectReference Include="..\..\src\Juice.MultiTenant.EF.SqlServer\Juice.MultiTenant.EF.SqlServer.csproj" />
     <ProjectReference Include="..\Juice.EF.Tests\Juice.EF.Tests.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Label="gRPC">
+    <PackageReference Include="Grpc.Net.ClientFactory" Version="2.50.0" />
   </ItemGroup>
 
   <ItemGroup>

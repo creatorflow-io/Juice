@@ -22,6 +22,7 @@
     <EFVersion>6.0.1</EFVersion>
     <NpgsqlVersion>6.0.2</NpgsqlVersion>
     <OrchardCoreVersion>1.2.2</OrchardCoreVersion>
+    <GrpcVersion>2.50.0</GrpcVersion>
     <JuiceRefVersion Condition="$(JuiceRefVersion)==''">6.0.0-alpha.*</JuiceRefVersion>
   </PropertyGroup>
 

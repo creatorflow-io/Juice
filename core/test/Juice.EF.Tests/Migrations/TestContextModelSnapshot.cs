@@ -57,11 +57,11 @@ namespace Juice.EF.Tests.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
-                    b.Property<string>("SerializedProperties")
+                    b.Property<string>("Properties")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasColumnType("nvarchar(max)")
-                        .HasDefaultValue("'{}'");
+                        .HasDefaultValue("{}");
 
                     b.HasKey("Id");
 
@@ -76,6 +76,10 @@ namespace Juice.EF.Tests.Migrations
                     SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("CreatedUser"), new[] { "Name", "Code", "CreatedDate" });
 
                     b.ToTable("Content", "Contents");
+
+                    b
+                        .HasAnnotation("Juice:Auditable", true)
+                        .HasAnnotation("Juice:Expandable", true);
                 });
 #pragma warning restore 612, 618
         }

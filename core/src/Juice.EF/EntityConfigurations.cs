@@ -1,4 +1,5 @@
 ﻿using Juice.Domain;
+using Juice.EF.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -10,7 +11,7 @@ namespace Juice.EF
     {
         public virtual void Configure(EntityTypeBuilder<T> builder)
         {
-            builder.Property(m => m.Name).HasMaxLength(DefinedLengh.NameLength).IsRequired();
+            builder.Property(m => m.Name).HasMaxLength(Constants.NameLength).IsRequired();
             builder.Property(m => m.Disabled).HasDefaultValue(false);
         }
     }
@@ -23,39 +24,31 @@ namespace Juice.EF
         {
             base.Configure(builder);
 
-            builder.Property(m => m.CreatedUser).HasMaxLength(DefinedLengh.NameLength);
-            builder.Property(m => m.ModifiedUser).HasMaxLength(DefinedLengh.NameLength);
-
-            builder.Property(m => m.CreatedDate);
+            builder.MarkAsAuditable();
         }
     }
 
-    public class DynamicEntityConfiguration<T, TKey> : EntityConfiguration<T, TKey>, IEntityTypeConfiguration<T>
-        where T : class, IDynamic, IAuditable, IIdentifiable<TKey>
-        where TKey : IEquatable<TKey>
-    {
-        public override void Configure(EntityTypeBuilder<T> builder)
-        {
-            base.Configure(builder);
-            builder.Property("SerializedProperties").HasDefaultValue("'{}'");
-            builder.Property(m => m.Name).HasMaxLength(DefinedLengh.NameLength);
-            builder.Property(m => m.CreatedUser).HasMaxLength(DefinedLengh.NameLength);
-            builder.Property(m => m.ModifiedUser).HasMaxLength(DefinedLengh.NameLength);
-            builder.Property(m => m.CreatedDate);
-        }
-    }
+    //public class DynamicEntityConfiguration<T, TKey> : EntityConfiguration<T, TKey>, IEntityTypeConfiguration<T>
+    //    where T : class, IDynamic, IAuditable, IIdentifiable<TKey>
+    //    where TKey : IEquatable<TKey>
+    //{
+    //    public override void Configure(EntityTypeBuilder<T> builder)
+    //    {
+    //        base.Configure(builder);
 
-    public class DynamicConfiguration<T, TKey> : IEntityTypeConfiguration<T>
-        where T : class, IDynamic, IAuditable
-        where TKey : IEquatable<TKey>
-    {
-        public virtual void Configure(EntityTypeBuilder<T> builder)
-        {
-            builder.Property("SerializedProperties").HasDefaultValue("'{}'");
-            builder.Property(m => m.CreatedUser).HasMaxLength(DefinedLengh.NameLength);
-            builder.Property(m => m.ModifiedUser).HasMaxLength(DefinedLengh.NameLength);
-            builder.Property(m => m.CreatedDate);
-        }
-    }
+    //        builder.MarkAsDynamicExpandable();
+    //        builder.MarkAsAuditable();
+    //    }
+    //}
+
+    //public class DynamicConfiguration<T, TKey> : IEntityTypeConfiguration<T>
+    //    where T : class, IDynamic
+    //    where TKey : IEquatable<TKey>
+    //{
+    //    public virtual void Configure(EntityTypeBuilder<T> builder)
+    //    {
+    //        builder.MarkAsDynamicExpandable();
+    //    }
+    //}
 
 }

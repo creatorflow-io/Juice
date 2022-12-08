@@ -8,7 +8,7 @@ namespace Juice.MultiTenant.EF.Migrations
     public static class TenantDbContextExtensions
     {
         public static async Task MigrateAsync<TTenantInfo>(this TenantStoreDbContext<TTenantInfo> context)
-             where TTenantInfo : DynamicEntity<string>, ITenantInfo, new()
+             where TTenantInfo : class, IDynamic, ITenantInfo, new()
         {
             var pendingMigrations = await context.Database.GetPendingMigrationsAsync();
 
@@ -21,7 +21,7 @@ namespace Juice.MultiTenant.EF.Migrations
         }
 
         public static async Task SeedAsync<TTenantInfo>(this TenantStoreDbContext<TTenantInfo> context, IConfiguration configuration)
-            where TTenantInfo : DynamicEntity<string>, ITenantInfo, new()
+            where TTenantInfo : class, IDynamic, ITenantInfo, new()
         {
             if (!await context.TenantInfo.AnyAsync())
             {

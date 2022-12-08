@@ -1,16 +1,19 @@
 ﻿using Finbuckle.MultiTenant;
+using Finbuckle.MultiTenant.Stores;
 using Juice.EventBus.IntegrationEventLog.EF.DependencyInjection;
 using Juice.Extensions.Configuration;
 using Juice.Extensions.Options;
 using Juice.MediatR.RequestManager.EF.DependencyInjection;
 using Juice.MultiTenant;
 using Juice.MultiTenant.DependencyInjection;
-using Juice.MultiTenant.EF;
 using Juice.MultiTenant.EF.ConfigurationProviders.DependencyInjection;
-using Juice.MultiTenant.EF.DependencyInjection;
+using Juice.MultiTenant.EF.Grpc.Services;
+using Juice.MultiTenant.Grpc;
+using Juice.MultiTenant.Grpc.DependencyInjection;
 using Juice.Tests.Host;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Caching.Distributed;
+using Newtonsoft.Json;
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -23,15 +26,42 @@ builder.Services.AddRequestManager(builder.Configuration, options =>
     options.ConnectionName = "PostgreConnection";
 });
 
+builder.Services.AddMemoryCache();
+
 // Add MultiTenant
-builder.Services.AddMultiTenant<Tenant>()
+builder.Services
+    .AddMultiTenant<Tenant>(options =>
+    {
+        options.IgnoredIdentifiers = new List<string> { "asset" };
+        options.Events.OnTenantResolved = async (context) =>
+        {
+            if (context.StoreType == typeof(InMemoryStore<Tenant>))
+            {
+                return;
+            }
+            if (context.Context is Microsoft.AspNetCore.Http.HttpContext httpContent
+            && context.TenantInfo is Tenant tenant)
+            {
+                var inMemoryStore = httpContent.RequestServices
+                    .GetServices<IMultiTenantStore<Tenant>>()
+                    .FirstOrDefault(s => s.GetType() == typeof(InMemoryStore<Tenant>));
+                if (inMemoryStore != null)
+                {
+                    await inMemoryStore.TryAddAsync(tenant);
+                }
+            }
+        };
+    })
     .JuiceIntegration()
     .WithBasePathStrategy(options => options.RebaseAspNetCorePathBase = true)
-    .WithEFStore(builder.Configuration, options =>
-    {
-        options.DatabaseProvider = "PostgreSQL";
-        options.ConnectionName = "PostgreConnection";
-    }, true)
+    //.WithInMemoryStore()
+    //.WithEFStore(builder.Configuration, options =>
+    //{
+    //    options.DatabaseProvider = "PostgreSQL";
+    //    options.ConnectionName = "PostgreConnection";
+    //}, true)
+    .WithGprcStore("https://localhost:7045")
+    .WithDistributedCacheStore()
     ;
 
 ConfigureTenantOptions(builder.Services, builder.Configuration);
@@ -53,7 +83,7 @@ app.UseEndpoints(endpoints =>
         var tenant = context.GetMultiTenantContext<Tenant>()?.TenantInfo;
         ;
         var tenant1 = context.RequestServices.GetRequiredService<IMultiTenantContextAccessor<Tenant>>().MultiTenantContext?.TenantInfo!;
-        var tenant2 = context.RequestServices.GetService<Tenant>();
+        var tenant2 = context.RequestServices.GetService<global::Juice.MultiTenant.Tenant>();
         var tenant3 = context.RequestServices.GetService<ITenantInfo>();
         if (tenant == null)
         {
@@ -62,10 +92,8 @@ app.UseEndpoints(endpoints =>
         }
         var options = context.RequestServices.GetRequiredService<ITenantsOptions<Options>>();
 
-        var db = context.RequestServices.GetService<TenantStoreDbContext<Tenant>>()?.GetType()?.Name;
-
         await
-           context.Response.WriteAsync("Hello " + (tenant?.Name ?? "Host") + ". Your options name is " + (options.Value?.Name ?? "") + " " + db ?? "");
+           context.Response.WriteAsync("Hello " + (tenant?.Name ?? "Host") + ". Your options name is " + (options.Value?.Name ?? "") + " ");
     });
 
     endpoints.MapGet("/protect", async (context) =>
@@ -99,6 +127,12 @@ app.UseEndpoints(endpoints =>
         var input = context.Request.Query["data"].ToString();
         var value = await cache.GetStringAsync("cachedKey");
         await context.Response.WriteAsync(value);
+    });
+
+    endpoints.MapGet("/tenant", async (context) =>
+    {
+        var s = context.RequestServices.GetRequiredService<TenantStoreService>();
+        await context.Response.WriteAsync(JsonConvert.SerializeObject(await s.TryGetByIdentifier(new TenantIdenfier { Identifier = "acme" })));
     });
 });
 
