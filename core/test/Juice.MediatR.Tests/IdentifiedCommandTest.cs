@@ -70,8 +70,8 @@ namespace Juice.MediatR.Tests
 
             if (pendingMigrations.Any())
             {
-                Console.WriteLine($"[{schema}][IntegrationEventLogContext] You have {pendingMigrations.Count()} pending migrations to apply.");
-                Console.WriteLine("[IntegrationEventLogContext] Applying pending migrations now");
+                Console.WriteLine($"[{schema}][ClientRequestContext] You have {pendingMigrations.Count()} pending migrations to apply.");
+                Console.WriteLine("[ClientRequestContext] Applying pending migrations now");
                 await context.Database.MigrateAsync();
             }
         }
@@ -174,11 +174,11 @@ namespace Juice.MediatR.Tests
 
             var id = Guid.NewGuid();
 
-            var ok = await requestManager.CreateRequestForCommandAsync<ActiveAssetCommand>(id);
+            var ok = await requestManager.TryCreateRequestForCommandAsync<ActiveAssetCommand, Guid>(id);
 
             Assert.True(ok);
 
-            await requestManager.CompleteRequestAsync(id, true);
+            await requestManager.TryCompleteRequestAsync(id, true);
 
         }
 

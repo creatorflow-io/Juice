@@ -67,7 +67,7 @@ namespace Juice.MultiTenant.Tests
             {
                 timer.Reset();
                 timer.Start();
-                var reply = await client.GetStringAsync(new Uri("https://localhost:7226/tenant"));
+                var reply = await client.GetStringAsync(new Uri("https://localhost:7045/tenant"));
                 _output.WriteLine("Request take {0} milliseconds",
                     timer.ElapsedMilliseconds);
                 timer.Stop();

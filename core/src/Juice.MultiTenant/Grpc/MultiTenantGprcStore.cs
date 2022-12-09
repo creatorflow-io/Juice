@@ -15,7 +15,7 @@ namespace Juice.MultiTenant.Grpc
         }
         public async Task<IEnumerable<TTenantInfo>> GetAllAsync()
         {
-            var tenantResult = await _client.GetAllAsync(new TenantQuery { });
+            var tenantResult = await _client.GetAllAsync(new TenantQuery { }, deadline: DateTime.UtcNow.AddSeconds(3));
             if (tenantResult?.Tenants?.Any() ?? false)
             {
                 return JsonSerializer.Deserialize<IEnumerable<TTenantInfo>>(
@@ -32,12 +32,12 @@ namespace Juice.MultiTenant.Grpc
                 Id = tenantInfo.Id,
                 Identifier = tenantInfo.Identifier,
                 Name = tenantInfo.Name,
-            });
+            }, deadline: DateTime.UtcNow.AddSeconds(3));
             return result.Succeeded;
         }
         public async Task<TTenantInfo?> TryGetAsync(string id)
         {
-            var tenantInfo = await _client.TryGetAsync(new TenantIdenfier { Id = id });
+            var tenantInfo = await _client.TryGetAsync(new TenantIdenfier { Id = id }, deadline: DateTime.UtcNow.AddSeconds(3));
             return tenantInfo == null ? default
                 : JsonSerializer.Deserialize<TTenantInfo>(
                         JsonSerializer.Serialize(tenantInfo));
@@ -48,7 +48,7 @@ namespace Juice.MultiTenant.Grpc
             {
                 return cachedTenant;
             }
-            var tenantInfo = await _client.TryGetByIdentifierAsync(new TenantIdenfier { Identifier = identifier });
+            var tenantInfo = await _client.TryGetByIdentifierAsync(new TenantIdenfier { Identifier = identifier }, deadline: DateTime.UtcNow.AddMilliseconds(500));
             var resolvedTenant = tenantInfo == null ? default
                 : JsonSerializer.Deserialize<TTenantInfo>(
                         JsonSerializer.Serialize(tenantInfo));
@@ -60,7 +60,8 @@ namespace Juice.MultiTenant.Grpc
         }
         public async Task<bool> TryRemoveAsync(string identifier)
         {
-            var result = await _client.TryRemoveAsync(new TenantIdenfier { Identifier = identifier });
+            var result = await _client.TryRemoveAsync(new TenantIdenfier { Identifier = identifier }
+                , deadline: DateTime.UtcNow.AddSeconds(3));
             return result.Succeeded;
         }
         public async Task<bool> TryUpdateAsync(TTenantInfo tenantInfo)
@@ -71,7 +72,7 @@ namespace Juice.MultiTenant.Grpc
                 Id = tenantInfo.Id,
                 Identifier = tenantInfo.Identifier,
                 Name = tenantInfo.Name
-            });
+            }, deadline: DateTime.UtcNow.AddSeconds(3));
             return result.Succeeded;
         }
     }
