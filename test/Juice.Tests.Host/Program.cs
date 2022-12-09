@@ -7,13 +7,10 @@ using Juice.MediatR.RequestManager.EF.DependencyInjection;
 using Juice.MultiTenant;
 using Juice.MultiTenant.DependencyInjection;
 using Juice.MultiTenant.EF.ConfigurationProviders.DependencyInjection;
-using Juice.MultiTenant.EF.Grpc.Services;
-using Juice.MultiTenant.Grpc;
 using Juice.MultiTenant.Grpc.DependencyInjection;
 using Juice.Tests.Host;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Caching.Distributed;
-using Newtonsoft.Json;
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -129,11 +126,6 @@ app.UseEndpoints(endpoints =>
         await context.Response.WriteAsync(value);
     });
 
-    endpoints.MapGet("/tenant", async (context) =>
-    {
-        var s = context.RequestServices.GetRequiredService<TenantStoreService>();
-        await context.Response.WriteAsync(JsonConvert.SerializeObject(await s.TryGetByIdentifier(new TenantIdenfier { Identifier = "acme" })));
-    });
 });
 
 app.Run();

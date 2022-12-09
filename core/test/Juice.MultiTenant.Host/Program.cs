@@ -1,6 +1,11 @@
-﻿using Juice.MultiTenant;
+﻿using Juice.MediatR.RequestManager.EF.DependencyInjection;
+using Juice.MultiTenant;
+using Juice.MultiTenant.Api.Commands;
 using Juice.MultiTenant.EF.DependencyInjection;
 using Juice.MultiTenant.EF.Grpc.Services;
+using Juice.MultiTenant.Grpc;
+using MediatR;
+using Newtonsoft.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,9 +13,36 @@ ConfigureTenantDb(builder);
 
 ConfigureGRPC(builder.Services);
 
+builder.Services.AddRequestManager(builder.Configuration, options =>
+{
+    var provider = "PostgreSQL";
+    options.ConnectionName = provider switch
+    {
+        "PostgreSQL" => "PostgreConnection",
+        "SqlServer" => "SqlServerConnection",
+        _ => throw new NotSupportedException($"Unsupported provider: {provider}")
+    };
+    options.DatabaseProvider = provider;
+    options.Schema = "App"; // default schema of Tenant
+});
+
+builder.Services.AddMediatR(typeof(CreateTenantCommand).Assembly);
+
+// For unit test
+builder.Services.AddScoped<TenantStoreService>();
+
 var app = builder.Build();
 
 app.MapGet("/", () => "Support gRPC only!");
+
+// For unit test
+app.MapGet("/tenant", async (context) =>
+{
+    var reqestId = context.Request.Headers["x-requestid"].ToString() ?? "";
+    Console.WriteLine("requestId: " + reqestId);
+    var s = context.RequestServices.GetRequiredService<TenantStoreService>();
+    await context.Response.WriteAsync(JsonConvert.SerializeObject(await s.TryGetByIdentifier(new TenantIdenfier { Identifier = "acme" })));
+});
 app.MapGrpcService<TenantStoreService>();
 app.Run();
 

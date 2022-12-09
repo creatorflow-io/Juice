@@ -11,7 +11,7 @@ namespace Juice.MultiTenant.EF.DependencyInjection
     public static class TenantDbServiceCollectionExtensions
     {
         /// <summary>
-        /// Add TenantDbContext with db options
+        /// Add TenantDbContext<TTenantInfo> with db options for MultiTenant EFCoreStore<TTenantInfo>
         /// </summary>
         /// <param name="services"></param>
         /// <param name="configuration"></param>

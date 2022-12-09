@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace Juice.MediatR.RequestManager.EF
 {
@@ -10,24 +11,32 @@ namespace Juice.MediatR.RequestManager.EF
             _context = context;
         }
 
-        public async Task CompleteRequestAsync(Guid id, bool success)
+        public async Task TryCompleteRequestAsync(Guid id, bool success)
         {
-            var request = await _context.ClientRequests.FindAsync(id);
-            if (request != null)
+            try
             {
-                if (success)
+                var request = await _context.ClientRequests.FindAsync(id);
+                if (request != null)
                 {
-                    request.MarkAsDone();
+                    if (success)
+                    {
+                        request.MarkAsDone();
+                    }
+                    else
+                    {
+                        request.MarkAsFailed();
+                    }
+                    await _context.SaveChangesAsync();
                 }
-                else
-                {
-                    request.MarkAsFailed();
-                }
-                await _context.SaveChangesAsync();
+            }
+            catch (Exception)
+            {
+
             }
         }
 
-        public async Task<bool> CreateRequestForCommandAsync<T>(Guid id)
+        public async Task<bool> TryCreateRequestForCommandAsync<T, R>(Guid id)
+            where T : IRequest<R>
         {
             if (await _context.ClientRequests.AnyAsync(r => r.Id == id))
             {

@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using Grpc.Core;
+using Juice.MultiTenant.Api.Commands;
 using Juice.MultiTenant.Grpc;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,10 +9,13 @@ namespace Juice.MultiTenant.EF.Grpc.Services
     public class TenantStoreService : TenantStore.TenantStoreBase
     {
         private readonly TenantStoreDbContext<Tenant> _dbContext;
-        public TenantStoreService(TenantStoreDbContext<Tenant> dbContext)
+        private readonly IMediator _mediator;
+        public TenantStoreService(TenantStoreDbContext<Tenant> dbContext, IMediator mediator)
         {
             _dbContext = dbContext;
+            _mediator = mediator;
         }
+
         public override async Task<TenantInfo?> TryGetByIdentifier(TenantIdenfier request, ServerCallContext? context = default)
         {
             var timer = new Stopwatch();
@@ -34,7 +38,9 @@ namespace Juice.MultiTenant.EF.Grpc.Services
             finally
             {
                 timer.Stop();
-                Console.WriteLine("Take {0} milliseconds", timer.ElapsedMilliseconds);
+                var requestId = context?.GetHttpContext()?.Request?.Headers["x-requestid"];
+                Console.WriteLine("Find tenant by identifier take {0} milliseconds." + requestId ?? "",
+                    timer.ElapsedMilliseconds);
             }
         }
 
@@ -59,35 +65,6 @@ namespace Juice.MultiTenant.EF.Grpc.Services
             return result;
         }
 
-        public override async Task<TenantOperationResult> TryAdd(TenantInfo request, ServerCallContext context)
-        {
-            try
-            {
-                var tenant = new Tenant
-                {
-                    Id = request.Id,
-                    ConnectionString = request.ConnectionString,
-                    Identifier = request.Identifier,
-                    Name = request.Name
-                };
-                _dbContext.Add(tenant);
-                await _dbContext.SaveChangesAsync();
-                return new TenantOperationResult
-                {
-                    Message = "Tenant added!",
-                    Succeeded = true
-                };
-            }
-            catch (Exception ex)
-            {
-                return new TenantOperationResult
-                {
-                    Message = ex.Message,
-                    Succeeded = false
-                };
-            }
-        }
-
         public override async Task<TenantInfo?> TryGet(TenantIdenfier request, ServerCallContext context)
         {
             return await _dbContext.TenantInfo
@@ -104,28 +81,42 @@ namespace Juice.MultiTenant.EF.Grpc.Services
                             .SingleOrDefaultAsync();
         }
 
+        public override async Task<TenantOperationResult> TryAdd(TenantInfo request, ServerCallContext context)
+        {
+            try
+            {
+                var command = new CreateTenantCommand(request.Id, request.Identifier, request.Name, request.ConnectionString);
+
+                var result = await _mediator.Send(command);
+
+                return new TenantOperationResult
+                {
+                    Message = result.Message,
+                    Succeeded = result.Succeeded
+                };
+            }
+            catch (Exception ex)
+            {
+                return new TenantOperationResult
+                {
+                    Message = ex.Message,
+                    Succeeded = false
+                };
+            }
+        }
+
         public override async Task<TenantOperationResult> TryUpdate(TenantInfo request, ServerCallContext context)
         {
             try
             {
-                var tenant = await _dbContext.TenantInfo
-                                .Where(ti => ti.Id == request.Id).FirstOrDefaultAsync();
-                if (tenant == null)
-                {
-                    return new TenantOperationResult
-                    {
-                        Succeeded = false,
-                        Message = "Tenant not found"
-                    };
-                }
-                tenant.Name = request.Name;
-                tenant.Identifier = request.Identifier;
-                tenant.ConnectionString = request.ConnectionString;
-                await _dbContext.SaveChangesAsync();
+                var command = new UpdateTenantCommand(request.Id, request.Identifier, request.Name, request.ConnectionString);
+
+                var result = await _mediator.Send(command);
+
                 return new TenantOperationResult
                 {
-                    Succeeded = true,
-                    Message = "Tenant updated!"
+                    Message = result.Message,
+                    Succeeded = result.Succeeded
                 };
             }
             catch (Exception ex)
@@ -142,24 +133,14 @@ namespace Juice.MultiTenant.EF.Grpc.Services
         {
             try
             {
-                var tenant = await _dbContext.TenantInfo
-                                .Where(ti => ti.Id == request.Id).FirstOrDefaultAsync();
-                if (tenant == null)
-                {
-                    return new TenantOperationResult
-                    {
-                        Succeeded = true,
-                        Message = "Tenant does not exist"
-                    };
-                }
-                _dbContext.Remove(tenant);
+                var command = new DeleteTenantCommand(request.Id);
 
-                await _dbContext.SaveChangesAsync();
+                var result = await _mediator.Send(command);
 
                 return new TenantOperationResult
                 {
-                    Succeeded = true,
-                    Message = "Tenant deleted!"
+                    Message = result.Message,
+                    Succeeded = result.Succeeded
                 };
             }
             catch (Exception ex)
