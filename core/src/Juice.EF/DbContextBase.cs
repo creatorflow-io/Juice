@@ -62,6 +62,7 @@ namespace Juice.EF
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            modelBuilder.ConfigureDynamicExpandableEntities(this);
             ConfigureModel(modelBuilder);
 
             var collections = _serviceProvider

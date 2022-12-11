@@ -47,7 +47,7 @@ namespace Juice.EF.Extensions
             return false;
         }
 
-        public static EntityTypeBuilder MarkAsDynamicExpandable(this EntityTypeBuilder builder, DbContext context)
+        public static EntityTypeBuilder IsDynamicExpandable(this EntityTypeBuilder builder, DbContext context)
         {
             try
             {
@@ -69,6 +69,26 @@ namespace Juice.EF.Extensions
             }
 
             return builder;
+        }
+
+        /// <summary>
+        /// Mark all entities that implemented IDynamic interface IsDynamicExpandable 
+        /// </summary>
+        /// <param name="modelBuilder"></param>
+        /// <param name="context"></param>
+        /// <returns></returns>
+        public static ModelBuilder ConfigureDynamicExpandableEntities(this ModelBuilder modelBuilder, DbContext context)
+        {
+            // Call IsMultiTenant() to configure the types marked with the MultiTenant Data Attribute
+            foreach (var clrType in modelBuilder.Model.GetEntityTypes()
+                                                 .Where(et => et.ClrType.IsAssignableTo(typeof(IDynamic)))
+                                                 .Select(et => et.ClrType))
+            {
+                modelBuilder.Entity(clrType)
+                            .IsDynamicExpandable(context);
+            }
+
+            return modelBuilder;
         }
     }
 }
