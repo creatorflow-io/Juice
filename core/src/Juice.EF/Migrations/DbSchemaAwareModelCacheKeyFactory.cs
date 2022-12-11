@@ -6,9 +6,10 @@ namespace Juice.EF.Migrations
     public class DbSchemaAwareModelCacheKeyFactory : IModelCacheKeyFactory
     {
         /// <inheritdoc />
-        public object Create(DbContext context)
+        public object Create(DbContext context, bool designTime)
         {
             return new { Type = context.GetType(), Schema = context is ISchemaDbContext schema ? schema.Schema : null };
         }
+
     }
 }

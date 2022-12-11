@@ -1,4 +1,5 @@
 ﻿using Juice.EventBus;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
@@ -16,6 +17,13 @@ namespace Microsoft.Extensions.DependencyInjection
 
             services.AddSingleton<IEventBus, InMemoryEventBus>();
 
+            services.AddIntegrationEventTypesService();
+            return services;
+        }
+
+        public static IServiceCollection AddIntegrationEventTypesService(this IServiceCollection services)
+        {
+            services.TryAddSingleton<IntegrationEventTypes>();
             return services;
         }
     }

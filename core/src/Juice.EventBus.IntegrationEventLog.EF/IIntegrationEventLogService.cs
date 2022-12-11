@@ -24,4 +24,5 @@ namespace Juice.EventBus.IntegrationEventLog.EF
         /// <param name="context"></param>
         void EnsureAssociatedConnection<T>(T context) where T : DbContext;
     }
+
 }

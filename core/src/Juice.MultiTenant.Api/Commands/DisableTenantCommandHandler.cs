@@ -1,4 +1,5 @@
 ﻿using Juice.MultiTenant.EF;
+using Juice.MultiTenant.Events;
 using Microsoft.EntityFrameworkCore;
 
 namespace Juice.MultiTenant.Api.Commands
@@ -8,12 +9,15 @@ namespace Juice.MultiTenant.Api.Commands
     {
         private readonly TenantStoreDbContext<Tenant> _dbContext;
         private readonly ILogger _logger;
+        private readonly IMediator _mediator;
 
         public DisableTenantCommandHandler(TenantStoreDbContext<Tenant> dbContext
-            , ILogger<DisableTenantCommandHandler> logger)
+            , ILogger<DisableTenantCommandHandler> logger
+            , IMediator mediator)
         {
             _dbContext = dbContext;
             _logger = logger;
+            _mediator = mediator;
         }
         public async Task<IOperationResult> Handle(DisableTenantCommand request, CancellationToken cancellationToken)
         {
@@ -27,6 +31,10 @@ namespace Juice.MultiTenant.Api.Commands
                 }
                 tenant.Disable();
                 await _dbContext.SaveChangesAsync();
+
+                var evt = new TenantDeactivatedDomainEvent(tenant);
+                await _mediator.Publish(evt);
+
                 return OperationResult.Success;
             }
             catch (Exception ex)

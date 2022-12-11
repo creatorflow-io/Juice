@@ -17,7 +17,7 @@ using Xunit.Abstractions;
 
 namespace Juice.MediatR.Tests
 {
-    [TestCaseOrderer("Juice.XUnit.PriorityOrderer", "Juice.MediatR.Tests")]
+    [TestCaseOrderer("Juice.XUnit.PriorityOrderer", "Juice.EF.Tests")]
     public class IdentifiedCommandTest
     {
         private readonly string TestSchema1 = "Contents";

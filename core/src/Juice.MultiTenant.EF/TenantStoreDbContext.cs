@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Data;
+using System.Security.Claims;
 using Finbuckle.MultiTenant;
 using Finbuckle.MultiTenant.Stores;
 using Juice.Domain;
@@ -6,12 +7,14 @@ using Juice.EF;
 using Juice.EF.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Juice.MultiTenant.EF
 {
-    public class TenantStoreDbContext<TTenantInfo> : EFCoreStoreDbContext<TTenantInfo>, ISchemaDbContext, IAuditableDbContext
+    public class TenantStoreDbContext<TTenantInfo> : EFCoreStoreDbContext<TTenantInfo>, ISchemaDbContext, IAuditableDbContext, IUnitOfWork
         where TTenantInfo : class, IDynamic, ITenantInfo, new()
     {
         #region Audit/Schema
@@ -53,6 +56,40 @@ namespace Juice.MultiTenant.EF
 
         }
 
+        private HashSet<EntityEntry> _pendingRefreshEntities = new HashSet<EntityEntry>();
+        private List<AuditEntry> _pendingAuditEntries = new List<AuditEntry>();
+
+        private void ProcessingRefreshEntries(HashSet<EntityEntry>? entities)
+        {
+            if (entities == null) { return; }
+            if (HasActiveTransaction)
+            {
+                // Waitting for transaction completed before reload entities
+                foreach (var entity in entities)
+                {
+                    _pendingRefreshEntities.Add(entity);
+                }
+            }
+            else
+            {
+                entities.RefreshEntriesAsync().GetAwaiter().GetResult();
+            }
+        }
+        private void ProcessingChanges(IEnumerable<AuditEntry>? changes)
+        {
+            if (changes == null)
+            { return; }
+            if (!HasActiveTransaction)
+            {
+                this.NotificationChanges(changes);
+            }
+            else
+            {
+                // Waitting for transaction completed before raise data events
+                _pendingAuditEntries.AddRange(changes);
+            }
+        }
+
         public override int SaveChanges(bool acceptAllChangesOnSuccess)
         {
             this.SetAuditInformation(_logger);
@@ -64,24 +101,20 @@ namespace Juice.MultiTenant.EF
                 {
                     return base.SaveChanges(acceptAllChangesOnSuccess);
                 }
-                using (var transaction = Database.BeginTransaction())
+
+                var (affects, refeshEntries) = this.TryUpdateDynamicPropertyAsync(_logger).GetAwaiter().GetResult();
+                if (this.HasUnsavedChanges())
                 {
-                    var (affects, refeshEntries) = this.TryUpdateDynamicPropertyAsync(_logger).GetAwaiter().GetResult();
-                    if (this.HasUnsavedChanges())
-                    {
-                        affects = base.SaveChanges(acceptAllChangesOnSuccess);
-                    }
-                    refeshEntries.RefreshEntriesAsync().GetAwaiter().GetResult();
-                    transaction.Commit();
-                    return affects;
+                    affects = base.SaveChanges(acceptAllChangesOnSuccess);
                 }
+
+                ProcessingRefreshEntries(refeshEntries);
+
+                return affects;
             }
             finally
             {
-                if (changes != null)
-                {
-                    this.NotificationChanges(changes);
-                }
+                ProcessingChanges(changes);
             }
         }
 
@@ -99,26 +132,123 @@ namespace Juice.MultiTenant.EF
                 {
                     return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
                 }
-                using (var transaction = Database.BeginTransaction())
+
+                var (affects, refeshEntries) = await this.TryUpdateDynamicPropertyAsync(_logger);
+                if (this.HasUnsavedChanges())
                 {
-                    var (affects, refeshEntries) = await this.TryUpdateDynamicPropertyAsync(_logger);
-                    if (this.HasUnsavedChanges())
-                    {
-                        affects = await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
-                    }
-                    await refeshEntries.RefreshEntriesAsync();
-                    transaction.Commit();
-                    return affects;
+                    affects = await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
                 }
+
+                ProcessingRefreshEntries(refeshEntries);
+
+                return affects;
             }
             finally
             {
-                if (changes != null)
+                ProcessingChanges(changes);
+            }
+        }
+
+        #region UnitOfWork
+        private IDbContextTransaction _currentTransaction;
+        public IDbContextTransaction GetCurrentTransaction() => _currentTransaction;
+        public bool HasActiveTransaction => _currentTransaction != null;
+        private Guid? _commitedTransactionId;
+
+        public async Task<IDbContextTransaction?> BeginTransactionAsync()
+        {
+            if (_currentTransaction != null) return default;
+
+            _commitedTransactionId = default;
+            _currentTransaction = await Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
+
+            return _currentTransaction;
+        }
+
+        public async Task CommitTransactionAsync(IDbContextTransaction transaction)
+        {
+            if (transaction == null) { throw new ArgumentNullException(nameof(transaction)); }
+            if (transaction.TransactionId == _commitedTransactionId)
+            {
+                return;
+            }
+            if (transaction.TransactionId != _currentTransaction?.TransactionId) { throw new InvalidOperationException($"Transaction {transaction.TransactionId} is not current"); }
+
+            try
+            {
+                await SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                RollbackTransaction();
+                throw;
+            }
+            finally
+            {
+                _commitedTransactionId = transaction.TransactionId;
+                if (_currentTransaction != null)
                 {
-                    this.NotificationChanges(changes);
+                    _currentTransaction.Dispose();
+                    _currentTransaction = null;
+                }
+                if (_pendingRefreshEntities != null)
+                {
+                    await _pendingRefreshEntities.RefreshEntriesAsync();
+                }
+                this.NotificationChanges(_pendingAuditEntries);
+            }
+        }
+
+        public void RollbackTransaction()
+        {
+            try
+            {
+                _currentTransaction?.Rollback();
+            }
+            finally
+            {
+                if (_currentTransaction != null)
+                {
+                    _currentTransaction.Dispose();
+                    _currentTransaction = null;
                 }
             }
         }
+        #endregion
+
+        #region IDisposable Support
+
+        private bool disposedValue = false; // To detect redundant calls
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    //  dispose managed state (managed objects).
+                    try
+                    {
+                        _pendingAuditEntries = null;
+                        _pendingRefreshEntities = null;
+                    }
+                    catch { }
+                }
+                disposedValue = true;
+            }
+        }
+
+        // This code added to correctly implement the disposable pattern.
+        public override void Dispose()
+        {
+            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+            base.Dispose();
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        #endregion
     }
 
     /// <summary>

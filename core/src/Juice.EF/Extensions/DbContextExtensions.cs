@@ -405,5 +405,18 @@ namespace Juice.EF.Extensions
         }
 
         #endregion
+
+        public static async Task MigrateAsync<TContext>(this TContext context)
+             where TContext : DbContext
+        {
+            var pendingMigrations = await context.Database.GetPendingMigrationsAsync();
+
+            if (pendingMigrations.Any())
+            {
+                Console.WriteLine($"[{typeof(TContext).Name}] You have {pendingMigrations.Count()} pending migrations to apply.");
+                Console.WriteLine($"[{typeof(TContext).Name}] Applying pending migrations now");
+                await context.Database.MigrateAsync();
+            }
+        }
     }
 }

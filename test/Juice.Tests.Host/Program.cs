@@ -1,5 +1,6 @@
 ﻿using Finbuckle.MultiTenant;
 using Finbuckle.MultiTenant.Stores;
+using Juice.EventBus;
 using Juice.EventBus.IntegrationEventLog.EF.DependencyInjection;
 using Juice.Extensions.Configuration;
 using Juice.Extensions.Options;
@@ -9,6 +10,7 @@ using Juice.MultiTenant.DependencyInjection;
 using Juice.MultiTenant.EF.ConfigurationProviders.DependencyInjection;
 using Juice.MultiTenant.Grpc.DependencyInjection;
 using Juice.Tests.Host;
+using Juice.Tests.Host.IntegrationEvents;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Caching.Distributed;
 using StackExchange.Redis;
@@ -67,7 +69,11 @@ ConfigureDataProtection(builder.Services, builder.Configuration.GetSection("Redi
 
 ConfigureDistributedCache(builder.Services, builder.Configuration);
 
+ConfigureEvents(builder);
+
 var app = builder.Build();
+
+RegisterEvents(app);
 
 app.UseMultiTenant();
 
@@ -179,4 +185,19 @@ static void ConfigureDistributedCache(IServiceCollection services, IConfiguratio
         options.Configuration = configuration.GetConnectionString("Redis");
         options.InstanceName = "SampleInstance";
     });
+}
+
+static void ConfigureEvents(WebApplicationBuilder builder)
+{
+    builder.Services.AddTransient<TenantActivatedIntegrationEventHandler>();
+
+    builder.Services.RegisterRabbitMQEventBus(builder.Configuration.GetSection("RabbitMQ"),
+        options => options.SubscriptionClientName = "event_bus_test1");
+}
+
+static void RegisterEvents(WebApplication app)
+{
+    var eventBus = app.Services.GetRequiredService<IEventBus>();
+
+    eventBus.Subscribe<TenantActivatedIntegrationEvent, TenantActivatedIntegrationEventHandler>();
 }

@@ -29,7 +29,7 @@ namespace Juice.EventBus.RabbitMQ
             IServiceScopeFactory scopeFactory,
             ILogger<RabbitMQEventBus> logger,
             IRabbitMQPersistentConnection mQPersistentConnection,
-            IOptionsSnapshot<RabbitMQOptions> options
+            IOptions<RabbitMQOptions> options
             )
             : base(subscriptionsManager, logger)
         {
@@ -224,6 +224,10 @@ namespace Juice.EventBus.RabbitMQ
         #region Publish outgoing event
         public override async Task PublishAsync(IntegrationEvent @event)
         {
+            if (@event == null)
+            {
+                throw new ArgumentNullException("@event");
+            }
             if (!_persistentConnection.IsConnected)
             {
                 _persistentConnection.TryConnect();

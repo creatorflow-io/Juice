@@ -12,10 +12,18 @@ namespace Juice.EventBus.IntegrationEventLog.EF
 
         private Func<TContext, IntegrationEventLogContext> _factory;
 
-        public IntegrationEventLogService(Func<TContext, IntegrationEventLogContext> factory, TContext context)
+        private TContext _context;
+
+        public TContext DomainContext => _context;
+
+        private IntegrationEventTypes _eventTypes;
+
+        public IntegrationEventLogService(Func<TContext, IntegrationEventLogContext> factory, TContext context, IntegrationEventTypes eventTypes)
         {
-            _integrationEventLogService = new IntegrationEventLogService(factory(context));
+            _context = context;
+            _integrationEventLogService = new IntegrationEventLogService(factory(context), eventTypes);
             _factory = factory;
+            _eventTypes = eventTypes;
         }
 
         public void EnsureAssociatedConnection<T>(T context) where T : DbContext
@@ -24,8 +32,9 @@ namespace Juice.EventBus.IntegrationEventLog.EF
             {
                 throw new ArgumentException($"Input context must be an instance of {typeof(TContext).Name}");
             }
+            _context = tContext;
             _integrationEventLogService.Dispose();
-            _integrationEventLogService = new IntegrationEventLogService(_factory(tContext));
+            _integrationEventLogService = new IntegrationEventLogService(_factory(tContext), _eventTypes);
         }
 
         void IDisposable.Dispose() => _integrationEventLogService.Dispose();
