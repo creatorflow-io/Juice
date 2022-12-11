@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using Finbuckle.MultiTenant;
 using Juice.EF;
+using Juice.EF.Extensions;
 using Juice.EF.Tests.EventHandlers;
 using Juice.Extensions.Configuration;
 using Juice.Extensions.DependencyInjection;
@@ -26,7 +27,7 @@ using Xunit.Abstractions;
 
 namespace Juice.MultiTenant.Tests
 {
-    [TestCaseOrderer("Juice.XUnit.PriorityOrderer", "Juice.MultiTenant.Tests")]
+    [TestCaseOrderer("Juice.XUnit.PriorityOrderer", "Juice.EF.Tests")]
     public class MultiTenantEFTest
     {
         private readonly ITestOutputHelper _output;

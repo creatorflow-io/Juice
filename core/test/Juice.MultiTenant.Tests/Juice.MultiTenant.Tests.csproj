@@ -22,6 +22,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Juice.AspNetCore\Juice.AspNetCore.csproj" />
+    <ProjectReference Include="..\..\src\Juice.EventBus.IntegrationEventLog.EF.PostgreSQL\Juice.EventBus.IntegrationEventLog.EF.PostgreSQL.csproj" />
+    <ProjectReference Include="..\..\src\Juice.EventBus.IntegrationEventLog.EF.SqlServer\Juice.EventBus.IntegrationEventLog.EF.SqlServer.csproj" />
+    <ProjectReference Include="..\..\src\Juice.EventBus.RabbitMQ\Juice.EventBus.RabbitMQ.csproj" />
     <ProjectReference Include="..\..\src\Juice.MediatR.RequestManager.EF.PostgreSQL\Juice.MediatR.RequestManager.EF.PostgreSQL.csproj" />
     <ProjectReference Include="..\..\src\Juice.MediatR.RequestManager.EF.SqlServer\Juice.MediatR.RequestManager.EF.SqlServer.csproj" />
     <ProjectReference Include="..\..\src\Juice.MultiTenant.Api\Juice.MultiTenant.Api.csproj" />
@@ -32,6 +35,10 @@
 
   <ItemGroup Label="gRPC">
     <PackageReference Include="Grpc.Net.ClientFactory" Version="2.50.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="6.0.0" />
   </ItemGroup>
 
   <ItemGroup>

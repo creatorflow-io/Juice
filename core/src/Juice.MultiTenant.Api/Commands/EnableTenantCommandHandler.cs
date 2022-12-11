@@ -1,4 +1,5 @@
 ﻿using Juice.MultiTenant.EF;
+using Juice.MultiTenant.Events;
 using Microsoft.EntityFrameworkCore;
 
 namespace Juice.MultiTenant.Api.Commands
@@ -8,12 +9,15 @@ namespace Juice.MultiTenant.Api.Commands
     {
         private readonly TenantStoreDbContext<Tenant> _dbContext;
         private readonly ILogger _logger;
+        private readonly IMediator _mediator;
 
         public EnableTenantCommandHandler(TenantStoreDbContext<Tenant> dbContext
-            , ILogger<EnableTenantCommandHandler> logger)
+            , ILogger<EnableTenantCommandHandler> logger
+            , IMediator mediator)
         {
             _dbContext = dbContext;
             _logger = logger;
+            _mediator = mediator;
         }
         public async Task<IOperationResult> Handle(EnableTenantCommand request, CancellationToken cancellationToken)
         {
@@ -25,7 +29,11 @@ namespace Juice.MultiTenant.Api.Commands
                 {
                     return OperationResult.Failed("Tenant not found");
                 }
-                tenant.Disable();
+                tenant.Enable();
+
+                var evt = new TenantActivatedDomainEvent(tenant);
+                await _mediator.Publish(evt);
+
                 await _dbContext.SaveChangesAsync();
                 return OperationResult.Success;
             }

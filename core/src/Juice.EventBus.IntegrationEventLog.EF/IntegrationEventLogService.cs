@@ -8,17 +8,22 @@ namespace Juice.EventBus.IntegrationEventLog.EF
     {
         public IntegrationEventLogContext LogContext => _integrationEventLogContext;
         private readonly IntegrationEventLogContext _integrationEventLogContext;
-        private readonly List<Type> _eventTypes;
         private volatile bool disposedValue;
+        private readonly IntegrationEventTypes _eventTypes;
 
-        public IntegrationEventLogService(IntegrationEventLogContext integrationEventLogContext)
+        public IntegrationEventLogService(IntegrationEventLogContext integrationEventLogContext, IntegrationEventTypes eventTypes)
         {
+            _eventTypes = eventTypes;
             _integrationEventLogContext = integrationEventLogContext;
 
-            _eventTypes = Assembly.Load(Assembly.GetEntryAssembly().FullName)
+            var types = Assembly.Load(Assembly.GetEntryAssembly().FullName)
                 .GetTypes()
                 .Where(t => t.Name.EndsWith(nameof(IntegrationEvent)))
                 .ToList();
+            foreach (var type in types)
+            {
+                _eventTypes.Register(type);
+            }
         }
 
         public async Task<IEnumerable<IntegrationEventLogEntry>> RetrieveEventLogsPendingToPublishAsync(Guid transactionId)
@@ -31,7 +36,7 @@ namespace Juice.EventBus.IntegrationEventLog.EF
             if (result != null && result.Any())
             {
                 return result.OrderBy(o => o.CreationTime)
-                    .Select(e => e.DeserializeJsonContent(_eventTypes.Find(t => t.Name == e.EventTypeShortName)));
+                    .Select(e => e.DeserializeJsonContent(_eventTypes.EventTypes.Find(t => t.Name == e.EventTypeShortName)));
             }
 
             return new List<IntegrationEventLogEntry>();
@@ -41,6 +46,7 @@ namespace Juice.EventBus.IntegrationEventLog.EF
         {
             if (transaction == null) throw new ArgumentNullException(nameof(transaction));
 
+            _eventTypes.Register(@event.GetType());
             var eventLogEntry = new IntegrationEventLogEntry(@event, transaction.TransactionId);
 
             try

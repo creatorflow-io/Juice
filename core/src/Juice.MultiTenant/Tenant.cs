@@ -8,10 +8,5 @@ namespace Juice.MultiTenant
     {
         public string? Identifier { get; set; }
         public string? ConnectionString { get; set; }
-
-        public Task TriggerConfigurationChangedAsync()
-        {
-            return Task.CompletedTask;
-        }
     }
 }

@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <PackageReference Include="Finbuckle.MultiTenant" Version="6.*" />
+    <PackageReference Include="MediatR" Version="$(MediatRVersion)" />
   </ItemGroup>
 
   <ItemGroup Label="gRPC">

@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(AppTargetFramework)</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Juice.EF\Juice.EF.csproj" />
+    <ProjectReference Include="..\Juice.EventBus.IntegrationEventLog.EF\Juice.EventBus.IntegrationEventLog.EF.csproj" />
+    <ProjectReference Include="..\Juice.MediatR\Juice.MediatR.csproj" />
+  </ItemGroup>
+
+</Project>

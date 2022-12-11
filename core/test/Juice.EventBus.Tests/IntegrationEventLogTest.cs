@@ -20,7 +20,7 @@ using Xunit.Abstractions;
 
 namespace Juice.EventBus.Tests
 {
-    [TestCaseOrderer("Juice.XUnit.PriorityOrderer", "Juice.EventBus.Tests")]
+    [TestCaseOrderer("Juice.XUnit.PriorityOrderer", "Juice.EF.Tests")]
     public class IntegrationEventLogTest
     {
         private readonly string TestSchema1 = "Contents";
@@ -196,11 +196,11 @@ namespace Juice.EventBus.Tests
 
                 //Use of an EF Core resiliency strategy when using multiple DbContexts within an explicit BeginTransaction():
                 //See: https://docs.microsoft.com/en-us/ef/core/miscellaneous/connection-resiliency            
-                await ResilientTransaction.New(context).ExecuteAsync(async () =>
+                await ResilientTransaction.New(context).ExecuteAsync(async (transaction) =>
                 {
                     // Achieving atomicity between original catalog database operation and the IntegrationEventLog thanks to a local transaction
                     await context.SaveChangesAsync();
-                    await eventLogService.SaveEventAsync(evt, context.Database.CurrentTransaction);
+                    await eventLogService.SaveEventAsync(evt, transaction);
                 });
 
                 try
@@ -266,5 +266,6 @@ namespace Juice.EventBus.Tests
             }
 
         }
+
     }
 }

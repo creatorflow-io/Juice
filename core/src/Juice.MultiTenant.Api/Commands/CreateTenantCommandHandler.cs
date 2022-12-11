@@ -1,4 +1,5 @@
 ﻿using Juice.MultiTenant.EF;
+using Juice.MultiTenant.Events;
 
 namespace Juice.MultiTenant.Api.Commands
 {
@@ -7,12 +8,14 @@ namespace Juice.MultiTenant.Api.Commands
     {
         private readonly TenantStoreDbContext<Tenant> _dbContext;
         private readonly ILogger _logger;
-
+        private readonly IMediator _mediator;
         public CreateTenantCommandHandler(TenantStoreDbContext<Tenant> dbContext
-            , ILogger<CreateTenantCommandHandler> logger)
+            , ILogger<CreateTenantCommandHandler> logger
+            , IMediator mediator)
         {
             _dbContext = dbContext;
             _logger = logger;
+            _mediator = mediator;
         }
         public async Task<IOperationResult> Handle(CreateTenantCommand request, CancellationToken cancellationToken)
         {
@@ -30,11 +33,16 @@ namespace Juice.MultiTenant.Api.Commands
                     Name = request.Name
                 };
                 _dbContext.Add(tenant);
+
+                var evt = new TenantActivatedDomainEvent(tenant);
+                await _mediator.Publish(evt);
+
                 await _dbContext.SaveChangesAsync(cancellationToken);
                 return OperationResult.Success;
             }
             catch (Exception ex)
             {
+                // Exception may not raise here if TransactionBehavior was resgiterd in mediator pipeline
                 _logger.LogError("Failed to create tenant {identifier}. {message}", request.Identifier, ex.Message);
                 _logger.LogTrace(ex, "Failed to create tenant {identifier}.", request.Identifier);
                 return OperationResult.Failed(ex, $"Failed to create tenant {request.Identifier}. {ex.Message}");

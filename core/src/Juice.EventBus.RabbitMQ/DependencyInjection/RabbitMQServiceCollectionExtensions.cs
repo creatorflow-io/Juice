@@ -32,6 +32,8 @@ namespace Microsoft.Extensions.DependencyInjection
                 services.AddSingleton<IRabbitMQPersistentConnection, DefaultRabbitMQPersistentConnection>();
 
                 services.AddSingleton<IEventBus, RabbitMQEventBus>();
+
+                services.AddIntegrationEventTypesService();
             }
             return services;
 

@@ -1,24 +1,36 @@
-﻿using System.Security.Claims;
+﻿using System.Data;
+using System.Security.Claims;
 using Juice.EF.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Juice.EF
 {
-    public abstract partial class DbContextBase : DbContext, ISchemaDbContext, IAuditableDbContext
+    public abstract partial class DbContextBase : DbContext,
+        ISchemaDbContext, IAuditableDbContext, IUnitOfWork
     {
-
+        #region Schema context
         public string? Schema { get; protected set; }
+        #endregion
+        #region Auditable context
         public string? User => _httpContextAccessor?.HttpContext?.User?.FindFirst(ClaimTypes.Name)?.Value;
 
         private IHttpContextAccessor? _httpContextAccessor;
+        #endregion
+
+        #region Audit events
+        public IEnumerable<IDataEventHandler>? AuditHandlers { get; set; }
+
+        #endregion
+
         private ILogger? _logger;
         private IServiceProvider _serviceProvider;
         private CancellationTokenSource _cts = new CancellationTokenSource();
-        private bool _hasChanged;
-        public bool HasChanged => _hasChanged;
+
         private readonly DbOptions? _options;
         public DbContextBase(IServiceProvider serviceProvider, DbContextOptions options)
             : base(options)
@@ -62,6 +74,42 @@ namespace Juice.EF
 
         }
 
+
+
+        private HashSet<EntityEntry> _pendingRefreshEntities = new HashSet<EntityEntry>();
+        private List<AuditEntry> _pendingAuditEntries = new List<AuditEntry>();
+
+        private void ProcessingRefreshEntries(HashSet<EntityEntry>? entities)
+        {
+            if (entities == null) { return; }
+            if (HasActiveTransaction)
+            {
+                // Waitting for transaction completed before reload entities
+                foreach (var entity in entities)
+                {
+                    _pendingRefreshEntities.Add(entity);
+                }
+            }
+            else
+            {
+                entities.RefreshEntriesAsync().GetAwaiter().GetResult();
+            }
+        }
+        private void ProcessingChanges(IEnumerable<AuditEntry>? changes)
+        {
+            if (changes == null)
+            { return; }
+            if (!HasActiveTransaction)
+            {
+                this.NotificationChanges(changes);
+            }
+            else
+            {
+                // Waitting for transaction completed before raise data events
+                _pendingAuditEntries.AddRange(changes);
+            }
+        }
+
         public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default(CancellationToken))
         {
             var cts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, cancellationToken);
@@ -74,34 +122,20 @@ namespace Juice.EF
                 {
                     return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cts.Token);
                 }
-                using (var transaction = Database.BeginTransaction())
+
+                var (affects, refeshEntries) = await this.TryUpdateDynamicPropertyAsync(_logger);
+                if (this.HasUnsavedChanges())
                 {
-                    try
-                    {
-                        var (affects, refeshEntries) = await this.TryUpdateDynamicPropertyAsync(_logger);
-                        if (this.HasUnsavedChanges())
-                        {
-                            affects = await base.SaveChangesAsync(acceptAllChangesOnSuccess, cts.Token);
-                        }
-
-                        transaction.Commit();
-
-                        await refeshEntries.RefreshEntriesAsync();
-                        return affects;
-                    }
-                    catch (Exception)
-                    {
-                        transaction.Rollback();
-                        throw;
-                    }
+                    affects = await base.SaveChangesAsync(acceptAllChangesOnSuccess, cts.Token);
                 }
+
+                ProcessingRefreshEntries(refeshEntries);
+                return affects;
+
             }
             finally
             {
-                if (changes != null)
-                {
-                    this.NotificationChanges(changes);
-                }
+                ProcessingChanges(changes);
             }
         }
 
@@ -115,40 +149,123 @@ namespace Juice.EF
                 {
                     return base.SaveChanges(acceptAllChangesOnSuccess);
                 }
-                using (var transaction = Database.BeginTransaction())
+
+                var (affects, refeshEntries) = this.TryUpdateDynamicPropertyAsync(_logger).GetAwaiter().GetResult();
+                if (this.HasUnsavedChanges())
                 {
-                    try
-                    {
-                        var (affects, refeshEntries) = this.TryUpdateDynamicPropertyAsync(_logger).GetAwaiter().GetResult();
-                        if (this.HasUnsavedChanges())
-                        {
-                            affects = base.SaveChanges(acceptAllChangesOnSuccess);
-                        }
-
-                        transaction.Commit();
-
-                        refeshEntries.RefreshEntriesAsync().GetAwaiter().GetResult();
-                        return affects;
-                    }
-                    catch (Exception)
-                    {
-                        transaction.Rollback();
-                        throw;
-                    }
+                    affects = base.SaveChanges(acceptAllChangesOnSuccess);
                 }
+
+                ProcessingRefreshEntries(refeshEntries);
+
+                return affects;
             }
             finally
             {
-                if (changes != null)
-                {
-                    this.NotificationChanges(changes);
-                }
+                ProcessingChanges(changes);
             }
         }
 
+        #region UnitOfWork
 
-        #region Audit
-        public IEnumerable<IDataEventHandler>? AuditHandlers { get; set; }
+        private IDbContextTransaction _currentTransaction;
+        public IDbContextTransaction GetCurrentTransaction() => _currentTransaction;
+        public bool HasActiveTransaction => _currentTransaction != null;
+        private Guid? _commitedTransactionId;
+
+        public async Task<IDbContextTransaction?> BeginTransactionAsync()
+        {
+            if (_currentTransaction != null) { return default; }
+
+            _commitedTransactionId = default;
+            _currentTransaction = await Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
+
+            return _currentTransaction;
+        }
+
+        public async Task CommitTransactionAsync(IDbContextTransaction transaction)
+        {
+            if (transaction == null) { throw new ArgumentNullException(nameof(transaction)); }
+            if (transaction.TransactionId == _commitedTransactionId)
+            {
+                return;
+            }
+            if (transaction.TransactionId != _currentTransaction?.TransactionId) { throw new InvalidOperationException($"Transaction {transaction.TransactionId} is not current"); }
+
+            try
+            {
+                await SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                RollbackTransaction();
+                throw;
+            }
+            finally
+            {
+                _commitedTransactionId = transaction.TransactionId;
+                if (_currentTransaction != null)
+                {
+                    _currentTransaction.Dispose();
+                    _currentTransaction = null;
+                }
+                if (_pendingRefreshEntities != null)
+                {
+                    await _pendingRefreshEntities.RefreshEntriesAsync();
+                }
+                this.NotificationChanges(_pendingAuditEntries);
+            }
+        }
+
+        public void RollbackTransaction()
+        {
+            try
+            {
+                _currentTransaction?.Rollback();
+            }
+            finally
+            {
+                if (_currentTransaction != null)
+                {
+                    _currentTransaction.Dispose();
+                    _currentTransaction = null;
+                }
+            }
+        }
+        #endregion
+
+
+        #region IDisposable Support
+
+        private bool disposedValue = false; // To detect redundant calls
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    //  dispose managed state (managed objects).
+                    try
+                    {
+                        _pendingAuditEntries = null;
+                        _pendingRefreshEntities = null;
+                    }
+                    catch { }
+                }
+                disposedValue = true;
+            }
+        }
+
+        // This code added to correctly implement the disposable pattern.
+        public override void Dispose()
+        {
+            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+            base.Dispose();
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
 
         #endregion
     }
