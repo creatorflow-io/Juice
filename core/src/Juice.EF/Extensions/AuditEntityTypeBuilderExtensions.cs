@@ -45,7 +45,7 @@ namespace Juice.EF.Extensions
             return false;
         }
 
-        public static EntityTypeBuilder MarkAsAuditable(this EntityTypeBuilder builder)
+        public static EntityTypeBuilder IsAuditable(this EntityTypeBuilder builder)
         {
             try
             {

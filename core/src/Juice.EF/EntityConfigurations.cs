@@ -24,7 +24,7 @@ namespace Juice.EF
         {
             base.Configure(builder);
 
-            builder.MarkAsAuditable();
+            builder.IsAuditable();
         }
     }
 

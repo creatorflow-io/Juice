@@ -1,9 +1,7 @@
 ﻿using System.Data;
 using System.Security.Claims;
 using Finbuckle.MultiTenant;
-using Finbuckle.MultiTenant.Stores;
-using Juice.Domain;
-using Juice.EF;
+using Finbuckle.MultiTenant.EntityFrameworkCore;
 using Juice.EF.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -12,49 +10,87 @@ using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace Juice.MultiTenant.EF
+namespace Juice.EF.MultiTenant
 {
-    public class TenantStoreDbContext<TTenantInfo> : EFCoreStoreDbContext<TTenantInfo>, ISchemaDbContext, IAuditableDbContext, IUnitOfWork
-        where TTenantInfo : class, IDynamic, ITenantInfo, new()
+    public abstract class MultiTenantDbContext : DbContext,
+        ISchemaDbContext, IAuditableDbContext, IUnitOfWork, IMultiTenantDbContext
     {
-        #region Audit/Schema
-        public string? Schema { get; protected set; }
-        public string? User =>
-            _httpContextAccessor?.HttpContext?.User?.FindFirst(ClaimTypes.Name)?.Value;
-        public IEnumerable<IDataEventHandler>? AuditHandlers { get; set; }
+        #region Finbuckle
+        public ITenantInfo? TenantInfo { get; internal set; }
+        public TenantMismatchMode TenantMismatchMode { get; set; } = TenantMismatchMode.Throw;
+
+        public TenantNotSetMode TenantNotSetMode { get; set; } = TenantNotSetMode.Throw;
         #endregion
 
+        #region Schema context
+        public string? Schema { get; protected set; }
+        #endregion
+        #region Auditable context
+        public string? User => _httpContextAccessor?.HttpContext?.User?.FindFirst(ClaimTypes.Name)?.Value;
+
         private IHttpContextAccessor? _httpContextAccessor;
+        #endregion
+
+        #region Audit events
+        public IEnumerable<IDataEventHandler>? AuditHandlers { get; set; }
+
+        #endregion
+
+
         private ILogger? _logger;
+        private IServiceProvider _serviceProvider;
+        private CancellationTokenSource _cts = new CancellationTokenSource();
+
         private readonly DbOptions? _options;
 
-        public TenantStoreDbContext(
-            IServiceProvider serviceProvider, DbContextOptions<TenantStoreDbContext<TTenantInfo>> options) : base(options)
+        public MultiTenantDbContext(IServiceProvider serviceProvider, DbContextOptions options)
+            : base(options)
         {
-            _options = serviceProvider.GetService<DbOptions<TenantStoreDbContext<TTenantInfo>>>();
-            Schema ??= _options?.Schema ?? "App";
+            _serviceProvider = serviceProvider;
             _httpContextAccessor = serviceProvider.GetService<IHttpContextAccessor>();
-            _logger = serviceProvider.GetService<ILogger<TenantStoreDbContext<TTenantInfo>>>();
-            AuditHandlers = serviceProvider.GetServices<IDataEventHandler>();
+            if (_httpContextAccessor?.HttpContext != null)
+            {
+                _cts = CancellationTokenSource.CreateLinkedTokenSource(_httpContextAccessor.HttpContext.RequestAborted);
+            }
+            var loggerFactory = serviceProvider.GetService<ILoggerFactory>();
+            _logger = loggerFactory != null ? loggerFactory.CreateLogger(GetType()) : null;
+            _logger?.LogInformation("Logger initialized for {type}", GetType().Name);
+            try
+            {
+                AuditHandlers = serviceProvider.GetServices<IDataEventHandler>();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, $"[DbContextBase] failed to receive audit handlers. {ex.Message}");
+            }
+
+            _options = serviceProvider.GetService(typeof(DbOptions<>).MakeGenericType(GetType())) as DbOptions;
+            Schema = _options?.Schema;
+
+            TenantInfo = serviceProvider.GetService<ITenantInfo>();
         }
+
+
+        protected abstract void ConfigureModel(ModelBuilder modelBuilder);
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<TTenantInfo>(entity =>
+            base.OnModelCreating(modelBuilder);
+            modelBuilder.ConfigureDynamicExpandableEntities(this);
+
+            ConfigureModel(modelBuilder);
+
+            var collections = _serviceProvider
+                .GetServices<IModelConfiguration>()
+                .Where(c => typeof(ModelConfigurationBase<>).MakeGenericType(GetType()).IsAssignableFrom(c.GetType()));
+            foreach (var callback in collections)
             {
-                entity.ToTable(nameof(Tenant), Schema);
-
-                entity.IsDynamicExpandable(this);
-
-                entity.IsAuditable();
-
-                entity.Property(ti => ti.Id).HasMaxLength(Constants.TenantIdMaxLength);
-
-                entity.Property(ti => ti.Identifier).HasMaxLength(Constants.TenantIdentifierMaxLength);
-                entity.HasIndex(ti => ti.Identifier).IsUnique();
-            });
+                callback.OnModelCreating(modelBuilder);
+            }
 
         }
+
+
 
         private HashSet<EntityEntry> _pendingRefreshEntities = new HashSet<EntityEntry>();
         private List<AuditEntry> _pendingAuditEntries = new List<AuditEntry>();
@@ -90,10 +126,40 @@ namespace Juice.MultiTenant.EF
             }
         }
 
+        public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            var cts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, cancellationToken);
+            this.SetAuditInformation(_logger);
+            this.EnforceMultiTenant();
+            var changes = this.TrackingChanges(_logger);
+
+            try
+            {
+                if (_options != null && _options.JsonPropertyBehavior == JsonPropertyBehavior.UpdateALL)
+                {
+                    return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cts.Token);
+                }
+
+                var (affects, refeshEntries) = await this.TryUpdateDynamicPropertyAsync(_logger);
+                if (this.HasUnsavedChanges())
+                {
+                    affects = await base.SaveChangesAsync(acceptAllChangesOnSuccess, cts.Token);
+                }
+
+                ProcessingRefreshEntries(refeshEntries);
+                return affects;
+
+            }
+            finally
+            {
+                ProcessingChanges(changes);
+            }
+        }
+
         public override int SaveChanges(bool acceptAllChangesOnSuccess)
         {
             this.SetAuditInformation(_logger);
-
+            this.EnforceMultiTenant();
             var changes = this.TrackingChanges(_logger);
             try
             {
@@ -118,38 +184,8 @@ namespace Juice.MultiTenant.EF
             }
         }
 
-        public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess,
-            CancellationToken cancellationToken = default(CancellationToken))
-        {
-            this.SetAuditInformation(_logger);
-            //this.EnforceMultiTenant(); //enforce mutitenant be must after audit
-
-            var changes = this.TrackingChanges(_logger);
-
-            try
-            {
-                if (_options != null && _options.JsonPropertyBehavior == JsonPropertyBehavior.UpdateALL)
-                {
-                    return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
-                }
-
-                var (affects, refeshEntries) = await this.TryUpdateDynamicPropertyAsync(_logger);
-                if (this.HasUnsavedChanges())
-                {
-                    affects = await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
-                }
-
-                ProcessingRefreshEntries(refeshEntries);
-
-                return affects;
-            }
-            finally
-            {
-                ProcessingChanges(changes);
-            }
-        }
-
         #region UnitOfWork
+
         private IDbContextTransaction _currentTransaction;
         public IDbContextTransaction GetCurrentTransaction() => _currentTransaction;
         public bool HasActiveTransaction => _currentTransaction != null;
@@ -157,7 +193,7 @@ namespace Juice.MultiTenant.EF
 
         public async Task<IDbContextTransaction?> BeginTransactionAsync()
         {
-            if (_currentTransaction != null) return default;
+            if (_currentTransaction != null) { return default; }
 
             _commitedTransactionId = default;
             _currentTransaction = await Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
@@ -217,6 +253,7 @@ namespace Juice.MultiTenant.EF
         }
         #endregion
 
+
         #region IDisposable Support
 
         private bool disposedValue = false; // To detect redundant calls
@@ -249,15 +286,5 @@ namespace Juice.MultiTenant.EF
         }
 
         #endregion
-    }
-
-    /// <summary>
-    /// TenantStoreDbContext for migration
-    /// </summary>
-    public class TenantStoreDbContextWrapper : TenantStoreDbContext<Tenant>
-    {
-        public TenantStoreDbContextWrapper(IServiceProvider serviceProvider, DbContextOptions<TenantStoreDbContext<Tenant>> options) : base(serviceProvider, options)
-        {
-        }
     }
 }
