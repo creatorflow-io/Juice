@@ -1,4 +1,5 @@
-﻿using Finbuckle.MultiTenant.Stores;
+﻿using Finbuckle.MultiTenant;
+using Finbuckle.MultiTenant.Stores;
 using Juice.MultiTenant.Api.IntegrationEvents.Handlers;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,12 +14,13 @@ namespace Juice.MultiTenant.Api.IntegrationEvents.DependencyInjection
         /// </summary>
         /// <param name="services"></param>
         /// <returns></returns>
-        public static IServiceCollection AddTenantIntegrationEventSelfHandlers(this IServiceCollection services)
+        public static IServiceCollection AddTenantIntegrationEventSelfHandlers<TTenantInfo>(this IServiceCollection services)
+            where TTenantInfo : class, ITenantInfo, new()
         {
             services.TryAddScoped(sp =>
             {
                 var cache = sp.GetRequiredService<IDistributedCache>();
-                return new DistributedCacheStore<Tenant>(cache, Constants.TenantToken, default);
+                return new DistributedCacheStore<TTenantInfo>(cache, Constants.TenantToken, default);
             });
 
             services.AddScoped<TenantActivatedIngtegrationEventSelfHandler>();

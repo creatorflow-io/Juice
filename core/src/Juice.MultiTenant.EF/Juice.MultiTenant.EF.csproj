@@ -4,6 +4,7 @@
     <TargetFramework>$(AppTargetFramework)</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Description>Package allows microservices access Tenant/TenantSettings EF store directly.</Description>
   </PropertyGroup>
 
   <ItemGroup>

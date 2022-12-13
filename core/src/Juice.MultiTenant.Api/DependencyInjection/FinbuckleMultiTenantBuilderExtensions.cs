@@ -8,6 +8,7 @@ using Juice.Integrations.MediatR.DependencyInjection;
 using Juice.MediatR.RequestManager.EF.DependencyInjection;
 using Juice.MultiTenant.Api.Behaviors.DependencyInjection;
 using Juice.MultiTenant.Api.Commands;
+using Juice.MultiTenant.Api.IntegrationEvents.DependencyInjection;
 using Juice.MultiTenant.EF;
 using Juice.MultiTenant.EF.DependencyInjection;
 using Juice.MultiTenant.Finbuckle.DependencyInjection;
@@ -50,6 +51,8 @@ namespace Juice.MultiTenant.Api.DependencyInjection
                     .AddIntegrationEventLog()
                     .RegisterContext<TenantStoreDbContext<TTenantInfo>>(dbOptions.Schema)
                     .RegisterContext<TenantSettingsDbContext>(dbOptions.Schema);
+
+            builder.Services.AddTenantIntegrationEventSelfHandlers<TTenantInfo>();
 
             builder.Services.AddTenantSettingsDbContext(configuration, configureTenantDb);
 

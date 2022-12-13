@@ -31,6 +31,7 @@
     <ProjectReference Include="..\..\src\Juice.MultiTenant.Api\Juice.MultiTenant.Api.csproj" />
     <ProjectReference Include="..\..\src\Juice.MultiTenant.EF.PostgreSQL\Juice.MultiTenant.EF.PostgreSQL.csproj" />
     <ProjectReference Include="..\..\src\Juice.MultiTenant.EF.SqlServer\Juice.MultiTenant.EF.SqlServer.csproj" />
+    <ProjectReference Include="..\..\src\Juice.MultiTenant.Grpc\Juice.MultiTenant.Grpc.csproj" />
     <ProjectReference Include="..\Juice.EF.Tests\Juice.EF.Tests.csproj" />
   </ItemGroup>
 
