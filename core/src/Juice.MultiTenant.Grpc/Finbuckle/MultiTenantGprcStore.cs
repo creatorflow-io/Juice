@@ -1,9 +1,8 @@
 ﻿using System.Text.Json;
 using Finbuckle.MultiTenant;
-using Juice.MultiTenant.Grpc;
 using Microsoft.Extensions.Caching.Memory;
 
-namespace Juice.MultiTenant.Finbuckle
+namespace Juice.MultiTenant.Grpc.Finbuckle
 {
     internal class MultiTenantGprcStore<TTenantInfo> : IMultiTenantStore<TTenantInfo> where TTenantInfo : class, ITenantInfo, new()
     {

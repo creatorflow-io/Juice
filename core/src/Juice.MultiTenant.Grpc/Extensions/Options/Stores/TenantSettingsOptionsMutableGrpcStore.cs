@@ -2,7 +2,7 @@
 using Juice.MultiTenant.Settings.Grpc;
 using Juice.Utils;
 
-namespace Juice.MultiTenant.Extensions.Options.Stores
+namespace Juice.MultiTenant.Grpc.Extensions.Options.Stores
 {
     internal class TenantSettingsOptionsMutableGrpcStore : ITenantsOptionsMutableStore
     {

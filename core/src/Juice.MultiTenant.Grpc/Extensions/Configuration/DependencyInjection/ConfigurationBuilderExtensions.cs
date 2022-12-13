@@ -4,7 +4,7 @@ using Juice.Tenants;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace Juice.MultiTenant.Extensions.Configuration.DependencyInjection
+namespace Juice.MultiTenant.Grpc.Extensions.Configuration.DependencyInjection
 {
     public static class ConfigurationBuilderExtensions
     {

@@ -168,7 +168,7 @@ namespace Juice.MultiTenant.Tests
                 services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"),
                     options => options.SubscriptionClientName = "event_bus_test1");
 
-                services.AddTenantIntegrationEventSelfHandlers();
+                services.AddTenantIntegrationEventSelfHandlers<Tenant>();
 
                 services.AddStackExchangeRedisCache(options =>
                 {

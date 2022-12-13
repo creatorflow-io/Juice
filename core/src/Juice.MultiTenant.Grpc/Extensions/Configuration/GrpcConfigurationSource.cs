@@ -4,7 +4,7 @@ using Juice.Tenants;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
-namespace Juice.MultiTenant.Extensions.Configuration
+namespace Juice.MultiTenant.Grpc.Extensions.Configuration
 {
     internal class GrpcConfigurationSource : IConfigurationSource, ITenantsConfigurationSource
     {

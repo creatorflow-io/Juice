@@ -3,7 +3,7 @@ using Finbuckle.MultiTenant.Stores;
 using Juice.EventBus;
 using Juice.Extensions.Options;
 using Juice.MultiTenant;
-using Juice.MultiTenant.Finbuckle.DependencyInjection;
+using Juice.MultiTenant.Grpc.Finbuckle.DependencyInjection;
 using Juice.Tests.Host;
 using Juice.Tests.Host.IntegrationEvents;
 using Microsoft.AspNetCore.DataProtection;

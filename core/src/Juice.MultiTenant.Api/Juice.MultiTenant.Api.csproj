@@ -4,6 +4,7 @@
     <TargetFramework>$(AppTargetFramework)</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Description>Provide Tenant/TenantSettings services via gRPC and integration events</Description>
   </PropertyGroup>
 
   <ItemGroup>
