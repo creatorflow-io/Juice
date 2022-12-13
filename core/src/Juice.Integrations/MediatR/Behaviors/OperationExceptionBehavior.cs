@@ -18,7 +18,12 @@ namespace Juice.Integrations.MediatR.Behaviors
             var typeName = request.GetGenericTypeName();
             try
             {
-                return await next();
+                var result = await next();
+                if (!result.Succeeded)
+                {
+                    _logger.LogError("Command {typeName} {request} not success. {message}", typeName, request?.ToString() ?? "", result.Message);
+                }
+                return result;
             }
             catch (Exception ex)
             {

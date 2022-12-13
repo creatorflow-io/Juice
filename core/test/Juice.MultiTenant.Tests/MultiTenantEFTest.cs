@@ -9,14 +9,15 @@ using Juice.Extensions.Configuration;
 using Juice.Extensions.DependencyInjection;
 using Juice.Extensions.Options;
 using Juice.Extensions.Options.Stores;
-using Juice.MultiTenant.DependencyInjection;
 using Juice.MultiTenant.EF;
-using Juice.MultiTenant.EF.ConfigurationProviders.DependencyInjection;
 using Juice.MultiTenant.EF.DependencyInjection;
+using Juice.MultiTenant.EF.Extensions.Configuration.DependencyInjection;
 using Juice.MultiTenant.EF.Migrations;
+using Juice.MultiTenant.Extensions.Options.DependencyInjection;
 using Juice.Services;
 using Juice.Tenants;
 using Juice.XUnit;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -68,12 +69,14 @@ namespace Juice.MultiTenant.Tests
                 services.AddScoped<IDataEventHandler, DataEventHandler>();
                 services.AddTenantDbContext<Tenant>(configuration, options =>
                 {
+                    options.Schema = "App";
                     options.DatabaseProvider = provider;
                     //options.JsonPropertyBehavior = JsonPropertyBehavior.UpdateALL;
                 }, true);
 
                 services.AddTenantSettingsDbContext(configuration, options =>
                 {
+                    options.Schema = "App";
                     options.DatabaseProvider = provider;
                 });
             });
@@ -144,18 +147,24 @@ namespace Juice.MultiTenant.Tests
 
                     services.AddScoped<ITenantInfo>(sp => sp.GetRequiredService<Tenant>());
 
+                    // Do not registering tenant domain events and its handlers.
+                    services.AddMediatR(typeof(MultiTenantEFTest));
 
                     services.AddTenantsConfiguration()
                         .AddTenantsJsonFile("appsettings.Development.json")
                         .AddTenantsEntityConfiguration(configuration, options =>
                         {
                             options.DatabaseProvider = provider;
+                            options.Schema = "App";
                         });
 
-                    services.UseTenantsOptionsMutableEFStore(configuration, options =>
+                    services.AddTenantSettingsDbContext(configuration, options =>
                     {
                         options.DatabaseProvider = provider;
+                        options.Schema = "App";
                     });
+
+                    services.AddTenantSettingsOptionsMutableStore();
 
                     services.ConfigureTenantsOptionsMutable<Models.Options>("Options");
 

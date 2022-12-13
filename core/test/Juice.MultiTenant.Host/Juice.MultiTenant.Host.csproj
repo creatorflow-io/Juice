@@ -17,4 +17,8 @@
     <ProjectReference Include="..\..\src\Juice.MediatR.RequestManager.EF.SqlServer\Juice.MediatR.RequestManager.EF.SqlServer.csproj" />
     <ProjectReference Include="..\..\src\Juice.MultiTenant.Api\Juice.MultiTenant.Api.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Finbuckle.MultiTenant.AspNetCore" Version="6.*" />
+  </ItemGroup>
 </Project>

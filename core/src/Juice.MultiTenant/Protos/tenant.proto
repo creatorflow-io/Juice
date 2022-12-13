@@ -36,5 +36,5 @@ message TenantInfo
 
 message TenantOperationResult{
     bool succeeded = 1;
-    string message = 2;
+    google.protobuf.StringValue message = 2;
 }

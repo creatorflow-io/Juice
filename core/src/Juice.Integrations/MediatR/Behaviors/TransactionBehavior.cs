@@ -33,9 +33,10 @@ namespace Juice.Integrations.MediatR.Behaviors
 
             try
             {
-                _logger.LogInformation("Transaction behavior");
                 if (_dbContext.HasActiveTransaction)
                 {
+                    _logger.LogInformation("DbContext has active transaction");
+
                     return await next();
                 }
                 await ResilientTransaction.New(_dbContext).ExecuteAsync(async (transaction) =>
@@ -50,6 +51,8 @@ namespace Juice.Integrations.MediatR.Behaviors
                         _logger.LogInformation("----- Commit transaction {TransactionId} for {CommandName}", transaction.TransactionId, typeName);
 
                         await _dbContext.CommitTransactionAsync(transaction);
+
+                        _logger.LogInformation("----- Transaction {TransactionId} committed", transaction.TransactionId);
                     }
 
                     await _integrationEventService.PublishEventsThroughEventBusAsync(transaction.TransactionId);

@@ -1,5 +1,5 @@
-﻿using Juice.MultiTenant.EF;
-using Juice.MultiTenant.Events;
+﻿using Juice.MultiTenant.Domain.Events;
+using Juice.MultiTenant.EF;
 
 namespace Juice.MultiTenant.Api.Commands
 {

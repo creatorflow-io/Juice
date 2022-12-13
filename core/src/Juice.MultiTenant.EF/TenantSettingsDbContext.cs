@@ -1,11 +1,14 @@
-﻿using Finbuckle.MultiTenant;
+﻿using System.Data;
+using Finbuckle.MultiTenant;
 using Finbuckle.MultiTenant.EntityFrameworkCore;
 using Juice.EF;
+using Juice.MultiTenant.Domain.AggregatesModel.SettingsAggregate;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Juice.MultiTenant.EF
 {
-    public class TenantSettingsDbContext : DbContext, ISchemaDbContext, IMultiTenantDbContext
+    public class TenantSettingsDbContext : DbContext, ISchemaDbContext, IMultiTenantDbContext, IUnitOfWork
     {
         #region Finbuckle
         public ITenantInfo? TenantInfo { get; internal set; }
@@ -54,5 +57,69 @@ namespace Juice.MultiTenant.EF
             this.EnforceMultiTenant();
             return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
         }
+
+        #region UnitOfWork
+        private IDbContextTransaction _currentTransaction;
+        public IDbContextTransaction GetCurrentTransaction() => _currentTransaction;
+        public bool HasActiveTransaction => _currentTransaction != null;
+        private Guid? _commitedTransactionId;
+
+        public async Task<IDbContextTransaction?> BeginTransactionAsync()
+        {
+            if (_currentTransaction != null) return default;
+
+            _commitedTransactionId = default;
+            _currentTransaction = await Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
+
+            return _currentTransaction;
+        }
+
+        public async Task CommitTransactionAsync(IDbContextTransaction transaction)
+        {
+            if (transaction == null) { throw new ArgumentNullException(nameof(transaction)); }
+            if (transaction.TransactionId == _commitedTransactionId)
+            {
+                return;
+            }
+            if (transaction.TransactionId != _currentTransaction?.TransactionId) { throw new InvalidOperationException($"Transaction {transaction.TransactionId} is not current"); }
+
+            try
+            {
+                await SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                RollbackTransaction();
+                throw;
+            }
+            finally
+            {
+                _commitedTransactionId = transaction.TransactionId;
+                if (_currentTransaction != null)
+                {
+                    _currentTransaction.Dispose();
+                    _currentTransaction = null;
+                }
+            }
+        }
+
+        public void RollbackTransaction()
+        {
+            try
+            {
+                _currentTransaction?.Rollback();
+            }
+            finally
+            {
+                if (_currentTransaction != null)
+                {
+                    _currentTransaction.Dispose();
+                    _currentTransaction = null;
+                }
+            }
+        }
+        #endregion
+
     }
 }

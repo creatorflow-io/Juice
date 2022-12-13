@@ -101,7 +101,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.MultiTenant.Api", "co
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Integrations", "core\src\Juice.Integrations\Juice.Integrations.csproj", "{E4422E7B-D79B-4CC3-8044-76A36F2798A1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.Integrations.Tests", "core\test\Juice.Integrations.Tests\Juice.Integrations.Tests.csproj", "{CC83A132-7F1F-4A1A-8085-50542CAF057D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Integrations.Tests", "core\test\Juice.Integrations.Tests\Juice.Integrations.Tests.csproj", "{CC83A132-7F1F-4A1A-8085-50542CAF057D}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.EF.MultiTenant", "core\src\Juice.EF.MultiTenant\Juice.EF.MultiTenant.csproj", "{63E4CC99-0B22-4C81-864C-9D18F3828A4E}"
 EndProject
