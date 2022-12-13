@@ -29,10 +29,11 @@ namespace Juice.MultiTenant.EF
         private readonly DbOptions? _options;
 
         public TenantStoreDbContext(
-            IServiceProvider serviceProvider, DbContextOptions<TenantStoreDbContext<TTenantInfo>> options) : base(options)
+            IServiceProvider serviceProvider,
+            DbContextOptions<TenantStoreDbContext<TTenantInfo>> options) : base(options)
         {
             _options = serviceProvider.GetService<DbOptions<TenantStoreDbContext<TTenantInfo>>>();
-            Schema ??= _options?.Schema ?? "App";
+            Schema = _options?.Schema;
             _httpContextAccessor = serviceProvider.GetService<IHttpContextAccessor>();
             _logger = serviceProvider.GetService<ILogger<TenantStoreDbContext<TTenantInfo>>>();
             AuditHandlers = serviceProvider.GetServices<IDataEventHandler>();

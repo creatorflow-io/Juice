@@ -1,14 +1,9 @@
 ﻿using Finbuckle.MultiTenant;
 using Finbuckle.MultiTenant.Stores;
 using Juice.EventBus;
-using Juice.EventBus.IntegrationEventLog.EF.DependencyInjection;
-using Juice.Extensions.Configuration;
 using Juice.Extensions.Options;
-using Juice.MediatR.RequestManager.EF.DependencyInjection;
 using Juice.MultiTenant;
-using Juice.MultiTenant.DependencyInjection;
-using Juice.MultiTenant.EF.ConfigurationProviders.DependencyInjection;
-using Juice.MultiTenant.Grpc.DependencyInjection;
+using Juice.MultiTenant.Finbuckle.DependencyInjection;
 using Juice.Tests.Host;
 using Juice.Tests.Host.IntegrationEvents;
 using Microsoft.AspNetCore.DataProtection;
@@ -16,14 +11,6 @@ using Microsoft.Extensions.Caching.Distributed;
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
-
-builder.Services.AddTestEventLogContext("PostgreSQL", builder.Configuration);
-
-builder.Services.AddRequestManager(builder.Configuration, options =>
-{
-    options.DatabaseProvider = "PostgreSQL";
-    options.ConnectionName = "PostgreConnection";
-});
 
 builder.Services.AddMemoryCache();
 
@@ -51,16 +38,8 @@ builder.Services
             }
         };
     })
-    .JuiceIntegration()
     .WithBasePathStrategy(options => options.RebaseAspNetCorePathBase = true)
-    //.WithInMemoryStore()
-    //.WithEFStore(builder.Configuration, options =>
-    //{
-    //    options.DatabaseProvider = "PostgreSQL";
-    //    options.ConnectionName = "PostgreConnection";
-    //}, true)
-    .WithGprcStore("https://localhost:7045")
-    .WithDistributedCacheStore()
+    .ConfigureTenantClient(builder.Configuration, builder.Environment.EnvironmentName)
     ;
 
 ConfigureTenantOptions(builder.Services, builder.Configuration);
@@ -139,12 +118,13 @@ app.Run();
 
 static void ConfigureTenantOptions(IServiceCollection services, IConfiguration configuration)
 {
-    services.AddTenantsConfiguration()
-        .AddTenantsJsonFile("appsettings.Development.json")
-        .AddTenantsEntityConfiguration(configuration, options =>
-        {
-            options.DatabaseProvider = "PostgreSQL";
-        });
+    //services.AddTenantsConfiguration()
+    //    .AddTenantsJsonFile("appsettings.Development.json")
+    //    //.AddTenantsEntityConfiguration(configuration, options =>
+    //    //{
+    //    //    options.DatabaseProvider = "PostgreSQL";
+    //    //})
+    //    .AddTenantsGrpcConfiguration("https://localhost:7045");
 
     services.ConfigureTenantsOptions<Options>("Options");
 }
@@ -190,6 +170,7 @@ static void ConfigureDistributedCache(IServiceCollection services, IConfiguratio
 static void ConfigureEvents(WebApplicationBuilder builder)
 {
     builder.Services.AddTransient<TenantActivatedIntegrationEventHandler>();
+    builder.Services.AddTransient<TenantSettingsChangedIntegrationEventHandler>();
 
     builder.Services.RegisterRabbitMQEventBus(builder.Configuration.GetSection("RabbitMQ"),
         options => options.SubscriptionClientName = "event_bus_test1");
@@ -200,4 +181,5 @@ static void RegisterEvents(WebApplication app)
     var eventBus = app.Services.GetRequiredService<IEventBus>();
 
     eventBus.Subscribe<TenantActivatedIntegrationEvent, TenantActivatedIntegrationEventHandler>();
+    eventBus.Subscribe<TenantSettingsChangedIntegrationEvent, TenantSettingsChangedIntegrationEventHandler>();
 }

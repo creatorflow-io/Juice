@@ -11,13 +11,12 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <returns></returns>
         public static IServiceCollection RegisterInMemoryEventBus(this IServiceCollection services)
         {
-
+            services.AddIntegrationEventTypesService();
 
             services.AddSingleton<IEventBusSubscriptionsManager, InMemoryEventBusSubscriptionsManager>();
 
             services.AddSingleton<IEventBus, InMemoryEventBus>();
 
-            services.AddIntegrationEventTypesService();
             return services;
         }
 

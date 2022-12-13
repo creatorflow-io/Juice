@@ -13,6 +13,7 @@ namespace Juice.EventBus.IntegrationEventLog.EF.DependencyInjection
     {
         public static IIntegrationEventLogBuilder AddIntegrationEventLog(this IServiceCollection services)
         {
+            services.AddIntegrationEventTypesService();
             services.TryAdd(ServiceDescriptor.Scoped(typeof(IIntegrationEventLogService<>), typeof(IntegrationEventLogService<>)));
 
             return new IntegrationEventLogBuilder(services);

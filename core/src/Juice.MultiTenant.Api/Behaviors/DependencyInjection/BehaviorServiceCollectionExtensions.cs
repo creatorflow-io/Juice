@@ -9,5 +9,11 @@ namespace Juice.MultiTenant.Api.Behaviors.DependencyInjection
             services.AddScoped(typeof(IPipelineBehavior<,>), typeof(TenantTransactionBehavior<,>));
             return services;
         }
+
+        public static IServiceCollection AddMediatRTenantSettingsBehaviors(this IServiceCollection services)
+        {
+            services.AddScoped(typeof(IPipelineBehavior<,>), typeof(TenantSettingsTransactionBehavior<,>));
+            return services;
+        }
     }
 }

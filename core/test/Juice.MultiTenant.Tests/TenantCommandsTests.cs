@@ -85,6 +85,7 @@ namespace Juice.MultiTenant.Tests
                 services.AddScoped<IDataEventHandler, DataEventHandler>();
                 services.AddTenantDbContext<Tenant>(configuration, options =>
                 {
+                    options.Schema = "App";
                     options.DatabaseProvider = provider;
                     //options.JsonPropertyBehavior = JsonPropertyBehavior.UpdateALL;
                 }, true);
@@ -150,6 +151,7 @@ namespace Juice.MultiTenant.Tests
                 services.AddScoped<IDataEventHandler, DataEventHandler>();
                 services.AddTenantDbContext<Tenant>(configuration, options =>
                 {
+                    options.Schema = "App";
                     options.DatabaseProvider = provider;
                     //options.JsonPropertyBehavior = JsonPropertyBehavior.UpdateALL;
                 }, true);

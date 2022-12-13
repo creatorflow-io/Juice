@@ -7,6 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Juice.Extensions.Configuration\Juice.Extensions.Configuration.csproj" />
+    <ProjectReference Include="..\Juice.Extensions.Options\Juice.Extensions.Options.csproj" />
     <ProjectReference Include="..\Juice\Juice.csproj" />
   </ItemGroup>
 
@@ -17,11 +19,11 @@
 
   <ItemGroup Label="gRPC">
     <Protobuf Include="Protos\tenant.proto" />
+    <Protobuf Include="Protos\tenantsettings.proto" />
     <PackageReference Include="Google.Protobuf" Version="3.18.1" />
     <PackageReference Include="Grpc.Tools" Version="$(GrpcVersion)" PrivateAssets="All" />
     <PackageReference Include="Grpc.Core.Api" Version="$(GrpcVersion)" />
     <PackageReference Include="Grpc.Net.ClientFactory" Version="$(GrpcVersion)" />
-
   </ItemGroup>
 
 </Project>

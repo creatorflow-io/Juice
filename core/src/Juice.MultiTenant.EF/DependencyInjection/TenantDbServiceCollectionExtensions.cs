@@ -1,6 +1,8 @@
 ﻿using Finbuckle.MultiTenant;
 using Juice.Domain;
 using Juice.EF.Migrations;
+using Juice.MultiTenant.Domain.AggregatesModel.SettingsAggregate;
+using Juice.MultiTenant.EF.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
@@ -82,14 +84,6 @@ namespace Juice.MultiTenant.EF.DependencyInjection
             // for migration only
             if (migrate)
             {
-                services.AddScoped(sp =>
-                new Juice.EF.DbOptions<TenantStoreDbContextWrapper>
-                {
-                    Schema = dbOptions.Schema,
-                    ConnectionName = dbOptions.ConnectionName,
-                    DatabaseProvider = dbOptions.DatabaseProvider,
-                    JsonPropertyBehavior = dbOptions.JsonPropertyBehavior
-                });
                 services.AddDbContext<TenantStoreDbContextWrapper>(
                    configure);
             }
@@ -172,6 +166,7 @@ namespace Juice.MultiTenant.EF.DependencyInjection
                    ;
                });
 
+            services.AddScoped<ITenantSettingsRepository, TenantSettingsRepository>();
             return services;
         }
 
