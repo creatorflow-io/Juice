@@ -394,7 +394,7 @@ namespace Juice.Extensions
         /// <param name="force"></param>
         /// <param name="others"></param>
         /// <returns></returns>
-        public static IDictionary<string, object> MergeOptions(this IDictionary<string, object> options, bool ignoreNull, bool force, params IDictionary<string, object>[] others)
+        public static IDictionary<string, object?> MergeOptions(this IDictionary<string, object?> options, bool ignoreNull, bool force, params IDictionary<string, object?>[] others)
         {
             foreach (var other in others)
             {
@@ -406,9 +406,9 @@ namespace Juice.Extensions
                     {
                         var val1 = options[kv.Key];
                         var val2 = other[kv.Key];
-                        if (val1 != null && val2 != null && typeof(IDictionary<string, object>).IsAssignableFrom(val1.GetType()) && typeof(IDictionary<string, object>).IsAssignableFrom(val2.GetType()))
+                        if (val1 != null && val2 != null && typeof(IDictionary<string, object?>).IsAssignableFrom(val1.GetType()) && typeof(IDictionary<string, object?>).IsAssignableFrom(val2.GetType()))
                         {
-                            options[kv.Key] = ((IDictionary<string, object>)options[kv.Key]).MergeOptions(ignoreNull, (IDictionary<string, object>)val2);
+                            options[kv.Key] = ((IDictionary<string, object?>)options[kv.Key])?.MergeOptions(ignoreNull, (IDictionary<string, object?>)val2);
                         }
                         else if ((!ignoreNull || val2 != null) && (force || val1 == null || val1.ToString() == kv.Key))
                         {
@@ -433,7 +433,7 @@ namespace Juice.Extensions
         /// <param name="ignoreNull"></param>
         /// <param name="others"></param>
         /// <returns></returns>
-        public static IDictionary<string, object> MergeOptions(this IDictionary<string, object> options, bool ignoreNull, params IDictionary<string, object>[] others)
+        public static IDictionary<string, object?> MergeOptions(this IDictionary<string, object?> options, bool ignoreNull, params IDictionary<string, object?>[] others)
             => MergeOptions(options, ignoreNull, false, others);
 
         /// <summary>
@@ -444,7 +444,7 @@ namespace Juice.Extensions
         /// <param name="options"></param>
         /// <param name="others"></param>
         /// <returns></returns>
-        public static IDictionary<string, object> MergeOptions(this IDictionary<string, object> options, params IDictionary<string, object>[] others)
+        public static IDictionary<string, object?> MergeOptions(this IDictionary<string, object?> options, params IDictionary<string, object?>[] others)
         {
             return options.MergeOptions(false, others);
         }

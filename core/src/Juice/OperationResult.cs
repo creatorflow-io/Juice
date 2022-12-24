@@ -38,7 +38,7 @@ namespace Juice
         /// <param name="ex"></param>
         /// <param name="errors"></param>
         /// <returns></returns>
-        public static OperationResult Failed(Exception ex)
+        public static OperationResult Failed(Exception? ex)
             => new()
             {
                 Succeeded = false,
@@ -51,7 +51,7 @@ namespace Juice
         /// <param name="ex"></param>
         /// <param name="errors"></param>
         /// <returns></returns>
-        public static OperationResult Failed(Exception ex, string message)
+        public static OperationResult Failed(Exception? ex, string? message)
             => new()
             {
                 Succeeded = false,
@@ -65,7 +65,7 @@ namespace Juice
         /// <param name="ex"></param>
         /// <param name="errors"></param>
         /// <returns></returns>
-        public static OperationResult Failed(string message)
+        public static OperationResult Failed(string? message)
             => new()
             {
                 Succeeded = false,
@@ -82,7 +82,7 @@ namespace Juice
         /// <param name="ex"></param>
         /// <param name="errors"></param>
         /// <returns></returns>
-        public static OperationResult<T> Failed<T>(Exception ex)
+        public static OperationResult<T> Failed<T>(Exception? ex)
             => new()
             { Succeeded = false, Exception = ex };
 
@@ -93,7 +93,7 @@ namespace Juice
         /// <param name="ex"></param>
         /// <param name="errors"></param>
         /// <returns></returns>
-        public static OperationResult<T> Failed<T>(Exception ex, string message)
+        public static OperationResult<T> Failed<T>(Exception? ex, string? message)
             => new()
             { Succeeded = false, Exception = ex, Message = message };
 
@@ -104,7 +104,7 @@ namespace Juice
         /// <param name="ex"></param>
         /// <param name="errors"></param>
         /// <returns></returns>
-        public static OperationResult<T> Failed<T>(string message)
+        public static OperationResult<T> Failed<T>(string? message)
             => new()
             { Succeeded = false, Message = message };
 
@@ -114,7 +114,7 @@ namespace Juice
         /// <param name="data"></param>
         /// <param name="message"></param>
         /// <returns></returns>
-        public static OperationResult<T> Result<T>(T data, string message = null)
+        public static OperationResult<T> Result<T>(T data, string? message = null)
             => new()
             { Succeeded = true, Data = data, Message = message };
 
