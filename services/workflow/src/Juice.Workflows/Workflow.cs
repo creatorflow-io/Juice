@@ -1,5 +1,6 @@
 ﻿using Juice.Services;
 using Juice.Workflows.Builder;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Juice.Workflows
 {
@@ -16,20 +17,20 @@ namespace Juice.Workflows
         private IEnumerable<IWorkflowContextBuilder> _builders;
         private WorkflowContext? _context;
 
-        private readonly WorkflowExecutor _executor;
+        private readonly IServiceScopeFactory _scopeFactory;
         private readonly IWorkflowStateReposistory _stateReposistory;
         private readonly IWorkflowRepository _workflowRepository;
 
         private readonly IStringIdGenerator _idGenerator;
 
-        public Workflow(WorkflowExecutor executor,
+        public Workflow(IServiceScopeFactory scopeFactory,
             IWorkflowStateReposistory stateReposistory,
             IStringIdGenerator idGenerator,
             IWorkflowRepository workflowRepository,
             IEnumerable<IWorkflowContextBuilder> builders)
         {
+            _scopeFactory = scopeFactory;
             _builders = builders;
-            _executor = executor;
             _idGenerator = idGenerator;
             _stateReposistory = stateReposistory;
             _workflowRepository = workflowRepository;
@@ -110,7 +111,9 @@ namespace Juice.Workflows
             _context = context;
             try
             {
-                var rs = await _executor.ExecuteAsync(_context, nodeId, token);
+                using var scope = _scopeFactory.CreateScope();
+                var executor = scope.ServiceProvider.GetRequiredService<WorkflowExecutor>();
+                var rs = await executor.ExecuteAsync(_context, nodeId, token);
 
                 var state = rs.Context.State;
 

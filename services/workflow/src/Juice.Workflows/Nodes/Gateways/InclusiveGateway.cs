@@ -1,4 +1,4 @@
-﻿namespace Juice.Workflows.Nodes
+﻿namespace Juice.Workflows.Nodes.Gateways
 {
     public class InclusiveGateway : Gateway
     {
@@ -8,7 +8,7 @@
 
         public override LocalizedString DisplayText => Localizer["Inclusive Gateway"];
 
-        public override async Task<NodeExecutionResult> ExecuteAsync(WorkflowContext workflowContext, NodeContext node, FlowContext? flow, CancellationToken token)
+        public override async Task<NodeExecutionResult> StartAsync(WorkflowContext workflowContext, NodeContext node, FlowContext? flow, CancellationToken token)
         {
             if (flow == null)
             {

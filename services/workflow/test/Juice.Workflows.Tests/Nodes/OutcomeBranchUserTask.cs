@@ -1,8 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Juice.Extensions;
-using Microsoft.Extensions.Logging;
 
 namespace Juice.Workflows.Tests.Nodes
 {
@@ -11,8 +11,8 @@ namespace Juice.Workflows.Tests.Nodes
         public override LocalizedString DisplayText => Localizer["Branch selector"];
 
 
-        public OutcomeBranchUserTask(ILoggerFactory logger, IStringLocalizer<UserTask> stringLocalizer)
-            : base(logger, stringLocalizer)
+        public OutcomeBranchUserTask(IServiceProvider serviceProvider, IStringLocalizer<UserTask> stringLocalizer)
+            : base(serviceProvider, stringLocalizer)
         {
         }
         public override IEnumerable<Outcome> GetPossibleOutcomes(WorkflowContext workflowContext, NodeContext node)
@@ -20,7 +20,7 @@ namespace Juice.Workflows.Tests.Nodes
                     new Outcome(Localizer["branch1"]),
                     new Outcome(Localizer["branch3"])
             };
-        public override Task<NodeExecutionResult> ExecuteAsync(WorkflowContext workflowContext, NodeContext node, FlowContext? flow, CancellationToken token)
+        public override Task<NodeExecutionResult> StartAsync(WorkflowContext workflowContext, NodeContext node, FlowContext? flow, CancellationToken token)
             => Task.FromResult(Outcomes(workflowContext.Input.GetOptionAsString("branch")));
     }
 }

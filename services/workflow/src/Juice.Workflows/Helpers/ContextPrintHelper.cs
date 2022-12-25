@@ -30,12 +30,14 @@ namespace Juice.Workflows.Helpers
             }
             return _rows.ElementAt(row);
         }
-        private int PrintBranches(WorkflowContext context, NodeContext node, int row, int col)
+        private (int row, int col) PrintBranches(WorkflowContext context, NodeContext node, int row, int col)
         {
+
             var topRow = Row(row);
             var midRow = Row(row + 1);
             var btRow = Row(row + 2);
             var padWidth = 0;
+            var currentRow = row;
             var currentPoint = col;
             if (node.Node is IGateway)
             {
@@ -51,7 +53,10 @@ namespace Juice.Workflows.Helpers
             }
             else if (node.Node is SubProcess)
             {
-                currentPoint = PrintSubProcess(context, node, row + 1, col);
+                var (bRow, bCol) = PrintSubProcess(context, node, row + 1, col);
+                currentPoint = Math.Max(bCol, currentPoint);
+                (currentRow, bCol) = PrintBoundaryEvents(context, node, bRow - 1, col);
+                currentPoint = Math.Max(bCol, currentPoint);
             }
             else
             {
@@ -61,6 +66,9 @@ namespace Juice.Workflows.Helpers
 
                 padWidth = _nodeWidth / 2 + 1;
                 currentPoint += _nodeWidth;
+                var (bRow, bCol) = PrintBoundaryEvents(context, node, row + 2, col);
+                currentPoint = Math.Max(currentPoint, bCol);
+                currentRow = bRow;
             }
 
             var i = 0;
@@ -69,7 +77,6 @@ namespace Juice.Workflows.Helpers
 
             _printedNodes.Add(node.Record.Id, new Location(row + 1, nodeCenterPoint));
 
-            var currentRow = row;
 
             var rightBoundaryCol = currentPoint;
             foreach (var flow in context.GetOutgoings(node))
@@ -93,13 +100,15 @@ namespace Juice.Workflows.Helpers
                 }
                 else
                 {
-                    if (i == 0)
+                    if (i == 0 && !(node.Node is IBoundary))
                     {
                         var endFlow = PrintFlow(context, flow, midRow, currentPoint);
 
                         if (next != null)
                         {
-                            rightBoundaryCol = Math.Max(rightBoundaryCol, PrintBranches(context, next, row, endFlow));
+                            var (brow, bcol) = PrintBranches(context, next, row, endFlow);
+                            rightBoundaryCol = Math.Max(rightBoundaryCol, bcol);
+                            currentRow = Math.Max(currentRow, brow);
                         }
                         else
                         {
@@ -109,12 +118,16 @@ namespace Juice.Workflows.Helpers
                     else
                     {
                         currentRow += 3;
-                        Vertical(Row(currentRow - 1), nodeCenterPoint);
+                        for (var j = row + 1; j < currentRow; j++)
+                        {
+                            Vertical(Row(j), nodeCenterPoint);
+                        }
                         var endFlow = Fork(context, flow, currentRow, currentPoint, padWidth);
 
                         if (next != null)
                         {
-                            rightBoundaryCol = Math.Max(rightBoundaryCol, PrintBranches(context, next, currentRow, endFlow));
+                            var (brow, bcol) = PrintBranches(context, next, currentRow, endFlow);
+                            rightBoundaryCol = Math.Max(rightBoundaryCol, bcol);
                         }
                         else
                         {
@@ -124,7 +137,7 @@ namespace Juice.Workflows.Helpers
                 }
                 i++;
             }
-            return rightBoundaryCol;
+            return (currentRow, rightBoundaryCol);
         }
         private int Merge(WorkflowContext context, FlowContext flow, int row, int currentPoint, int padWidth)
         {
@@ -267,26 +280,28 @@ namespace Juice.Workflows.Helpers
 
             Vertical(builder, start + _nodeWidth);
         }
-        private int PrintSubProcess(WorkflowContext context, NodeContext node, int row, int start)
+        private (int row, int col) PrintSubProcess(WorkflowContext context, NodeContext node, int row, int start)
         {
-            Vertical(Row(row - 1), start);
-            Vertical(Row(row), start);
-            Vertical(Row(row + 1), start);
-
-            Row(row + 1).Replace(' ', '_', start, 2).Replace('-', '_', start, 2);
 
             Row(row - 1).Replace(new string(' ', node.DisplayName.Length), node.DisplayName, start + 2, node.DisplayName.Length);
 
             var startNode = context.GetStartNode(node.Record.Id);
 
-            var rightBoundaryCol = PrintBranches(context, startNode, row - 1, start + 4);
+            var (bRow, rightBoundaryCol) = PrintBranches(context, startNode, row - 1, start + 4);
 
-            Vertical(Row(row - 1), rightBoundaryCol + 1);
-            Vertical(Row(row), rightBoundaryCol + 1);
-            Vertical(Row(row + 1), rightBoundaryCol + 1);
-            Row(row + 1).Replace(' ', '_', rightBoundaryCol - 2, 2).Replace('-', '_', rightBoundaryCol - 2, 2);
+            for (var i = row - 1; i <= bRow; i++)
+            {
+                Vertical(Row(i), start);
+            }
+            Row(bRow).Replace(' ', '_', start, 2).Replace('-', '_', start, 2);
 
-            return rightBoundaryCol + 1;
+            for (var i = row - 1; i <= bRow; i++)
+            {
+                Vertical(Row(i), rightBoundaryCol + 1);
+            }
+            Row(bRow).Replace(' ', '_', rightBoundaryCol - 1, 2).Replace('-', '_', rightBoundaryCol - 1, 2);
+
+            return (bRow, rightBoundaryCol + 1);
         }
         private int PrintFlow(WorkflowContext context, FlowContext flow, StringBuilder builder, int start)
         {
@@ -307,6 +322,22 @@ namespace Juice.Workflows.Helpers
             builder.Replace(' ', '>', start + _flowLength - 1, 1);
             return start + _flowLength;
         }
+
+        private (int row, int col) PrintBoundaryEvents(WorkflowContext context, NodeContext node, int row, int start)
+        {
+            var evtStart = row;
+            var endCol = start;
+            var col = start;
+            foreach (var evt in context.Nodes.Values.Where(n => n.Node is IBoundary && n.Record.AttachedToRef == node.Record.Id))
+            {
+                var (bRow, bCol) = PrintBranches(context, evt, row, col + 2);
+                endCol = Math.Max(endCol, bCol);
+                evtStart = Math.Max(evtStart, bRow);
+                col += 4;
+            }
+            return (evtStart, endCol);
+        }
+
         private string AlignCentre(string text, int width)
         {
             text = text.Length > width ? text.Substring(0, width - 3) + "..." : text;

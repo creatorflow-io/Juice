@@ -1,4 +1,4 @@
-﻿namespace Juice.Workflows.Nodes
+﻿namespace Juice.Workflows.Nodes.Gateways
 {
     public class ParallelGateway : Gateway
     {
@@ -11,7 +11,7 @@
 
         public override LocalizedString DisplayText => Localizer["Parallel Gateway"];
 
-        public override async Task<NodeExecutionResult> ExecuteAsync(WorkflowContext workflowContext, NodeContext node, FlowContext? flow, CancellationToken token)
+        public override async Task<NodeExecutionResult> StartAsync(WorkflowContext workflowContext, NodeContext node, FlowContext? flow, CancellationToken token)
         {
             _logger.LogInformation(node.Record.Name + " execute");
             if (flow == null)

@@ -14,7 +14,7 @@
         /// <summary>
         /// Executes the specified flow object.
         /// </summary>
-        Task<NodeExecutionResult> ExecuteAsync(WorkflowContext workflowContext, NodeContext node,
+        Task<NodeExecutionResult> StartAsync(WorkflowContext workflowContext, NodeContext node,
             FlowContext? flow,
             CancellationToken token);
 
@@ -40,6 +40,16 @@
 
     }
 
+    public interface IBoundary : IThrowing, IIntermediate
+    {
+        /// <summary>
+        /// Check before start.
+        /// </summary>
+        Task<bool> PreStartCheckAsync(WorkflowContext workflowContext, NodeContext node, NodeContext ancestor,
+            CancellationToken token);
+
+    }
+
     public interface ICatching : IEvent
     {
 
@@ -53,11 +63,10 @@
     public interface IGateway : INode
     {
         /// <summary>
-        /// Executes the specified flow object.
+        /// Check after executed.
         /// </summary>
-        Task PostCheckAsync(WorkflowContext workflowContext, NodeContext node,
+        Task PostExecuteCheckAsync(WorkflowContext workflowContext, NodeContext node,
             CancellationToken token);
-
     }
 
     public interface IExclusive : IGateway { }

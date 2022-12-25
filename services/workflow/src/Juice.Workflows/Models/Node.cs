@@ -14,12 +14,16 @@
 
         public abstract IEnumerable<Outcome> GetPossibleOutcomes(WorkflowContext workflowContext, NodeContext node);
 
-        public abstract Task<NodeExecutionResult> ExecuteAsync(WorkflowContext workflowContext, NodeContext node,
+        public abstract Task<NodeExecutionResult> StartAsync(WorkflowContext workflowContext, NodeContext node,
             FlowContext? flow,
             CancellationToken token);
 
         public abstract Task<NodeExecutionResult> ResumeAsync(WorkflowContext workflowContext, NodeContext node,
             CancellationToken token);
+
+        public virtual Task<bool> PreStartCheckAsync(WorkflowContext workflowContext, NodeContext node, CancellationToken token)
+            => Task.FromResult(true);
+
 
         #region Outcomes
         protected static NodeExecutionResult Outcomes(params string[] names) => new(WorkflowStatus.Finished, names);
