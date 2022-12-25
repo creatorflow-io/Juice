@@ -23,5 +23,11 @@
     /// <param name="Name"></param>
     public record IdlingNode(string Id, string Name);
 
+    /// <summary>
+    /// Workflow are waitting for catche event
+    /// </summary>
+    /// <param name="Id"></param>
+    /// <param name="Name"></param>
     public record ListeningEvent(string Id, string Name);
+
 }

@@ -1,4 +1,4 @@
-﻿namespace Juice.Workflows.Nodes
+﻿namespace Juice.Workflows.Nodes.Events
 {
     public abstract class IntermediateCatchEvent : Event, IIntermediate, ICatching
     {
@@ -6,7 +6,7 @@
         {
         }
 
-        public override async Task<NodeExecutionResult> ExecuteAsync(WorkflowContext workflowContext, NodeContext node, FlowContext? flow, CancellationToken token)
+        public override async Task<NodeExecutionResult> StartAsync(WorkflowContext workflowContext, NodeContext node, FlowContext? flow, CancellationToken token)
         {
             return Halt();
         }

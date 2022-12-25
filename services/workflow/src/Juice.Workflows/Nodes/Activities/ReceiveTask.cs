@@ -1,10 +1,10 @@
-﻿namespace Juice.Workflows.Nodes
+﻿namespace Juice.Workflows.Nodes.Activities
 {
     public class ReceiveTask : Activity
     {
-        public ReceiveTask(ILoggerFactory logger,
+        public ReceiveTask(IServiceProvider serviceProvider,
             IStringLocalizer<ReceiveTask> stringLocalizer)
-            : base(logger, stringLocalizer)
+            : base(serviceProvider, stringLocalizer)
         {
         }
 

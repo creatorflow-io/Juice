@@ -21,5 +21,6 @@
         public string? OwnerId { get; set; }
 
         public string? Default { get; set; }
+        public string? AttachedToRef { get; set; }
     }
 }

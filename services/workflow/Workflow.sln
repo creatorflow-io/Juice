@@ -11,9 +11,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Workflows", "src\Juic
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{70B24DBB-F994-47D6-9525-10B03203740D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.Workflows.Tests", "test\Juice.Workflows.Tests\Juice.Workflows.Tests.csproj", "{AD8D3A5F-B08B-4C8B-940C-8436F8B69F22}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Workflows.Tests", "test\Juice.Workflows.Tests\Juice.Workflows.Tests.csproj", "{AD8D3A5F-B08B-4C8B-940C-8436F8B69F22}"
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Juice.XUnit", "..\..\test\Juice.XUnit\Juice.XUnit.shproj", "{3C5739A5-F7BF-4D1E-8727-FC0C11C5BD21}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{87F0DD7D-66AF-4409-BB36-BB0B1E9A55A2}"
 EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution

@@ -1,15 +1,15 @@
-﻿namespace Juice.Workflows.Nodes
+﻿namespace Juice.Workflows.Nodes.Activities
 {
     public class SendTask : Activity
     {
-        public SendTask(ILoggerFactory logger, IStringLocalizer<SendTask> stringLocalizer)
-            : base(logger, stringLocalizer)
+        public SendTask(IServiceProvider serviceProvider, IStringLocalizer<SendTask> stringLocalizer)
+            : base(serviceProvider, stringLocalizer)
         {
         }
 
         public override LocalizedString DisplayText => Localizer["Send Task"];
 
-        public override Task<NodeExecutionResult> ExecuteAsync(WorkflowContext workflowContext, NodeContext node, FlowContext? flow, CancellationToken token)
+        public override Task<NodeExecutionResult> StartAsync(WorkflowContext workflowContext, NodeContext node, FlowContext? flow, CancellationToken token)
             => Task.FromResult(Outcomes("Sent"));
 
         public override Task<NodeExecutionResult> ResumeAsync(WorkflowContext workflowContext, NodeContext node, CancellationToken token) => throw new NotImplementedException();

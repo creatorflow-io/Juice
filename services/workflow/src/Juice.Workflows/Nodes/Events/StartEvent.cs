@@ -1,4 +1,4 @@
-﻿namespace Juice.Workflows.Nodes
+﻿namespace Juice.Workflows.Nodes.Events
 {
     public class StartEvent : Event
     {
@@ -12,7 +12,7 @@
         public override IEnumerable<Outcome> GetPossibleOutcomes(WorkflowContext workflowContext, NodeContext node)
             => new List<Outcome> { new Outcome(Localizer["Catched"]) };
 
-        public override Task<NodeExecutionResult> ExecuteAsync(WorkflowContext workflowContext, NodeContext node, FlowContext? flowContext, CancellationToken token)
+        public override Task<NodeExecutionResult> StartAsync(WorkflowContext workflowContext, NodeContext node, FlowContext? flowContext, CancellationToken token)
             => Task.FromResult(Outcomes("Catched"));
 
     }

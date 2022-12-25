@@ -210,6 +210,22 @@ namespace Juice.Workflows.Builder
             where T : class, IIntermediate
             => Append<T>(name, condition, isDefault);
 
+        public WorkflowContextBuilder Attach<T>(string name)
+            where T : class, IBoundary
+        {
+            if (string.IsNullOrEmpty(_currentNodeId))
+            {
+                throw new InvalidOperationException("Workflow must has current node before");
+            }
+            var id = NewEventId();
+            var node = _nodeLibrary.CreateInstance(typeof(T).Name, _serviceProvider);
+            var record = new NodeRecord { Id = id, Name = name ?? node.DisplayText, AttachedToRef = _currentNodeId };
+
+            AddNode(record, node);
+
+            return this;
+        }
+
         private Stack<string> _branchActivities = new Stack<string>();
         private Stack<string> _gateways = new Stack<string>();
 

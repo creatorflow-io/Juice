@@ -1,10 +1,15 @@
-﻿namespace Juice.Workflows.Models
+﻿using Microsoft.Extensions.DependencyInjection;
+
+namespace Juice.Workflows.Nodes
 {
     public abstract class Activity : Node, IActivity
     {
         protected ILogger _logger;
-        protected Activity(ILoggerFactory loggerFactory, IStringLocalizer stringLocalizer) : base(stringLocalizer)
+        protected IServiceProvider _serviceProvider;
+        protected Activity(IServiceProvider serviceProvider, IStringLocalizer stringLocalizer) : base(stringLocalizer)
         {
+            _serviceProvider = serviceProvider;
+            var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
             _logger = loggerFactory.CreateLogger(GetType());
         }
 
@@ -13,20 +18,22 @@
         public override IEnumerable<Outcome> GetPossibleOutcomes(WorkflowContext workflowContext, NodeContext node)
             => new List<Outcome> { new Outcome(Localizer["Done"]) };
 
-        public override Task<NodeExecutionResult> ExecuteAsync(WorkflowContext workflowContext, NodeContext node, FlowContext? flow, CancellationToken token)
+        public override async Task<NodeExecutionResult> StartAsync(WorkflowContext workflowContext, NodeContext node, FlowContext? flow, CancellationToken token)
         {
             if (flow == null)
             {
-                return Task.FromResult(Fault("Activity required an income flow"));
+                return Fault("Activity required an income flow");
             }
             _logger.LogInformation(node.Record.Name + " execute");
-            return Task.FromResult(Halt());
+            return Halt();
         }
+
         public override Task<NodeExecutionResult> ResumeAsync(WorkflowContext workflowContext, NodeContext node, CancellationToken token)
         {
             _logger.LogInformation(node.Record.Name + " outcome done");
             return Task.FromResult(Outcomes("Done"));
         }
+
     }
 
     public abstract class Event : Node, IEvent
@@ -49,10 +56,6 @@
         }
 
         public override LocalizedString Category => Localizer["Gateways"];
-
-        public virtual Task PostCheckAsync(WorkflowContext workflowContext, NodeContext node, CancellationToken token)
-            => Task.CompletedTask;
-
 
         public override IEnumerable<Outcome> GetPossibleOutcomes(WorkflowContext workflowContext, NodeContext node)
         {
@@ -91,6 +94,10 @@
             var outcomes = workflowContext.GetOutcomes(incoming.Record.SourceRef);
             return Outcomes(outcomes.ToArray());
         }
+
+        public virtual Task PostExecuteCheckAsync(WorkflowContext workflowContext, NodeContext node, CancellationToken token)
+            => Task.CompletedTask;
+
     }
 
 }

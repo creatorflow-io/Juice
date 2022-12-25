@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-
-namespace Juice.Workflows.Nodes
+﻿namespace Juice.Workflows.Nodes.Activities
 {
     public class DummyNode : Node
     {
@@ -17,7 +15,7 @@ namespace Juice.Workflows.Nodes
         public override IEnumerable<Outcome> GetPossibleOutcomes(WorkflowContext workflowContext, NodeContext node)
             => new List<Outcome>();
 
-        public override Task<NodeExecutionResult> ExecuteAsync(WorkflowContext workflowContext, NodeContext node,
+        public override Task<NodeExecutionResult> StartAsync(WorkflowContext workflowContext, NodeContext node,
             FlowContext? flowContext, CancellationToken token)
         {
             var message = "The flow node of type '{0}' was not registerd for '{1}'. Either enable the feature, or remove this activity from workflow definition with name '{2}'.";

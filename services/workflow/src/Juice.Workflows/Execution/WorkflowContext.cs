@@ -121,7 +121,6 @@
         /// </summary>
         public Stack<string> LastMessages { get; } = new Stack<string>();
 
-
         /// <summary>
         /// All of activities in workflow data
         /// </summary>

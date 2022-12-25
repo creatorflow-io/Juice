@@ -2,12 +2,16 @@
 {
     public class WorkflowExecutor
     {
-        private readonly ILogger _logger;
+        private readonly ILogger<WorkflowExecutor> _logger;
         // The maximum recursion depth is used to limit the number of Workflow (of any type) that a given
         // Workflow execution can trigger (directly or transitively) without reaching a blocking activity.
         private const int MaxRecursionDepth = 100;
         private int _currentRecursionDepth;
         private Queue<(NodeContext Node, FlowContext Flow)> _queue = new Queue<(NodeContext, FlowContext)>();
+
+        private bool _hasFailure = false;
+        private bool _hasBlocking = false;
+
         public WorkflowExecutor(ILogger<WorkflowExecutor> logger)
         {
             _logger = logger;
@@ -16,18 +20,36 @@
         public async Task<WorkflowExecutionResult> ExecuteAsync(WorkflowContext workflowContext, string? nodeId,
             CancellationToken token)
         {
+            if (workflowContext == null)
+            {
+                throw new ArgumentNullException(nameof(workflowContext));
+            }
+
+            var node = !string.IsNullOrEmpty(nodeId)
+                ? workflowContext.GetNode(nodeId)
+                : workflowContext.GetStartNode(default);
+
+
+            return await ExecuteAsync(workflowContext, node, token);
+        }
+
+        public async Task<WorkflowExecutionResult> ExecuteAsync(WorkflowContext workflowContext, NodeContext? node,
+            CancellationToken token)
+        {
             try
             {
+                _logger.LogInformation("============ BEGIN EXECUTE WORKFLOW {0} =============", workflowContext.WorkflowId);
+
                 if (workflowContext == null)
                 {
                     throw new ArgumentNullException(nameof(workflowContext));
                 }
                 workflowContext.LastMessages.Clear();
-                _logger.LogInformation("============ BEGIN EXECUTE WORKFLOW {0} =============", workflowContext.WorkflowId);
 
-                var node = !string.IsNullOrEmpty(nodeId)
-                    ? workflowContext.GetNode(nodeId)
-                    : workflowContext.GetStartNode(default);
+                if (node == null)
+                {
+                    throw new ArgumentNullException(nameof(node));
+                }
 
                 NodeExecutionResult nodeResult =
                     await ExecuteInternalAsync(workflowContext, node, default, token);
@@ -51,9 +73,9 @@
                 {
                     Context = workflowContext,
                     Message = nodeResult.Message,
-                    Status = workflowContext.FaultedNodes.Any()
+                    Status = _hasFailure
                     ? WorkflowStatus.Faulted
-                    : workflowContext.BlockingNodes.Any()
+                    : _hasBlocking
                     ? WorkflowStatus.Halted
                     : nodeResult.Status
                 };
@@ -107,11 +129,12 @@
             {
                 nodeExecutionResult =
                     isResuming ? await nodeContext.Node.ResumeAsync(workflowContext, nodeContext, token)
-                    : await nodeContext.Node.ExecuteAsync(workflowContext, nodeContext, flowContext, token);
+                    : await nodeContext.Node.StartAsync(workflowContext, nodeContext, flowContext, token);
+
             }
             catch (Exception ex)
             {
-                nodeExecutionResult = NodeExecutionResult.Fault(ex.Message);
+                nodeExecutionResult = NodeExecutionResult.Fault("Failed to execute node. " + ex.Message);
             }
             finally
             {
@@ -119,7 +142,14 @@
             }
 
             workflowContext.ProcessNodeExecutionResult(nodeContext, nodeExecutionResult);
-
+            try
+            {
+                await ExecuteBoundaryEventsAsync(workflowContext, nodeContext, token);
+            }
+            catch (Exception ex)
+            {
+                nodeExecutionResult = NodeExecutionResult.Fault("Failed to execute boundary events. " + ex.Message);
+            }
             if (nodeExecutionResult.Status == WorkflowStatus.Finished)
             {
                 #region Continue execute next nodes
@@ -173,13 +203,44 @@
 
                 if (nodeContext.Node is IGateway gateway)
                 {
-                    await gateway.PostCheckAsync(workflowContext, nodeContext, token);
+                    await gateway.PostExecuteCheckAsync(workflowContext, nodeContext, token);
                 }
 
                 #endregion
             }
+            else if (nodeExecutionResult.Status == WorkflowStatus.Faulted)
+            {
+                _hasFailure = true;
+            }
+            else if (nodeExecutionResult.Status == WorkflowStatus.Halted)
+            {
+                _hasBlocking = true;
+            }
 
             return nodeExecutionResult;
+        }
+
+
+
+        protected async Task ExecuteBoundaryEventsAsync(WorkflowContext workflowContext, NodeContext node, CancellationToken token)
+        {
+            var boundaryEvents = workflowContext.Nodes.Values
+                .Where(n => n.Node is IBoundary && (n.Record.AttachedToRef == node.Record.Id))
+                .ToList();
+
+            foreach (var boundaryEvent in boundaryEvents)
+            {
+                if (await ((IBoundary)boundaryEvent.Node).PreStartCheckAsync(workflowContext, boundaryEvent, node, token))
+                {
+                    var executor = new WorkflowExecutor(_logger);
+                    var rs = await executor.ExecuteAsync(workflowContext, boundaryEvent, token);
+                    if (rs.Status == WorkflowStatus.Faulted)
+                    {
+                        throw new InvalidOperationException($"Failed to execute event {boundaryEvent.DisplayName}" + (rs.Message ?? ""));
+                    }
+                }
+            }
+
         }
 
     }

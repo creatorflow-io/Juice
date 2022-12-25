@@ -22,6 +22,17 @@ namespace Juice.Workflows.Tests
             _output = output;
         }
 
+        /*
+         * Should catch event e2 (branch 2)
+         * 
+         *   ---------------                                    ---------------
+( )----0---->|    utask_0   |---1----><~>----2---->(O)--------->|    utask_1   |-------->())
+             ---------------           |                        ---------------
+                                       |                        ---------------
+                                       '-----3---->(O)----4---->|    utask_2   |---5---->())
+                                                                ---------------
+         * 
+         */
 
         [Fact(DisplayName = "Should select single branch")]
 
