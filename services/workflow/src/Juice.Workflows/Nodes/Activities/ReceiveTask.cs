@@ -3,7 +3,7 @@
     public class ReceiveTask : Activity
     {
         public ReceiveTask(IServiceProvider serviceProvider,
-            IStringLocalizer<ReceiveTask> stringLocalizer)
+            IStringLocalizerFactory stringLocalizer)
             : base(serviceProvider, stringLocalizer)
         {
         }

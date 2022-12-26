@@ -1,14 +1,12 @@
 ﻿namespace Juice.Workflows.Nodes.Events
 {
-    public class EndEvent : Event
+    public class CancelEvent : EndEvent
     {
-        protected ILogger _logger;
-        public EndEvent(ILoggerFactory logger, IStringLocalizerFactory stringLocalizer) : base(stringLocalizer)
+        public CancelEvent(ILoggerFactory logger, IStringLocalizerFactory stringLocalizer) : base(logger, stringLocalizer)
         {
-            _logger = logger.CreateLogger(GetType());
         }
 
-        public override LocalizedString DisplayText => Localizer["End Event"];
+        public override LocalizedString DisplayText => Localizer["Cancel Event"];
 
 
         public override IEnumerable<Outcome> GetPossibleOutcomes(WorkflowContext workflowContext, NodeContext node)
@@ -18,11 +16,11 @@
         {
             if (string.IsNullOrEmpty(node.Record.OwnerId))
             {
-                workflowContext.AddDomainEvent(new WorkflowFinishedDomainEvent(node, WorkflowStatus.Finished));
-                workflowContext.Finish();
+                workflowContext.AddDomainEvent(new WorkflowFinishedDomainEvent(node, WorkflowStatus.Aborted));
+                workflowContext.Terminate();
             }
             _logger.LogInformation(node.Record.Name + " throwed");
-            return Task.FromResult(Outcomes("Throwed"));
+            return Task.FromResult<NodeExecutionResult>(new(WorkflowStatus.Aborted, "Throwed"));
         }
 
     }

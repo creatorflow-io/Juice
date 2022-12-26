@@ -3,7 +3,7 @@
     public class BusinessRuleTask : Activity
     {
         public BusinessRuleTask(IServiceProvider serviceProvider,
-            IStringLocalizer<BusinessRuleTask> stringLocalizer)
+            IStringLocalizerFactory stringLocalizer)
             : base(serviceProvider, stringLocalizer)
         {
         }

@@ -1,4 +1,4 @@
-﻿namespace Juice.Workflows.Services
+﻿namespace Juice.Workflows.Domain.AggregatesModel.WorkflowStateAggregate
 {
     public interface IWorkflowStateReposistory
     {

@@ -11,7 +11,7 @@ namespace Juice.Workflows.Tests.Nodes
         public override LocalizedString DisplayText => Localizer["Branch selector"];
 
 
-        public OutcomeBranchUserTask(IServiceProvider serviceProvider, IStringLocalizer<UserTask> stringLocalizer)
+        public OutcomeBranchUserTask(IServiceProvider serviceProvider, IStringLocalizerFactory stringLocalizer)
             : base(serviceProvider, stringLocalizer)
         {
         }

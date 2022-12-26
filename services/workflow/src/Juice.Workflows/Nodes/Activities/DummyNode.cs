@@ -3,7 +3,7 @@
     public class DummyNode : Node
     {
         private readonly ILogger _logger;
-        public DummyNode(IStringLocalizer<DummyNode> localizer, ILogger<DummyNode> logger)
+        public DummyNode(IStringLocalizerFactory localizer, ILogger<DummyNode> logger)
             : base(localizer)
         {
             _logger = logger;

@@ -4,7 +4,7 @@ namespace Juice.Workflows.Nodes.Activities
 {
     public class SubProcess : Activity
     {
-        public SubProcess(IServiceProvider serviceProvider, IStringLocalizer<SubProcess> stringLocalizer)
+        public SubProcess(IServiceProvider serviceProvider, IStringLocalizerFactory stringLocalizer)
             : base(serviceProvider, stringLocalizer)
         {
         }

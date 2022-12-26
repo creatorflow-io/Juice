@@ -2,7 +2,7 @@
 {
     public class SendTask : Activity
     {
-        public SendTask(IServiceProvider serviceProvider, IStringLocalizer<SendTask> stringLocalizer)
+        public SendTask(IServiceProvider serviceProvider, IStringLocalizerFactory stringLocalizer)
             : base(serviceProvider, stringLocalizer)
         {
         }

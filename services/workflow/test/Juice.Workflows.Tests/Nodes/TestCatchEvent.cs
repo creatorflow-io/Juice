@@ -2,7 +2,7 @@
 {
     internal class TestCatchEvent : IntermediateCatchEvent
     {
-        public TestCatchEvent(IStringLocalizer<TestCatchEvent> stringLocalizer) : base(stringLocalizer)
+        public TestCatchEvent(IStringLocalizerFactory stringLocalizer) : base(stringLocalizer)
         {
         }
 

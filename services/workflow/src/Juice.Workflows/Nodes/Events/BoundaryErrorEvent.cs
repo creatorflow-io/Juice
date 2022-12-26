@@ -3,12 +3,12 @@
     public class BoundaryErrorEvent : BoundaryEvent
     {
         private ILogger _logger;
-        public BoundaryErrorEvent(ILogger<BoundaryErrorEvent> logger, IStringLocalizer<BoundaryErrorEvent> stringLocalizer) : base(stringLocalizer)
+        public BoundaryErrorEvent(ILogger<BoundaryErrorEvent> logger, IStringLocalizerFactory stringLocalizer) : base(stringLocalizer)
         {
             _logger = logger;
         }
 
-        public override LocalizedString DisplayText => Localizer["Error"];
+        public override LocalizedString DisplayText => Localizer["Error Event"];
 
         public override Task<bool> PreStartCheckAsync(WorkflowContext workflowContext, NodeContext node, NodeContext ancestor, CancellationToken token)
         {

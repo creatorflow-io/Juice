@@ -2,7 +2,7 @@
 {
     public abstract class BoundaryEvent : Event, IBoundary
     {
-        public BoundaryEvent(IStringLocalizer stringLocalizer) : base(stringLocalizer)
+        public BoundaryEvent(IStringLocalizerFactory stringLocalizer) : base(stringLocalizer)
         {
         }
 

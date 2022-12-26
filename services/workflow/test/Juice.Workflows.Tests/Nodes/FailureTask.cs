@@ -6,7 +6,7 @@ namespace Juice.Workflows.Tests.Nodes
 {
     internal class FailureTask : Activity
     {
-        public FailureTask(IServiceProvider serviceProvider, IStringLocalizer<FailureTask> stringLocalizer) : base(serviceProvider, stringLocalizer)
+        public FailureTask(IServiceProvider serviceProvider, IStringLocalizerFactory stringLocalizer) : base(serviceProvider, stringLocalizer)
         {
         }
 

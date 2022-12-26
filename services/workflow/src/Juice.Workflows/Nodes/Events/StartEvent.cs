@@ -3,7 +3,7 @@
     public class StartEvent : Event
     {
 
-        public StartEvent(IStringLocalizer<StartEvent> stringLocalizer) : base(stringLocalizer)
+        public StartEvent(IStringLocalizerFactory stringLocalizer) : base(stringLocalizer)
         {
         }
 

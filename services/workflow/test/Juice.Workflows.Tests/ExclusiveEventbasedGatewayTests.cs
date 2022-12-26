@@ -6,6 +6,7 @@ using Juice.Extensions.DependencyInjection;
 using Juice.Services;
 using Juice.Workflows.DependencyInjection;
 using Juice.Workflows.Helpers;
+using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -63,6 +64,8 @@ namespace Juice.Workflows.Tests
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
 
+                services.AddMediatR(typeof(StartEvent));
+
                 services.AddWorkflowServices()
                     .AddInMemoryReposistories();
                 services.RegisterNodes(typeof(TestCatchEvent));
@@ -92,7 +95,9 @@ namespace Juice.Workflows.Tests
                 await Task.Delay(1000);
                 try
                 {
-                    var listeningEvents = workflow.ExecutedContext.ListeningEvents;
+                    var listeningEvents = workflow.ExecutedContext
+                        .BlockingNodes.Where(b =>
+                            workflow.ExecutedContext.GetNode(b.Id).Node is IEvent);
 
                     _output.WriteLine("Waiting for events: " + JsonConvert.SerializeObject(listeningEvents));
 

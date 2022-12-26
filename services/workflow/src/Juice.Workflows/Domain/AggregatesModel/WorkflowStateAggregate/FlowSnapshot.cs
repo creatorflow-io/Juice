@@ -1,4 +1,4 @@
-﻿namespace Juice.Workflows.Execution
+﻿namespace Juice.Workflows.Domain.AggregatesModel.WorkflowStateAggregate
 {
     /// <summary>
     /// Snapshot of flow to store or reload workflow
@@ -7,6 +7,5 @@
     {
         public string Id { get; set; }
         public string Name { get; set; }
-        //public bool Activated { get; set; }
     }
 }

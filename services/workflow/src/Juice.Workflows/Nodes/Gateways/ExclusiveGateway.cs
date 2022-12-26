@@ -3,7 +3,7 @@
     public class ExclusiveGateway : Gateway, IExclusive
     {
         private ILogger _logger;
-        public ExclusiveGateway(ILogger<ExclusiveGateway> logger, IStringLocalizer<ExclusiveGateway> stringLocalizer) : base(stringLocalizer)
+        public ExclusiveGateway(ILogger<ExclusiveGateway> logger, IStringLocalizerFactory stringLocalizer) : base(stringLocalizer)
         {
             _logger = logger;
         }

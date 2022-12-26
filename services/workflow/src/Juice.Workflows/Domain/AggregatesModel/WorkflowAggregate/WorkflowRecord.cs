@@ -1,15 +1,19 @@
-﻿namespace Juice.Workflows.Models
+﻿using System.ComponentModel.DataAnnotations;
+using Juice.Domain;
+
+namespace Juice.Workflows.Domain.AggregatesModel.WorkflowAggregate
 {
     /// <summary>
     /// Represents a workflow instance.
     /// </summary>
-    public class WorkflowRecord
+    public class WorkflowRecord : Entity<string>
     {
 
         /// <summary>
         /// A unique identifier for this workflow.
         /// </summary>
-        public string WorkflowId { get; set; }
+        [Key]
+        public string Id { get; set; }
 
         public string? RefWorkflowId { get; set; }
 

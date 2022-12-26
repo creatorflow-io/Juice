@@ -30,7 +30,7 @@ namespace Juice.Workflows.Helpers
             }
             return _rows.ElementAt(row);
         }
-        private (int row, int col) PrintBranches(WorkflowContext context, NodeContext node, int row, int col)
+        private (int row, int col) PrintBranches(WorkflowContext context, NodeContext node, int row, int col, int flowDown = 0)
         {
 
             var topRow = Row(row);
@@ -69,6 +69,11 @@ namespace Juice.Workflows.Helpers
                 var (bRow, bCol) = PrintBoundaryEvents(context, node, row + 2, col);
                 currentPoint = Math.Max(currentPoint, bCol);
                 currentRow = bRow;
+            }
+
+            if (flowDown > 0)
+            {
+                currentRow += flowDown;
             }
 
             var i = 0;
@@ -117,7 +122,7 @@ namespace Juice.Workflows.Helpers
                     }
                     else
                     {
-                        currentRow += 3;
+                        currentRow += 1;
                         for (var j = row + 1; j < currentRow; j++)
                         {
                             Vertical(Row(j), nodeCenterPoint);
@@ -128,6 +133,7 @@ namespace Juice.Workflows.Helpers
                         {
                             var (brow, bcol) = PrintBranches(context, next, currentRow, endFlow);
                             rightBoundaryCol = Math.Max(rightBoundaryCol, bcol);
+                            currentRow = Math.Max(currentRow, brow);
                         }
                         else
                         {
@@ -330,7 +336,7 @@ namespace Juice.Workflows.Helpers
             var col = start;
             foreach (var evt in context.Nodes.Values.Where(n => n.Node is IBoundary && n.Record.AttachedToRef == node.Record.Id))
             {
-                var (bRow, bCol) = PrintBranches(context, evt, row, col + 2);
+                var (bRow, bCol) = PrintBranches(context, evt, row, col + 2, 1);
                 endCol = Math.Max(endCol, bCol);
                 evtStart = Math.Max(evtStart, bRow);
                 col += 4;

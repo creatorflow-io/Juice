@@ -179,10 +179,10 @@ namespace Juice.Extensions
         /// <param name="converter"></param>
         /// <param name="referencedOptions"></param>
         /// <returns></returns>
-        public static T GetOption<T>(this IDictionary<string, object> options, string key, Func<object, T> converter = null, IDictionary<string, object> referencedOptions = null)
+        public static T? GetOption<T>(this IDictionary<string, object?> options, string key, Func<object?, T>? converter = null, IDictionary<string, object?>? referencedOptions = null)
         {
             var value = options.ContainsKey(key) ? options[key] : null;
-            if (value != null)
+            if (value?.ToString() != null)
             {
                 if (value.ToString().StartsWith("$") && !value.ToString().StartsWith("$("))
                 {
@@ -201,7 +201,7 @@ namespace Juice.Extensions
             return options.Match(key, referencedOptions, converter);
         }
 
-        private static T Match<T>(this IDictionary<string, object> options, string key, IDictionary<string, object> referencedOptions, Func<object, T> converter = null)
+        private static T? Match<T>(this IDictionary<string, object?> options, string key, IDictionary<string, object?>? referencedOptions, Func<object?, T?>? converter = null)
         {
             if (key.StartsWith("$") || key.Contains(".") || key.Contains("["))
             {
@@ -264,10 +264,10 @@ namespace Juice.Extensions
                 return converter(value);
 
             }
-            return default(T);
+            return default;
         }
 
-        private static T Converter<T>(object value)
+        private static T? Converter<T>(object? value)
         {
             if (value == null) { return default(T); }
             if (value is T t) { return t; }
@@ -303,14 +303,14 @@ namespace Juice.Extensions
             return JsonConverter<T>(value);
         }
 
-        private static T JsonConverter<T>(object value)
+        private static T? JsonConverter<T>(object? value)
         {
             if (value == null) { return default(T); }
             var serialized = JsonConvert.SerializeObject(value);
             if (string.IsNullOrWhiteSpace(serialized)) { return default(T); }
             try
             {
-                return JsonConvert.DeserializeObject<T>(serialized);
+                return JsonConvert.DeserializeObject<T?>(serialized);
             }
             catch (Exception)
             {
@@ -318,7 +318,7 @@ namespace Juice.Extensions
             }
         }
 
-        private static object GetItemValue(object myObject, object index)
+        private static object? GetItemValue(object myObject, object index)
         {
             if (myObject == null)
             {

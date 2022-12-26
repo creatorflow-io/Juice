@@ -73,10 +73,11 @@
                 {
                     Context = workflowContext,
                     Message = nodeResult.Message,
-                    Status = _hasFailure
-                    ? WorkflowStatus.Faulted
-                    : _hasBlocking
-                    ? WorkflowStatus.Halted
+                    Status =
+                    workflowContext.HasTerminateSignal ? WorkflowStatus.Aborted
+                    : workflowContext.HasFinishSignal ? WorkflowStatus.Finished
+                    : _hasFailure ? WorkflowStatus.Faulted
+                    : _hasBlocking ? WorkflowStatus.Halted
                     : nodeResult.Status
                 };
                 if (string.IsNullOrEmpty(result.Message) && workflowContext.LastMessages.Any())
@@ -109,7 +110,16 @@
 
             if (nodeContext == null)
             {
-                return new NodeExecutionResult(WorkflowStatus.Faulted, "Node is null");
+                return new(WorkflowStatus.Faulted, "Node is null");
+            }
+
+            if (workflowContext.HasTerminateSignal)
+            {
+                return new(WorkflowStatus.Idle, "The executing workflow has terminated");
+            }
+            if (workflowContext.HasFinishSignal)
+            {
+                return new(WorkflowStatus.Idle, "The executing workflow has finished");
             }
 
             _currentRecursionDepth++;
