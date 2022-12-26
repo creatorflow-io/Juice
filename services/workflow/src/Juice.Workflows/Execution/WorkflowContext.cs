@@ -1,4 +1,6 @@
-﻿namespace Juice.Workflows.Execution
+﻿using MediatR;
+
+namespace Juice.Workflows.Execution
 {
     /// <summary>
     /// Contains workflow data, incomes, outcomes, properties, states... to execute a workflow process
@@ -50,11 +52,8 @@
                     NodeStates = Nodes.ToDictionary(x => x.Key, x => x.Value.Properties),
                     FlowSnapshots = FlowSnapshots,
                     LastMessages = LastMessages.Reverse(),
-                    BlockingNodes = BlockingNodes,
-                    ExecutedNodes = ExecutedNodes,
-                    FaultedNodes = FaultedNodes,
                     IdlingNodes = IdlingNodes,
-                    ListeningEvents = ListeningEvents
+                    DomainEvents = _domainEvents
                 };
             }
         }
@@ -93,18 +92,6 @@
             }
         }
 
-        public IList<ListeningEvent> ListeningEvents
-        {
-            get
-            {
-                var blockings = BlockingNodes.Select(n => n.Id);
-                return Nodes.Values
-                    .Where(n => n.Node is IIntermediate && n.Node is ICatching)
-                    .Where(n => blockings.Contains(n.Record.Id) || !n.Record.Incomings.Any())
-                    .Select(n => new ListeningEvent(n.Record.Id, n.Record.Name))
-                    .ToList();
-            }
-        }
 
         /// <summary>
         /// A dictionary of re-hydrated values provided by the initiator of the workflow.
@@ -179,7 +166,7 @@
                     var blocking = NodeSnapshots.FirstOrDefault(f => f.Id == id && f.Status == WorkflowStatus.Halted);
                     if (blocking != null)
                     {
-                        blocking.Status = WorkflowStatus.Idle;
+                        blocking.Idle(User);
                     }
                 }
 
@@ -189,22 +176,18 @@
             var snapshot = NodeSnapshots.FirstOrDefault(f => f.Id == node.Record.Id);
             if (snapshot != null)
             {
-                snapshot.Status = executionResult.Status;
-                snapshot.Message = executionResult.Message;
-                snapshot.User = User;
-                snapshot.Outcomes = executionResult.Outcomes;
+                snapshot.SetStatus(executionResult.Status, executionResult.Message, User, executionResult.Outcomes);
             }
             else
             {
-                NodeSnapshots.Add(new NodeSnapshot
+                snapshot = new NodeSnapshot
                 {
                     Id = node.Record.Id,
-                    Name = node.Record.Name,
-                    Message = executionResult.Message,
-                    User = User,
-                    Outcomes = executionResult.Outcomes,
-                    Status = executionResult.Status
-                });
+                    Name = node.Record.Name
+                };
+                snapshot.SetStatus(executionResult.Status, executionResult.Message, User, executionResult.Outcomes);
+
+                NodeSnapshots.Add(snapshot);
             }
 
         }
@@ -218,8 +201,7 @@
                 && node is IIntermediate
                 && node is ICatching)
             {
-                snapshot.Status = WorkflowStatus.Idle;
-                snapshot.Message = "Cancelled because other event was cactched";
+                snapshot.Idle(User, "Cancelled because other event was cactched");
             }
         }
 
@@ -312,6 +294,27 @@
 
         }
 
+
+        private IList<INotification> _domainEvents = new List<INotification>();
+        public void AddDomainEvent(INotification evt)
+        {
+            _domainEvents.Add(evt);
+        }
+
+        public bool HasFinishSignal => _finishSignal;
+        private bool _finishSignal = false;
+        public void Finish()
+        {
+            _finishSignal = true;
+        }
+
+
+        public bool HasTerminateSignal => _terminateSignal;
+        private bool _terminateSignal = false;
+        public void Terminate()
+        {
+            _terminateSignal = true;
+        }
 
         #region IDisposable Support
 

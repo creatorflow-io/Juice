@@ -4,7 +4,7 @@
     {
         private ILogger _logger;
         public ParallelGateway(ILogger<ParallelGateway> logger,
-            IStringLocalizer<ParallelGateway> stringLocalizer) : base(stringLocalizer)
+            IStringLocalizerFactory stringLocalizer) : base(stringLocalizer)
         {
             _logger = logger;
         }

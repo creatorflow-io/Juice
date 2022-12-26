@@ -4,7 +4,7 @@
     {
         private ILogger _logger;
         public EventBasedGateway(ILogger<EventBasedGateway> logger,
-            IStringLocalizer<EventBasedGateway> stringLocalizer) : base(stringLocalizer)
+            IStringLocalizerFactory stringLocalizer) : base(stringLocalizer)
         {
             _logger = logger;
         }

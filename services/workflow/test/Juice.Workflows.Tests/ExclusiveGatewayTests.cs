@@ -8,6 +8,7 @@ using Juice.Workflows.Builder;
 using Juice.Workflows.DependencyInjection;
 using Juice.Workflows.Helpers;
 using Juice.Workflows.Services;
+using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit;
@@ -52,6 +53,8 @@ namespace Juice.Workflows.Tests
                     .AddTestOutputLogger()
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
+
+                services.AddMediatR(typeof(StartEvent));
 
                 services.AddWorkflowServices()
                     .AddInMemoryReposistories();
@@ -130,6 +133,8 @@ namespace Juice.Workflows.Tests
                     .AddTestOutputLogger()
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
+
+                services.AddMediatR(typeof(StartEvent));
 
                 services.AddWorkflowServices()
                     .AddInMemoryReposistories();

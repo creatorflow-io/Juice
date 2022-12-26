@@ -1,11 +1,12 @@
-﻿namespace Juice.Workflows.InMemory
+﻿using Juice.Workflows.Domain.AggregatesModel.WorkflowAggregate;
+namespace Juice.Workflows.InMemory
 {
     internal class InMemoryWorkflowReposistory : IWorkflowRepository
     {
         private Dictionary<string, WorkflowRecord> _workflowRecords = new Dictionary<string, WorkflowRecord>();
         public Task<OperationResult> CreateAsync(WorkflowRecord workflow, CancellationToken token)
         {
-            _workflowRecords[workflow.WorkflowId] = workflow;
+            _workflowRecords[workflow.Id] = workflow;
             return Task.FromResult(OperationResult.Success);
         }
         public Task<WorkflowRecord?> GetAsync(string workflowId, CancellationToken token)
@@ -15,7 +16,7 @@
 
         public Task<OperationResult> UpdateAsync(WorkflowRecord workflow, CancellationToken token)
         {
-            _workflowRecords[workflow.WorkflowId] = workflow;
+            _workflowRecords[workflow.Id] = workflow;
             return Task.FromResult(OperationResult.Success);
         }
     }

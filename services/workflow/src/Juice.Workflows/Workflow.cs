@@ -44,7 +44,7 @@ namespace Juice.Workflows
 
                 var createResult = await _workflowRepository.CreateAsync(new WorkflowRecord
                 {
-                    WorkflowId = id,
+                    Id = id,
                     RefWorkflowId = workflowId,
                     CorrelationId = correlationId,
                     Status = WorkflowStatus.Idle
@@ -91,7 +91,7 @@ namespace Juice.Workflows
             {
                 return OperationResult.Failed<WorkflowExecutionResult>("Workflow not found");
             }
-            var defineId = workflowRecord.RefWorkflowId ?? workflowRecord.WorkflowId;
+            var defineId = workflowRecord.RefWorkflowId ?? workflowRecord.Id;
             foreach (var builder in _builders)
             {
                 if (await builder.ExistsAsync(defineId, token))

@@ -2,7 +2,7 @@
 {
     public abstract class IntermediateCatchEvent : Event, IIntermediate, ICatching
     {
-        protected IntermediateCatchEvent(IStringLocalizer stringLocalizer) : base(stringLocalizer)
+        protected IntermediateCatchEvent(IStringLocalizerFactory stringLocalizer) : base(stringLocalizer)
         {
         }
 

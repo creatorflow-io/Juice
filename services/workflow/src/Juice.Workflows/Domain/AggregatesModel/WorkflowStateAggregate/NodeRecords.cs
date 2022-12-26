@@ -1,4 +1,4 @@
-﻿namespace Juice.Workflows.Models
+﻿namespace Juice.Workflows.Domain.AggregatesModel.WorkflowStateAggregate
 {
     /// <summary>
     /// Halt workflow and wait till resume signal

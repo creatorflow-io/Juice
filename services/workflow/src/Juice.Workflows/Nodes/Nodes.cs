@@ -6,7 +6,7 @@ namespace Juice.Workflows.Nodes
     {
         protected ILogger _logger;
         protected IServiceProvider _serviceProvider;
-        protected Activity(IServiceProvider serviceProvider, IStringLocalizer stringLocalizer) : base(stringLocalizer)
+        protected Activity(IServiceProvider serviceProvider, IStringLocalizerFactory stringLocalizer) : base(stringLocalizer)
         {
             _serviceProvider = serviceProvider;
             var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
@@ -38,7 +38,7 @@ namespace Juice.Workflows.Nodes
 
     public abstract class Event : Node, IEvent
     {
-        protected Event(IStringLocalizer stringLocalizer) : base(stringLocalizer)
+        protected Event(IStringLocalizerFactory stringLocalizer) : base(stringLocalizer)
         {
         }
 
@@ -51,7 +51,7 @@ namespace Juice.Workflows.Nodes
 
     public abstract class Gateway : Node, IGateway
     {
-        protected Gateway(IStringLocalizer stringLocalizer) : base(stringLocalizer)
+        protected Gateway(IStringLocalizerFactory stringLocalizer) : base(stringLocalizer)
         {
         }
 

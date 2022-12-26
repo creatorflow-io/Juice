@@ -7,9 +7,9 @@
 
         protected IStringLocalizer Localizer { get; }
 
-        public Node(IStringLocalizer stringLocalizer)
+        public Node(IStringLocalizerFactory stringLocalizer)
         {
-            Localizer = stringLocalizer;
+            Localizer = stringLocalizer.Create(GetType());
         }
 
         public abstract IEnumerable<Outcome> GetPossibleOutcomes(WorkflowContext workflowContext, NodeContext node);

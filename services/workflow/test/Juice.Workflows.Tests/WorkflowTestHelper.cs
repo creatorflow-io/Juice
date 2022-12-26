@@ -10,6 +10,7 @@ namespace Juice.Workflows.Tests
     internal class WorkflowTestHelper
     {
         private ITestOutputHelper _output;
+
         public WorkflowTestHelper(ITestOutputHelper output)
         {
             _output = output;

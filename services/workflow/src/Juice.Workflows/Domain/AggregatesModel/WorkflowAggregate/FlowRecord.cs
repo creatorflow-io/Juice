@@ -1,4 +1,4 @@
-﻿namespace Juice.Workflows.Models
+﻿namespace Juice.Workflows.Domain.AggregatesModel.WorkflowAggregate
 {
     /// <summary>
     /// A record of flow on a workflow process

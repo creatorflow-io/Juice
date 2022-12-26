@@ -5,6 +5,7 @@ using Juice.Extensions.DependencyInjection;
 using Juice.Services;
 using Juice.Workflows.DependencyInjection;
 using Juice.Workflows.Helpers;
+using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit;
@@ -66,6 +67,7 @@ namespace Juice.Workflows.Tests
                     .AddInMemoryReposistories();
                 services.RegisterNodes(typeof(OutcomeBranchUserTask));
 
+                services.AddMediatR(typeof(StartEvent));
 
                 services.RegisterWorkflow(workflowId, builder =>
                 {
@@ -128,6 +130,8 @@ namespace Juice.Workflows.Tests
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
 
+                services.AddMediatR(typeof(StartEvent));
+
                 services.AddWorkflowServices()
                     .AddInMemoryReposistories();
                 services.RegisterNodes(typeof(FailureTask));
@@ -136,13 +140,14 @@ namespace Juice.Workflows.Tests
                 services.RegisterWorkflow(workflowId, builder =>
                 {
                     builder
+                        .SetInput("TaskStatus", WorkflowStatus.Faulted)
                         .Start()
                         .Parallel("p1")
                             .Fork().SubProcess("P-KB", subBuilder =>
                             {
-                                subBuilder.Start().Then<UserTask>("KB").Then<FailureTask>("Approve KB").End();
+                                subBuilder.Start().Then<UserTask>("KB").Then<ServiceTask>("Convert KB").End();
                             }, default).Then<UserTask>("Approve Grph")
-                            .Seek("P-KB").Attach<BoundaryErrorEvent>("Error").Then<SendTask>("Author inform").End()
+                            .Seek("P-KB").Attach<BoundaryErrorEvent>("Error").Then<SendTask>("Author inform").Terminate()
                             .Seek("p1")
                             .Fork().Then<UserTask>("Editing")
                                 .Parallel("p2")
@@ -164,6 +169,8 @@ namespace Juice.Workflows.Tests
 
             result.Should().NotBeNull();
             _output.WriteLine(ContextPrintHelper.Visualize(result.Context));
+
+            result.Status.Should().Be(WorkflowStatus.Aborted);
 
         }
     }

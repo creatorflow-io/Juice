@@ -201,6 +201,8 @@ namespace Juice.Workflows.Builder
         }
         public WorkflowContextBuilder End()
             => Append<EndEvent>();
+        public WorkflowContextBuilder Terminate()
+           => Append<TerminateEvent>();
 
         public WorkflowContextBuilder Then<T>(string? name = default, string? condition = default, bool isDefault = false)
             where T : class, IActivity

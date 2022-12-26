@@ -1,4 +1,7 @@
-﻿global using Juice.Workflows.Execution;
+﻿global using Juice.Workflows.Domain.AggregatesModel.WorkflowAggregate;
+global using Juice.Workflows.Domain.AggregatesModel.WorkflowStateAggregate;
+global using Juice.Workflows.Domain.Events;
+global using Juice.Workflows.Execution;
 global using Juice.Workflows.Models;
 global using Juice.Workflows.Nodes.Activities;
 global using Juice.Workflows.Nodes.Events;

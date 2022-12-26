@@ -2,7 +2,7 @@
 {
     public class InclusiveGateway : Gateway
     {
-        public InclusiveGateway(IStringLocalizer<InclusiveGateway> stringLocalizer) : base(stringLocalizer)
+        public InclusiveGateway(IStringLocalizerFactory stringLocalizer) : base(stringLocalizer)
         {
         }
 
