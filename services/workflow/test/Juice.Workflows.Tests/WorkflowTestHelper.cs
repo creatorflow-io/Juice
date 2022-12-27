@@ -16,22 +16,22 @@ namespace Juice.Workflows.Tests
             _output = output;
         }
         public static Task<WorkflowExecutionResult?> ExecuteAsync(IWorkflow workflow,
-            ITestOutputHelper output, string workflowId)
-            => new WorkflowTestHelper(output).StartAsync(workflow, workflowId);
+            ITestOutputHelper output, string workflowId, Dictionary<string, object?>? input = default)
+            => new WorkflowTestHelper(output).StartAsync(workflow, workflowId, input);
 
         public static Task<WorkflowExecutionResult?> ExecuteAsync(WorkflowExecutor workflowExecutor,
             WorkflowContext workflowContext,
             ITestOutputHelper output,
-            string? nodeId = default)
+            string? nodeId = default, Dictionary<string, object?>? input = default)
            => new WorkflowTestHelper(output).ExecuteAsync(workflowExecutor, workflowContext, nodeId);
 
         private SemaphoreSlim _signal = new SemaphoreSlim(0);
         private Queue<string> _event = new Queue<string>();
 
         public async Task<WorkflowExecutionResult?> StartAsync(IWorkflow workflow,
-            string workflowId)
+            string workflowId, Dictionary<string, object?>? input)
         {
-            var rs = await workflow.StartAsync(workflowId, default);
+            var rs = await workflow.StartAsync(workflowId, default, input);
             if (rs.Succeeded)
             {
                 _output.WriteLine("Start workflow status " + rs.Data.Status);
@@ -47,7 +47,7 @@ namespace Juice.Workflows.Tests
                             context.GetNode(b.Id).Node is IActivity);
                     if (blockings.Any())
                     {
-                        return await ResumeAsync(workflow, newWorkflowId, blockings.First().Id);
+                        return await ResumeAsync(workflow, newWorkflowId, blockings.First().Id, input);
                     }
 
                     var events = context.State
@@ -62,7 +62,7 @@ namespace Juice.Workflows.Tests
                             await _signal.WaitAsync(tokenSource.Token);
                             if (_event.TryDequeue(out var eventId))
                             {
-                                return await ResumeAsync(workflow, newWorkflowId, eventId);
+                                return await ResumeAsync(workflow, newWorkflowId, eventId, input);
                             }
                         }
                         catch (OperationCanceledException)
@@ -85,9 +85,9 @@ namespace Juice.Workflows.Tests
         }
 
         public async Task<WorkflowExecutionResult?> ResumeAsync(IWorkflow workflow,
-            string workflowId, string nodeId)
+            string workflowId, string nodeId, Dictionary<string, object?>? input)
         {
-            var rs = await workflow.ResumeAsync(workflowId, nodeId);
+            var rs = await workflow.ResumeAsync(workflowId, nodeId, input);
             if (rs.Succeeded)
             {
                 _output.WriteLine("Execute workflow status " + rs.Data.Status);
@@ -104,7 +104,7 @@ namespace Juice.Workflows.Tests
                         var blocking = blockings.FirstOrDefault(b =>
                             !(context.GetNode(b.Id).Node is SubProcess))
                             ?? blockings.First();
-                        return await ResumeAsync(workflow, workflowId, blocking.Id);
+                        return await ResumeAsync(workflow, workflowId, blocking.Id, input);
                     }
 
                     var events = context.State
@@ -119,7 +119,7 @@ namespace Juice.Workflows.Tests
                             await _signal.WaitAsync(tokenSource.Token);
                             if (_event.TryDequeue(out var eventId))
                             {
-                                return await ResumeAsync(workflow, workflowId, eventId);
+                                return await ResumeAsync(workflow, workflowId, eventId, input);
                             }
                         }
                         catch (OperationCanceledException)

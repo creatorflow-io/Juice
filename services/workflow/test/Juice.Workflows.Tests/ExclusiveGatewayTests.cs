@@ -62,7 +62,6 @@ namespace Juice.Workflows.Tests
                 services.RegisterWorkflow(workflowId, builder =>
                 {
                     builder
-                       .SetInput("branch", branch)
                        .Start()
                        .Then<OutcomeBranchUserTask>("utask_0")
                        .Exclusive()
@@ -80,7 +79,8 @@ namespace Juice.Workflows.Tests
             using var scope = resolver.ServiceProvider.CreateScope();
             var workflow = scope.ServiceProvider.GetRequiredService<IWorkflow>();
 
-            var result = await WorkflowTestHelper.ExecuteAsync(workflow, _output, workflowId);
+            var result = await WorkflowTestHelper.ExecuteAsync(workflow, _output, workflowId,
+                new System.Collections.Generic.Dictionary<string, object?> { { "branch", branch } });
 
             _output.WriteLine(ContextPrintHelper.Visualize(workflow.ExecutedContext));
 
@@ -147,7 +147,6 @@ namespace Juice.Workflows.Tests
 
             var builder = scope.ServiceProvider.GetRequiredService<WorkflowContextBuilder>();
             builder
-                .SetInput("branch", default(string))
                 .Start()
                 .Then<OutcomeBranchUserTask>("utask_0")
                 .Exclusive()
@@ -159,7 +158,7 @@ namespace Juice.Workflows.Tests
                 .Merge()
                 .End()
                 ;
-            var context = builder.Build("axad", default);
+            var context = builder.Build("axad", default, default);
             _output.WriteLine(ContextPrintHelper.Visualize(context));
 
             await Assert.ThrowsAsync<InvalidOperationException>(async () =>

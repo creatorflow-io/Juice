@@ -113,7 +113,7 @@ namespace Juice.Workflows.Tests
 
             });
 
-            var result = await executor.StartAsync(workflow, workflowId);
+            var result = await executor.StartAsync(workflow, workflowId, default);
 
             workflow.ExecutedContext.Should().NotBeNull();
 

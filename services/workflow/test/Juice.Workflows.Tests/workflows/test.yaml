@@ -1,0 +1,28 @@
+﻿steps:
+    - name: Start
+      type: StartEvent
+    - name: KB
+      type: UserTask
+    - name: Sub-process
+      type: SubProcess
+      process:
+        steps:
+          - name: Start
+            type: StartEvent
+          - name: Pre check
+            type: UserTask
+          - name: Convert KB
+            type: ServiceTask
+          - name: End
+            type: EndEvent
+      boundary_events:
+        - name: Error
+          type: BoundaryErrorEvent
+          process:
+            steps:
+              - type: SendTask
+                name: Inform user
+              - name: Terminate
+                type: TerminateEvent
+    - name: End
+      type: EndEvent

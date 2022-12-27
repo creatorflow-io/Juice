@@ -36,7 +36,9 @@ namespace Juice.Workflows
             _workflowRepository = workflowRepository;
         }
 
-        public async Task<OperationResult<WorkflowExecutionResult>> StartAsync(string workflowId, string? correlationId, CancellationToken token = default)
+        public async Task<OperationResult<WorkflowExecutionResult>> StartAsync(string workflowId,
+            string? correlationId, Dictionary<string, object?>? input,
+            CancellationToken token = default)
         {
             try
             {
@@ -59,7 +61,7 @@ namespace Juice.Workflows
                 {
                     if (await builder.ExistsAsync(workflowId, token))
                     {
-                        var context = await builder.BuildAsync(workflowId, id, token);
+                        var context = await builder.BuildAsync(workflowId, id, input, token);
                         if (context != null)
                         {
                             return await ExecuteAsync(context, default, token);
@@ -74,7 +76,9 @@ namespace Juice.Workflows
             }
         }
 
-        public async Task<OperationResult<WorkflowExecutionResult>> ResumeAsync(string workflowId, string nodeId, CancellationToken token = default)
+        public async Task<OperationResult<WorkflowExecutionResult>> ResumeAsync(string workflowId,
+            string nodeId, Dictionary<string, object?>? input,
+            CancellationToken token = default)
         {
             if (workflowId == null)
             {
@@ -91,12 +95,13 @@ namespace Juice.Workflows
             {
                 return OperationResult.Failed<WorkflowExecutionResult>("Workflow not found");
             }
+
             var defineId = workflowRecord.RefWorkflowId ?? workflowRecord.Id;
             foreach (var builder in _builders)
             {
                 if (await builder.ExistsAsync(defineId, token))
                 {
-                    var context = await builder.BuildAsync(defineId, workflowId, token);
+                    var context = await builder.BuildAsync(defineId, workflowId, input, token);
                     if (context != null)
                     {
                         return await ExecuteAsync(context, nodeId, token);
@@ -113,6 +118,7 @@ namespace Juice.Workflows
             {
                 using var scope = _scopeFactory.CreateScope();
                 var executor = scope.ServiceProvider.GetRequiredService<WorkflowExecutor>();
+
                 var rs = await executor.ExecuteAsync(_context, nodeId, token);
 
                 var state = rs.Context.State;
