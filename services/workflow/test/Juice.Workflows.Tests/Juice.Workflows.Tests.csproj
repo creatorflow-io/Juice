@@ -27,7 +27,14 @@
   </ItemGroup>
   
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Juice.Workflows.Yaml\Juice.Workflows.Yaml.csproj" />
     <ProjectReference Include="..\..\src\Juice.Workflows\Juice.Workflows.csproj" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <None Update="workflows\test.yaml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <Import Project="..\..\..\..\test\Juice.XUnit\Juice.XUnit.projitems" Label="Shared" />

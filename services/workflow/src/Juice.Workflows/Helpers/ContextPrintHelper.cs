@@ -12,7 +12,7 @@ namespace Juice.Workflows.Helpers
             var start = context.GetStartNode(default);
 
             Row(0).Insert(20, "--- funny workflow visualization! ---");
-            PrintBranches(context, start, 1, 0);
+            PrintBranches(context, start, 3, 0);
 
             var _string = new StringBuilder();
             while (_rows.TryDequeue(out var row))
@@ -33,9 +33,9 @@ namespace Juice.Workflows.Helpers
         private (int row, int col) PrintBranches(WorkflowContext context, NodeContext node, int row, int col, int flowDown = 0)
         {
 
-            var topRow = Row(row);
-            var midRow = Row(row + 1);
-            var btRow = Row(row + 2);
+            var topRow = Row(row - 1);
+            var midRow = Row(row);
+            var btRow = Row(row + 1);
             var padWidth = 0;
             var currentRow = row;
             var currentPoint = col;
@@ -53,10 +53,13 @@ namespace Juice.Workflows.Helpers
             }
             else if (node.Node is SubProcess)
             {
-                var (bRow, bCol) = PrintSubProcess(context, node, row + 1, col);
+                var (bRow, bCol) = PrintSubProcess(context, node, row, col);
                 currentPoint = Math.Max(bCol, currentPoint);
-                (currentRow, bCol) = PrintBoundaryEvents(context, node, bRow - 1, col);
-                currentPoint = Math.Max(bCol, currentPoint);
+                if (HasBoundaryEvents(context, node))
+                {
+                    (currentRow, bCol) = PrintBoundaryEvents(context, node, bRow, col);
+                    currentPoint = Math.Max(bCol, currentPoint);
+                }
             }
             else
             {
@@ -66,9 +69,12 @@ namespace Juice.Workflows.Helpers
 
                 padWidth = _nodeWidth / 2 + 1;
                 currentPoint += _nodeWidth;
-                var (bRow, bCol) = PrintBoundaryEvents(context, node, row + 2, col);
-                currentPoint = Math.Max(currentPoint, bCol);
-                currentRow = bRow;
+                if (HasBoundaryEvents(context, node))
+                {
+                    var (bRow, bCol) = PrintBoundaryEvents(context, node, row + 1, col);
+                    //currentPoint = Math.Max(currentPoint, bCol);
+                    currentRow = bRow;
+                }
             }
 
             if (flowDown > 0)
@@ -80,7 +86,7 @@ namespace Juice.Workflows.Helpers
 
             var nodeCenterPoint = currentPoint - padWidth;
 
-            _printedNodes.Add(node.Record.Id, new Location(row + 1, nodeCenterPoint));
+            _printedNodes.Add(node.Record.Id, new Location(row, nodeCenterPoint));
 
 
             var rightBoundaryCol = currentPoint;
@@ -122,7 +128,7 @@ namespace Juice.Workflows.Helpers
                     }
                     else
                     {
-                        currentRow += 1;
+                        currentRow += 3;
                         for (var j = row + 1; j < currentRow; j++)
                         {
                             Vertical(Row(j), nodeCenterPoint);
@@ -147,9 +153,9 @@ namespace Juice.Workflows.Helpers
         }
         private int Merge(WorkflowContext context, FlowContext flow, int row, int currentPoint, int padWidth)
         {
-            var topRow = Row(row);
-            var midRow = Row(row + 1);
-            var btRow = Row(row + 2);
+            var topRow = Row(row - 1);
+            var midRow = Row(row);
+            var btRow = Row(row + 1);
             var centerPoint = currentPoint - padWidth;
 
             var mergeLocation = _printedNodes[flow.Record.DestinationRef];
@@ -160,7 +166,7 @@ namespace Juice.Workflows.Helpers
 
             var startRow = mergeType is IGateway || mergeType is IEvent
                 ? mergeLocation.Row + 1 : mergeLocation.Row + 2;
-            Row(startRow).Replace(' ', '^', mergePoint, 1);
+            Row(startRow).Replace(' ', '^', mergePoint, 1).Replace('|', '^', mergePoint, 1);
 
             var text = context.FlowSnapshots.Any(s => s.Id == flow.Record.Id)
                     ? context.FlowSnapshots.IndexOf(context.FlowSnapshots.First(s => s.Id == flow.Record.Id)).ToString()
@@ -168,7 +174,7 @@ namespace Juice.Workflows.Helpers
 
             if (mergePoint >= currentPoint)
             {
-                for (var i = startRow + 1; i <= row; i++)
+                for (var i = startRow + 1; i < row; i++)
                 {
                     var betweenRow = Row(i);
                     betweenRow.Replace(' ', '|', mergePoint, 1);
@@ -186,9 +192,9 @@ namespace Juice.Workflows.Helpers
                     var betweenRow = Row(i);
                     Vertical(betweenRow, mergePoint);
                 }
-                HalfVertical(Row(row - 1), mergePoint);
+                HalfVertical(Row(row - 2), mergePoint);
 
-                Horizontal(Row(row - 1), centerPoint, mergePoint, text);
+                Horizontal(Row(row - 2), centerPoint, mergePoint, text);
                 HalfVertical(topRow, centerPoint);
 
                 return currentPoint;
@@ -229,10 +235,9 @@ namespace Juice.Workflows.Helpers
         private int Fork(WorkflowContext context, FlowContext flow, int row, int currentPoint, int padWidth)
         {
             var centerPoint = currentPoint - padWidth;
-            var topRow = Row(row);
-            var midRow = Row(row + 1);
-
-            topRow.Replace(' ', '|', centerPoint, 1);
+            var midRow = Row(row);
+            Row(row - 2).Replace(' ', '|', centerPoint, 1);
+            Row(row - 1).Replace(' ', '|', centerPoint, 1);
             midRow.Replace(' ', '\'', currentPoint - 2, 1)
                 .Replace(' ', '-', currentPoint - 1, 1);
 
@@ -256,7 +261,7 @@ namespace Juice.Workflows.Helpers
             }
             else if (node.Node is IIntermediate)
             {
-                builder.Replace("   ", "(O)", start, 3);
+                builder.Replace("   ", "(O)", start, 3).Replace("---", "(O)", start, 3);
             }
         }
         private void PrintGateway(NodeContext node, StringBuilder builder, int start)
@@ -293,8 +298,9 @@ namespace Juice.Workflows.Helpers
 
             var startNode = context.GetStartNode(node.Record.Id);
 
-            var (bRow, rightBoundaryCol) = PrintBranches(context, startNode, row - 1, start + 4);
+            var (bRow, rightBoundaryCol) = PrintBranches(context, startNode, row, start + 4);
 
+            bRow = Math.Max(bRow, row + 1);
             for (var i = row - 1; i <= bRow; i++)
             {
                 Vertical(Row(i), start);
@@ -329,6 +335,11 @@ namespace Juice.Workflows.Helpers
             return start + _flowLength;
         }
 
+        private bool HasBoundaryEvents(WorkflowContext context, NodeContext node)
+        {
+            return context.Nodes.Values.Any(n => n.Node is IBoundary && n.Record.AttachedToRef == node.Record.Id);
+        }
+
         private (int row, int col) PrintBoundaryEvents(WorkflowContext context, NodeContext node, int row, int start)
         {
             var evtStart = row;
@@ -336,7 +347,7 @@ namespace Juice.Workflows.Helpers
             var col = start;
             foreach (var evt in context.Nodes.Values.Where(n => n.Node is IBoundary && n.Record.AttachedToRef == node.Record.Id))
             {
-                var (bRow, bCol) = PrintBranches(context, evt, row, col + 2, 1);
+                var (bRow, bCol) = PrintBranches(context, evt, row, col + 2, 0);
                 endCol = Math.Max(endCol, bCol);
                 evtStart = Math.Max(evtStart, bRow);
                 col += 4;
