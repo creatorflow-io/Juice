@@ -27,11 +27,15 @@
   </ItemGroup>
   
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Juice.Workflows.Bpmn\Juice.Workflows.Bpmn.csproj" />
     <ProjectReference Include="..\..\src\Juice.Workflows.Yaml\Juice.Workflows.Yaml.csproj" />
     <ProjectReference Include="..\..\src\Juice.Workflows\Juice.Workflows.csproj" />
   </ItemGroup>
   
   <ItemGroup>
+    <None Update="workflows\diagram.bpmn">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="workflows\test.yaml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

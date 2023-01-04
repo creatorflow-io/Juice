@@ -27,11 +27,14 @@ namespace Juice.Workflows.Tests
 
         private SemaphoreSlim _signal = new SemaphoreSlim(0);
         private Queue<string> _event = new Queue<string>();
+        private Dictionary<string, int> _executed = new Dictionary<string, int>();
 
         public async Task<WorkflowExecutionResult?> StartAsync(IWorkflow workflow,
             string workflowId, Dictionary<string, object?>? input)
         {
-            var rs = await workflow.StartAsync(workflowId, default, input);
+            string? nullCorrelationId = default;
+            string? nullName = default;
+            var rs = await workflow.StartAsync(workflowId, nullCorrelationId, nullName, input);
             if (rs.Succeeded)
             {
                 _output.WriteLine("Start workflow status " + rs.Data.Status);
@@ -90,6 +93,7 @@ namespace Juice.Workflows.Tests
             var rs = await workflow.ResumeAsync(workflowId, nodeId, input);
             if (rs.Succeeded)
             {
+                IncraseExecutedCount(nodeId);
                 _output.WriteLine("Execute workflow status " + rs.Data.Status);
                 _output.WriteLine("Execute workflow message " + rs.Data.Message);
 
@@ -146,7 +150,10 @@ namespace Juice.Workflows.Tests
         {
 
             var rs = await workflowExecutor.ExecuteAsync(workflowContext, nodeId, default);
-
+            if (nodeId != null)
+            {
+                IncraseExecutedCount(nodeId);
+            }
             _output.WriteLine("Execute workflow status " + rs.Status);
             _output.WriteLine("Execute workflow message " + rs.Message);
 
@@ -194,6 +201,22 @@ namespace Juice.Workflows.Tests
         {
             _event.Enqueue(eventId);
             _signal.Release();
+        }
+
+        private void IncraseExecutedCount(string nodeId)
+        {
+            if (!_executed.ContainsKey(nodeId))
+            {
+                _executed[nodeId] = 1;
+            }
+            else
+            {
+                _executed[nodeId]++;
+            }
+            if (_executed[nodeId] > 3)
+            {
+                throw new InvalidOperationException($"Node was executed {_executed[nodeId]} times");
+            }
         }
     }
 }

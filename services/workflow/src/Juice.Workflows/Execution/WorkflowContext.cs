@@ -9,15 +9,16 @@ namespace Juice.Workflows.Execution
     {
         public WorkflowContext(
             string workflowId
-           , string? correlationId
-           , IList<NodeSnapshot>? nodeSnapshots
-           , IList<FlowSnapshot>? flowSnapshots
-           , IDictionary<string, object?>? input
-           , IDictionary<string, object?>? output
-           , IEnumerable<NodeContext> nodes
-           , IEnumerable<FlowContext> flows
-           , string? name
-           , string? user
+            , string? correlationId
+            , IList<NodeSnapshot>? nodeSnapshots
+            , IList<FlowSnapshot>? flowSnapshots
+            , IDictionary<string, object?>? input
+            , IDictionary<string, object?>? output
+            , IEnumerable<NodeContext> nodes
+            , IEnumerable<FlowContext> flows
+            , IEnumerable<ProcessRecord> processes
+            , string? name
+            , string? user
            )
         {
             WorkflowId = workflowId;
@@ -26,6 +27,7 @@ namespace Juice.Workflows.Execution
             Output = output ?? new Dictionary<string, object?>();
             Nodes = nodes.ToDictionary(x => x.Record.Id);
             Flows = flows;
+            Processes = processes;
             Name = name;
             User = user;
             NodeSnapshots = nodeSnapshots ?? new List<NodeSnapshot>();
@@ -119,7 +121,9 @@ namespace Juice.Workflows.Execution
 
         public IEnumerable<FlowContext> Flows { get; }
 
-        public bool IsFinished(string id)
+        public IEnumerable<ProcessRecord> Processes { get; init; }
+
+        public bool IsNodeFinished(string id)
         {
             return ExecutedNodes.Any(n => n.Id == id);
         }
@@ -129,10 +133,14 @@ namespace Juice.Workflows.Execution
             return string.IsNullOrEmpty(id) || !Nodes.ContainsKey(id) ? null : Nodes[id];
         }
 
-        public NodeContext GetStartNode(string? ownerId)
+        public NodeContext GetStartNode(string? processId)
         {
+            if (processId == null && Processes.Count() > 1)
+            {
+                throw new ArgumentNullException("Workflow contains more than one process so the processId is required");
+            }
             return Nodes.Values.Single(n => n.Node is StartEvent
-                && n.Record.OwnerId == ownerId);
+                && n.Record.ProcessIdRef == processId);
         }
 
         public IEnumerable<FlowContext> GetIncomings(NodeContext node)
@@ -301,21 +309,33 @@ namespace Juice.Workflows.Execution
             _domainEvents.Add(evt);
         }
 
-        public bool HasFinishSignal => _finishSignal;
-        private bool _finishSignal = false;
-        public void Finish()
+        public bool IsFinished
+            => Processes.All(p => p.Status == WorkflowStatus.Finished);
+        public bool HasFinishSignal(string processId)
+            => Processes.Any(p => p.Id == processId && p.Status == WorkflowStatus.Finished);
+        public void Finish(string processId)
         {
-            _finishSignal = true;
+            Processes.Single(p => p.Id == processId).SetStatus(WorkflowStatus.Finished);
         }
 
-
-        public bool HasTerminateSignal => _terminateSignal;
-        private bool _terminateSignal = false;
-        public void Terminate()
+        public bool HasTerminated
+            => Processes.Any(p => p.Status == WorkflowStatus.Aborted);
+        public bool HasTerminateSignal(string processId)
+            => Processes.Any(p => p.Id == processId && p.Status == WorkflowStatus.Aborted);
+        public void Terminate(string processId)
         {
-            _terminateSignal = true;
+            Processes.Single(p => p.Id == processId).SetStatus(WorkflowStatus.Aborted);
         }
-
+        public void Start(string processId)
+        {
+            Processes.Single(p => p.Id == processId).SetStatus(WorkflowStatus.Executing);
+        }
+        public bool HasFaulted
+            => Processes.Any(p => p.Status == WorkflowStatus.Faulted);
+        public void Fault(string processId)
+        {
+            Processes.Single(p => p.Id == processId).SetStatus(WorkflowStatus.Faulted);
+        }
         #region IDisposable Support
 
         private bool disposedValue = false; // To detect redundant calls

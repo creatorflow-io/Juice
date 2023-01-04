@@ -4,7 +4,7 @@
     {
         Task<bool> ExistsAsync(string workflowId, CancellationToken token);
         Task<WorkflowContext> BuildAsync(string workflowId,
-            string? instanceId,
+            string instanceId,
             Dictionary<string, object?>? input,
             CancellationToken token);
     }

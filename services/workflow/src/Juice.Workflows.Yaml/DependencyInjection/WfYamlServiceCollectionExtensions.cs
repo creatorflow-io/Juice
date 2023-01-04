@@ -7,10 +7,11 @@ namespace Juice.Workflows.Yaml.DependencyInjection
     {
         public static IServiceCollection RegisterYamlWorkflows(this IServiceCollection services, string? directory = "workflows")
         {
-            services.AddScoped<Builder.YamlWorkflowContextBuilder>();
+            services.AddScoped<Builder.WorkflowContextBuilder>();
+            services.AddScoped<Builder.YamlFileWorkflowContextBuilder>();
             services.AddScoped<IWorkflowContextBuilder>(sp =>
             {
-                var builder = sp.GetRequiredService<Builder.YamlWorkflowContextBuilder>();
+                var builder = sp.GetRequiredService<Builder.YamlFileWorkflowContextBuilder>();
                 builder.SetWorkflowsDirectory(directory);
                 return builder;
             });

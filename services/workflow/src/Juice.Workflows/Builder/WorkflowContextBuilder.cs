@@ -4,63 +4,40 @@ using Juice.Services;
 namespace Juice.Workflows.Builder
 {
     // Build the simple workflow for logic testing
-    public class WorkflowContextBuilder
+
+    public abstract class WorkflowContextBuilderBase
     {
-        private Dictionary<string, NodeRecord> _nodeRecords = new Dictionary<string, NodeRecord>();
-        private Dictionary<string, INode> _nodes = new Dictionary<string, INode>();
-        private Dictionary<string, FlowRecord> _flowRecords = new Dictionary<string, FlowRecord>();
-        private Dictionary<string, IFlow> _flows = new Dictionary<string, IFlow>();
+        protected Dictionary<string, NodeRecord> _nodeRecords = new Dictionary<string, NodeRecord>();
+        protected Dictionary<string, INode> _nodes = new Dictionary<string, INode>();
+        protected Dictionary<string, FlowRecord> _flowRecords = new Dictionary<string, FlowRecord>();
+        protected Dictionary<string, IFlow> _flows = new Dictionary<string, IFlow>();
 
-        private string? _correlationId;
-        private string? _name;
-        private string? _user;
+        protected Dictionary<string, ProcessRecord> _processRecords = new Dictionary<string, ProcessRecord>();
 
-        public WorkflowContext Build(string workflowId, WorkflowState? state, Dictionary<string, object?>? input)
-        {
-            if (workflowId == null)
-            {
-                workflowId = _idGenerator.GenerateRandomId(6);
-            }
-            return new WorkflowContext(workflowId
-                , _correlationId
-                , state?.NodeSnapshots
-                , state?.FlowSnapshots
-                , input
-                , state?.Output
-                , _nodeRecords.Values.Select(n => new NodeContext(n, _nodes[n.Id])).ToList()
-                , _flowRecords.Values.Select(f => new FlowContext(f, _flows[f.Id])).ToList()
-                , _user
-                , _name
-                );
-        }
-
-        private IStringIdGenerator _idGenerator;
-        private INodeLibrary _nodeLibrary;
-        private IServiceProvider _serviceProvider;
-        public WorkflowContextBuilder(IStringIdGenerator stringIdGenerator,
-            INodeLibrary nodeLibrary,
-            IServiceProvider serviceProvider)
+        protected IStringIdGenerator _idGenerator;
+        protected INodeLibrary _nodeLibrary;
+        protected IServiceProvider _serviceProvider;
+        protected bool _needBuild = true;
+        public WorkflowContextBuilderBase(
+           IStringIdGenerator stringIdGenerator,
+           INodeLibrary nodeLibrary,
+           IServiceProvider serviceProvider
+       )
         {
             _idGenerator = stringIdGenerator;
             _nodeLibrary = nodeLibrary;
             _serviceProvider = serviceProvider;
         }
 
-        public void SetInfo(string? correlationId = default,
-            string? name = default, string? user = default)
-        {
-            _correlationId = correlationId;
-            _name = name;
-            _user = user;
-        }
 
-        /// <summary>
-        /// Set input
-        /// </summary>
-        /// <param name="key"></param>
-        /// <param name="value"></param>
+        #region Builder
+        protected string NewProcessId() => "Process_" + _idGenerator.GenerateRandomId(6);
+        protected string NewEventId() => "Event_" + _idGenerator.GenerateRandomId(6);
+        protected string NewGatewayId() => "Gateway_" + _idGenerator.GenerateRandomId(6);
+        protected string NewActivityId() => "Activity_" + _idGenerator.GenerateRandomId(6);
+        protected string NewFlowId() => "Flow_" + _idGenerator.GenerateRandomId(6);
 
-        private void AddNode(NodeRecord record, INode node)
+        protected virtual void AddNode(NodeRecord record, INode node)
         {
             if (node == null)
             {
@@ -72,10 +49,9 @@ namespace Juice.Workflows.Builder
             }
             _nodes[record.Id] = node;
             _nodeRecords[record.Id] = record;
-            _currentNodeId = record.Id;
         }
 
-        private void AddFlow(FlowRecord record, IFlow flow, bool isDefault = false)
+        protected virtual void AddFlow(FlowRecord record, IFlow flow, bool isDefault = false)
         {
             if (flow == null)
             {
@@ -100,30 +76,74 @@ namespace Juice.Workflows.Builder
             _flowRecords[record.Id] = record;
 
             var source = _nodeRecords[record.SourceRef];
-            if (!source.Outgoings.Contains(record.Id))
-            {
-                source.Outgoings = source.Outgoings.Append(record.Id).ToArray();
-            }
+            source.AddOutgoing(record.Id);
+
             if (isDefault)
             {
-                source.Default = record.Id;
+                source.SetDefault(record.Id);
             }
 
             var dest = _nodeRecords[record.DestinationRef];
-            if (!dest.Incomings.Contains(record.Id))
-            {
-                dest.Incomings = dest.Incomings.Append(record.Id).ToArray();
-            }
+            dest.AddIncoming(record.Id);
+        }
+
+        protected (INode Node, NodeRecord Record) CreateNode(string type, string? name, string processId)
+        {
+            var node = _nodeLibrary.CreateInstance(type, _serviceProvider);
+            var nodeId = node is IGateway ? NewGatewayId()
+            : node is IEvent ? NewEventId()
+            : NewActivityId();
+            var record = new NodeRecord { Id = nodeId, Name = name ?? node.DisplayText, ProcessIdRef = processId };
+            return (node, record);
+        }
+
+        protected virtual void AddProcess(ProcessRecord process)
+        {
+            _processRecords[process.Id] = process;
+        }
+        #endregion
+    }
+
+    public class WorkflowContextBuilder : WorkflowContextBuilderBase
+    {
+        public WorkflowContextBuilder(IStringIdGenerator stringIdGenerator,
+            INodeLibrary nodeLibrary,
+            IServiceProvider serviceProvider) : base(stringIdGenerator, nodeLibrary, serviceProvider)
+        {
+
+        }
+
+        public WorkflowContext Build(WorkflowRecord workflow,
+            WorkflowState? state,
+            string? user,
+            Dictionary<string, object?>? input)
+        {
+
+            return new WorkflowContext(workflow.Id
+                , workflow.CorrelationId
+                , state?.NodeSnapshots
+                , state?.FlowSnapshots
+                , input
+                , state?.Output
+                , _nodeRecords.Values.Select(n => new NodeContext(n, _nodes[n.Id])).ToList()
+                , _flowRecords.Values.Select(f => new FlowContext(f, _flows[f.Id])).ToList()
+                , _processRecords.Values
+                , workflow.Name
+                , user
+                );
         }
 
 
+        protected override void AddNode(NodeRecord record, INode node)
+        {
+            base.AddNode(record, node);
+            _currentNodeId = record.Id;
+        }
+
         #region Workflow as code
-        private string NewEventId() => "Event_" + _idGenerator.GenerateRandomId(6);
-        private string NewGatewayId() => "Gateway_" + _idGenerator.GenerateRandomId(6);
-        private string NewActivityId() => "Activity_" + _idGenerator.GenerateRandomId(6);
-        private string NewFlowId() => "Flow_" + _idGenerator.GenerateRandomId(6);
 
         private string? _currentNodeId;
+        private string? _currentProcessId;
 
         private WorkflowContextBuilder Append<T>(string? name = default, string? condition = default, bool isDefault = false)
     where T : class, INode
@@ -168,27 +188,33 @@ namespace Juice.Workflows.Builder
             var flowId = NewFlowId();
 
             var node = _nodeLibrary.CreateInstance(typeof(T).Name, _serviceProvider);
-            var record = new NodeRecord { Id = id, Name = name ?? node.DisplayText };
+            var record = new NodeRecord(id, name ?? node.DisplayText, _currentProcessId);
 
             AddNode(record, node);
 
             var flow = new SequenceFlow { };
-            var flowRecord = new FlowRecord
-            {
-                Id = flowId,
-                SourceRef = currentId,
-                DestinationRef = id,
-                ConditionExpression = condition
-            };
+            var flowRecord = new FlowRecord(flowId, currentId, id, default, _currentProcessId, condition);
 
             AddFlow(flowRecord, flow, isDefault);
 
             return this;
         }
+
+        public WorkflowContextBuilder NewProcess(string? processId = default, string? name = default)
+        {
+            var process = new ProcessRecord(processId ?? NewProcessId(), name);
+            _processRecords[process.Id] = process;
+            _currentProcessId = process.Id;
+            return this;
+        }
         public WorkflowContextBuilder Start()
         {
+            if (_currentProcessId == null)
+            {
+                NewProcess();
+            }
             _currentNodeId = NewEventId();
-            var record = new NodeRecord { Id = _currentNodeId, Name = "Start" };
+            var record = new NodeRecord(_currentNodeId, "Start", _currentProcessId);
             AddNode(record, _nodeLibrary.CreateInstance(nameof(StartEvent), _serviceProvider));
             return this;
         }
@@ -214,7 +240,7 @@ namespace Juice.Workflows.Builder
             }
             var id = NewEventId();
             var node = _nodeLibrary.CreateInstance(typeof(T).Name, _serviceProvider);
-            var record = new NodeRecord { Id = id, Name = name ?? node.DisplayText, AttachedToRef = _currentNodeId };
+            var record = new NodeRecord(id, name ?? node.DisplayText).AttachTo(_currentNodeId);
 
             AddNode(record, node);
 
@@ -321,7 +347,7 @@ namespace Juice.Workflows.Builder
             foreach (var leaf in leafNodes)
             {
                 var flowId = NewFlowId();
-                var flowRecord = new FlowRecord { Id = flowId, DestinationRef = id, SourceRef = leaf };
+                var flowRecord = new FlowRecord(flowId, leaf, id);
                 var flow = new SequenceFlow();
                 AddFlow(flowRecord, flow);
             }
@@ -329,12 +355,8 @@ namespace Juice.Workflows.Builder
             if (current.GetType().IsAssignableTo(typeof(IGateway)))
             {
                 var flowId = NewFlowId();
-                var flowRecord = new FlowRecord
-                {
-                    Id = flowId,
-                    SourceRef = currentGatewayId,
-                    DestinationRef = id
-                };
+                var flowRecord = new FlowRecord(flowId, currentGatewayId, id);
+
                 var flow = new SequenceFlow();
                 AddFlow(flowRecord, flow, true);
             }
@@ -368,33 +390,34 @@ namespace Juice.Workflows.Builder
             AddNode(record, node);
 
             var flow = new SequenceFlow { };
-            var flowRecord = new FlowRecord
-            {
-                Id = flowId,
-                SourceRef = currentId,
-                DestinationRef = id,
-                ConditionExpression = condition
-            };
+            var flowRecord = new FlowRecord(flowId, currentId, id, default, default, condition);
 
             AddFlow(flowRecord, flow, isDefault);
 
             var tmpWorkflowId = _idGenerator.GenerateRandomId(6);
 
-            var contextBuilder = new WorkflowContextBuilder(_idGenerator, _nodeLibrary, _serviceProvider);
+            var contextBuilder = new WorkflowContextBuilder(_idGenerator, _nodeLibrary, _serviceProvider)
+                .NewProcess(record.Id, record.Name);
             builder(contextBuilder);
-            var context = contextBuilder.Build(tmpWorkflowId, default, default);
+
+            string? nullCorrelationId = default;
+            string? nullName = default;
+            string? nullUser = default;
+            WorkflowState? nullState = default;
+            Dictionary<string, object?>? nullInput = default;
+
+            var context = contextBuilder.Build(new WorkflowRecord(tmpWorkflowId, tmpWorkflowId, nullCorrelationId, nullName),
+                nullState, nullUser, nullInput);
 
             foreach (var n in context.Nodes.Values)
             {
                 _nodes[n.Record.Id] = n.Node;
-                n.Record.OwnerId = id;
                 _nodeRecords[n.Record.Id] = n.Record;
             }
 
             foreach (var f in context.Flows)
             {
                 _flows[f.Record.Id] = f.Flow;
-                f.Record.OwnerId = id;
                 _flowRecords[f.Record.Id] = f.Record;
             }
             return this;
@@ -440,12 +463,15 @@ namespace Juice.Workflows.Builder
         }
 
         public async Task<WorkflowContext> BuildAsync(string workflowId,
-            string? instanceId, Dictionary<string, object?>? input,
+            string instanceId, Dictionary<string, object?>? input,
             CancellationToken token)
         {
-            var state = await _stateReposistory.GetAsync(instanceId ?? workflowId, token);
+            var state = await _stateReposistory.GetAsync(instanceId, token);
 
-            return _store[workflowId].Build(instanceId ?? workflowId, state, input);
+            string? nullUser = default;
+
+            return _store[workflowId].Build(new WorkflowRecord(instanceId, workflowId, default, default),
+                state, nullUser, input);
         }
         public Task<bool> ExistsAsync(string workflowId, CancellationToken token)
             => Task.FromResult(_store.ContainsKey(workflowId));

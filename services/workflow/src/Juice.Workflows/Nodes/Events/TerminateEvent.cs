@@ -14,10 +14,11 @@
 
         public override Task<NodeExecutionResult> StartAsync(WorkflowContext workflowContext, NodeContext node, FlowContext? flowContext, CancellationToken token)
         {
-            if (string.IsNullOrEmpty(node.Record.OwnerId))
+            if (workflowContext.Processes.Any(p => p.Id == node.Record.ProcessIdRef))
             {
+                // if EndEvent is not inside sub-process
                 workflowContext.AddDomainEvent(new WorkflowFinishedDomainEvent(node, WorkflowStatus.Aborted));
-                workflowContext.Terminate();
+                workflowContext.Terminate(node.Record.ProcessIdRef);
             }
             _logger.LogInformation(node.Record.Name + " throwed");
             return Task.FromResult<NodeExecutionResult>(new(WorkflowStatus.Aborted, "Throwed"));

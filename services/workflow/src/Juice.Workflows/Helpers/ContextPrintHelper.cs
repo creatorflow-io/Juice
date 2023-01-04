@@ -9,11 +9,15 @@ namespace Juice.Workflows.Helpers
 
         public string GetVisualize(WorkflowContext context)
         {
-            var start = context.GetStartNode(default);
+            var startRow = 3;
+            foreach (var process in context.Processes)
+            {
+                var start = context.GetStartNode(process.Id);
 
-            Row(0).Insert(20, "--- funny workflow visualization! ---");
-            PrintBranches(context, start, 3, 0);
-
+                Row(0).Insert(20, "--- funny workflow visualization! ---");
+                var (bRow, bCol) = PrintBranches(context, start, startRow, 0);
+                startRow = bRow + 3;
+            }
             var _string = new StringBuilder();
             while (_rows.TryDequeue(out var row))
             {
@@ -151,6 +155,7 @@ namespace Juice.Workflows.Helpers
             }
             return (currentRow, rightBoundaryCol);
         }
+
         private int Merge(WorkflowContext context, FlowContext flow, int row, int currentPoint, int padWidth)
         {
             var topRow = Row(row - 1);
@@ -164,9 +169,7 @@ namespace Juice.Workflows.Helpers
 
             var mergeType = context.GetNode(flow.Record.DestinationRef).Node;
 
-            var startRow = mergeType is IGateway || mergeType is IEvent
-                ? mergeLocation.Row + 1 : mergeLocation.Row + 2;
-            Row(startRow).Replace(' ', '^', mergePoint, 1).Replace('|', '^', mergePoint, 1);
+
 
             var text = context.FlowSnapshots.Any(s => s.Id == flow.Record.Id)
                     ? context.FlowSnapshots.IndexOf(context.FlowSnapshots.First(s => s.Id == flow.Record.Id)).ToString()
@@ -174,30 +177,77 @@ namespace Juice.Workflows.Helpers
 
             if (mergePoint >= currentPoint)
             {
-                for (var i = startRow + 1; i < row; i++)
+                if (mergeLocation.Row < row)
                 {
-                    var betweenRow = Row(i);
-                    betweenRow.Replace(' ', '|', mergePoint, 1);
+                    var startRow = mergeType is IGateway || mergeType is IEvent
+                        ? mergeLocation.Row + 1 : mergeLocation.Row + 2;
+                    Row(startRow).Replace(' ', '^', mergePoint, 1).Replace('|', '^', mergePoint, 1);
+
+                    for (var i = startRow + 1; i < row; i++)
+                    {
+                        var betweenRow = Row(i);
+                        betweenRow.Replace(' ', '|', mergePoint, 1);
+                    }
+
+                    Horizontal(midRow, currentPoint, mergePoint, text);
+
+                    HalfVertical(midRow, mergePoint);
+                    return mergePoint;
                 }
+                else
+                {
+                    var startRow = mergeType is IGateway || mergeType is IEvent
+                        ? mergeLocation.Row - 1 : mergeLocation.Row - 2;
+                    Row(startRow).Replace(' ', 'v', mergePoint, 1).Replace('|', '^', mergePoint, 1);
+                    Row(row).Replace(' ', '.', mergePoint, 1).Replace('|', '.', mergePoint, 1);
 
-                Horizontal(midRow, currentPoint, mergePoint, text);
+                    for (var i = row + 1; i < startRow; i++)
+                    {
+                        var betweenRow = Row(i);
+                        betweenRow.Replace(' ', '|', mergePoint, 1);
+                    }
 
-                midRow.Replace(' ', '\'', mergePoint, 1);
-                return mergePoint;
+                    Horizontal(midRow, currentPoint, mergePoint, text);
+
+                    return mergePoint;
+                }
             }
             else
             {
-                for (var i = startRow + 1; i < row - 2; i++)
+                var startRow = mergeType is IGateway || mergeType is IEvent
+                        ? mergeLocation.Row + 1 : mergeLocation.Row + 2;
+                if (mergeLocation.Row < row)
                 {
-                    var betweenRow = Row(i);
-                    Vertical(betweenRow, mergePoint);
+
+                    Row(startRow).Replace(' ', '^', mergePoint, 1).Replace('|', '^', mergePoint, 1);
+                    for (var i = startRow + 1; i < row - 2; i++)
+                    {
+                        var betweenRow = Row(i);
+                        Vertical(betweenRow, mergePoint);
+                    }
+                    HalfVertical(Row(row - 2), mergePoint);
+
+                    Horizontal(Row(row - 2), centerPoint, mergePoint, text);
+                    HalfVertical(topRow, centerPoint);
+
+                    return currentPoint;
                 }
-                HalfVertical(Row(row - 2), mergePoint);
+                else
+                {
 
-                Horizontal(Row(row - 2), centerPoint, mergePoint, text);
-                HalfVertical(topRow, centerPoint);
+                    Row(startRow).Replace(' ', '^', mergePoint, 1).Replace('|', '^', mergePoint, 1);
+                    for (var i = startRow + 1; i < row + 3; i++)
+                    {
+                        var betweenRow = Row(i);
+                        Vertical(betweenRow, mergePoint);
+                    }
+                    HalfVertical(Row(row + 3), mergePoint);
 
-                return currentPoint;
+                    Horizontal(Row(row + 3), centerPoint, mergePoint, text);
+                    HalfVertical(btRow, centerPoint);
+
+                    return currentPoint;
+                }
             }
         }
         private void Vertical(StringBuilder row, int point)
@@ -345,12 +395,15 @@ namespace Juice.Workflows.Helpers
             var evtStart = row;
             var endCol = start;
             var col = start;
-            foreach (var evt in context.Nodes.Values.Where(n => n.Node is IBoundary && n.Record.AttachedToRef == node.Record.Id))
+            var bEvents = context.Nodes.Values.Where(n => n.Node is IBoundary && n.Record.AttachedToRef == node.Record.Id);
+            var flowDown = (bEvents.Count() - 1) * 3;
+            foreach (var evt in bEvents)
             {
-                var (bRow, bCol) = PrintBranches(context, evt, row, col + 2, 0);
+                var (bRow, bCol) = PrintBranches(context, evt, row, col + 2, flowDown);
                 endCol = Math.Max(endCol, bCol);
                 evtStart = Math.Max(evtStart, bRow);
                 col += 4;
+                flowDown -= 3;
             }
             return (evtStart, endCol);
         }

@@ -1,6 +1,6 @@
 ﻿namespace Juice.Workflows.Nodes.Events
 {
-    public class StartEvent : Event
+    public class StartEvent : Event, ICatching
     {
 
         public StartEvent(IStringLocalizerFactory stringLocalizer) : base(stringLocalizer)

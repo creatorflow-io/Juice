@@ -27,12 +27,12 @@ namespace Juice.Workflows.Nodes.Activities
 
         public override async Task<NodeExecutionResult> ResumeAsync(WorkflowContext workflowContext, NodeContext node, CancellationToken token)
         {
-            var end = workflowContext.Nodes.Values.Single(n => n.Node is EndEvent && n.Record.OwnerId == node.Record.Id);
-            if (workflowContext.IsFinished(end.Record.Id))
+            var end = workflowContext.Nodes.Values.Single(n => n.Node is EndEvent && n.Record.ProcessIdRef == node.Record.Id);
+            if (workflowContext.IsNodeFinished(end.Record.Id))
             {
                 return Outcomes("Done");
             }
-            else if (workflowContext.Nodes.Values.Any(n => n.Record.OwnerId == node.Record.Id
+            else if (workflowContext.Nodes.Values.Any(n => n.Record.ProcessIdRef == node.Record.Id
                      && workflowContext.NodeSnapshots.Any(s => s.Id == n.Record.Id && s.Status == WorkflowStatus.Faulted)))
             {
                 return Fault("Sub-process error");

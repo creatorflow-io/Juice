@@ -22,7 +22,7 @@
             {
                 return Noop("ParallelGateway must has completed for each of the incoming sequence flows");
             }
-            if (workflowContext.IsFinished(node.Record.Id))
+            if (workflowContext.IsNodeFinished(node.Record.Id))
             {
                 return Noop("ParallelGateway is alreay finished");
             }
