@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Juice.Extensions.DependencyInjection;
 using Juice.Services;
+using Juice.Workflows.Bpmn.DependencyInjection;
 using Juice.Workflows.DependencyInjection;
 using Juice.Workflows.Helpers;
 using Juice.Workflows.Yaml.DependencyInjection;
@@ -246,6 +247,61 @@ namespace Juice.Workflows.Tests
 
             result.Status.Should().Be(WorkflowStatus.Aborted);
 
+        }
+
+        [Fact(DisplayName = "Bpmn parse")]
+
+        public async Task Bpmn_should_terminate_Async()
+        {
+            var resolver = new DependencyResolver
+            {
+                CurrentDirectory = AppContext.BaseDirectory
+            };
+            var workflowId = new DefaultStringIdGenerator().GenerateRandomId(6);
+            resolver.ConfigureServices(services =>
+            {
+                var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
+                var configuration = configService.GetConfiguration();
+
+                services.AddLocalization(options => options.ResourcesPath = "Resources");
+
+                services.AddDefaultStringIdGenerator();
+
+                services.AddSingleton(provider => _output);
+
+                services.AddLogging(builder =>
+                {
+                    builder.ClearProviders()
+                    .AddTestOutputLogger()
+                    .AddConfiguration(configuration.GetSection("Logging"));
+                });
+
+                services.AddMediatR(typeof(StartEvent));
+
+                services.AddWorkflowServices()
+                    .AddInMemoryReposistories();
+                services.RegisterNodes(typeof(FailureTask));
+
+                services.RegisterBpmnWorkflows();
+            });
+
+            using var scope = resolver.ServiceProvider.CreateScope();
+            //var builder = scope.ServiceProvider.GetRequiredService<Bpmn.Builder.WorkflowContextBuilder>();
+            var workflow = scope.ServiceProvider.GetRequiredService<IWorkflow>();
+            try
+            {
+                var result = await WorkflowTestHelper.ExecuteAsync(workflow, _output, "diagram",
+                    new System.Collections.Generic.Dictionary<string, object?> { { "TaskStatus", WorkflowStatus.Faulted } });
+
+                result.Should().NotBeNull();
+                _output.WriteLine(ContextPrintHelper.Visualize(result.Context));
+
+                result.Status.Should().Be(WorkflowStatus.Aborted);
+            }
+            catch (Exception ex)
+            {
+                _output.WriteLine(ContextPrintHelper.Visualize(workflow.ExecutedContext));
+            }
         }
     }
 }

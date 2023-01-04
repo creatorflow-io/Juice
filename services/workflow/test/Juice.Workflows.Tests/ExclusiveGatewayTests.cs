@@ -158,7 +158,8 @@ namespace Juice.Workflows.Tests
                 .Merge()
                 .End()
                 ;
-            var context = builder.Build("axad", default, default);
+            var context = builder.Build(new Domain.AggregatesModel.WorkflowAggregate.WorkflowRecord("axad", "axad", default, default),
+                default, default, default);
             _output.WriteLine(ContextPrintHelper.Visualize(context));
 
             await Assert.ThrowsAsync<InvalidOperationException>(async () =>

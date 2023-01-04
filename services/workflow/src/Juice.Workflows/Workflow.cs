@@ -37,20 +37,14 @@ namespace Juice.Workflows
         }
 
         public async Task<OperationResult<WorkflowExecutionResult>> StartAsync(string workflowId,
-            string? correlationId, Dictionary<string, object?>? input,
+            string? correlationId, string? name, Dictionary<string, object?>? input,
             CancellationToken token = default)
         {
             try
             {
                 var id = _idGenerator.GenerateUniqueId();
 
-                var createResult = await _workflowRepository.CreateAsync(new WorkflowRecord
-                {
-                    Id = id,
-                    RefWorkflowId = workflowId,
-                    CorrelationId = correlationId,
-                    Status = WorkflowStatus.Idle
-                }, token);
+                var createResult = await _workflowRepository.CreateAsync(new WorkflowRecord(id, workflowId, correlationId, name), token);
 
                 if (!createResult.Succeeded)
                 {
@@ -96,7 +90,7 @@ namespace Juice.Workflows
                 return OperationResult.Failed<WorkflowExecutionResult>("Workflow not found");
             }
 
-            var defineId = workflowRecord.RefWorkflowId ?? workflowRecord.Id;
+            var defineId = workflowRecord.DefinitionId;
             foreach (var builder in _builders)
             {
                 if (await builder.ExistsAsync(defineId, token))

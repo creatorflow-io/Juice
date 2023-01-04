@@ -30,7 +30,7 @@
                     {
                         if (branch.Record.DestinationRef != node.Record.Id)
                         {
-                            if (workflowContext.IsFinished(branch.Record.DestinationRef))
+                            if (workflowContext.IsNodeFinished(branch.Record.DestinationRef))
                             {
                                 return Noop("Another flow branch was happened");
                             }

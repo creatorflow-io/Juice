@@ -40,7 +40,7 @@
 
     }
 
-    public interface IBoundary : IThrowing, IIntermediate
+    public interface IBoundary : ICatching, IIntermediate
     {
         /// <summary>
         /// Check before start.
@@ -48,6 +48,7 @@
         Task<bool> PreStartCheckAsync(WorkflowContext workflowContext, NodeContext node, NodeContext ancestor,
             CancellationToken token);
 
+        void NonInterupt();
     }
 
     public interface ICatching : IEvent

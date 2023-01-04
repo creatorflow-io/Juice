@@ -1,4 +1,4 @@
-﻿namespace Juice.Workflows.Nodes.Activities
+﻿namespace Juice.Workflows.Nodes
 {
     public class DummyNode : Node
     {
@@ -19,7 +19,7 @@
             FlowContext? flowContext, CancellationToken token)
         {
             var message = "The flow node of type '{0}' was not registerd for '{1}'. Either enable the feature, or remove this activity from workflow definition with name '{2}'.";
-            _logger.LogWarning(message, node.Record.Name,
+            _logger.LogWarning(message, node.Node.GetType().Name,
                 node.Record.Name,
                 workflowContext.Name);
             return Task.FromResult(Noop(Localizer[message, node.Record.Name,

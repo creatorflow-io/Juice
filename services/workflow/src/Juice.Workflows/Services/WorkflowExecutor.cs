@@ -24,13 +24,30 @@
             {
                 throw new ArgumentNullException(nameof(workflowContext));
             }
+            if (nodeId == null)
+            {
+                if (workflowContext.Processes.Any())
+                {
+                    WorkflowExecutionResult? result = null;
 
-            var node = !string.IsNullOrEmpty(nodeId)
-                ? workflowContext.GetNode(nodeId)
-                : workflowContext.GetStartNode(default);
+                    foreach (var process in workflowContext.Processes.Where(p => p.Status == WorkflowStatus.Idle))
+                    {
+                        result = await StartProcessAsync(workflowContext, process, token);
+                    }
+                    return result;
+                }
+                else
+                {
+                    var start = workflowContext.GetStartNode(default);
+                    return await ExecuteAsync(workflowContext, start, token);
+                }
+            }
+            else
+            {
+                var node = workflowContext.GetNode(nodeId);
 
-
-            return await ExecuteAsync(workflowContext, node, token);
+                return await ExecuteAsync(workflowContext, node, token);
+            }
         }
 
         public async Task<WorkflowExecutionResult> ExecuteAsync(WorkflowContext workflowContext, NodeContext? node,
@@ -55,7 +72,7 @@
                     await ExecuteInternalAsync(workflowContext, node, default, token);
                 while (_queue.TryDequeue(out var item))
                 {
-                    if (workflowContext.IsFinished(item.Node.Record.Id))
+                    if (workflowContext.IsNodeFinished(item.Node.Record.Id))
                     {
                         continue;
                     }
@@ -69,16 +86,23 @@
                 }
 
                 #region Post process
+
+                if (workflowContext.HasFinishSignal(node.Record.ProcessIdRef)
+                    && workflowContext.Processes.Any(p => p.Status == WorkflowStatus.Idle))
+                {
+                    await StartProcessAsync(workflowContext, workflowContext.Processes.First(p => p.Status == WorkflowStatus.Idle), token);
+                }
+
                 var result = new WorkflowExecutionResult
                 {
                     Context = workflowContext,
                     Message = nodeResult.Message,
                     Status =
-                    workflowContext.HasTerminateSignal ? WorkflowStatus.Aborted
-                    : workflowContext.HasFinishSignal ? WorkflowStatus.Finished
-                    : _hasFailure ? WorkflowStatus.Faulted
-                    : _hasBlocking ? WorkflowStatus.Halted
-                    : nodeResult.Status
+                            workflowContext.HasTerminated ? WorkflowStatus.Aborted
+                            : workflowContext.IsFinished ? WorkflowStatus.Finished
+                            : _hasFailure || workflowContext.HasFaulted ? WorkflowStatus.Faulted
+                            : _hasBlocking ? WorkflowStatus.Halted
+                            : nodeResult.Status
                 };
                 if (string.IsNullOrEmpty(result.Message) && workflowContext.LastMessages.Any())
                 {
@@ -93,6 +117,23 @@
             {
                 _logger.LogInformation("============ END EXECUTE WORKFLOW {0} =============", workflowContext.WorkflowId);
             }
+        }
+
+        private async Task<WorkflowExecutionResult> StartProcessAsync(WorkflowContext workflowContext, ProcessRecord process,
+            CancellationToken token)
+        {
+            var start = workflowContext.GetStartNode(process.Id);
+            var result = await ExecuteAsync(workflowContext, start, token);
+            if (result.Status == WorkflowStatus.Faulted)
+            {
+                workflowContext.Fault(process.Id);
+                return result;
+            }
+            else if (result.Status == WorkflowStatus.Finished)
+            {
+                workflowContext.Start(process.Id);
+            }
+            return result;
         }
 
         /// <summary>
@@ -113,11 +154,11 @@
                 return new(WorkflowStatus.Faulted, "Node is null");
             }
 
-            if (workflowContext.HasTerminateSignal)
+            if (workflowContext.HasTerminateSignal(nodeContext.Record.ProcessIdRef))
             {
                 return new(WorkflowStatus.Idle, "The executing workflow has terminated");
             }
-            if (workflowContext.HasFinishSignal)
+            if (workflowContext.HasFinishSignal(nodeContext.Record.ProcessIdRef))
             {
                 return new(WorkflowStatus.Idle, "The executing workflow has finished");
             }
@@ -230,8 +271,6 @@
             return nodeExecutionResult;
         }
 
-
-
         protected async Task ExecuteBoundaryEventsAsync(WorkflowContext workflowContext, NodeContext node, CancellationToken token)
         {
             var boundaryEvents = workflowContext.Nodes.Values
@@ -246,7 +285,7 @@
                     var rs = await executor.ExecuteAsync(workflowContext, boundaryEvent, token);
                     if (rs.Status == WorkflowStatus.Faulted)
                     {
-                        throw new InvalidOperationException($"Failed to execute event {boundaryEvent.DisplayName}" + (rs.Message ?? ""));
+                        throw new InvalidOperationException($"Failed to execute event {boundaryEvent.DisplayName}. " + (rs.Message ?? ""));
                     }
                 }
             }

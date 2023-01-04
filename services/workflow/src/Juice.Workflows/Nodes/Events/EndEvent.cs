@@ -1,6 +1,6 @@
 ﻿namespace Juice.Workflows.Nodes.Events
 {
-    public class EndEvent : Event
+    public class EndEvent : Event, IThrowing
     {
         protected ILogger _logger;
         public EndEvent(ILoggerFactory logger, IStringLocalizerFactory stringLocalizer) : base(stringLocalizer)
@@ -16,10 +16,11 @@
 
         public override Task<NodeExecutionResult> StartAsync(WorkflowContext workflowContext, NodeContext node, FlowContext? flowContext, CancellationToken token)
         {
-            if (string.IsNullOrEmpty(node.Record.OwnerId))
+            if (workflowContext.Processes.Any(p => p.Id == node.Record.ProcessIdRef))
             {
+                // if EndEvent is not inside sub-process
                 workflowContext.AddDomainEvent(new WorkflowFinishedDomainEvent(node, WorkflowStatus.Finished));
-                workflowContext.Finish();
+                workflowContext.Finish(node.Record.ProcessIdRef);
             }
             _logger.LogInformation(node.Record.Name + " throwed");
             return Task.FromResult(Outcomes("Throwed"));
