@@ -7,9 +7,10 @@ namespace Juice.Workflows.Bpmn.Builder
 {
     internal class BpmnFileWorkflowContextBuilder : IWorkflowContextBuilder
     {
+        public int Priority => 1;
         private string _directory = "workflows";
 
-        private IWorkflowStateReposistory _stateReposistory;
+        private IWorkflowStateRepository _stateReposistory;
         private IWorkflowRepository _workflowRepository;
 
         private WorkflowContextBuilder _builder;
@@ -17,7 +18,7 @@ namespace Juice.Workflows.Bpmn.Builder
         private bool _build = true;
 
         public BpmnFileWorkflowContextBuilder(
-            IWorkflowStateReposistory stateReposistory,
+            IWorkflowStateRepository stateReposistory,
             WorkflowContextBuilder builder,
             IWorkflowRepository workflowRepository
         )

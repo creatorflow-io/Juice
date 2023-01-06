@@ -73,6 +73,7 @@ namespace Juice.Workflows.Bpmn.Builder
                 , _processRecords.Values
                 , name
                 , user
+                , this.GetType().FullName
                 );
         }
 

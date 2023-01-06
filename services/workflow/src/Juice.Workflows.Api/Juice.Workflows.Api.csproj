@@ -6,4 +6,12 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Juice.Workflows\Juice.Workflows.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Builder\" />
+  </ItemGroup>
+
 </Project>

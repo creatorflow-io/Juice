@@ -9,12 +9,18 @@ namespace Juice.Workflows.Helpers
 
         public string GetVisualize(WorkflowContext context)
         {
+            Row(0).Insert(20, "--- funny workflow visualization! ---");
+
+            if (context == null)
+            {
+                return Row(0).ToString();
+            }
             var startRow = 3;
+
             foreach (var process in context.Processes)
             {
                 var start = context.GetStartNode(process.Id);
 
-                Row(0).Insert(20, "--- funny workflow visualization! ---");
                 var (bRow, bCol) = PrintBranches(context, start, startRow, 0);
                 startRow = bRow + 3;
             }

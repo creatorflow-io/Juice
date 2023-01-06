@@ -2,6 +2,7 @@
 {
     public record ProcessRecord
     {
+        public ProcessRecord() { }
         public ProcessRecord(string id, string? name = "default")
         {
             Id = id;
@@ -9,10 +10,12 @@
         }
         public string Id { get; init; }
         public string? Name { get; init; }
-        public WorkflowStatus Status { get; private set; }
+
+        private WorkflowStatus _status;
+        public WorkflowStatus Status { get { return _status; } init { _status = value; } }
         public void SetStatus(WorkflowStatus status)
         {
-            Status = status;
+            _status = status;
         }
     }
 }

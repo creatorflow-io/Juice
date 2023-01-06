@@ -2,14 +2,14 @@
 
 namespace Juice.Workflows.InMemory
 {
-    internal class InMemoryStateReposistory : IWorkflowStateReposistory
+    internal class InMemoryStateRepository : IWorkflowStateRepository
     {
         private Dictionary<string, WorkflowState> _states = new Dictionary<string, WorkflowState>();
 
         private ILogger _logger;
         private IMediator _mediator;
 
-        public InMemoryStateReposistory(IMediator mediator, ILogger<InMemoryStateReposistory> logger)
+        public InMemoryStateRepository(IMediator mediator, ILogger<InMemoryStateRepository> logger)
         {
             _logger = logger;
             _mediator = mediator;
