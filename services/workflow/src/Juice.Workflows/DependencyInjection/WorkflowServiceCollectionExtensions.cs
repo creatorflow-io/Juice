@@ -45,12 +45,24 @@ namespace Juice.Workflows.DependencyInjection
             return services;
         }
 
+        /// <summary>
+        /// Require <see cref="IDefinitionRepository"/> implementation
+        /// </summary>
+        /// <param name="services"></param>
+        /// <param name="directory"></param>
+        /// <returns></returns>
+        public static IServiceCollection AddDbWorkflows(this IServiceCollection services)
+        {
+            services.AddScoped<IWorkflowContextBuilder, DbWorkflowContextBuilder>();
+
+            return services;
+        }
 
         public static IServiceCollection AddInMemoryReposistories(this IServiceCollection services)
         {
-            services.TryAddSingleton<IWorkflowStateReposistory, InMemoryStateReposistory>();
-            services.TryAddSingleton<IWorkflowRepository, InMemoryWorkflowReposistory>();
-
+            services.TryAddSingleton<IWorkflowStateRepository, InMemoryStateRepository>();
+            services.TryAddSingleton<IWorkflowRepository, InMemoryWorkflowRepository>();
+            services.TryAddSingleton<IDefinitionRepository, InMemorDefinitionRepository>();
             return services;
         }
 

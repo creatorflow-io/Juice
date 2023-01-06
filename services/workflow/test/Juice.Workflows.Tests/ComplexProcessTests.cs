@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Juice.Extensions.DependencyInjection;
 using Juice.Services;
 using Juice.Workflows.Bpmn.DependencyInjection;
 using Juice.Workflows.DependencyInjection;
+using Juice.Workflows.Domain.AggregatesModel.DefinitionAggregate;
 using Juice.Workflows.Helpers;
 using Juice.Workflows.Yaml.DependencyInjection;
 using MediatR;
@@ -249,7 +251,7 @@ namespace Juice.Workflows.Tests
 
         }
 
-        [Fact(DisplayName = "Bpmn parse")]
+        [Fact(DisplayName = "Bpmn shouuld add to db")]
 
         public async Task Bpmn_should_terminate_Async()
         {
@@ -279,28 +281,70 @@ namespace Juice.Workflows.Tests
                 services.AddMediatR(typeof(StartEvent));
 
                 services.AddWorkflowServices()
+                    .AddDbWorkflows()
                     .AddInMemoryReposistories();
+
                 services.RegisterNodes(typeof(FailureTask));
 
                 services.RegisterBpmnWorkflows();
             });
 
-            using var scope = resolver.ServiceProvider.CreateScope();
-            //var builder = scope.ServiceProvider.GetRequiredService<Bpmn.Builder.WorkflowContextBuilder>();
-            var workflow = scope.ServiceProvider.GetRequiredService<IWorkflow>();
-            try
+            var definitionRepo = resolver.ServiceProvider.GetRequiredService<IDefinitionRepository>();
+
             {
-                var result = await WorkflowTestHelper.ExecuteAsync(workflow, _output, "diagram",
-                    new System.Collections.Generic.Dictionary<string, object?> { { "TaskStatus", WorkflowStatus.Faulted } });
+                using var scope = resolver.ServiceProvider.CreateScope();
+                var workflow = scope.ServiceProvider.GetRequiredService<IWorkflow>();
+                try
+                {
+                    var result = await WorkflowTestHelper.ExecuteAsync(workflow, _output, "diagram",
+                        new System.Collections.Generic.Dictionary<string, object?> { { "TaskStatus", WorkflowStatus.Faulted } });
 
-                result.Should().NotBeNull();
-                _output.WriteLine(ContextPrintHelper.Visualize(result.Context));
+                    result.Should().NotBeNull();
 
-                result.Status.Should().Be(WorkflowStatus.Aborted);
+                    result.Status.Should().Be(WorkflowStatus.Aborted);
+
+                    var context = workflow.ExecutedContext;
+                    context.ResolvedBy.Should().Be(typeof(Bpmn.Builder.WorkflowContextBuilder).FullName);
+                    var definition = new WorkflowDefinition(
+                        "diagram",
+                        context.Name
+                    );
+
+                    definition.SetData(
+                        context.Processes,
+                        context.Nodes.Values.Select(n => new NodeData(n.Record, n.Node.GetType().Name)),
+                        context.Flows.Select(f => new FlowData(f.Record, f.Flow.GetType().Name))
+                        );
+
+                    var createResult = await definitionRepo.CreateAsync(definition, default);
+                    createResult.Succeeded.Should().BeTrue();
+
+                }
+                finally
+                {
+                    _output.WriteLine(ContextPrintHelper.Visualize(workflow.ExecutedContext));
+                }
             }
-            catch (Exception ex)
             {
-                _output.WriteLine(ContextPrintHelper.Visualize(workflow.ExecutedContext));
+                using var scope = resolver.ServiceProvider.CreateScope();
+                var workflow = scope.ServiceProvider.GetRequiredService<IWorkflow>();
+                try
+                {
+                    var result = await WorkflowTestHelper.ExecuteAsync(workflow, _output, "diagram",
+                        new System.Collections.Generic.Dictionary<string, object?> { { "TaskStatus", WorkflowStatus.Faulted } });
+
+                    result.Should().NotBeNull();
+
+                    result.Status.Should().Be(WorkflowStatus.Aborted);
+
+                    var context = workflow.ExecutedContext;
+                    context.ResolvedBy.Should().Be(typeof(Builder.DbWorkflowContextBuilder).FullName);
+
+                }
+                finally
+                {
+                    _output.WriteLine(ContextPrintHelper.Visualize(workflow.ExecutedContext));
+                }
             }
         }
     }

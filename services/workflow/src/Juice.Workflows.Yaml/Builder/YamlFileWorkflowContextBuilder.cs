@@ -8,9 +8,10 @@ namespace Juice.Workflows.Yaml.Builder
 {
     internal class YamlFileWorkflowContextBuilder : IWorkflowContextBuilder
     {
+        public int Priority => 1;
         private string _directory = "workflows";
 
-        private IWorkflowStateReposistory _stateReposistory;
+        private IWorkflowStateRepository _stateReposistory;
         private IWorkflowRepository _workflowRepository;
 
         private WorkflowContextBuilder _builder;
@@ -18,7 +19,7 @@ namespace Juice.Workflows.Yaml.Builder
         private bool _build = true;
 
         public YamlFileWorkflowContextBuilder(
-            IWorkflowStateReposistory stateReposistory,
+            IWorkflowStateRepository stateReposistory,
             WorkflowContextBuilder builder,
             IWorkflowRepository workflowRepository
         )
@@ -35,9 +36,9 @@ namespace Juice.Workflows.Yaml.Builder
             var user = default(string?);
             var file = Path.Combine(_directory, workflowId + ".yaml");
 
-            var state = await _stateReposistory.GetAsync(instanceId ?? workflowId, token);
+            var state = await _stateReposistory.GetAsync(instanceId, token);
 
-            var workflow = await _workflowRepository.GetAsync(instanceId ?? workflowId, token);
+            var workflow = await _workflowRepository.GetAsync(instanceId, token);
             if (workflow == null)
             {
                 throw new Exception("Workflow not found");

@@ -1,6 +1,6 @@
 ﻿namespace Juice.Workflows.Domain.AggregatesModel.WorkflowStateAggregate
 {
-    public interface IWorkflowStateReposistory
+    public interface IWorkflowStateRepository
     {
         Task<OperationResult> PersistAsync(string workflowId, WorkflowState state, CancellationToken token);
 

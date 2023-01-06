@@ -25,7 +25,15 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Workflows.EF", "src\J
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Workflows.Api", "src\Juice.Workflows.Api\Juice.Workflows.Api.csproj", "{81072C34-67CD-463F-BDD4-65B48F23C99D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.Workflows.Bpmn", "src\Juice.Workflows.Bpmn\Juice.Workflows.Bpmn.csproj", "{C1CC2126-291B-4E75-9B4F-1524DEF42C1B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Workflows.Bpmn", "src\Juice.Workflows.Bpmn\Juice.Workflows.Bpmn.csproj", "{C1CC2126-291B-4E75-9B4F-1524DEF42C1B}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.EF", "..\..\core\src\Juice.EF\Juice.EF.csproj", "{4D5EC546-BDA4-4040-B23A-27BCC4AF13F7}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Integrations", "..\..\core\src\Juice.Integrations\Juice.Integrations.csproj", "{18790E9F-43D0-4549-A0ED-1531EB275F07}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.EventBus.IntegrationEventLog.EF", "..\..\core\src\Juice.EventBus.IntegrationEventLog.EF\Juice.EventBus.IntegrationEventLog.EF.csproj", "{BD5AFA01-E18A-498F-8882-EFD25E27C38A}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.EventBus", "..\..\core\src\Juice.EventBus\Juice.EventBus.csproj", "{BEAF4BDB-C264-4D91-BE4D-0195E6679451}"
 EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
@@ -69,6 +77,22 @@ Global
 		{C1CC2126-291B-4E75-9B4F-1524DEF42C1B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C1CC2126-291B-4E75-9B4F-1524DEF42C1B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C1CC2126-291B-4E75-9B4F-1524DEF42C1B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4D5EC546-BDA4-4040-B23A-27BCC4AF13F7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4D5EC546-BDA4-4040-B23A-27BCC4AF13F7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4D5EC546-BDA4-4040-B23A-27BCC4AF13F7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4D5EC546-BDA4-4040-B23A-27BCC4AF13F7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{18790E9F-43D0-4549-A0ED-1531EB275F07}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{18790E9F-43D0-4549-A0ED-1531EB275F07}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{18790E9F-43D0-4549-A0ED-1531EB275F07}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{18790E9F-43D0-4549-A0ED-1531EB275F07}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BD5AFA01-E18A-498F-8882-EFD25E27C38A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BD5AFA01-E18A-498F-8882-EFD25E27C38A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BD5AFA01-E18A-498F-8882-EFD25E27C38A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BD5AFA01-E18A-498F-8882-EFD25E27C38A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BEAF4BDB-C264-4D91-BE4D-0195E6679451}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BEAF4BDB-C264-4D91-BE4D-0195E6679451}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BEAF4BDB-C264-4D91-BE4D-0195E6679451}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BEAF4BDB-C264-4D91-BE4D-0195E6679451}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -83,6 +107,10 @@ Global
 		{A31AC20D-ACED-44AF-A8A3-BC769BF533B0} = {D8B637D6-824B-43D3-B4A3-5B43EED4EA49}
 		{81072C34-67CD-463F-BDD4-65B48F23C99D} = {D8B637D6-824B-43D3-B4A3-5B43EED4EA49}
 		{C1CC2126-291B-4E75-9B4F-1524DEF42C1B} = {D8B637D6-824B-43D3-B4A3-5B43EED4EA49}
+		{4D5EC546-BDA4-4040-B23A-27BCC4AF13F7} = {D8B637D6-824B-43D3-B4A3-5B43EED4EA49}
+		{18790E9F-43D0-4549-A0ED-1531EB275F07} = {D8B637D6-824B-43D3-B4A3-5B43EED4EA49}
+		{BD5AFA01-E18A-498F-8882-EFD25E27C38A} = {D8B637D6-824B-43D3-B4A3-5B43EED4EA49}
+		{BEAF4BDB-C264-4D91-BE4D-0195E6679451} = {D8B637D6-824B-43D3-B4A3-5B43EED4EA49}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {34388FC1-08EB-42D1-A46D-72835FA4FCA4}

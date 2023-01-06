@@ -11,7 +11,7 @@ namespace Juice.Domain
     public abstract class Entity<TKey> : IIdentifiable<TKey> where TKey : IEquatable<TKey>
     {
         [Key]
-        public virtual TKey Id { get; private set; }
+        public virtual TKey Id { get; protected set; }
         public string? Name { get; protected set; }
         public bool Disabled { get; protected set; }
 

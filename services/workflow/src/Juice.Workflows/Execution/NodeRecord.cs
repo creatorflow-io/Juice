@@ -30,11 +30,11 @@
         /// <summary>
         /// Outgoing flows
         /// </summary>
-        public string[] Outgoings { get; private set; } = Array.Empty<string>();
+        public List<string> Outgoings { get; init; } = new List<string>();
         /// <summary>
         /// Incoming flows
         /// </summary>
-        public string[] Incomings { get; private set; } = Array.Empty<string>();
+        public List<string> Incomings { get; init; } = new List<string>();
 
         /// <summary>
         /// Process/sub-process reference
@@ -48,7 +48,8 @@
         /// <summary>
         /// Boundary event reference
         /// </summary>
-        public string? AttachedToRef { get; private set; }
+        private string? _attachedToRef;
+        public string? AttachedToRef { get { return _attachedToRef; } init { _attachedToRef = value; } }
 
         public void SetDefault(string flowId)
         {
@@ -59,7 +60,7 @@
         {
             if (!Outgoings.Contains(flowId))
             {
-                Outgoings = Outgoings.Append(flowId).ToArray();
+                Outgoings.Add(flowId);
             }
         }
 
@@ -67,13 +68,13 @@
         {
             if (!Incomings.Contains(flowId))
             {
-                Incomings = Incomings.Append(flowId).ToArray();
+                Incomings.Add(flowId);
             }
         }
 
         public NodeRecord AttachTo(string nodeId)
         {
-            AttachedToRef = nodeId;
+            _attachedToRef = nodeId;
             return this;
         }
 

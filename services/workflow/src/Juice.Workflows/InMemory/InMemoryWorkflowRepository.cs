@@ -1,6 +1,6 @@
 ﻿namespace Juice.Workflows.InMemory
 {
-    internal class InMemoryWorkflowReposistory : IWorkflowRepository
+    internal class InMemoryWorkflowRepository : IWorkflowRepository
     {
         private Dictionary<string, WorkflowRecord> _workflowRecords = new Dictionary<string, WorkflowRecord>();
         public Task<OperationResult> CreateAsync(WorkflowRecord workflow, CancellationToken token)

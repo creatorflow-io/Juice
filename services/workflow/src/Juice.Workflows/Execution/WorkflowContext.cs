@@ -19,6 +19,7 @@ namespace Juice.Workflows.Execution
             , IEnumerable<ProcessRecord> processes
             , string? name
             , string? user
+            , string? resolvedBy
            )
         {
             WorkflowId = workflowId;
@@ -32,7 +33,13 @@ namespace Juice.Workflows.Execution
             User = user;
             NodeSnapshots = nodeSnapshots ?? new List<NodeSnapshot>();
             FlowSnapshots = flowSnapshots ?? new List<FlowSnapshot>();
+            ResolvedBy = resolvedBy;
         }
+
+        /// <summary>
+        /// Context builder
+        /// </summary>
+        public string? ResolvedBy { get; }
 
         public string? User { get; }
 

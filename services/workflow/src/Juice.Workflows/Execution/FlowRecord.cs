@@ -5,6 +5,7 @@
     /// </summary>
     public record FlowRecord
     {
+        public FlowRecord() { }
         public FlowRecord(string id, string sourceRef, string destinationRef)
         {
             Id = id;

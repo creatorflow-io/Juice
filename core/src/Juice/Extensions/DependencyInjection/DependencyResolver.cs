@@ -8,7 +8,18 @@ namespace Juice.Extensions.DependencyInjection
     /// </summary>
     public class DependencyResolver
     {
-        public IServiceProvider ServiceProvider => _services.BuildServiceProvider();
+        public IServiceProvider ServiceProvider
+        {
+            get
+            {
+                if (_serviceProvider == null)
+                {
+                    _serviceProvider = _services.BuildServiceProvider();
+                }
+                return _serviceProvider;
+            }
+        }
+        private IServiceProvider? _serviceProvider;
         public string CurrentDirectory { get; set; }
 
         private IServiceCollection _services;

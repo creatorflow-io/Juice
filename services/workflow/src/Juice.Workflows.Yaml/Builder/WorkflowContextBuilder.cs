@@ -59,6 +59,7 @@ namespace Juice.Workflows.Yaml.Builder
                 , _processRecords.Values
                 , name
                 , user
+                , this.GetType().FullName
                 );
         }
 

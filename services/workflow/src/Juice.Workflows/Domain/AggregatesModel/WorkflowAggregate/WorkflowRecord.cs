@@ -20,20 +20,29 @@ namespace Juice.Workflows.Domain.AggregatesModel.WorkflowAggregate
         /// A unique identifier for this workflow.
         /// </summary>
         [Key]
-        public string Id { get; set; }
+        public string Id { get; init; }
 
-        public string DefinitionId { get; set; }
-
-        public string? User { get; set; }
+        public string DefinitionId { get; init; }
 
         /// <summary>
         /// The correlation ID can be used to resume workflows that are associated with specific objects, such as content items.
         /// </summary>
-        public string? CorrelationId { get; set; }
+        public string? CorrelationId { get; init; }
 
-        public WorkflowStatus Status { get; set; }
+        public DateTimeOffset? StatusLastUpdate { get; private set; }
+        public WorkflowStatus Status { get; private set; }
 
-        public string? FaultMessage { get; set; }
+        public string? FaultMessage { get; private set; }
+
+        public void UpdateStatus(WorkflowStatus status, string? message)
+        {
+            Status = status;
+            StatusLastUpdate = DateTimeOffset.Now;
+            if (status == WorkflowStatus.Faulted && !string.IsNullOrEmpty(message))
+            {
+                FaultMessage = message;
+            }
+        }
 
     }
 }

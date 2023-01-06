@@ -14,23 +14,27 @@ namespace Juice.Workflows
             }
         }
 
+        private ILogger _logger;
+
         private IEnumerable<IWorkflowContextBuilder> _builders;
         private WorkflowContext? _context;
 
         private readonly IServiceScopeFactory _scopeFactory;
-        private readonly IWorkflowStateReposistory _stateReposistory;
+        private readonly IWorkflowStateRepository _stateReposistory;
         private readonly IWorkflowRepository _workflowRepository;
 
         private readonly IStringIdGenerator _idGenerator;
 
         public Workflow(IServiceScopeFactory scopeFactory,
-            IWorkflowStateReposistory stateReposistory,
+            ILogger<Workflow> logger,
+            IWorkflowStateRepository stateReposistory,
             IStringIdGenerator idGenerator,
             IWorkflowRepository workflowRepository,
             IEnumerable<IWorkflowContextBuilder> builders)
         {
             _scopeFactory = scopeFactory;
-            _builders = builders;
+            _logger = logger;
+            _builders = builders.OrderByDescending(b => b.Priority).ToArray();
             _idGenerator = idGenerator;
             _stateReposistory = stateReposistory;
             _workflowRepository = workflowRepository;
@@ -58,10 +62,12 @@ namespace Juice.Workflows
                         var context = await builder.BuildAsync(workflowId, id, input, token);
                         if (context != null)
                         {
+                            _logger.LogInformation("WorkflowContext resolved by {resolver}", context.ResolvedBy);
                             return await ExecuteAsync(context, default, token);
                         }
                     }
                 }
+
                 return OperationResult.Failed<WorkflowExecutionResult>($"Cannot resolve workflow context to execute {workflowId}");
             }
             catch (Exception ex)
@@ -98,6 +104,7 @@ namespace Juice.Workflows
                     var context = await builder.BuildAsync(defineId, workflowId, input, token);
                     if (context != null)
                     {
+                        _logger.LogInformation("WorkflowContext resolved by {resolver}", context.ResolvedBy);
                         return await ExecuteAsync(context, nodeId, token);
                     }
                 }
