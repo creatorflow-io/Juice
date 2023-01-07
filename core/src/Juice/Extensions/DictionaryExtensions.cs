@@ -29,7 +29,7 @@ namespace Juice.Extensions
         /// <param name="key"></param>
         /// <param name="replacementParamPattern"></param>
         /// <returns>formatted string</returns>
-        public static string GetOptionAsString(this IDictionary<string, object> options, string key, string replacementParamPattern = DefaultReplacementPattern)
+        public static string GetOptionAsString(this IDictionary<string, object?> options, string key, string replacementParamPattern = DefaultReplacementPattern)
         {
             return options.GetOptionAsString(key, options, replacementParamPattern);
         }
@@ -52,7 +52,7 @@ namespace Juice.Extensions
         /// <param name="replacementParamPattern"></param>
         /// <param name="logging"></param>
         /// <returns>formatted string</returns>
-        public static string GetOptionAsString(this IDictionary<string, object> options, string key, string replacementParamPattern, Action<string> logging)
+        public static string GetOptionAsString(this IDictionary<string, object?> options, string key, string replacementParamPattern, Action<string> logging)
         {
             return options.GetOptionAsString(key, options, replacementParamPattern, logging);
         }
@@ -74,7 +74,7 @@ namespace Juice.Extensions
         /// <param name="key"></param>
         /// <param name="logging"></param>
         /// <returns>formatted string</returns>
-        public static string GetOptionAsString(this IDictionary<string, object> options, string key, Action<string> logging)
+        public static string GetOptionAsString(this IDictionary<string, object?> options, string key, Action<string> logging)
         {
             return options.GetOptionAsString(key, options, DefaultReplacementPattern, logging);
         }
@@ -101,7 +101,7 @@ namespace Juice.Extensions
         /// <param name="replacementParamPattern"></param>
         /// <param name="logging"></param>
         /// <returns></returns>
-        public static string GetOptionAsString(this IDictionary<string, object> oc, string key, IDictionary<string, object> referencedOptions, string replacementParamPattern = DefaultReplacementPattern, Action<string> logging = null)
+        public static string GetOptionAsString(this IDictionary<string, object?> oc, string key, IDictionary<string, object?> referencedOptions, string replacementParamPattern = DefaultReplacementPattern, Action<string>? logging = null)
         {
             var value = GetOption<string>(oc, key, null, referencedOptions);
             if (value != null && !string.IsNullOrEmpty(replacementParamPattern))
@@ -153,7 +153,7 @@ namespace Juice.Extensions
         /// <param name="referencedOptions"></param>
         /// <param name="logging"></param>
         /// <returns></returns>
-        public static string GetOptionAsString(this IDictionary<string, object> oc, string key, IDictionary<string, object> referencedOptions, Action<string> logging = null)
+        public static string GetOptionAsString(this IDictionary<string, object?> oc, string key, IDictionary<string, object?> referencedOptions, Action<string>? logging = null)
             => oc.GetOptionAsString(key, referencedOptions, DefaultReplacementPattern, logging);
 
         /// <summary>

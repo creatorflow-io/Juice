@@ -21,6 +21,7 @@ namespace Juice.Workflows.InMemory
                     _states[workflowId].FlowSnapshots,
                     _states[workflowId].NodeSnapshots.Select(n =>
                         new NodeSnapshot(n.Id, n.Name, n.Status, n.Message, n.User, n.Outcomes)).ToList(),
+                    _states[workflowId].ProcessSnapshots,
                     _states[workflowId].Output
                 )
                 : new WorkflowState());

@@ -55,6 +55,7 @@ namespace Juice.Workflows.Builder
                , workflow.CorrelationId
                , state?.NodeSnapshots
                , state?.FlowSnapshots
+               , state?.ProcessSnapshots
                , input
                , state?.Output
                , nodesContext

@@ -53,7 +53,6 @@ namespace Juice.Domain
         #endregion
     }
 
-
     public abstract class DynamicEntity<TKey> : DynamicObject, IDynamic, IIdentifiable<TKey>
         where TKey : IEquatable<TKey>
     {

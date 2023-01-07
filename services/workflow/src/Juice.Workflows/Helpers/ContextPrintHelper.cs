@@ -4,10 +4,10 @@ namespace Juice.Workflows.Helpers
 {
     public class ContextPrintHelper
     {
-        public static string Visualize(WorkflowContext context)
+        public static string Visualize(WorkflowContext? context)
             => new ContextPrintHelper().GetVisualize(context);
 
-        public string GetVisualize(WorkflowContext context)
+        public string GetVisualize(WorkflowContext? context)
         {
             Row(0).Insert(20, "--- funny workflow visualization! ---");
 

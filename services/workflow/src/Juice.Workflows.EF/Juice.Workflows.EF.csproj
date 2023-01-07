@@ -6,4 +6,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\core\src\Juice.EF\Juice.EF.csproj" />
+    <ProjectReference Include="..\Juice.Workflows\Juice.Workflows.csproj" />
+  </ItemGroup>
+
 </Project>

@@ -30,7 +30,7 @@
                 {
                     WorkflowExecutionResult? result = null;
 
-                    foreach (var process in workflowContext.Processes.Where(p => p.Status == WorkflowStatus.Idle))
+                    foreach (var process in workflowContext.IdlingProcesses)
                     {
                         result = await StartProcessAsync(workflowContext, process, token);
                     }
@@ -86,11 +86,11 @@
                 }
 
                 #region Post process
-
+                var idling = workflowContext.IdlingProcesses;
                 if (workflowContext.HasFinishSignal(node.Record.ProcessIdRef)
-                    && workflowContext.Processes.Any(p => p.Status == WorkflowStatus.Idle))
+                    && idling.Any())
                 {
-                    await StartProcessAsync(workflowContext, workflowContext.Processes.First(p => p.Status == WorkflowStatus.Idle), token);
+                    await StartProcessAsync(workflowContext, idling.First(), token);
                 }
 
                 var result = new WorkflowExecutionResult

@@ -2,7 +2,8 @@
 {
     public interface IAuditableDbContext
     {
+        List<AuditEntry>? PendingAuditEntries { get; }
+
         string? User { get; }
-        public IEnumerable<IDataEventHandler>? AuditHandlers { get; }
     }
 }

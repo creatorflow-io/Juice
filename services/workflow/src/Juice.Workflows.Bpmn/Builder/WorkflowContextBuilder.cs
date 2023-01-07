@@ -66,6 +66,7 @@ namespace Juice.Workflows.Bpmn.Builder
                 , workflow.CorrelationId
                 , state?.NodeSnapshots
                 , state?.FlowSnapshots
+                , state?.ProcessSnapshots
                 , input
                 , state?.Output
                 , _nodeRecords.Values.Select(n => new NodeContext(n, _nodes[n.Id])).ToList()
