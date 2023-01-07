@@ -1,6 +1,8 @@
-﻿namespace Juice.EF
+﻿using MediatR;
+
+namespace Juice.EF
 {
-    public class DataEvent : EventArgs
+    public class DataEvent : INotification
     {
         public DataEvent(string name)
         {

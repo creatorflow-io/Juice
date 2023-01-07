@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Finbuckle.MultiTenant;
-using Juice.EF;
 using Juice.EF.Extensions;
 using Juice.EF.Tests.EventHandlers;
 using Juice.Extensions.Configuration;
@@ -66,7 +65,7 @@ namespace Juice.MultiTenant.Tests
                     .AddTestOutputLogger()
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
-                services.AddScoped<IDataEventHandler, DataEventHandler>();
+                services.AddMediatR(typeof(DataEventHandler));
                 services.AddTenantDbContext<Tenant>(configuration, options =>
                 {
                     options.Schema = "App";

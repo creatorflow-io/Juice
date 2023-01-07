@@ -5,6 +5,7 @@ using Finbuckle.MultiTenant.Stores;
 using Juice.Domain;
 using Juice.EF;
 using Juice.EF.Extensions;
+using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -21,8 +22,10 @@ namespace Juice.MultiTenant.EF
         public string? Schema { get; protected set; }
         public string? User =>
             _httpContextAccessor?.HttpContext?.User?.FindFirst(ClaimTypes.Name)?.Value;
-        public IEnumerable<IDataEventHandler>? AuditHandlers { get; set; }
+        public List<AuditEntry>? PendingAuditEntries { get; protected set; }
         #endregion
+
+        private readonly IMediator? _mediator;
 
         private IHttpContextAccessor? _httpContextAccessor;
         private ILogger? _logger;
@@ -36,7 +39,7 @@ namespace Juice.MultiTenant.EF
             Schema = _options?.Schema;
             _httpContextAccessor = serviceProvider.GetService<IHttpContextAccessor>();
             _logger = serviceProvider.GetService<ILogger<TenantStoreDbContext<TTenantInfo>>>();
-            AuditHandlers = serviceProvider.GetServices<IDataEventHandler>();
+            _mediator = serviceProvider.GetService<IMediator>();
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -58,7 +61,6 @@ namespace Juice.MultiTenant.EF
         }
 
         private HashSet<EntityEntry> _pendingRefreshEntities = new HashSet<EntityEntry>();
-        private List<AuditEntry> _pendingAuditEntries = new List<AuditEntry>();
 
         private void ProcessingRefreshEntries(HashSet<EntityEntry>? entities)
         {
@@ -76,26 +78,22 @@ namespace Juice.MultiTenant.EF
                 entities.RefreshEntriesAsync().GetAwaiter().GetResult();
             }
         }
-        private void ProcessingChanges(IEnumerable<AuditEntry>? changes)
+        private void ProcessingChanges()
         {
-            if (changes == null)
+            if (PendingAuditEntries == null)
             { return; }
             if (!HasActiveTransaction)
             {
-                this.NotificationChanges(changes);
+                _mediator.DispatchDataChangeEventsAsync(this).GetAwaiter().GetResult();
             }
-            else
-            {
-                // Waitting for transaction completed before raise data events
-                _pendingAuditEntries.AddRange(changes);
-            }
+
         }
 
         public override int SaveChanges(bool acceptAllChangesOnSuccess)
         {
             this.SetAuditInformation(_logger);
 
-            var changes = this.TrackingChanges(_logger);
+            PendingAuditEntries = _mediator != null ? this.TrackingChanges(_logger)?.ToList() : default;
             try
             {
                 if (_options != null && _options.JsonPropertyBehavior == JsonPropertyBehavior.UpdateALL)
@@ -115,7 +113,7 @@ namespace Juice.MultiTenant.EF
             }
             finally
             {
-                ProcessingChanges(changes);
+                ProcessingChanges();
             }
         }
 
@@ -125,7 +123,7 @@ namespace Juice.MultiTenant.EF
             this.SetAuditInformation(_logger);
             //this.EnforceMultiTenant(); //enforce mutitenant be must after audit
 
-            var changes = this.TrackingChanges(_logger);
+            PendingAuditEntries = _mediator != null ? this.TrackingChanges(_logger)?.ToList() : default;
 
             try
             {
@@ -146,7 +144,7 @@ namespace Juice.MultiTenant.EF
             }
             finally
             {
-                ProcessingChanges(changes);
+                ProcessingChanges();
             }
         }
 
@@ -197,7 +195,7 @@ namespace Juice.MultiTenant.EF
                 {
                     await _pendingRefreshEntities.RefreshEntriesAsync();
                 }
-                this.NotificationChanges(_pendingAuditEntries);
+                await _mediator.DispatchDataChangeEventsAsync(this);
             }
         }
 
@@ -231,7 +229,7 @@ namespace Juice.MultiTenant.EF
                     //  dispose managed state (managed objects).
                     try
                     {
-                        _pendingAuditEntries = null;
+                        PendingAuditEntries = null;
                         _pendingRefreshEntities = null;
                     }
                     catch { }

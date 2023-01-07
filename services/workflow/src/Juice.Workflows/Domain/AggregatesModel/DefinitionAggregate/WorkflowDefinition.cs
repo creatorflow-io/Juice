@@ -1,9 +1,11 @@
 ﻿using Juice.Domain;
+using Juice.Domain.AggregatesModel;
+using MediatR;
 using Newtonsoft.Json;
 
 namespace Juice.Workflows.Domain.AggregatesModel.DefinitionAggregate
 {
-    public class WorkflowDefinition : AuditAggregrateRoot<string>
+    public class WorkflowDefinition : AuditAggregrateRoot<string, INotification>
     {
 
         public WorkflowDefinition() { }
@@ -30,7 +32,6 @@ namespace Juice.Workflows.Domain.AggregatesModel.DefinitionAggregate
         {
             RawData = rawData;
             RawFormat = rawFormat;
-            ClearData();
         }
 
         private void ClearData()

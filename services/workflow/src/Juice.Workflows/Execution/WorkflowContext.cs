@@ -12,6 +12,7 @@ namespace Juice.Workflows.Execution
             , string? correlationId
             , IList<NodeSnapshot>? nodeSnapshots
             , IList<FlowSnapshot>? flowSnapshots
+            , IList<ProcessSnapshot>? processSnapshots
             , IDictionary<string, object?>? input
             , IDictionary<string, object?>? output
             , IEnumerable<NodeContext> nodes
@@ -29,6 +30,12 @@ namespace Juice.Workflows.Execution
             Nodes = nodes.ToDictionary(x => x.Record.Id);
             Flows = flows;
             Processes = processes;
+            ProcessSnapshots = processes.Select(p => new ProcessSnapshot
+            {
+                Id = p.Id,
+                Name = p.Name,
+                Status = processSnapshots?.FirstOrDefault(s => s.Id == p.Id)?.Status ?? WorkflowStatus.Idle
+            }).ToList();
             Name = name;
             User = user;
             NodeSnapshots = nodeSnapshots ?? new List<NodeSnapshot>();
@@ -60,6 +67,7 @@ namespace Juice.Workflows.Execution
                     NodeSnapshots = NodeSnapshots,
                     NodeStates = Nodes.ToDictionary(x => x.Key, x => x.Value.Properties),
                     FlowSnapshots = FlowSnapshots,
+                    ProcessSnapshots = ProcessSnapshots,
                     LastMessages = LastMessages.Reverse(),
                     IdlingNodes = IdlingNodes,
                     DomainEvents = _domainEvents
@@ -70,6 +78,8 @@ namespace Juice.Workflows.Execution
         public IList<NodeSnapshot> NodeSnapshots { get; private set; }
 
         public IList<FlowSnapshot> FlowSnapshots { get; private set; }
+
+        public IList<ProcessSnapshot> ProcessSnapshots { get; private set; }
 
         /// <summary>
         /// Blocking activities
@@ -317,32 +327,26 @@ namespace Juice.Workflows.Execution
         }
 
         public bool IsFinished
-            => Processes.All(p => p.Status == WorkflowStatus.Finished);
+            => ProcessSnapshots.All(p => p.Status == WorkflowStatus.Finished);
         public bool HasFinishSignal(string processId)
-            => Processes.Any(p => p.Id == processId && p.Status == WorkflowStatus.Finished);
+            => ProcessSnapshots.Any(p => p.Id == processId && p.Status == WorkflowStatus.Finished);
         public void Finish(string processId)
-        {
-            Processes.Single(p => p.Id == processId).SetStatus(WorkflowStatus.Finished);
-        }
-
+            => ProcessSnapshots.Single(p => p.Id == processId).SetStatus(WorkflowStatus.Finished);
         public bool HasTerminated
-            => Processes.Any(p => p.Status == WorkflowStatus.Aborted);
+            => ProcessSnapshots.Any(p => p.Status == WorkflowStatus.Aborted);
         public bool HasTerminateSignal(string processId)
-            => Processes.Any(p => p.Id == processId && p.Status == WorkflowStatus.Aborted);
+            => ProcessSnapshots.Any(p => p.Id == processId && p.Status == WorkflowStatus.Aborted);
         public void Terminate(string processId)
-        {
-            Processes.Single(p => p.Id == processId).SetStatus(WorkflowStatus.Aborted);
-        }
+            => ProcessSnapshots.Single(p => p.Id == processId).SetStatus(WorkflowStatus.Aborted);
         public void Start(string processId)
-        {
-            Processes.Single(p => p.Id == processId).SetStatus(WorkflowStatus.Executing);
-        }
+            => ProcessSnapshots.Single(p => p.Id == processId).SetStatus(WorkflowStatus.Executing);
         public bool HasFaulted
-            => Processes.Any(p => p.Status == WorkflowStatus.Faulted);
+            => ProcessSnapshots.Any(p => p.Status == WorkflowStatus.Faulted);
         public void Fault(string processId)
-        {
-            Processes.Single(p => p.Id == processId).SetStatus(WorkflowStatus.Faulted);
-        }
+            => ProcessSnapshots.Single(p => p.Id == processId).SetStatus(WorkflowStatus.Faulted);
+
+        public IEnumerable<ProcessRecord> IdlingProcesses
+            => Processes.Where(p => ProcessSnapshots.Where(s => s.Status == WorkflowStatus.Idle).Select(s => s.Id).Contains(p.Id));
         #region IDisposable Support
 
         private bool disposedValue = false; // To detect redundant calls

@@ -3,6 +3,7 @@ using System.Security.Claims;
 using Finbuckle.MultiTenant;
 using Finbuckle.MultiTenant.EntityFrameworkCore;
 using Juice.EF.Extensions;
+using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -29,13 +30,10 @@ namespace Juice.EF.MultiTenant
         public string? User => _httpContextAccessor?.HttpContext?.User?.FindFirst(ClaimTypes.Name)?.Value;
 
         private IHttpContextAccessor? _httpContextAccessor;
+        public List<AuditEntry>? PendingAuditEntries { get; protected set; }
         #endregion
 
-        #region Audit events
-        public IEnumerable<IDataEventHandler>? AuditHandlers { get; set; }
-
-        #endregion
-
+        private readonly IMediator? _mediator;
 
         private ILogger? _logger;
         private IServiceProvider _serviceProvider;
@@ -55,14 +53,8 @@ namespace Juice.EF.MultiTenant
             var loggerFactory = serviceProvider.GetService<ILoggerFactory>();
             _logger = loggerFactory != null ? loggerFactory.CreateLogger(GetType()) : null;
             _logger?.LogInformation("Logger initialized for {type}", GetType().Name);
-            try
-            {
-                AuditHandlers = serviceProvider.GetServices<IDataEventHandler>();
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogWarning(ex, $"[DbContextBase] failed to receive audit handlers. {ex.Message}");
-            }
+
+            _mediator = serviceProvider.GetService<IMediator>();
 
             _options = serviceProvider.GetService(typeof(DbOptions<>).MakeGenericType(GetType())) as DbOptions;
             Schema = _options?.Schema;
@@ -93,7 +85,6 @@ namespace Juice.EF.MultiTenant
 
 
         private HashSet<EntityEntry> _pendingRefreshEntities = new HashSet<EntityEntry>();
-        private List<AuditEntry> _pendingAuditEntries = new List<AuditEntry>();
 
         private void ProcessingRefreshEntries(HashSet<EntityEntry>? entities)
         {
@@ -111,18 +102,13 @@ namespace Juice.EF.MultiTenant
                 entities.RefreshEntriesAsync().GetAwaiter().GetResult();
             }
         }
-        private void ProcessingChanges(IEnumerable<AuditEntry>? changes)
+        private void ProcessingChanges()
         {
-            if (changes == null)
+            if (PendingAuditEntries == null)
             { return; }
             if (!HasActiveTransaction)
             {
-                this.NotificationChanges(changes);
-            }
-            else
-            {
-                // Waitting for transaction completed before raise data events
-                _pendingAuditEntries.AddRange(changes);
+                _mediator.DispatchDataChangeEventsAsync(this).GetAwaiter().GetResult();
             }
         }
 
@@ -131,10 +117,11 @@ namespace Juice.EF.MultiTenant
             var cts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, cancellationToken);
             this.SetAuditInformation(_logger);
             this.EnforceMultiTenant();
-            var changes = this.TrackingChanges(_logger);
-
+            PendingAuditEntries = _mediator != null ? this.TrackingChanges(_logger)?.ToList() : default;
             try
             {
+                await _mediator.DispatchDomainEventsAsync(this);
+
                 if (_options != null && _options.JsonPropertyBehavior == JsonPropertyBehavior.UpdateALL)
                 {
                     return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cts.Token);
@@ -152,7 +139,7 @@ namespace Juice.EF.MultiTenant
             }
             finally
             {
-                ProcessingChanges(changes);
+                ProcessingChanges();
             }
         }
 
@@ -160,9 +147,10 @@ namespace Juice.EF.MultiTenant
         {
             this.SetAuditInformation(_logger);
             this.EnforceMultiTenant();
-            var changes = this.TrackingChanges(_logger);
+            PendingAuditEntries = _mediator != null ? this.TrackingChanges(_logger)?.ToList() : default;
             try
             {
+                _mediator.DispatchDomainEventsAsync(this).GetAwaiter().GetResult();
                 if (_options != null && _options.JsonPropertyBehavior == JsonPropertyBehavior.UpdateALL)
                 {
                     return base.SaveChanges(acceptAllChangesOnSuccess);
@@ -180,14 +168,14 @@ namespace Juice.EF.MultiTenant
             }
             finally
             {
-                ProcessingChanges(changes);
+                ProcessingChanges();
             }
         }
 
         #region UnitOfWork
 
-        private IDbContextTransaction _currentTransaction;
-        public IDbContextTransaction GetCurrentTransaction() => _currentTransaction;
+        private IDbContextTransaction? _currentTransaction;
+        public IDbContextTransaction? GetCurrentTransaction() => _currentTransaction;
         public bool HasActiveTransaction => _currentTransaction != null;
         private Guid? _commitedTransactionId;
 
@@ -232,7 +220,7 @@ namespace Juice.EF.MultiTenant
                 {
                     await _pendingRefreshEntities.RefreshEntriesAsync();
                 }
-                this.NotificationChanges(_pendingAuditEntries);
+                await _mediator.DispatchDataChangeEventsAsync(this);
             }
         }
 
@@ -267,7 +255,7 @@ namespace Juice.EF.MultiTenant
                     //  dispose managed state (managed objects).
                     try
                     {
-                        _pendingAuditEntries = null;
+                        PendingAuditEntries = null;
                         _pendingRefreshEntities = null;
                     }
                     catch { }

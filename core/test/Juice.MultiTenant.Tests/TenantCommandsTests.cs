@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Juice.EF;
 using Juice.EF.Extensions;
 using Juice.EF.Tests.EventHandlers;
 using Juice.EventBus.IntegrationEventLog.EF;
@@ -82,7 +81,7 @@ namespace Juice.MultiTenant.Tests
                     .AddTestOutputLogger()
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
-                services.AddScoped<IDataEventHandler, DataEventHandler>();
+                services.AddMediatR(typeof(DataEventHandler));
                 services.AddTenantDbContext<Tenant>(configuration, options =>
                 {
                     options.Schema = "App";
@@ -148,7 +147,7 @@ namespace Juice.MultiTenant.Tests
                     .AddTestOutputLogger()
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
-                services.AddScoped<IDataEventHandler, DataEventHandler>();
+                services.AddMediatR(typeof(DataEventHandler));
                 services.AddTenantDbContext<Tenant>(configuration, options =>
                 {
                     options.Schema = "App";

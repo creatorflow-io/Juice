@@ -12,10 +12,12 @@ namespace Juice.Workflows.Domain.AggregatesModel.WorkflowStateAggregate
         {
 
         }
-        public WorkflowState(IList<FlowSnapshot> flowSnapshots, IList<NodeSnapshot> nodeSnapshots, IDictionary<string, object?> output)
+        public WorkflowState(IList<FlowSnapshot> flowSnapshots, IList<NodeSnapshot> nodeSnapshots, IList<ProcessSnapshot> processSnapshots,
+            IDictionary<string, object?> output)
         {
             FlowSnapshots = flowSnapshots;
             NodeSnapshots = nodeSnapshots;
+            ProcessSnapshots = processSnapshots;
             Output = output;
         }
 
@@ -45,6 +47,11 @@ namespace Juice.Workflows.Domain.AggregatesModel.WorkflowStateAggregate
         /// The list of activated flows.
         /// </summary>
         public IList<FlowSnapshot> FlowSnapshots { get; init; } = new List<FlowSnapshot>();
+
+        /// <summary>
+        /// Processes's status
+        /// </summary>
+        public IList<ProcessSnapshot> ProcessSnapshots { get; init; } = new List<ProcessSnapshot>();
 
         /// <summary>
         /// Blocking nodes could be resume 
