@@ -11,7 +11,9 @@ namespace Juice.Workflows.DependencyInjection
         {
             services.AddScoped<IWorkflow, Workflow>();
 
-            services.AddScoped<WorkflowExecutor>();
+            services.AddTransient<WorkflowExecutor>();
+
+            services.AddScoped<IWorkflowContextAccessor, WorkflowContextAccessor>();
 
             services.AddSingleton<NodeLibrary>();
             services.AddSingleton<INodeLibrary>(sp => sp.GetRequiredService<NodeLibrary>());
@@ -24,6 +26,8 @@ namespace Juice.Workflows.DependencyInjection
 
             services.AddTransient<WorkflowContextBuilder>();
             services.AddSingleton<IncodeWorkflowContextBuilder>();
+
+            services.AddScoped<IWorkflowContextResolver, WorkflowContextResolver>();
 
             services.AddScoped<IWorkflowContextBuilder>(sp =>
             {
@@ -46,7 +50,7 @@ namespace Juice.Workflows.DependencyInjection
         }
 
         /// <summary>
-        /// Require <see cref="IDefinitionRepository"/> implementation
+        /// Add workflows from DB. Require <see cref="IDefinitionRepository"/> implementation
         /// </summary>
         /// <param name="services"></param>
         /// <param name="directory"></param>

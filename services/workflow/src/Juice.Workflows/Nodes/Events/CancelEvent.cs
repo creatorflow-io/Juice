@@ -17,7 +17,7 @@
             if (workflowContext.Processes.Any(p => p.Id == node.Record.ProcessIdRef))
             {
                 // if EndEvent is not inside sub-process
-                workflowContext.AddDomainEvent(new WorkflowFinishedDomainEvent(node, WorkflowStatus.Aborted));
+                workflowContext.AddDomainEvent(new ProcessFinishedDomainEvent(node, WorkflowStatus.Aborted));
                 workflowContext.Terminate(node.Record.ProcessIdRef);
             }
 

@@ -1,7 +1,6 @@
 ﻿using Juice.Services;
 using Juice.Workflows.Builder;
 using Juice.Workflows.Domain.AggregatesModel.WorkflowAggregate;
-using Juice.Workflows.Domain.AggregatesModel.WorkflowStateAggregate;
 using Juice.Workflows.Execution;
 using Juice.Workflows.Models;
 using Juice.Workflows.Nodes.Activities;
@@ -24,8 +23,7 @@ namespace Juice.Workflows.Yaml.Builder
         }
 
         public WorkflowContext Build(string? yml, WorkflowRecord workflow,
-            WorkflowState? state, string? user,
-            Dictionary<string, object?>? input, bool rebuild = false)
+            bool rebuild = false)
         {
             var name = workflow.Name;
             if (_needBuild || rebuild)
@@ -49,17 +47,10 @@ namespace Juice.Workflows.Yaml.Builder
             }
 
             return new WorkflowContext(workflow.Id
-                , workflow.CorrelationId
-                , state?.NodeSnapshots
-                , state?.FlowSnapshots
-                , state?.ProcessSnapshots
-                , input
-                , state?.Output
+                , name
                 , _nodeRecords.Values.Select(n => new NodeContext(n, _nodes[n.Id])).ToList()
                 , _flowRecords.Values.Select(f => new FlowContext(f, _flows[f.Id])).ToList()
                 , _processRecords.Values
-                , name
-                , user
                 , this.GetType().FullName
                 );
         }

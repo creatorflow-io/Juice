@@ -9,38 +9,22 @@ namespace Juice.Workflows.Execution
     {
         public WorkflowContext(
             string workflowId
-            , string? correlationId
-            , IList<NodeSnapshot>? nodeSnapshots
-            , IList<FlowSnapshot>? flowSnapshots
-            , IList<ProcessSnapshot>? processSnapshots
-            , IDictionary<string, object?>? input
-            , IDictionary<string, object?>? output
+            , string? name
             , IEnumerable<NodeContext> nodes
             , IEnumerable<FlowContext> flows
             , IEnumerable<ProcessRecord> processes
-            , string? name
-            , string? user
             , string? resolvedBy
            )
         {
             WorkflowId = workflowId;
-            CorrelationId = correlationId;
-            Input = input ?? new Dictionary<string, object?>();
-            Output = output ?? new Dictionary<string, object?>();
+            Name = name;
             Nodes = nodes.ToDictionary(x => x.Record.Id);
             Flows = flows;
             Processes = processes;
-            ProcessSnapshots = processes.Select(p => new ProcessSnapshot
-            {
-                Id = p.Id,
-                Name = p.Name,
-                Status = processSnapshots?.FirstOrDefault(s => s.Id == p.Id)?.Status ?? WorkflowStatus.Idle
-            }).ToList();
-            Name = name;
-            User = user;
-            NodeSnapshots = nodeSnapshots ?? new List<NodeSnapshot>();
-            FlowSnapshots = flowSnapshots ?? new List<FlowSnapshot>();
             ResolvedBy = resolvedBy;
+
+            SetState(default);
+            SetExecutionInfo(default, default, default);
         }
 
         /// <summary>
@@ -48,13 +32,13 @@ namespace Juice.Workflows.Execution
         /// </summary>
         public string? ResolvedBy { get; }
 
-        public string? User { get; }
+        public string? User { get; private set; }
 
-        public string? Name { get; }
+        public string? Name { get; private set; }
 
         public string WorkflowId { get; init; }
 
-        public string? CorrelationId { get; }
+        public string? CorrelationId { get; private set; }
 
         public WorkflowState State
         {
@@ -73,6 +57,30 @@ namespace Juice.Workflows.Execution
                     DomainEvents = _domainEvents
                 };
             }
+        }
+
+        public WorkflowContext SetState(WorkflowState? state)
+        {
+            Output = state?.Output ?? new Dictionary<string, object?>();
+
+            ProcessSnapshots = Processes.Select(p => new ProcessSnapshot
+            {
+                Id = p.Id,
+                Name = p.Name,
+                Status = state?.ProcessSnapshots?.FirstOrDefault(s => s.Id == p.Id)?.Status ?? WorkflowStatus.Idle
+            }).ToList();
+            NodeSnapshots = state?.NodeSnapshots ?? new List<NodeSnapshot>();
+            FlowSnapshots = state?.FlowSnapshots ?? new List<FlowSnapshot>();
+            return this;
+        }
+
+        public WorkflowContext SetExecutionInfo(string? user, string? correlationId,
+            IDictionary<string, object?>? input)
+        {
+            User = user;
+            CorrelationId = correlationId;
+            Input = input ?? new Dictionary<string, object?>();
+            return this;
         }
 
         public IList<NodeSnapshot> NodeSnapshots { get; private set; }
@@ -115,12 +123,12 @@ namespace Juice.Workflows.Execution
         /// <summary>
         /// A dictionary of re-hydrated values provided by the initiator of the workflow.
         /// </summary>
-        public IDictionary<string, object?> Input { get; }
+        public IDictionary<string, object?> Input { get; private set; }
 
         /// <summary>
         /// A dictionary of node's output
         /// </summary>
-        public IDictionary<string, object?> Output { get; }
+        public IDictionary<string, object?> Output { get; private set; }
 
         /// <summary>
         /// Last message stack of workflow execution
@@ -331,9 +339,8 @@ namespace Juice.Workflows.Execution
         public bool HasFinishSignal(string processId)
             => ProcessSnapshots.Any(p => p.Id == processId && p.Status == WorkflowStatus.Finished);
         public void Finish(string processId)
-            => ProcessSnapshots.Single(p => p.Id == processId).SetStatus(WorkflowStatus.Finished);
-        public bool HasTerminated
-            => ProcessSnapshots.Any(p => p.Status == WorkflowStatus.Aborted);
+            => ProcessSnapshots.Single(p => p.Id == processId).SetStatus(WorkflowStatus.Finished); public bool HasTerminated
+     => ProcessSnapshots.Any(p => p.Status == WorkflowStatus.Aborted);
         public bool HasTerminateSignal(string processId)
             => ProcessSnapshots.Any(p => p.Id == processId && p.Status == WorkflowStatus.Aborted);
         public void Terminate(string processId)

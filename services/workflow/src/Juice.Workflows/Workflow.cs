@@ -1,5 +1,4 @@
 ﻿using Juice.Services;
-using Juice.Workflows.Builder;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Juice.Workflows
@@ -10,34 +9,40 @@ namespace Juice.Workflows
         {
             get
             {
-                return _context;
+                return _workflowContextAccessor.Context;
+            }
+            private set
+            {
+                _workflowContextAccessor.SetContext(value);
             }
         }
 
         private ILogger _logger;
 
-        private IEnumerable<IWorkflowContextBuilder> _builders;
-        private WorkflowContext? _context;
-
-        private readonly IServiceScopeFactory _scopeFactory;
+        private readonly IServiceProvider _serviceProvider;
         private readonly IWorkflowStateRepository _stateReposistory;
         private readonly IWorkflowRepository _workflowRepository;
 
         private readonly IStringIdGenerator _idGenerator;
 
-        public Workflow(IServiceScopeFactory scopeFactory,
+        private readonly IWorkflowContextAccessor _workflowContextAccessor;
+        private readonly IWorkflowContextResolver _workflowContextResolver;
+
+        public Workflow(IServiceProvider serviceProvider,
             ILogger<Workflow> logger,
             IWorkflowStateRepository stateReposistory,
             IStringIdGenerator idGenerator,
             IWorkflowRepository workflowRepository,
-            IEnumerable<IWorkflowContextBuilder> builders)
+            IWorkflowContextAccessor workflowContextAccessor,
+            IWorkflowContextResolver workflowContextResolver)
         {
-            _scopeFactory = scopeFactory;
+            _serviceProvider = serviceProvider;
             _logger = logger;
-            _builders = builders.OrderByDescending(b => b.Priority).ToArray();
             _idGenerator = idGenerator;
             _stateReposistory = stateReposistory;
             _workflowRepository = workflowRepository;
+            _workflowContextAccessor = workflowContextAccessor;
+            _workflowContextResolver = workflowContextResolver;
         }
 
         public async Task<OperationResult<WorkflowExecutionResult>> StartAsync(string workflowId,
@@ -55,17 +60,15 @@ namespace Juice.Workflows
                     return OperationResult.Failed<WorkflowExecutionResult>(createResult.Exception, "Cannot start new workflow. " + (createResult.Message ?? ""));
                 }
 
-                foreach (var builder in _builders)
+                _workflowContextAccessor.SetWorkflowId(id);
+
+                var context = await _workflowContextResolver.StateResolveAsync(id, input, token);
+                if (context != null)
                 {
-                    if (await builder.ExistsAsync(workflowId, token))
-                    {
-                        var context = await builder.BuildAsync(workflowId, id, input, token);
-                        if (context != null)
-                        {
-                            _logger.LogInformation("WorkflowContext resolved by {resolver}", context.ResolvedBy);
-                            return await ExecuteAsync(context, default, token);
-                        }
-                    }
+                    ExecutedContext = context;
+
+                    _logger.LogInformation("WorkflowContext resolved by {resolver}", context.ResolvedBy);
+                    return await ExecuteAsync(context, default, token);
                 }
 
                 return OperationResult.Failed<WorkflowExecutionResult>($"Cannot resolve workflow context to execute {workflowId}");
@@ -90,37 +93,35 @@ namespace Juice.Workflows
                 return OperationResult.Failed<WorkflowExecutionResult>(
                     new ArgumentNullException(nameof(nodeId)));
             }
-            var workflowRecord = await _workflowRepository.GetAsync(workflowId, token);
-            if (workflowRecord == null)
-            {
-                return OperationResult.Failed<WorkflowExecutionResult>("Workflow not found");
-            }
 
-            var defineId = workflowRecord.DefinitionId;
-            foreach (var builder in _builders)
+            _workflowContextAccessor.SetWorkflowId(workflowId);
+            try
             {
-                if (await builder.ExistsAsync(defineId, token))
+                var context = ExecutedContext
+                    ?? await _workflowContextResolver.StateResolveAsync(workflowId, input, token);
+                if (context != null)
                 {
-                    var context = await builder.BuildAsync(defineId, workflowId, input, token);
-                    if (context != null)
-                    {
-                        _logger.LogInformation("WorkflowContext resolved by {resolver}", context.ResolvedBy);
-                        return await ExecuteAsync(context, nodeId, token);
-                    }
+                    ExecutedContext = context;
+
+                    _logger.LogInformation("WorkflowContext resolved by {resolver}", context.ResolvedBy);
+                    return await ExecuteAsync(context, nodeId, token);
                 }
+            }
+            catch (Exception ex)
+            {
+                return OperationResult.Failed<WorkflowExecutionResult>(ex);
             }
             return OperationResult.Failed<WorkflowExecutionResult>($"Cannot resolve workflow context to execute {workflowId}");
         }
 
         private async Task<OperationResult<WorkflowExecutionResult>> ExecuteAsync(WorkflowContext context, string? nodeId = default, CancellationToken token = default)
         {
-            _context = context;
             try
             {
-                using var scope = _scopeFactory.CreateScope();
-                var executor = scope.ServiceProvider.GetRequiredService<WorkflowExecutor>();
 
-                var rs = await executor.ExecuteAsync(_context, nodeId, token);
+                var executor = _serviceProvider.GetRequiredService<WorkflowExecutor>();
+
+                var rs = await executor.ExecuteAsync(ExecutedContext, nodeId, token);
 
                 var state = rs.Context.State;
 

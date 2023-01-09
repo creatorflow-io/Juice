@@ -131,6 +131,7 @@
             }
             else if (result.Status == WorkflowStatus.Finished)
             {
+                workflowContext.AddDomainEvent(new ProcessStartedDomainEvent(start));
                 workflowContext.Start(process.Id);
             }
             return result;

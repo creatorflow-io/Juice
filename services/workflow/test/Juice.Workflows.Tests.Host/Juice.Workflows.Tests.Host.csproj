@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>$(AppTargetFramework)</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>juice.workflows.tests.host</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Juice.Workflows.EF.PostgreSQL\Juice.Workflows.EF.PostgreSQL.csproj" />
+    <ProjectReference Include="..\..\src\Juice.Workflows.EF.SqlServer\Juice.Workflows.EF.SqlServer.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Label="Migrations">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="$(EFVersion)">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="$(EFVersion)">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+</Project>
