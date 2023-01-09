@@ -20,11 +20,17 @@ namespace Juice.Workflows.Domain.AggregatesModel.WorkflowStateAggregate
             Status = status;
             Message = message;
             User = user;
-            Outcomes = outcomes;
+            _outcomes = outcomes;
         }
+        private string _workflowId;
+        public string WorkflowId => _workflowId;
         public string Id { get; set; }
-        public string Name { get; set; }
-        public IEnumerable<string>? Outcomes { get; private set; }
+
+        private string _name = "";
+        public string Name { get { return _name; } set { _name = value ?? ""; } }
+
+        private IEnumerable<string>? _outcomes;
+        public IEnumerable<string>? Outcomes => _outcomes;
         public string? Message { get; private set; }
         public WorkflowStatus Status { get; private set; }
         public string? User { get; private set; }
@@ -44,7 +50,7 @@ namespace Juice.Workflows.Domain.AggregatesModel.WorkflowStateAggregate
                 User = user;
                 if (status == WorkflowStatus.Finished)
                 {
-                    Outcomes = outcomes;
+                    _outcomes = outcomes;
                 }
                 StatusChanged = true;
             }

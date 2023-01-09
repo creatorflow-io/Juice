@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Juice.Extensions.DependencyInjection;
 using Juice.Services;
 using Juice.Workflows.Bpmn.DependencyInjection;
@@ -12,7 +11,6 @@ using Juice.Workflows.Yaml.DependencyInjection;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Xunit;
 
 namespace Juice.Workflows.Tests
 {
@@ -251,7 +249,7 @@ namespace Juice.Workflows.Tests
 
         }
 
-        [Fact(DisplayName = "Bpmn shouuld add to db")]
+        [Fact(DisplayName = "Bpmn should add to db")]
 
         public async Task Bpmn_should_terminate_Async()
         {

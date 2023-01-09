@@ -1,6 +1,5 @@
 ﻿using Juice.Workflows.Builder;
 using Juice.Workflows.Domain.AggregatesModel.WorkflowAggregate;
-using Juice.Workflows.Domain.AggregatesModel.WorkflowStateAggregate;
 using Juice.Workflows.Execution;
 
 
@@ -11,47 +10,32 @@ namespace Juice.Workflows.Yaml.Builder
         public int Priority => 1;
         private string _directory = "workflows";
 
-        private IWorkflowStateRepository _stateReposistory;
-        private IWorkflowRepository _workflowRepository;
-
         private WorkflowContextBuilder _builder;
 
         private bool _build = true;
 
         public YamlFileWorkflowContextBuilder(
-            IWorkflowStateRepository stateReposistory,
-            WorkflowContextBuilder builder,
-            IWorkflowRepository workflowRepository
+            WorkflowContextBuilder builder
         )
         {
-            _stateReposistory = stateReposistory;
-            _workflowRepository = workflowRepository;
             _builder = builder;
         }
 
         public async Task<WorkflowContext> BuildAsync(string workflowId,
-            string instanceId, Dictionary<string, object?>? input,
+            string instanceId,
             CancellationToken token)
         {
-            var user = default(string?);
             var file = Path.Combine(_directory, workflowId + ".yaml");
 
-            var state = await _stateReposistory.GetAsync(instanceId, token);
-
-            var workflow = await _workflowRepository.GetAsync(instanceId, token);
-            if (workflow == null)
-            {
-                throw new Exception("Workflow not found");
-            }
             if (_build)
             {
                 _build = false;
                 var yml = await File.ReadAllTextAsync(file);
-                return _builder.Build(yml, workflow, state, user, input, true);
+                return _builder.Build(yml, new WorkflowRecord(instanceId, workflowId, default, default), true);
 
             }
             var nullYml = default(string?);
-            return _builder.Build(nullYml, workflow, state, user, input, false);
+            return _builder.Build(nullYml, new WorkflowRecord(instanceId, workflowId, default, default), false);
         }
 
         public Task<bool> ExistsAsync(string workflowId, CancellationToken token)

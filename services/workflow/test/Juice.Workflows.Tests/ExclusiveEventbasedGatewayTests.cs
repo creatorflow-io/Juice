@@ -1,16 +1,4 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
-using FluentAssertions;
-using Juice.Extensions.DependencyInjection;
-using Juice.Services;
-using Juice.Workflows.DependencyInjection;
-using Juice.Workflows.Helpers;
-using MediatR;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using Xunit;
+﻿using Newtonsoft.Json;
 
 namespace Juice.Workflows.Tests
 {

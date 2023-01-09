@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿using Juice.Domain;
+using MediatR;
 using Newtonsoft.Json.Linq;
 
 namespace Juice.Workflows.Domain.AggregatesModel.WorkflowStateAggregate
@@ -6,7 +7,7 @@ namespace Juice.Workflows.Domain.AggregatesModel.WorkflowStateAggregate
     /// <summary>
     /// Represents a workflow's serializable runtime state.
     /// </summary>
-    public class WorkflowState
+    public class WorkflowState : IAggregrateRoot<INotification>
     {
         public WorkflowState()
         {

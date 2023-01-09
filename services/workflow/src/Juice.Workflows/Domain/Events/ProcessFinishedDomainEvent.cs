@@ -2,12 +2,12 @@
 
 namespace Juice.Workflows.Domain.Events
 {
-    public class WorkflowFinishedDomainEvent : INotification
+    public class ProcessFinishedDomainEvent : INotification
     {
         public NodeContext Node { get; init; }
         public WorkflowStatus Status { get; init; }
 
-        public WorkflowFinishedDomainEvent(NodeContext node, WorkflowStatus status)
+        public ProcessFinishedDomainEvent(NodeContext node, WorkflowStatus status)
         {
             Node = node;
             Status = status;

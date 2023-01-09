@@ -2,6 +2,8 @@
 {
     public class ProcessSnapshot
     {
+        private string _workflowId;
+        public string WorkflowId => _workflowId;
         public string Id { get; init; }
         public string? Name { get; init; }
 

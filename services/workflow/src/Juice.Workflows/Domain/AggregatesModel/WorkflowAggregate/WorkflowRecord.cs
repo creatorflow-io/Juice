@@ -1,5 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-using Juice.Domain;
+﻿using Juice.Domain;
 
 namespace Juice.Workflows.Domain.AggregatesModel.WorkflowAggregate
 {
@@ -14,13 +13,8 @@ namespace Juice.Workflows.Domain.AggregatesModel.WorkflowAggregate
             Id = id;
             DefinitionId = definitionId;
             CorrelationId = correlationId;
-            Name = name;
+            Name = name ?? definitionId;
         }
-        /// <summary>
-        /// A unique identifier for this workflow.
-        /// </summary>
-        [Key]
-        public string Id { get; init; }
 
         public string DefinitionId { get; init; }
 
@@ -36,11 +30,14 @@ namespace Juice.Workflows.Domain.AggregatesModel.WorkflowAggregate
 
         public void UpdateStatus(WorkflowStatus status, string? message)
         {
-            Status = status;
-            StatusLastUpdate = DateTimeOffset.Now;
-            if (status == WorkflowStatus.Faulted && !string.IsNullOrEmpty(message))
+            if (Status != status)
             {
-                FaultMessage = message;
+                Status = status;
+                StatusLastUpdate = DateTimeOffset.Now;
+                if (status == WorkflowStatus.Faulted && !string.IsNullOrEmpty(message))
+                {
+                    FaultMessage = message;
+                }
             }
         }
 

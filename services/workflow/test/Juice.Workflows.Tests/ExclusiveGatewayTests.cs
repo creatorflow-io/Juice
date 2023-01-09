@@ -1,19 +1,4 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
-using FluentAssertions;
-using Juice.Extensions.DependencyInjection;
-using Juice.Services;
-using Juice.Workflows.Builder;
-using Juice.Workflows.DependencyInjection;
-using Juice.Workflows.Helpers;
-using Juice.Workflows.Services;
-using MediatR;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Xunit;
-
-namespace Juice.Workflows.Tests
+﻿namespace Juice.Workflows.Tests
 {
     public class ExclusiveGatewayTests
     {
@@ -158,8 +143,7 @@ namespace Juice.Workflows.Tests
                 .Merge()
                 .End()
                 ;
-            var context = builder.Build(new Domain.AggregatesModel.WorkflowAggregate.WorkflowRecord("axad", "axad", default, default),
-                default, default, default);
+            var context = builder.Build(new Domain.AggregatesModel.WorkflowAggregate.WorkflowRecord("axad", "axad", default, default));
             _output.WriteLine(ContextPrintHelper.Visualize(context));
 
             await Assert.ThrowsAsync<InvalidOperationException>(async () =>

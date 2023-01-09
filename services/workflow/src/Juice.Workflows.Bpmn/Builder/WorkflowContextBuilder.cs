@@ -3,7 +3,6 @@ using Juice.Services;
 using Juice.Workflows.Bpmn.Models;
 using Juice.Workflows.Builder;
 using Juice.Workflows.Domain.AggregatesModel.WorkflowAggregate;
-using Juice.Workflows.Domain.AggregatesModel.WorkflowStateAggregate;
 using Juice.Workflows.Execution;
 using Juice.Workflows.Models;
 using Juice.Workflows.Nodes.Activities;
@@ -25,8 +24,7 @@ namespace Juice.Workflows.Bpmn.Builder
         }
 
         public WorkflowContext Build(TextReader? reader, WorkflowRecord workflow,
-            WorkflowState? state, string? user,
-            Dictionary<string, object?>? input, bool rebuild = false)
+            bool rebuild = false)
         {
             var name = workflow.Name;
             if (_needBuild || rebuild)
@@ -48,6 +46,11 @@ namespace Juice.Workflows.Bpmn.Builder
                     throw new Exception("Bpmn xml does not contain any workflow process definition.");
                 }
 
+                if (string.IsNullOrEmpty(name) && bpmn.name != null)
+                {
+                    name = bpmn.name;
+                }
+
                 foreach (var process in bpmn.Process)
                 {
                     if (process.flowElement == null)
@@ -55,6 +58,10 @@ namespace Juice.Workflows.Bpmn.Builder
                         throw new Exception("Bpmn process does not contain any flow element.");
                     }
                     var processId = process.id;
+                    if (string.IsNullOrEmpty(name))
+                    {
+                        name = process.name;
+                    }
 
                     AddProcess(new ProcessRecord(processId, process.name));
 
@@ -63,17 +70,10 @@ namespace Juice.Workflows.Bpmn.Builder
             }
 
             return new WorkflowContext(workflow.Id
-                , workflow.CorrelationId
-                , state?.NodeSnapshots
-                , state?.FlowSnapshots
-                , state?.ProcessSnapshots
-                , input
-                , state?.Output
+                , name
                 , _nodeRecords.Values.Select(n => new NodeContext(n, _nodes[n.Id])).ToList()
                 , _flowRecords.Values.Select(f => new FlowContext(f, _flows[f.Id])).ToList()
                 , _processRecords.Values
-                , name
-                , user
                 , this.GetType().FullName
                 );
         }

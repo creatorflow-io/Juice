@@ -13,28 +13,17 @@ namespace Juice.Workflows.Builder
 
         }
 
-        public WorkflowContext Build(WorkflowRecord workflow,
-            WorkflowState? state,
-            string? user,
-            Dictionary<string, object?>? input)
+        public WorkflowContext Build(WorkflowRecord workflow)
         {
-
-            return new WorkflowContext(workflow.Id
-                , workflow.CorrelationId
-                , state?.NodeSnapshots
-                , state?.FlowSnapshots
-                , state?.ProcessSnapshots
-                , input
-                , state?.Output
+            return new WorkflowContext(
+                workflow.Id
+                , workflow.Name ?? _name
                 , _nodeRecords.Values.Select(n => new NodeContext(n, _nodes[n.Id])).ToList()
                 , _flowRecords.Values.Select(f => new FlowContext(f, _flows[f.Id])).ToList()
                 , _processRecords.Values
-                , workflow.Name
-                , user
                 , this.GetType().FullName
                 );
         }
-
 
         protected override void AddNode(NodeRecord record, INode node)
         {
@@ -44,6 +33,7 @@ namespace Juice.Workflows.Builder
 
         #region Workflow as code
 
+        private string? _name;
         private string? _currentNodeId;
         private string? _currentProcessId;
 
@@ -99,6 +89,12 @@ namespace Juice.Workflows.Builder
 
             AddFlow(flowRecord, flow, isDefault);
 
+            return this;
+        }
+
+        public WorkflowContextBuilder SetName(string name)
+        {
+            _name = name;
             return this;
         }
 
@@ -304,12 +300,8 @@ namespace Juice.Workflows.Builder
 
             string? nullCorrelationId = default;
             string? nullName = default;
-            string? nullUser = default;
-            WorkflowState? nullState = default;
-            Dictionary<string, object?>? nullInput = default;
 
-            var context = contextBuilder.Build(new WorkflowRecord(tmpWorkflowId, tmpWorkflowId, nullCorrelationId, nullName),
-                nullState, nullUser, nullInput);
+            var context = contextBuilder.Build(new WorkflowRecord(tmpWorkflowId, tmpWorkflowId, nullCorrelationId, nullName));
 
             foreach (var n in context.Nodes.Values)
             {
@@ -360,24 +352,13 @@ namespace Juice.Workflows.Builder
         private static ConcurrentDictionary<string, WorkflowContextBuilder> _store
             = new ConcurrentDictionary<string, WorkflowContextBuilder>();
 
-        private IWorkflowStateRepository _stateReposistory;
-        public IncodeWorkflowContextBuilder(IWorkflowStateRepository stateReposistory)
-        {
-            _stateReposistory = stateReposistory;
-        }
-
         public int Priority => 99;
 
         public async Task<WorkflowContext> BuildAsync(string workflowId,
-            string instanceId, Dictionary<string, object?>? input,
+            string instanceId,
             CancellationToken token)
         {
-            var state = await _stateReposistory.GetAsync(instanceId, token);
-
-            string? nullUser = default;
-
-            return _store[workflowId].Build(new WorkflowRecord(instanceId, workflowId, default, default),
-                state, nullUser, input);
+            return _store[workflowId].Build(new WorkflowRecord(instanceId, workflowId, default, default));
         }
 
         public Task<bool> ExistsAsync(string workflowId, CancellationToken token)
