@@ -146,13 +146,22 @@ namespace Juice.Workflows.EF
                     .WithOne()
                     ;
 
+                entity.Navigation(b => b.NodeSnapshots)
+                    .UsePropertyAccessMode(PropertyAccessMode.Property);
+
                 entity.HasMany(e => e.FlowSnapshots)
                     .WithOne()
                     ;
 
+                entity.Navigation(b => b.FlowSnapshots)
+                    .UsePropertyAccessMode(PropertyAccessMode.Property);
+
                 entity.HasMany(e => e.ProcessSnapshots)
                     .WithOne()
                     ;
+
+                entity.Navigation(b => b.ProcessSnapshots)
+                    .UsePropertyAccessMode(PropertyAccessMode.Property);
 
                 entity.Ignore(e => e.BlockingNodes);
                 entity.Ignore(e => e.ExecutedNodes);

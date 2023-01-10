@@ -2,8 +2,10 @@
 {
     public class BoundaryTimerEvent : BoundaryEvent
     {
-        public BoundaryTimerEvent(IStringLocalizerFactory stringLocalizer) : base(stringLocalizer)
+        private ILogger _logger;
+        public BoundaryTimerEvent(ILogger<BoundaryErrorEvent> logger, IStringLocalizerFactory stringLocalizer) : base(stringLocalizer)
         {
+            _logger = logger;
         }
 
         public override LocalizedString DisplayText => Localizer["Timer Event"];
@@ -19,9 +21,13 @@
         public override Task<NodeExecutionResult> StartAsync(WorkflowContext workflowContext, NodeContext node, FlowContext? flow, CancellationToken token)
         {
             // Should register a timer
+            _logger.LogInformation("Registed a timer");
             return Task.FromResult(Halt());
         }
         public override Task<NodeExecutionResult> ResumeAsync(WorkflowContext workflowContext, NodeContext node, CancellationToken token)
-            => Task.FromResult(Outcomes("Throwed"));
+        {
+            _logger.LogInformation("Timed out");
+            return Task.FromResult(Outcomes("Throwed"));
+        }
     }
 }

@@ -71,18 +71,16 @@ namespace Juice.Workflows.Tests
                 });
             });
 
-            using var scope = resolver.ServiceProvider.CreateScope();
-            var workflow = scope.ServiceProvider.GetRequiredService<IWorkflow>();
-
             var branch = "e2";
 
-            var executor = new WorkflowTestHelper(_output);
+            var executor = new WorkflowTestHelper(_output, resolver.ServiceProvider);
 
             Task.Run(async () =>
             {
                 await Task.Delay(1000);
                 try
                 {
+                    var workflow = executor.Executing;
                     var listeningEvents = workflow.ExecutedContext
                         .BlockingNodes.Where(b =>
                             workflow.ExecutedContext.GetNode(b.Id).Node is IEvent);
@@ -101,19 +99,17 @@ namespace Juice.Workflows.Tests
 
             });
 
-            var result = await executor.StartAsync(workflow, workflowId, default);
+            var result = await executor.StartAsync(workflowId, default);
 
-            workflow.ExecutedContext.Should().NotBeNull();
+            result.Context.Should().NotBeNull();
 
-            _output.WriteLine(ContextPrintHelper.Visualize(workflow.ExecutedContext));
-
-            workflow.ExecutedContext.Should().NotBeNull();
+            _output.WriteLine(ContextPrintHelper.Visualize(result.Context));
 
             result?.Status.Should().Be(WorkflowStatus.Finished);
-            var state = workflow.ExecutedContext?.State;
+            var state = result.Context.State;
             state?.Should().NotBeNull();
 
-            var expectedNodes = workflow.ExecutedContext.Nodes.Values
+            var expectedNodes = result.Context.Nodes.Values
                 .Where(n =>
                 n.Record.Name.StartsWith(branch == "e1" ? "utask_1" : "utask_2")
                 || n.Record.Name == "utask_0"
@@ -129,7 +125,7 @@ namespace Juice.Workflows.Tests
             expectedNodes.Should().BeSubsetOf(state?.ExecutedNodes?.Select(n => n.Id));
 
             var cancelledEvent = branch == "e1" ? "e2" : "e1";
-            var @event = workflow.ExecutedContext.NodeSnapshots
+            var @event = result.Context.NodeSnapshots
                 .Where(n => n.Name == cancelledEvent)
                 .First();
 

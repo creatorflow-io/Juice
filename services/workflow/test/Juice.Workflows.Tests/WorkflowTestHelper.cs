@@ -6,31 +6,41 @@ namespace Juice.Workflows.Tests
     internal class WorkflowTestHelper
     {
         private ITestOutputHelper _output;
+        private IServiceProvider _serviceProvider;
 
-        public WorkflowTestHelper(ITestOutputHelper output)
+        private IWorkflow? _executing;
+        public IWorkflow? Executing => _executing;
+
+        public WorkflowTestHelper(ITestOutputHelper output, IServiceProvider serviceProvider)
         {
             _output = output;
+            _serviceProvider = serviceProvider;
         }
 
-        public static Task<WorkflowExecutionResult?> ExecuteAsync(IWorkflow workflow,
+        public static Task<WorkflowExecutionResult?> ExecuteAsync(IServiceProvider serviceProvider,
             ITestOutputHelper output, string workflowId, Dictionary<string, object?>? input = default)
-            => new WorkflowTestHelper(output).StartAsync(workflow, workflowId, input);
+            => new WorkflowTestHelper(output, serviceProvider).StartAsync(workflowId, input);
 
         public static Task<WorkflowExecutionResult?> ExecuteAsync(WorkflowExecutor workflowExecutor,
             WorkflowContext workflowContext,
-            ITestOutputHelper output,
+            ITestOutputHelper output, IServiceProvider serviceProvider,
             string? nodeId = default, Dictionary<string, object?>? input = default)
-           => new WorkflowTestHelper(output).ExecuteAsync(workflowExecutor, workflowContext, nodeId);
+           => new WorkflowTestHelper(output, serviceProvider).ExecuteAsync(workflowExecutor, workflowContext, nodeId);
 
         private SemaphoreSlim _signal = new SemaphoreSlim(0);
         private Queue<string> _event = new Queue<string>();
         private Dictionary<string, int> _executed = new Dictionary<string, int>();
 
-        public async Task<WorkflowExecutionResult?> StartAsync(IWorkflow workflow,
+        public async Task<WorkflowExecutionResult?> StartAsync(
             string workflowId, Dictionary<string, object?>? input)
         {
             string? nullCorrelationId = default;
             string? nullName = default;
+            using var scope = _serviceProvider.CreateScope();
+
+            var workflow = scope.ServiceProvider.GetRequiredService<IWorkflow>();
+            _executing = workflow;
+
             var rs = await workflow.StartAsync(workflowId, nullCorrelationId, nullName, input);
             if (rs.Succeeded)
             {
@@ -47,7 +57,7 @@ namespace Juice.Workflows.Tests
                             context.GetNode(b.Id).Node is IActivity);
                     if (blockings.Any())
                     {
-                        return await ResumeAsync(workflow, newWorkflowId, blockings.First().Id, input);
+                        return await ResumeAsync(newWorkflowId, blockings.First().Id, input);
                     }
 
                     var events = context.State
@@ -62,16 +72,19 @@ namespace Juice.Workflows.Tests
                             await _signal.WaitAsync(tokenSource.Token);
                             if (_event.TryDequeue(out var eventId))
                             {
-                                return await ResumeAsync(workflow, newWorkflowId, eventId, input);
+                                return await ResumeAsync(newWorkflowId, eventId, input);
                             }
                         }
                         catch (OperationCanceledException)
                         {
-                            return new WorkflowExecutionResult
+                            if (!context.Completed)
                             {
-                                Status = WorkflowStatus.Faulted,
-                                Message = "Operation timedout"
-                            };
+                                return new WorkflowExecutionResult
+                                {
+                                    Status = WorkflowStatus.Faulted,
+                                    Message = "Operation timedout"
+                                };
+                            }
                         }
                     }
                 }
@@ -84,9 +97,12 @@ namespace Juice.Workflows.Tests
             return default;
         }
 
-        public async Task<WorkflowExecutionResult?> ResumeAsync(IWorkflow workflow,
+        public async Task<WorkflowExecutionResult?> ResumeAsync(
             string workflowId, string nodeId, Dictionary<string, object?>? input)
         {
+            using var scope = _serviceProvider.CreateScope();
+            var workflow = scope.ServiceProvider.GetRequiredService<IWorkflow>();
+            _executing = workflow;
             var rs = await workflow.ResumeAsync(workflowId, nodeId, input);
             if (rs.Succeeded)
             {
@@ -105,7 +121,7 @@ namespace Juice.Workflows.Tests
                         var blocking = blockings.FirstOrDefault(b =>
                             !(context.GetNode(b.Id).Node is SubProcess))
                             ?? blockings.First();
-                        return await ResumeAsync(workflow, workflowId, blocking.Id, input);
+                        return await ResumeAsync(workflowId, blocking.Id, input);
                     }
 
                     var events = context.State
@@ -120,16 +136,19 @@ namespace Juice.Workflows.Tests
                             await _signal.WaitAsync(tokenSource.Token);
                             if (_event.TryDequeue(out var eventId))
                             {
-                                return await ResumeAsync(workflow, workflowId, eventId, input);
+                                return await ResumeAsync(workflowId, eventId, input);
                             }
                         }
                         catch (OperationCanceledException)
                         {
-                            return new WorkflowExecutionResult
+                            if (!context.Completed)
                             {
-                                Status = WorkflowStatus.Faulted,
-                                Message = "Operation timedout"
-                            };
+                                return new WorkflowExecutionResult
+                                {
+                                    Status = WorkflowStatus.Faulted,
+                                    Message = "Operation timedout"
+                                };
+                            }
                         }
                     }
                 }

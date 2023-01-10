@@ -179,19 +179,33 @@ namespace Juice.Workflows.Tests
                 services.AddMediatR(typeof(StartEvent));
 
             });
+            string? workflowId = default;
+            {
 
-            using var scope = resolver.ServiceProvider.CreateScope();
+                var result = await WorkflowTestHelper.ExecuteAsync(resolver.ServiceProvider, _output, "diagram");
 
-            var workflow = scope.ServiceProvider.GetRequiredService<IWorkflow>();
+                result.Should().NotBeNull();
 
-            var result = await WorkflowTestHelper.ExecuteAsync(workflow, _output, "diagram");
+                _output.WriteLine(ContextPrintHelper.Visualize(result.Context));
 
-            result.Should().NotBeNull();
+                result.Status.Should().Be(WorkflowStatus.Finished);
 
-            _output.WriteLine(ContextPrintHelper.Visualize(result.Context));
+                workflowId = result.Context.WorkflowId;
+            }
+            if (!string.IsNullOrEmpty(workflowId))
+            {
+                _output.WriteLine("WorkflowId: " + workflowId);
 
-            result.Status.Should().Be(WorkflowStatus.Aborted);
+                using var scope = resolver.ServiceProvider.CreateScope();
 
+                var contextResolver = scope.ServiceProvider.GetRequiredService<IWorkflowContextResolver>();
+
+                var context = await contextResolver.StateResolveAsync(workflowId, default, default);
+
+                context.Should().NotBeNull();
+                _output.WriteLine("Builder: " + context.ResolvedBy);
+                _output.WriteLine(ContextPrintHelper.Visualize(context));
+            }
         }
     }
 }

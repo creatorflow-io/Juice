@@ -44,33 +44,64 @@ namespace Juice.Workflows.Execution
         {
             get
             {
-                return new WorkflowState
-                {
-                    Input = Input,
-                    Output = Output,
-                    NodeSnapshots = NodeSnapshots,
-                    NodeStates = Nodes.ToDictionary(x => x.Key, x => x.Value.Properties),
-                    FlowSnapshots = FlowSnapshots,
-                    ProcessSnapshots = ProcessSnapshots,
-                    LastMessages = LastMessages.Reverse(),
-                    IdlingNodes = IdlingNodes,
-                    DomainEvents = _domainEvents
-                };
+                _state.SetExecutionInfo(Input, LastMessages.Reverse());
+                return _state;
+                //return new WorkflowState
+                //{
+                //    Input = Input,
+                //    Output = Output,
+                //    NodeSnapshots = NodeSnapshots,
+                //    NodeStates = Nodes.ToDictionary(x => x.Key, x => x.Value.Properties),
+                //    FlowSnapshots = FlowSnapshots,
+                //    ProcessSnapshots = ProcessSnapshots,
+                //    LastMessages = LastMessages.Reverse(),
+                //    IdlingNodes = IdlingNodes,
+                //    DomainEvents = _domainEvents
+                //};
             }
         }
 
+        private WorkflowState _state = new WorkflowState
+        {
+            Output = new Dictionary<string, object?>(),
+            ProcessSnapshots = new List<ProcessSnapshot>(),
+            NodeSnapshots = new List<NodeSnapshot>(),
+            FlowSnapshots = new List<FlowSnapshot>()
+        };
+
         public WorkflowContext SetState(WorkflowState? state)
         {
-            Output = state?.Output ?? new Dictionary<string, object?>();
+            //if (state == null)
+            //{
+            //    Output = state?.Output ?? new Dictionary<string, object?>();
 
-            ProcessSnapshots = Processes.Select(p => new ProcessSnapshot
+            //    ProcessSnapshots = Processes.Select(p => new ProcessSnapshot
+            //    {
+            //        Id = p.Id,
+            //        Name = p.Name,
+            //        Status = state?.ProcessSnapshots?.FirstOrDefault(s => s.Id == p.Id)?.Status ?? WorkflowStatus.Idle
+            //    }).ToList();
+            //    NodeSnapshots = state?.NodeSnapshots ?? new List<NodeSnapshot>();
+            //    FlowSnapshots = state?.FlowSnapshots ?? new List<FlowSnapshot>();
+            //}
+            if (state != null)
             {
-                Id = p.Id,
-                Name = p.Name,
-                Status = state?.ProcessSnapshots?.FirstOrDefault(s => s.Id == p.Id)?.Status ?? WorkflowStatus.Idle
-            }).ToList();
-            NodeSnapshots = state?.NodeSnapshots ?? new List<NodeSnapshot>();
-            FlowSnapshots = state?.FlowSnapshots ?? new List<FlowSnapshot>();
+                _state = state;
+            }
+
+            foreach (var process in Processes)
+            {
+                if (!_state.ProcessSnapshots.Any(p => p.Id == process.Id))
+                {
+                    _state.ProcessSnapshots.Add(new ProcessSnapshot
+                    {
+                        Id = process.Id,
+                        Name = process.Name,
+                        Status = WorkflowStatus.Idle
+                    });
+                }
+            }
+
             return this;
         }
 
@@ -83,11 +114,11 @@ namespace Juice.Workflows.Execution
             return this;
         }
 
-        public IList<NodeSnapshot> NodeSnapshots { get; private set; }
+        public IList<NodeSnapshot> NodeSnapshots => _state.NodeSnapshots;
 
-        public IList<FlowSnapshot> FlowSnapshots { get; private set; }
+        public IList<FlowSnapshot> FlowSnapshots => _state.FlowSnapshots;
 
-        public IList<ProcessSnapshot> ProcessSnapshots { get; private set; }
+        public IList<ProcessSnapshot> ProcessSnapshots => _state.ProcessSnapshots;
 
         /// <summary>
         /// Blocking activities
@@ -128,7 +159,7 @@ namespace Juice.Workflows.Execution
         /// <summary>
         /// A dictionary of node's output
         /// </summary>
-        public IDictionary<string, object?> Output { get; private set; }
+        public IDictionary<string, object?> Output => _state.Output;
 
         /// <summary>
         /// Last message stack of workflow execution
@@ -334,13 +365,19 @@ namespace Juice.Workflows.Execution
             _domainEvents.Add(evt);
         }
 
+        public bool Completed
+            => ProcessSnapshots.All(p => p.Status == WorkflowStatus.Finished
+            || p.Status == WorkflowStatus.Aborted
+            || p.Status == WorkflowStatus.Faulted);
+
         public bool IsFinished
             => ProcessSnapshots.All(p => p.Status == WorkflowStatus.Finished);
         public bool HasFinishSignal(string processId)
             => ProcessSnapshots.Any(p => p.Id == processId && p.Status == WorkflowStatus.Finished);
         public void Finish(string processId)
-            => ProcessSnapshots.Single(p => p.Id == processId).SetStatus(WorkflowStatus.Finished); public bool HasTerminated
-     => ProcessSnapshots.Any(p => p.Status == WorkflowStatus.Aborted);
+            => ProcessSnapshots.Single(p => p.Id == processId).SetStatus(WorkflowStatus.Finished);
+        public bool HasTerminated
+            => ProcessSnapshots.Any(p => p.Status == WorkflowStatus.Aborted);
         public bool HasTerminateSignal(string processId)
             => ProcessSnapshots.Any(p => p.Id == processId && p.Status == WorkflowStatus.Aborted);
         public void Terminate(string processId)

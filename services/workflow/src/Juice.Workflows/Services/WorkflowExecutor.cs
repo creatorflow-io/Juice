@@ -280,7 +280,9 @@
 
             foreach (var boundaryEvent in boundaryEvents)
             {
-                if (await ((IBoundary)boundaryEvent.Node).PreStartCheckAsync(workflowContext, boundaryEvent, node, token))
+                if (workflowContext.IdlingNodes.Any(n => n.Id == boundaryEvent.Record.Id)
+                    &&
+                    await ((IBoundary)boundaryEvent.Node).PreStartCheckAsync(workflowContext, boundaryEvent, node, token))
                 {
                     var executor = new WorkflowExecutor(_logger);
                     var rs = await executor.ExecuteAsync(workflowContext, boundaryEvent, token);

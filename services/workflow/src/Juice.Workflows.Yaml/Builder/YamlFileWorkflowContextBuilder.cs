@@ -1,7 +1,9 @@
-﻿using Juice.Workflows.Builder;
+﻿using System.Security.Cryptography;
+using System.Text;
+using Juice.Workflows.Builder;
 using Juice.Workflows.Domain.AggregatesModel.WorkflowAggregate;
 using Juice.Workflows.Execution;
-
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Juice.Workflows.Yaml.Builder
 {
@@ -10,15 +12,17 @@ namespace Juice.Workflows.Yaml.Builder
         public int Priority => 1;
         private string _directory = "workflows";
 
-        private WorkflowContextBuilder _builder;
+        private static Dictionary<string, WorkflowContextBuilder> _builders = new Dictionary<string, WorkflowContextBuilder>();
 
-        private bool _build = true;
+        private static Dictionary<string, string> _fileHash = new Dictionary<string, string>();
+
+        private readonly IServiceProvider _serviceProvider;
 
         public YamlFileWorkflowContextBuilder(
-            WorkflowContextBuilder builder
+            IServiceProvider serviceProvider
         )
         {
-            _builder = builder;
+            _serviceProvider = serviceProvider;
         }
 
         public async Task<WorkflowContext> BuildAsync(string workflowId,
@@ -27,15 +31,27 @@ namespace Juice.Workflows.Yaml.Builder
         {
             var file = Path.Combine(_directory, workflowId + ".yaml");
 
-            if (_build)
+            var hash = await GetMD5Async(file, token);
+            var build = !_fileHash.ContainsKey(file)
+                || _fileHash[file] != hash
+                || !_builders.ContainsKey(file)
+                ;
+
+            if (build)
             {
-                _build = false;
+                _fileHash[file] = hash;
+
+                if (!_builders.ContainsKey(file))
+                {
+                    var builder = _serviceProvider.GetRequiredService<WorkflowContextBuilder>();
+                    _builders.Add(file, builder);
+                }
                 var yml = await File.ReadAllTextAsync(file);
-                return _builder.Build(yml, new WorkflowRecord(instanceId, workflowId, default, default), true);
+                return _builders[file].Build(yml, new WorkflowRecord(instanceId, workflowId, default, default), true);
 
             }
             var nullYml = default(string?);
-            return _builder.Build(nullYml, new WorkflowRecord(instanceId, workflowId, default, default), false);
+            return _builders[file].Build(nullYml, new WorkflowRecord(instanceId, workflowId, default, default), false);
         }
 
         public Task<bool> ExistsAsync(string workflowId, CancellationToken token)
@@ -47,6 +63,24 @@ namespace Juice.Workflows.Yaml.Builder
             {
                 _directory = directory;
             }
+        }
+
+        private static async Task<string> GetMD5Async(string filePath, CancellationToken token)
+        {
+            using var md5 = MD5.Create();
+            using var stream = File.OpenRead(filePath);
+            return ToHex(await md5.ComputeHashAsync(stream));
+        }
+        private static string ToHex(byte[] bytes, bool upperCase = false)
+        {
+            StringBuilder result = new StringBuilder(bytes.Length * 2);
+
+            for (int i = 0; i < bytes.Length; i++)
+            {
+                result.Append(bytes[i].ToString(upperCase ? "X2" : "x2"));
+            }
+
+            return result.ToString();
         }
 
     }
