@@ -22,12 +22,21 @@ namespace Juice.Workflows.Domain.AggregatesModel.WorkflowStateAggregate
             Output = output;
         }
 
-        public IEnumerable<string>? LastMessages { get; set; }
+        public void SetExecutionInfo(IDictionary<string, object?>? input, IEnumerable<string>? lastMessages)
+        {
+            if (input != null)
+            {
+                Input = input;
+            }
+            LastMessages = lastMessages;
+        }
+
+        public IEnumerable<string>? LastMessages { get; private set; }
 
         /// <summary>
         /// A dictionary of input values provided by the caller of the workflow.
         /// </summary>
-        public IDictionary<string, object?> Input { get; init; } = new Dictionary<string, object?>();
+        public IDictionary<string, object?> Input { get; private set; } = new Dictionary<string, object?>();
 
         /// <summary>
         /// A dictionary of output values provided by executed nodes of the workflow.

@@ -61,21 +61,20 @@
                 });
             });
 
-            using var scope = resolver.ServiceProvider.CreateScope();
-            var workflow = scope.ServiceProvider.GetRequiredService<IWorkflow>();
 
-            var result = await WorkflowTestHelper.ExecuteAsync(workflow, _output, workflowId,
+            var result = await WorkflowTestHelper.ExecuteAsync(resolver.ServiceProvider, _output, workflowId,
                 new System.Collections.Generic.Dictionary<string, object?> { { "branch", branch } });
 
-            _output.WriteLine(ContextPrintHelper.Visualize(workflow.ExecutedContext));
+            var context = result.Context;
 
-            workflow.ExecutedContext.Should().NotBeNull();
+            context.Should().NotBeNull();
+            _output.WriteLine(ContextPrintHelper.Visualize(context));
 
             result?.Status.Should().Be(WorkflowStatus.Finished);
-            var state = workflow.ExecutedContext?.State;
+            var state = context?.State;
             state?.Should().NotBeNull();
 
-            var expectedNodes = workflow.ExecutedContext.Nodes.Values
+            var expectedNodes = context.Nodes.Values
                 .Where(n =>
                 n.Record.Name.StartsWith(
                     branch == "branch1" ? "utask_1"
