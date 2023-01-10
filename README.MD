@@ -65,10 +65,10 @@ Version 6.0
     - [x] Write file to FTP, UNC path
     - [ ] Extended file's metadata
     - [ ] EF store 
-- [ ] Workflow
-    - [ ] [Bpmn](https://bpmn.io/toolkit/bpmn-js/) compatible
-    - [ ] Yaml support
-    - [ ] Sub-workflow
+- [x] Workflow
+    - [x] [Bpmn](https://bpmn.io/toolkit/bpmn-js/) compatible
+    - [x] Yaml support
+    - [x] Sub-workflow
     - [ ] Workload/ lightweigh workflow engine
     - [ ] gRPC/ Web API
 - [ ] App templates
