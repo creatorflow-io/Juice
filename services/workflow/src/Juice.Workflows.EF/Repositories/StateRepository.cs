@@ -19,6 +19,7 @@ namespace Juice.Workflows.EF.Repositories
                 .Include(p => p.ProcessSnapshots)
                 .Include(p => p.FlowSnapshots)
                 .Include(p => p.NodeSnapshots)
+                .AsSplitQuery()
                 .FirstOrDefaultAsync(token);
 
             if (state != null && _logger.IsEnabled(LogLevel.Debug))

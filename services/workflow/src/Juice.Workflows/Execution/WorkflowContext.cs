@@ -44,7 +44,7 @@ namespace Juice.Workflows.Execution
         {
             get
             {
-                _state.SetExecutionInfo(Input, LastMessages.Reverse());
+                _state.SetExecutionInfo(Input, LastMessages.Reverse(), _domainEvents);
                 return _state;
                 //return new WorkflowState
                 //{

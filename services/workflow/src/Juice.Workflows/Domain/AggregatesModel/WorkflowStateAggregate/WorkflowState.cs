@@ -22,13 +22,22 @@ namespace Juice.Workflows.Domain.AggregatesModel.WorkflowStateAggregate
             Output = output;
         }
 
-        public void SetExecutionInfo(IDictionary<string, object?>? input, IEnumerable<string>? lastMessages)
+        public void SetExecutionInfo(IDictionary<string, object?>? input,
+            IEnumerable<string>? lastMessages,
+            IList<INotification> domainEvents
+            )
         {
             if (input != null)
             {
                 Input = input;
             }
             LastMessages = lastMessages;
+
+            DomainEvents.Clear();
+            foreach (var @event in domainEvents)
+            {
+                DomainEvents.Add(@event);
+            }
         }
 
         public IEnumerable<string>? LastMessages { get; private set; }
