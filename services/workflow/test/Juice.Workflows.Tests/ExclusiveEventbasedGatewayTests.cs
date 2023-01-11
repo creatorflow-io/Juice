@@ -52,7 +52,8 @@ namespace Juice.Workflows.Tests
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
 
-                services.AddMediatR(typeof(StartEvent));
+                services.AddMediatR(typeof(StartEvent), typeof(TimerEventStartDomainEventHandler));
+                services.AddSingleton<EventQueue>();
 
                 services.AddWorkflowServices()
                     .AddInMemoryReposistories();
@@ -74,6 +75,7 @@ namespace Juice.Workflows.Tests
             var branch = "e2";
 
             var executor = new WorkflowTestHelper(_output, resolver.ServiceProvider);
+            var queue = resolver.ServiceProvider.GetRequiredService<EventQueue>();
 
             Task.Run(async () =>
             {
@@ -90,7 +92,7 @@ namespace Juice.Workflows.Tests
                     var @event = listeningEvents.Where(n => n.Name == branch).First();
 
                     _output.WriteLine("********* Event " + @event.Name + " " + @event.Id);
-                    executor.Catched(@event.Id);
+                    queue.Throw(@event.Id);
                 }
                 catch (Exception ex)
                 {

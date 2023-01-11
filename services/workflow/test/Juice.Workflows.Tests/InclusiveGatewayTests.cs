@@ -39,6 +39,7 @@
                 });
 
                 services.AddMediatR(typeof(StartEvent));
+                services.AddSingleton<EventQueue>();
 
                 services.AddWorkflowServices()
                     .AddInMemoryReposistories();
