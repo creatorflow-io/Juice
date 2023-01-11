@@ -183,6 +183,11 @@ namespace Juice.Workflows.Execution
         {
             return ExecutedNodes.Any(n => n.Id == id);
         }
+        public bool IsNodeAborted(string id)
+        {
+            return NodeSnapshots.Any(n => n.Id == id
+                && (n.Status == WorkflowStatus.Aborted));
+        }
 
         public NodeContext? GetNode(string id)
         {
