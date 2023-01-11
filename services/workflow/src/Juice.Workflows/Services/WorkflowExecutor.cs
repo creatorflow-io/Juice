@@ -152,25 +152,33 @@
 
             if (nodeContext == null)
             {
-                return new(WorkflowStatus.Faulted, "Node is null");
+                return new("Node is null", WorkflowStatus.Faulted);
             }
 
             if (workflowContext.HasTerminateSignal(nodeContext.Record.ProcessIdRef))
             {
-                return new(WorkflowStatus.Idle, "The executing workflow has terminated");
+                return new("The executing workflow has terminated", WorkflowStatus.Idle);
             }
             if (workflowContext.HasFinishSignal(nodeContext.Record.ProcessIdRef))
             {
-                return new(WorkflowStatus.Idle, "The executing workflow has finished");
+                return new("The executing workflow has finished", WorkflowStatus.Idle);
+            }
+            if (workflowContext.IsNodeFinished(nodeContext.Record.Id))
+            {
+                return new("The executing node has finished", WorkflowStatus.Finished);
+            }
+            if (workflowContext.IsNodeAborted(nodeContext.Record.Id))
+            {
+                return new("The executing node has aborted", WorkflowStatus.Aborted);
             }
 
             _currentRecursionDepth++;
             if (_currentRecursionDepth > MaxRecursionDepth || token.IsCancellationRequested)
             {
-                return new NodeExecutionResult(
-                     WorkflowStatus.Aborted,
-                        token.IsCancellationRequested ? "The workflow execution was aborted."
-                    : "The max recursion depth of Workflow executions has been reached."
+                return new(
+                     token.IsCancellationRequested ? "The workflow execution was aborted."
+                    : "The max recursion depth of Workflow executions has been reached.",
+                     WorkflowStatus.Aborted
                 );
             }
 
@@ -294,11 +302,12 @@
                 .Where(n => n.Node is IBoundary && (n.Record.AttachedToRef == node.Record.Id))
                 .ToList();
 
+            var isFinished = workflowContext.IsNodeFinished(node.Record.Id);
             foreach (var boundaryEvent in boundaryEvents)
             {
-                if (workflowContext.IdlingNodes.Any(n => n.Id == boundaryEvent.Record.Id)
-                    &&
-                    await ((IBoundary)boundaryEvent.Node).PreStartCheckAsync(workflowContext, boundaryEvent, node, token))
+                if (!isFinished
+                    && workflowContext.IdlingNodes.Any(n => n.Id == boundaryEvent.Record.Id)
+                    && await ((IBoundary)boundaryEvent.Node).PreStartCheckAsync(workflowContext, boundaryEvent, node, token))
                 {
                     var executor = new WorkflowExecutor(_logger);
                     var rs = await executor.ExecuteAsync(workflowContext, boundaryEvent, token);
@@ -306,6 +315,12 @@
                     {
                         throw new InvalidOperationException($"Failed to execute event {boundaryEvent.DisplayName}. " + (rs.Message ?? ""));
                     }
+                }
+                else if (isFinished
+                   && workflowContext.BlockingNodes.Any(n => n.Id == boundaryEvent.Record.Id))
+                {
+                    // abort event
+                    workflowContext.ProcessNodeExecutionResult(boundaryEvent, new("Ancestor node has finished", WorkflowStatus.Aborted));
                 }
             }
 

@@ -72,6 +72,10 @@ namespace Juice.Workflows.Tests
                             var resumeResult = await ResumeAsync(newWorkflowId, blocking.Id, input);
                             if (resumeResult != null)
                             {
+                                if (resumeResult.Message != null)
+                                {
+                                    _output.WriteLine("Resume message: " + resumeResult.Message);
+                                }
                                 executionResult = resumeResult;
                             }
                             continue;
@@ -89,9 +93,14 @@ namespace Juice.Workflows.Tests
                             var eventId = await queue.TryCatchAsync(tokenSource.Token);
                             if (eventId != null)
                             {
+                                _output.WriteLine("Resume " + eventId);
                                 var resumeResult = await ResumeAsync(newWorkflowId, eventId, input);
                                 if (resumeResult != null)
                                 {
+                                    if (resumeResult.Message != null)
+                                    {
+                                        _output.WriteLine("Resume message: " + resumeResult.Message);
+                                    }
                                     executionResult = resumeResult;
                                     continue;
                                 }
