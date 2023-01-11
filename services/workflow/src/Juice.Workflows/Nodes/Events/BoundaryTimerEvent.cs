@@ -21,7 +21,8 @@
         public override Task<NodeExecutionResult> StartAsync(WorkflowContext workflowContext, NodeContext node, FlowContext? flow, CancellationToken token)
         {
             // Should register a timer
-            _logger.LogInformation("Registed a timer");
+            _logger.LogDebug("Registed a timer");
+            workflowContext.AddDomainEvent(new TimerEventStartDomainEvent(node));
             return Task.FromResult(Halt());
         }
         public override Task<NodeExecutionResult> ResumeAsync(WorkflowContext workflowContext, NodeContext node, CancellationToken token)
