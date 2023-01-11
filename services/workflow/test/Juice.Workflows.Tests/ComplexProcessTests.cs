@@ -59,7 +59,8 @@ namespace Juice.Workflows.Tests
                     .AddInMemoryReposistories();
                 services.RegisterNodes(typeof(OutcomeBranchUserTask));
 
-                services.AddMediatR(typeof(StartEvent));
+                services.AddMediatR(typeof(StartEvent), typeof(TimerEventStartDomainEventHandler));
+                services.AddSingleton<EventQueue>();
 
                 services.RegisterWorkflow(workflowId, builder =>
                 {
@@ -81,6 +82,7 @@ namespace Juice.Workflows.Tests
                         .End()
                         ;
                 });
+
             });
 
             var result = await WorkflowTestHelper.ExecuteAsync(resolver.ServiceProvider, _output, workflowId);
@@ -90,9 +92,76 @@ namespace Juice.Workflows.Tests
 
         }
 
+        [Fact(DisplayName = "Should timeout terminate")]
+
+        public async Task Should_timeout_Async()
+        {
+            var resolver = new DependencyResolver
+            {
+                CurrentDirectory = AppContext.BaseDirectory
+            };
+            var workflowId = new DefaultStringIdGenerator().GenerateRandomId(6);
+            resolver.ConfigureServices(services =>
+            {
+                var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
+                var configuration = configService.GetConfiguration();
+
+                services.AddLocalization(options => options.ResourcesPath = "Resources");
+
+                services.AddDefaultStringIdGenerator();
+
+                services.AddSingleton(provider => _output);
+
+                services.AddLogging(builder =>
+                {
+                    builder.ClearProviders()
+                    .AddTestOutputLogger()
+                    .AddConfiguration(configuration.GetSection("Logging"));
+                });
+
+                services.AddMediatR(typeof(StartEvent), typeof(TimerEventStartDomainEventHandler));
+                services.AddSingleton<EventQueue>();
+
+                services.AddWorkflowServices()
+                    .AddInMemoryReposistories();
+                services.RegisterNodes(typeof(FailureTask));
+
+                services.RegisterWorkflow(workflowId, builder =>
+                {
+                    builder
+                        .Start()
+                        .Parallel("p1")
+                            .Fork().SubProcess("P-KB", subBuilder =>
+                            {
+                                subBuilder.Start().Then<UserTask>("KB").Then<ServiceTask>("Convert KB").End();
+                            }, default).Then<UserTask>("Approve Grph")
+                            .Seek("P-KB").Attach<BoundaryTimerEvent>("Error").Then<SendTask>("Author inform").Terminate()
+                            .Seek("p1")
+                            .Fork().Then<UserTask>("Editing")
+                                .Parallel("p2")
+                                    .Fork().Then<ServiceTask>("WEB").Then<UserTask>("Approve Vid")
+                                    .Fork().Then<ServiceTask>("Social")
+                                    .Merge()
+                                        .Fork().Then<ServiceTask>("Copy PS")
+                                        .Fork().Then<ServiceTask>("Publish")
+                                        .Merge("Copy PS", "Publish", "Approve Grph")
+                        .End()
+                        ;
+                });
+            });
+
+            var result = await WorkflowTestHelper.ExecuteAsync(resolver.ServiceProvider, _output, workflowId,
+                new System.Collections.Generic.Dictionary<string, object?> { { "TaskStatus", WorkflowStatus.Faulted } });
+
+            result.Should().NotBeNull();
+            _output.WriteLine(ContextPrintHelper.Visualize(result.Context));
+
+            result.Status.Should().Be(WorkflowStatus.Aborted);
+
+        }
 
 
-        [Fact(DisplayName = "Should terminate")]
+        [Fact(DisplayName = "Should failure terminate")]
 
         public async Task Should_terminate_Async()
         {
@@ -119,12 +188,12 @@ namespace Juice.Workflows.Tests
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
 
-                services.AddMediatR(typeof(StartEvent));
+                services.AddMediatR(typeof(StartEvent), typeof(TimerEventStartDomainEventHandler));
+                services.AddSingleton<EventQueue>();
 
                 services.AddWorkflowServices()
                     .AddInMemoryReposistories();
                 services.RegisterNodes(typeof(FailureTask));
-
 
                 services.RegisterWorkflow(workflowId, builder =>
                 {
@@ -161,7 +230,7 @@ namespace Juice.Workflows.Tests
         }
 
 
-        [Fact(DisplayName = "Yaml terminate")]
+        [Fact(DisplayName = "Yaml failure terminate")]
 
         public async Task Yaml_should_terminate_Async()
         {
@@ -188,7 +257,8 @@ namespace Juice.Workflows.Tests
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
 
-                services.AddMediatR(typeof(StartEvent));
+                services.AddMediatR(typeof(StartEvent), typeof(TimerEventStartDomainEventHandler));
+                services.AddSingleton<EventQueue>();
 
                 services.AddWorkflowServices()
                     .AddInMemoryReposistories();
@@ -257,7 +327,8 @@ namespace Juice.Workflows.Tests
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
 
-                services.AddMediatR(typeof(StartEvent));
+                services.AddMediatR(typeof(StartEvent), typeof(TimerEventStartDomainEventHandler));
+                services.AddSingleton<EventQueue>();
 
                 services.AddWorkflowServices()
                     .AddDbWorkflows()

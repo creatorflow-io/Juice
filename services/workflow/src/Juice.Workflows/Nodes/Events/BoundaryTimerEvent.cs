@@ -25,6 +25,7 @@
             workflowContext.AddDomainEvent(new TimerEventStartDomainEvent(node));
             return Task.FromResult(Halt());
         }
+
         public override Task<NodeExecutionResult> ResumeAsync(WorkflowContext workflowContext, NodeContext node, CancellationToken token)
         {
             _logger.LogInformation("Timed out");

@@ -40,6 +40,7 @@
                 });
 
                 services.AddMediatR(typeof(StartEvent));
+                services.AddSingleton<EventQueue>();
 
                 services.AddWorkflowServices()
                     .AddInMemoryReposistories();
@@ -147,7 +148,7 @@
 
             await Assert.ThrowsAsync<InvalidOperationException>(async () =>
             {
-                var result = await WorkflowTestHelper.ExecuteAsync(workflowExecutor, context, _output, default);
+                var result = await WorkflowTestHelper.ExecuteAsync(workflowExecutor, context, _output, resolver.ServiceProvider);
             });
         }
 

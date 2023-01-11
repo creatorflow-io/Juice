@@ -27,8 +27,6 @@ namespace Juice.Workflows.Tests
             string? nodeId = default, Dictionary<string, object?>? input = default)
            => new WorkflowTestHelper(output, serviceProvider).ExecuteAsync(workflowExecutor, workflowContext, nodeId);
 
-        private SemaphoreSlim _signal = new SemaphoreSlim(0);
-        private Queue<string> _event = new Queue<string>();
         private Dictionary<string, int> _executed = new Dictionary<string, int>();
 
         public async Task<WorkflowExecutionResult?> StartAsync(
@@ -40,24 +38,44 @@ namespace Juice.Workflows.Tests
 
             var workflow = scope.ServiceProvider.GetRequiredService<IWorkflow>();
             _executing = workflow;
-
+            var queue = scope.ServiceProvider.GetRequiredService<EventQueue>();
             var rs = await workflow.StartAsync(workflowId, nullCorrelationId, nullName, input);
             if (rs.Succeeded)
             {
+
                 _output.WriteLine("Start workflow status " + rs.Data.Status);
                 _output.WriteLine("Start workflow message " + rs.Data.Message);
                 _output.WriteLine("Started workflow id " + rs.Data.Context.WorkflowId);
+                var executionResult = rs.Data;
+                var newWorkflowId = executionResult.Context.WorkflowId;
 
-                var context = rs.Data.Context;
-                var newWorkflowId = context.WorkflowId;
-                if (context?.State?.BlockingNodes != null)
+                var tokenSource = new CancellationTokenSource(3000);
+                while (!tokenSource.IsCancellationRequested)
                 {
-                    var blockings = context.State
-                        .BlockingNodes.Where(b =>
-                            context.GetNode(b.Id).Node is IActivity);
-                    if (blockings.Any())
+                    var context = executionResult.Context;
+                    if (context.Completed)
                     {
-                        return await ResumeAsync(newWorkflowId, blockings.First().Id, input);
+                        break;
+                    }
+                    if (context?.State?.BlockingNodes != null)
+                    {
+                        var blockings = context.State
+                            .BlockingNodes.Where(b =>
+                            {
+                                var node = context.GetNode(b.Id).Node;
+                                return node is IActivity && node is not SubProcess;
+                            });
+                        if (blockings.Any())
+                        {
+                            var blocking = blockings.First();
+                            _output.WriteLine("Resume " + blocking.Name + " " + blocking.Id);
+                            var resumeResult = await ResumeAsync(newWorkflowId, blocking.Id, input);
+                            if (resumeResult != null)
+                            {
+                                executionResult = resumeResult;
+                            }
+                            continue;
+                        }
                     }
 
                     var events = context.State
@@ -68,27 +86,26 @@ namespace Juice.Workflows.Tests
                     {
                         try
                         {
-                            var tokenSource = new CancellationTokenSource(3000);
-                            await _signal.WaitAsync(tokenSource.Token);
-                            if (_event.TryDequeue(out var eventId))
+                            var eventId = await queue.TryCatchAsync(tokenSource.Token);
+                            if (eventId != null)
                             {
-                                return await ResumeAsync(newWorkflowId, eventId, input);
+                                var resumeResult = await ResumeAsync(newWorkflowId, eventId, input);
+                                if (resumeResult != null)
+                                {
+                                    executionResult = resumeResult;
+                                    continue;
+                                }
                             }
                         }
                         catch (OperationCanceledException)
                         {
-                            if (!context.Completed)
-                            {
-                                return new WorkflowExecutionResult
-                                {
-                                    Status = WorkflowStatus.Faulted,
-                                    Message = "Operation timedout"
-                                };
-                            }
                         }
                     }
+
+                    await Task.Delay(100);
                 }
-                return rs.Data;
+
+                return executionResult;
             }
             else
             {
@@ -97,126 +114,85 @@ namespace Juice.Workflows.Tests
             return default;
         }
 
-        public async Task<WorkflowExecutionResult?> ResumeAsync(
+        private async Task<WorkflowExecutionResult?> ResumeAsync(
             string workflowId, string nodeId, Dictionary<string, object?>? input)
         {
+            IncraseExecutedCount(nodeId);
             using var scope = _serviceProvider.CreateScope();
             var workflow = scope.ServiceProvider.GetRequiredService<IWorkflow>();
             _executing = workflow;
             var rs = await workflow.ResumeAsync(workflowId, nodeId, input);
-            if (rs.Succeeded)
-            {
-                IncraseExecutedCount(nodeId);
-                _output.WriteLine("Execute workflow status " + rs.Data.Status);
-                _output.WriteLine("Execute workflow message " + rs.Data.Message);
-
-                var context = rs.Data.Context;
-                if (context?.State?.BlockingNodes != null)
-                {
-                    var blockings = context.State
-                        .BlockingNodes.Where(b =>
-                            context.GetNode(b.Id).Node is IActivity);
-                    if (blockings.Any())
-                    {
-                        var blocking = blockings.FirstOrDefault(b =>
-                            !(context.GetNode(b.Id).Node is SubProcess))
-                            ?? blockings.First();
-                        return await ResumeAsync(workflowId, blocking.Id, input);
-                    }
-
-                    var events = context.State
-                        .BlockingNodes.Where(b =>
-                            context.GetNode(b.Id).Node is IEvent);
-
-                    if (events.Any())
-                    {
-                        try
-                        {
-                            var tokenSource = new CancellationTokenSource(3000);
-                            await _signal.WaitAsync(tokenSource.Token);
-                            if (_event.TryDequeue(out var eventId))
-                            {
-                                return await ResumeAsync(workflowId, eventId, input);
-                            }
-                        }
-                        catch (OperationCanceledException)
-                        {
-                            if (!context.Completed)
-                            {
-                                return new WorkflowExecutionResult
-                                {
-                                    Status = WorkflowStatus.Faulted,
-                                    Message = "Operation timedout"
-                                };
-                            }
-                        }
-                    }
-                }
-                return rs.Data;
-            }
-            else
-            {
-                _output.WriteLine(rs.Message);
-            }
-            return default;
+            return rs?.Data;
         }
 
         public async Task<WorkflowExecutionResult?> ExecuteAsync(WorkflowExecutor workflowExecutor,
             WorkflowContext workflowContext, string? nodeId = default)
         {
-
-            var rs = await workflowExecutor.ExecuteAsync(workflowContext, nodeId, default);
-            if (nodeId != null)
+            var queue = _serviceProvider.GetRequiredService<EventQueue>();
+            var tokenSource = new CancellationTokenSource(3000);
+            WorkflowExecutionResult? result = await workflowExecutor.ExecuteAsync(workflowContext, nodeId, default);
+            while (!tokenSource.IsCancellationRequested)
             {
-                IncraseExecutedCount(nodeId);
-            }
-            _output.WriteLine("Execute workflow status " + rs.Status);
-            _output.WriteLine("Execute workflow message " + rs.Message);
-
-            var context = rs.Context;
-            if (context?.State?.BlockingNodes != null)
-            {
-                var blockings = context.State
-                    .BlockingNodes.Where(b =>
-                        context.GetNode(b.Id).Node is IActivity);
-                if (blockings.Any())
+                var context = result.Context;
+                if (context.Completed)
                 {
-                    return await ExecuteAsync(workflowExecutor, context, blockings.First().Id);
+                    break;
                 }
-
-                var events = context.State
-                    .BlockingNodes.Where(b =>
-                        context.GetNode(b.Id).Node is IEvent);
-
-                if (events.Any())
+                if (context?.State?.BlockingNodes != null)
                 {
-                    try
-                    {
-                        var tokenSource = new CancellationTokenSource(3000);
-                        await _signal.WaitAsync(tokenSource.Token);
-                        if (_event.TryDequeue(out var eventId))
+                    var blockings = context.State
+                        .BlockingNodes.Where(b =>
                         {
-                            return await ExecuteAsync(workflowExecutor, context, eventId);
+                            var node = context.GetNode(b.Id).Node;
+                            return node is IActivity && node is not SubProcess;
+                        });
+
+                    if (blockings.Any())
+                    {
+                        var blockingId = blockings.First().Id;
+                        var rs = await workflowExecutor.ExecuteAsync(workflowContext, blockingId, default);
+                        if (rs != null)
+                        {
+                            result = rs;
+                            IncraseExecutedCount(blockingId);
+                            _output.WriteLine("Execute workflow status " + rs.Status);
+                            _output.WriteLine("Execute workflow message " + rs.Message);
+                            continue;
+
                         }
                     }
-                    catch (OperationCanceledException)
+
+                    var events = context.State
+                        .BlockingNodes.Where(b =>
+                            context.GetNode(b.Id).Node is IEvent);
+
+                    if (events.Any())
                     {
-                        return new WorkflowExecutionResult
+                        try
                         {
-                            Status = WorkflowStatus.Faulted,
-                            Message = "Operation timedout"
-                        };
+                            var eventId = await queue.TryCatchAsync(tokenSource.Token);
+                            if (eventId != null)
+                            {
+                                var rs = await workflowExecutor.ExecuteAsync(workflowContext, eventId, default);
+                                if (rs != null)
+                                {
+                                    result = rs;
+                                    IncraseExecutedCount(eventId);
+                                    _output.WriteLine("Execute workflow status " + rs.Status);
+                                    _output.WriteLine("Execute workflow message " + rs.Message);
+                                    continue;
+
+                                }
+                            }
+                        }
+                        catch (OperationCanceledException)
+                        {
+                        }
                     }
                 }
+                await Task.Delay(100);
             }
-            return rs;
-
-        }
-
-        public void Catched(string eventId)
-        {
-            _event.Enqueue(eventId);
-            _signal.Release();
+            return result;
         }
 
         private void IncraseExecutedCount(string nodeId)
@@ -231,7 +207,7 @@ namespace Juice.Workflows.Tests
             }
             if (_executed[nodeId] > 3)
             {
-                throw new InvalidOperationException($"Node was executed {_executed[nodeId]} times");
+                throw new InvalidOperationException($"Node {nodeId} was executed {_executed[nodeId]} times");
             }
         }
     }

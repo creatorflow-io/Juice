@@ -176,7 +176,8 @@ namespace Juice.Workflows.Tests
 
                 services.AddDbWorkflows();
 
-                services.AddMediatR(typeof(StartEvent));
+                services.AddMediatR(typeof(StartEvent), typeof(TimerEventStartDomainEventHandler));
+                services.AddSingleton<EventQueue>();
 
             });
             string? workflowId = default;

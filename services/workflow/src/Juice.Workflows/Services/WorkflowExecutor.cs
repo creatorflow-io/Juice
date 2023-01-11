@@ -7,7 +7,7 @@
         // Workflow execution can trigger (directly or transitively) without reaching a blocking activity.
         private const int MaxRecursionDepth = 100;
         private int _currentRecursionDepth;
-        private Queue<(NodeContext Node, FlowContext Flow)> _queue = new Queue<(NodeContext, FlowContext)>();
+        private Queue<(NodeContext Node, FlowContext? Flow)> _queue = new Queue<(NodeContext, FlowContext?)>();
 
         private bool _hasFailure = false;
         private bool _hasBlocking = false;
@@ -258,11 +258,27 @@
                     await gateway.PostExecuteCheckAsync(workflowContext, nodeContext, token);
                 }
 
+                #region Sub-process finished
+                if (nodeContext.Node is EndEvent endEvent)
+                {
+                    var subProcess = workflowContext.GetNode(nodeContext.Record.ProcessIdRef);
+                    if (subProcess != null)
+                    {
+                        _queue.Enqueue((subProcess, default));
+                    }
+                }
+                #endregion
+
                 #endregion
             }
             else if (nodeExecutionResult.Status == WorkflowStatus.Faulted)
             {
                 _hasFailure = true;
+                var subProcess = workflowContext.GetNode(nodeContext.Record.ProcessIdRef);
+                if (subProcess != null)
+                {
+                    _queue.Enqueue((subProcess, default));
+                }
             }
             else if (nodeExecutionResult.Status == WorkflowStatus.Halted)
             {

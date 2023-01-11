@@ -14,6 +14,8 @@ global using Juice.Workflows.Nodes.Activities;
 global using Juice.Workflows.Nodes.Events;
 global using Juice.Workflows.Nodes.Gateways;
 global using Juice.Workflows.Services;
+global using Juice.Workflows.Tests.Common;
+global using Juice.Workflows.Tests.EventHandlers;
 global using Juice.Workflows.Tests.Nodes;
 global using MediatR;
 global using Microsoft.Extensions.DependencyInjection;
