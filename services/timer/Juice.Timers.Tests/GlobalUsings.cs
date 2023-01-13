@@ -1,0 +1,15 @@
+﻿global using System;
+global using System.Linq;
+global using System.Threading.Tasks;
+global using FluentAssertions;
+global using Juice.EF.Extensions;
+global using Juice.Extensions.DependencyInjection;
+global using Juice.Timers.Domain.Commands;
+global using Juice.Timers.EF;
+global using Juice.Timers.EF.DependencyInjection;
+global using Juice.XUnit;
+global using MediatR;
+global using Microsoft.Extensions.DependencyInjection;
+global using Microsoft.Extensions.Logging;
+global using Xunit;
+global using Xunit.Abstractions;

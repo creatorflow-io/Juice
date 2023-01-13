@@ -12,7 +12,7 @@ namespace Juice.Domain
     {
         [Key]
         public virtual TKey Id { get; protected set; }
-        public string? Name { get; protected set; }
+        public string Name { get; protected set; }
         public bool Disabled { get; protected set; }
 
         public virtual void UpdateName(string name)
@@ -63,7 +63,7 @@ namespace Juice.Domain
         #endregion
 
         #region Bassic info
-        public string? Name { get; set; }
+        public string Name { get; set; }
 
         public bool Disabled { get; protected set; }
 

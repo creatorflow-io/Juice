@@ -28,7 +28,10 @@ namespace Juice.Integrations.EventBus
 
         public async Task AddAndSaveEventAsync(IntegrationEvent evt)
         {
-            _logger.LogDebug("----- Enqueuing integration event {IntegrationEventId} to repository ({@IntegrationEvent})", evt.Id, evt);
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("----- Enqueuing integration event {IntegrationEventId} to repository ({@IntegrationEvent})", evt.Id, evt);
+            }
             if (!DomainContext.HasActiveTransaction)
             {
                 throw new Exception($"{typeof(TContext).Name} does not have an active transaction");
@@ -46,8 +49,10 @@ namespace Juice.Integrations.EventBus
 
             foreach (var logEvt in pendingLogEvents)
             {
-                _logger.LogInformation("----- Publishing integration event: {IntegrationEventId} - ({@IntegrationEvent})", logEvt.EventId, logEvt.IntegrationEvent);
-
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogDebug("----- Publishing integration event: {IntegrationEventId} - ({@IntegrationEvent})", logEvt.EventId, logEvt.IntegrationEvent);
+                }
                 try
                 {
                     await _eventLogService.MarkEventAsInProgressAsync(logEvt.EventId);
