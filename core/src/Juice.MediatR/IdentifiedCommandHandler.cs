@@ -13,9 +13,9 @@ namespace Juice.MediatR
     public abstract class IdentifiedCommandHandler<T, R> : IRequestHandler<IdentifiedCommand<T, R>, R>
         where T : IRequest<R>
     {
-        private readonly IMediator _mediator;
-        private readonly IRequestManager _requestManager;
-        private readonly ILogger _logger;
+        protected readonly IMediator _mediator;
+        protected readonly IRequestManager _requestManager;
+        protected readonly ILogger _logger;
 
         public IdentifiedCommandHandler(
             IMediator mediator,
@@ -32,10 +32,7 @@ namespace Juice.MediatR
         /// Creates the result value to return if a previous request was found
         /// </summary>
         /// <returns></returns>
-        protected virtual R CreateResultForDuplicateRequest()
-        {
-            return default;
-        }
+        protected abstract Task<R> CreateResultForDuplicateRequestAsync(IdentifiedCommand<T, R> message);
 
         /// <summary>
         /// This method handles the command. It just ensures that no other request exists with the same ID, and if this is the case
@@ -49,7 +46,7 @@ namespace Juice.MediatR
             var created = await _requestManager.TryCreateRequestForCommandAsync<T, R>(message.Id);
             if (!created)
             {
-                return CreateResultForDuplicateRequest();
+                return await CreateResultForDuplicateRequestAsync(message);
             }
             try
             {
@@ -57,24 +54,28 @@ namespace Juice.MediatR
                 var commandName = command.GetGenericTypeName();
 
                 var (idProperty, commandId) = ExtractInfo(command);
-
-                _logger.LogInformation(
-                    "----- Sending command: {CommandName} - {IdProperty}: {CommandId} ({@Command})",
-                    commandName,
-                    idProperty,
-                    commandId,
-                    command);
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogDebug(
+                        "----- Sending command: {CommandName} - {IdProperty}: {CommandId} ({@Command})",
+                        commandName,
+                        idProperty,
+                        commandId,
+                        command);
+                }
 
                 // Send the embeded business command to mediator so it runs its related CommandHandler 
                 var result = await _mediator.Send(command, cancellationToken);
-
-                _logger.LogInformation(
-                    "----- Command result: {@Result} - {CommandName} - {IdProperty}: {CommandId} ({@Command})",
-                    result,
-                    commandName,
-                    idProperty,
-                    commandId,
-                    command);
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogDebug(
+                        "----- Command result: {@Result} - {CommandName} - {IdProperty}: {CommandId} ({@Command})",
+                        result,
+                        commandName,
+                        idProperty,
+                        commandId,
+                        command);
+                }
                 await _requestManager.TryCompleteRequestAsync(message.Id, true);
                 return result;
             }

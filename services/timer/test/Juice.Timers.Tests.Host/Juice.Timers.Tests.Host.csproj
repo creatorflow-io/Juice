@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>$(AppTargetFramework)</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>juice.timers.tests.host</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\core\src\Juice.EventBus.IntegrationEventLog.EF.PostgreSQL\Juice.EventBus.IntegrationEventLog.EF.PostgreSQL.csproj" />
+    <ProjectReference Include="..\..\..\..\core\src\Juice.EventBus.IntegrationEventLog.EF.SqlServer\Juice.EventBus.IntegrationEventLog.EF.SqlServer.csproj" />
+    <ProjectReference Include="..\..\..\..\core\src\Juice.EventBus.RabbitMQ\Juice.EventBus.RabbitMQ.csproj" />
+    <ProjectReference Include="..\..\..\..\core\src\Juice.MediatR.RequestManager.EF.PostgreSQL\Juice.MediatR.RequestManager.EF.PostgreSQL.csproj" />
+    <ProjectReference Include="..\..\..\..\core\src\Juice.MediatR.RequestManager.EF.SqlServer\Juice.MediatR.RequestManager.EF.SqlServer.csproj" />
+    <ProjectReference Include="..\..\Juice.Timers.BackgroundTasks\Juice.Timers.BackgroundTasks.csproj" />
+    <ProjectReference Include="..\..\src\Juice.Timers.Api\Juice.Timers.Api.csproj" />
+    <ProjectReference Include="..\..\src\Juice.Timers.EF.PostgreSQL\Juice.Timers.EF.PostgreSQL.csproj" />
+    <ProjectReference Include="..\..\src\Juice.Timers.EF.SqlServer\Juice.Timers.EF.SqlServer.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Label="Migrations">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="$(EFVersion)">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="$(EFVersion)">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+</Project>

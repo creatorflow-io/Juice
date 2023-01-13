@@ -1,8 +1,5 @@
-﻿using Juice.MediatR;
-using Juice.MultiTenant.EF;
-using MediatR;
+﻿using Juice.MultiTenant.EF;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace Juice.MultiTenant.Api.Commands
 {
@@ -50,6 +47,9 @@ namespace Juice.MultiTenant.Api.Commands
             : base(mediator, requestManager, logger)
         {
         }
+
+        protected override Task<IOperationResult> CreateResultForDuplicateRequestAsync(IdentifiedCommand<UpdateTenantCommand, IOperationResult> mesage)
+            => Task.FromResult((IOperationResult)OperationResult.Success);
 
         protected override (string IdProperty, string CommandId) ExtractInfo(UpdateTenantCommand command) => (nameof(command.Id), command.Id);
     }

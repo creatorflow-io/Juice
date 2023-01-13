@@ -59,7 +59,8 @@ namespace Juice.MultiTenant.Api.Commands
         {
         }
 
-        protected override IOperationResult CreateResultForDuplicateRequest() => OperationResult.Success;
+        protected override Task<IOperationResult> CreateResultForDuplicateRequestAsync(IdentifiedCommand<CreateTenantCommand, IOperationResult> mesage)
+            => Task.FromResult((IOperationResult)OperationResult.Success);
 
         protected override (string IdProperty, string CommandId) ExtractInfo(CreateTenantCommand command)
             => (nameof(command.Identifier), command.Identifier);

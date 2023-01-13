@@ -35,7 +35,7 @@ namespace Juice.Integrations.MediatR.Behaviors
             {
                 if (_dbContext.HasActiveTransaction)
                 {
-                    _logger.LogInformation("DbContext has active transaction");
+                    _logger.LogDebug("DbContext has active transaction");
 
                     return await next();
                 }
@@ -44,15 +44,22 @@ namespace Juice.Integrations.MediatR.Behaviors
                     // Achieving atomicity between original catalog database operation and the IntegrationEventLog thanks to a local transaction
                     using (_logger.BeginScope(CreateLogScope(transaction.TransactionId)))
                     {
-                        _logger.LogInformation("----- Begin transaction {TransactionId} for {CommandName} ({@Command})", transaction.TransactionId, typeName, request);
-
+                        if (_logger.IsEnabled(LogLevel.Debug))
+                        {
+                            _logger.LogDebug("----- Begin transaction {TransactionId} for {CommandName} ({@Command})", transaction.TransactionId, typeName, request);
+                        }
                         response = await next();
 
-                        _logger.LogInformation("----- Commit transaction {TransactionId} for {CommandName}", transaction.TransactionId, typeName);
+                        if (_logger.IsEnabled(LogLevel.Debug))
+                        {
+                            _logger.LogDebug("----- Commit transaction {TransactionId} for {CommandName}", transaction.TransactionId, typeName);
+                        }
 
                         await _dbContext.CommitTransactionAsync(transaction);
-
-                        _logger.LogInformation("----- Transaction {TransactionId} committed", transaction.TransactionId);
+                        if (_logger.IsEnabled(LogLevel.Debug))
+                        {
+                            _logger.LogDebug("----- Transaction {TransactionId} committed", transaction.TransactionId);
+                        }
                     }
 
                     await _integrationEventService.PublishEventsThroughEventBusAsync(transaction.TransactionId);
