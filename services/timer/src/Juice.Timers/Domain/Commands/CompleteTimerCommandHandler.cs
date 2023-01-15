@@ -5,9 +5,11 @@ namespace Juice.Timers.Domain.Commands
     public class CompleteTimerCommandHandler : IRequestHandler<CompleteTimerCommand, IOperationResult>
     {
         private ITimerRepository _repository;
-        public CompleteTimerCommandHandler(ITimerRepository repository)
+        private TimerManager _timer;
+        public CompleteTimerCommandHandler(ITimerRepository repository, TimerManager timer)
         {
             _repository = repository;
+            _timer = timer;
         }
         public async Task<IOperationResult> Handle(CompleteTimerCommand request, CancellationToken cancellationToken)
         {
@@ -20,6 +22,7 @@ namespace Juice.Timers.Domain.Commands
                 }
                 timerRequest.Complete();
                 await _repository.UpdateAsync(timerRequest, cancellationToken);
+                _timer.Remove(timerRequest.Id);
                 return OperationResult.Success;
             }
             catch (Exception ex)
