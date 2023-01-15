@@ -6,22 +6,22 @@ namespace Juice.Timers.Domain.Commands
         : IRequestHandler<CreateTimerCommand, TimerRequest>
     {
         private ITimerRepository _repository;
-        private IMediator _mediator;
 
-        public CreateTimerCommandHandler(ITimerRepository repository, IMediator mediator)
+        private TimerManager _timer;
+
+        public CreateTimerCommandHandler(ITimerRepository repository, TimerManager timer)
         {
             _repository = repository;
-            _mediator = mediator;
+            _timer = timer;
         }
 
         public async Task<TimerRequest> Handle(CreateTimerCommand request, CancellationToken cancellationToken)
         {
             var timerRequest = new TimerRequest(request.Issuer, request.CorrelationId, request.AbsoluteExpired);
             var id = await _repository.CreateAsync(timerRequest, cancellationToken);
-            if (timerRequest.IsExpired && !timerRequest.IsCompleted)
-            {
-                await _mediator.Send(new IdentifiedCommand<CompleteTimerCommand, IOperationResult>(new CompleteTimerCommand(id), id));
-            }
+
+            await _timer.StartAsync(timerRequest);
+
             return timerRequest;
         }
     }

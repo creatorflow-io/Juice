@@ -19,6 +19,7 @@ namespace Juice.Timers.Domain.AggregratesModel.TimerAggregrate
         public string CorrelationId { get; init; }
         public DateTimeOffset AbsoluteExpired { get; init; }
 
+
         public bool IsCompleted { get; private set; }
 
         public DateTimeOffset? ProcessedTime { get; private set; }

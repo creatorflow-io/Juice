@@ -5,6 +5,7 @@ using Juice.MediatR.RequestManager.EF.DependencyInjection;
 using Juice.Timers.Api.Behaviors.DependencyInjection;
 using Juice.Timers.Api.Domain.EventHandlers;
 using Juice.Timers.BackgroundTasks.DependencyInjection;
+using Juice.Timers.DependencyInjection;
 using Juice.Timers.Domain.Events;
 using Juice.Timers.EF;
 using Juice.Timers.EF.DependencyInjection;
@@ -29,6 +30,7 @@ static void ConfigureTimer(IServiceCollection services, string provider, IConfig
         options.Schema = "App";
         options.DatabaseProvider = provider;
     }).AddEFTimerRepo();
+    services.AddTimerService(configuration.GetSection("Timer"));
     services.AddTimerBackgroundTasks(configuration.GetSection("Timer"));
 
     services.AddMediatR(typeof(TimerExpiredDomainEventHandler), typeof(TimerExpiredDomainEvent));

@@ -10,6 +10,7 @@ using Juice.Services;
 using Juice.Timers.Api.Behaviors.DependencyInjection;
 using Juice.Timers.Api.Domain.EventHandlers;
 using Juice.Timers.Api.IntegrationEvents.Events;
+using Juice.Timers.DependencyInjection;
 using Juice.Timers.Domain.Events;
 using Microsoft.EntityFrameworkCore;
 
@@ -88,6 +89,8 @@ namespace Juice.Timers.Tests
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
 
+                services.AddTimerService(configuration.GetSection("Timer"));
+
                 services.AddTimerDbContext(configuration, options =>
                 {
                     options.Schema = "App";
@@ -163,6 +166,8 @@ namespace Juice.Timers.Tests
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
 
+                services.AddTimerService(configuration.GetSection("Timer"));
+
                 services.AddTimerDbContext(configuration, options =>
                 {
                     options.Schema = "App";
@@ -228,6 +233,8 @@ namespace Juice.Timers.Tests
                     .AddTestOutputLogger()
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
+
+                services.AddTimerService(configuration.GetSection("Timer"));
 
                 services.AddTimerDbContext(configuration, options =>
                 {
@@ -307,8 +314,10 @@ namespace Juice.Timers.Tests
                     options.Schema = "App";
                     options.DatabaseProvider = provider;
                 }).AddEFTimerRepo();
+                services.AddTimerService(configuration.GetSection("Timer"));
 
-                services.AddMediatR(typeof(TimerExpiredDomainEventHandler), typeof(TimerExpiredDomainEvent));
+                services.AddMediatR(typeof(TimerExpiredDomainEventHandler), typeof(TimerExpiredDomainEvent),
+                    typeof(SelfTimerExipredDomainEventHandler));
                 services.AddOperationExceptionBehavior();
                 services.AddMediatRTimerBehaviors();
 
@@ -357,7 +366,7 @@ namespace Juice.Timers.Tests
 
             var delayTime = (DateTimeOffset.Now - expiredTime);
             _output.WriteLine($"Delayed: {delayTime}");
-            delayTime.Should().BeLessThan(TimeSpan.FromSeconds(5)); // timer interval option
+            delayTime.Should().BeLessThan(TimeSpan.FromSeconds(1)); // timer interval option
 
             eventBus.Unsubscribe<TimerExpiredIntegrationEvent, TimerExpiredIntegrationEventHandler>();
             await Task.Delay(TimeSpan.FromSeconds(1));
@@ -384,6 +393,25 @@ namespace Juice.Timers.Tests
         {
             _logger.LogInformation("Received timer event {CorrelationId}", @event.CorrelationId);
             _sharedToken.CTS.Cancel();
+        }
+    }
+
+    public class SelfTimerExipredDomainEventHandler : INotificationHandler<TimerExpiredDomainEvent>
+    {
+        private SharedToken _sharedToken;
+        private ILogger _logger;
+        public SelfTimerExipredDomainEventHandler(ILogger<SelfTimerExipredDomainEventHandler> logger,
+            SharedToken sharedToken)
+        {
+            _logger = logger;
+            _sharedToken = sharedToken;
+        }
+
+        public Task Handle(TimerExpiredDomainEvent notification, CancellationToken cancellationToken)
+        {
+            _logger.LogInformation("Timeout event {CorrelationId}", notification.Request.CorrelationId);
+            _sharedToken.CTS.Cancel();
+            return Task.CompletedTask;
         }
     }
 }

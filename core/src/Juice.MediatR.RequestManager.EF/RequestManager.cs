@@ -38,13 +38,27 @@ namespace Juice.MediatR.RequestManager.EF
         public async Task<bool> TryCreateRequestForCommandAsync<T, R>(Guid id)
             where T : IRequest<R>
         {
+            // retry failed or interupted conmmands
+            if (await _context.ClientRequests.AnyAsync(r => r.Id == id
+                && (r.State == RequestState.ProcessedFailed
+                || (r.State == RequestState.New && r.Time < DateTimeOffset.Now.AddSeconds(-15)))))
+            {
+                return true;
+            }
             if (await _context.ClientRequests.AnyAsync(r => r.Id == id))
             {
                 return false;
             }
-            _context.ClientRequests.Add(new ClientRequest(id, typeof(T).Name));
-            await _context.SaveChangesAsync();
-            return true;
+            try
+            {
+                _context.ClientRequests.Add(new ClientRequest(id, typeof(T).Name));
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
     }
 }
