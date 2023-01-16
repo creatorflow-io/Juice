@@ -1,4 +1,5 @@
 ﻿
+using System.Collections.Generic;
 using System.Threading;
 using Juice.EventBus;
 using Juice.EventBus.IntegrationEventLog.EF;
@@ -174,16 +175,58 @@ namespace Juice.Timers.Tests
                     options.DatabaseProvider = provider;
                 }).AddEFTimerRepo();
 
-                services.AddMediatR(typeof(TimerExpiredIntegrationEventHandler), typeof(TimerExpiredDomainEvent));
+                services.AddMediatR(typeof(TimerExpiredDomainEvent));
                 services.AddOperationExceptionBehavior();
-                services.AddMediatRTimerBehaviors();
 
-                services.AddIntegrationEventService()
-                        .AddIntegrationEventLog()
-                        .RegisterContext<TimerDbContext>("App");
+            });
 
-                services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"),
-                    options => options.SubscriptionClientName = "event_bus_test1");
+            using var scope = resolver.ServiceProvider.CreateScope();
+
+            var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+            for (var i = 0; i < 100; i++)
+            {
+                var id = new DefaultStringIdGenerator().GenerateRandomId(6);
+
+                var request = await mediator.Send(new CreateTimerCommand("xunit", id, DateTimeOffset.Now.AddSeconds(2)));
+            }
+        }
+
+
+        [IgnoreOnCITheory(DisplayName = "Complete 100 TimerRequests"), TestPriority(900)]
+        [InlineData("PostgreSQL")]
+        public async Task Should_complete_100_Async(string provider)
+        {
+            var resolver = new DependencyResolver
+            {
+                CurrentDirectory = AppContext.BaseDirectory
+            };
+
+            resolver.ConfigureServices(services =>
+            {
+                var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
+                var configuration = configService.GetConfiguration();
+
+                services.AddSingleton(provider => _output);
+
+                services.AddLogging(builder =>
+                {
+                    builder.ClearProviders()
+                    .AddTestOutputLogger()
+                    .AddConfiguration(configuration.GetSection("Logging"));
+                });
+
+                services.AddTimerService(configuration.GetSection("Timer"));
+
+                services.AddTimerDbContext(configuration, options =>
+                {
+                    options.Schema = "App";
+                    options.DatabaseProvider = provider;
+                }).AddEFTimerRepo();
+
+                services.AddSingleton<SharedToken>();
+
+                services.AddMediatR(typeof(SelfTimerExipredDomainEventHandler), typeof(TimerExpiredDomainEvent));
+                services.AddOperationExceptionBehavior();
 
                 services.AddRequestManager(configuration, options =>
                 {
@@ -202,12 +245,19 @@ namespace Juice.Timers.Tests
             using var scope = resolver.ServiceProvider.CreateScope();
 
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+            var ids = new List<string>();
             for (var i = 0; i < 100; i++)
             {
                 var id = new DefaultStringIdGenerator().GenerateRandomId(6);
 
                 var request = await mediator.Send(new CreateTimerCommand("xunit", id, DateTimeOffset.Now.AddSeconds(2)));
+                ids.Add(id);
             }
+
+            await Task.Delay(5000);
+            var dbContext = scope.ServiceProvider.GetRequiredService<TimerDbContext>();
+            var incompleted = await dbContext.TimerRequests.AnyAsync(t => ids.Contains(t.CorrelationId) && !t.IsCompleted);
+            incompleted.Should().BeFalse();
         }
 
         [IgnoreOnCITheory(DisplayName = "Complete TimerRequest"), TestPriority(800)]
