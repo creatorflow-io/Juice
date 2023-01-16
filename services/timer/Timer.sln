@@ -19,9 +19,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.MediatR.RequestManage
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.MediatR.RequestManager.EF.SqlServer", "..\..\core\src\Juice.MediatR.RequestManager.EF.SqlServer\Juice.MediatR.RequestManager.EF.SqlServer.csproj", "{1D0454C7-A590-4FBA-BAF1-30BB9225A00F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.Timers.Api", "src\Juice.Timers.Api\Juice.Timers.Api.csproj", "{04CF09B2-B829-4144-B32C-51E679466B01}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Timers.Api", "src\Juice.Timers.Api\Juice.Timers.Api.csproj", "{04CF09B2-B829-4144-B32C-51E679466B01}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.Timers.EF", "src\Juice.Timers.EF\Juice.Timers.EF.csproj", "{E90DA35C-BAC1-4F6A-ADC2-1D3091509386}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Timers.EF", "src\Juice.Timers.EF\Juice.Timers.EF.csproj", "{E90DA35C-BAC1-4F6A-ADC2-1D3091509386}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.EventBus", "..\..\core\src\Juice.EventBus\Juice.EventBus.csproj", "{82B7BCDC-BA7B-4A58-9304-39F5E44802A2}"
 EndProject
@@ -35,26 +35,26 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.EventBus.RabbitMQ", "
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Integrations", "..\..\core\src\Juice.Integrations\Juice.Integrations.csproj", "{3F59EDBB-97FE-413C-A1FC-60B5A360A08B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.Timers.Api.Contracts", "src\Juice.Timers.Api.Contracts\Juice.Timers.Api.Contracts.csproj", "{81601A7F-DD03-4641-96A3-9B96FF28438A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Timers.Api.Contracts", "src\Juice.Timers.Api.Contracts\Juice.Timers.Api.Contracts.csproj", "{81601A7F-DD03-4641-96A3-9B96FF28438A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.Timers.EF.PostgreSQL", "src\Juice.Timers.EF.PostgreSQL\Juice.Timers.EF.PostgreSQL.csproj", "{A3269CD7-3601-4562-BD5E-0CE96EF99521}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Timers.EF.PostgreSQL", "src\Juice.Timers.EF.PostgreSQL\Juice.Timers.EF.PostgreSQL.csproj", "{A3269CD7-3601-4562-BD5E-0CE96EF99521}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.Timers.EF.SqlServer", "src\Juice.Timers.EF.SqlServer\Juice.Timers.EF.SqlServer.csproj", "{BCE4B937-19B6-443F-9D37-8814C0116DB8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Timers.EF.SqlServer", "src\Juice.Timers.EF.SqlServer\Juice.Timers.EF.SqlServer.csproj", "{BCE4B937-19B6-443F-9D37-8814C0116DB8}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{440E68F2-3619-47AC-A113-DE93A86BA4E6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.Timers.Tests.Host", "test\Juice.Timers.Tests.Host\Juice.Timers.Tests.Host.csproj", "{6CBEC797-A34C-45DD-8832-B21213901E7A}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.Timers.Tests", "Juice.Timers.Tests\Juice.Timers.Tests.csproj", "{B1D99B18-184D-4EDA-956C-771C32F67089}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Timers.Tests.Host", "test\Juice.Timers.Tests.Host\Juice.Timers.Tests.Host.csproj", "{6CBEC797-A34C-45DD-8832-B21213901E7A}"
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Juice.XUnit", "..\..\test\Juice.XUnit\Juice.XUnit.shproj", "{3C5739A5-F7BF-4D1E-8727-FC0C11C5BD21}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.Timers.BackgroundTasks", "Juice.Timers.BackgroundTasks\Juice.Timers.BackgroundTasks.csproj", "{FF226CA7-6129-4E82-84BA-10B0EEB167CA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Timers.BackgroundTasks", "src\Juice.Timers.BackgroundTasks\Juice.Timers.BackgroundTasks.csproj", "{0C9F13FD-666F-4CC9-8DC1-15B3B11A6E9A}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Timers.Tests", "test\Juice.Timers.Tests\Juice.Timers.Tests.csproj", "{8CCA4BAE-B1A9-4A26-B967-9BD70C2064AF}"
 EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		..\..\test\Juice.XUnit\Juice.XUnit.projitems*{3c5739a5-f7bf-4d1e-8727-fc0c11c5bd21}*SharedItemsImports = 13
-		..\..\test\Juice.XUnit\Juice.XUnit.projitems*{b1d99b18-184d-4eda-956c-771c32f67089}*SharedItemsImports = 5
+		..\..\test\Juice.XUnit\Juice.XUnit.projitems*{8cca4bae-b1a9-4a26-b967-9bd70c2064af}*SharedItemsImports = 5
 	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -137,14 +137,14 @@ Global
 		{6CBEC797-A34C-45DD-8832-B21213901E7A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6CBEC797-A34C-45DD-8832-B21213901E7A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6CBEC797-A34C-45DD-8832-B21213901E7A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B1D99B18-184D-4EDA-956C-771C32F67089}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B1D99B18-184D-4EDA-956C-771C32F67089}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B1D99B18-184D-4EDA-956C-771C32F67089}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B1D99B18-184D-4EDA-956C-771C32F67089}.Release|Any CPU.Build.0 = Release|Any CPU
-		{FF226CA7-6129-4E82-84BA-10B0EEB167CA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{FF226CA7-6129-4E82-84BA-10B0EEB167CA}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{FF226CA7-6129-4E82-84BA-10B0EEB167CA}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{FF226CA7-6129-4E82-84BA-10B0EEB167CA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0C9F13FD-666F-4CC9-8DC1-15B3B11A6E9A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0C9F13FD-666F-4CC9-8DC1-15B3B11A6E9A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0C9F13FD-666F-4CC9-8DC1-15B3B11A6E9A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0C9F13FD-666F-4CC9-8DC1-15B3B11A6E9A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8CCA4BAE-B1A9-4A26-B967-9BD70C2064AF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8CCA4BAE-B1A9-4A26-B967-9BD70C2064AF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8CCA4BAE-B1A9-4A26-B967-9BD70C2064AF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8CCA4BAE-B1A9-4A26-B967-9BD70C2064AF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -169,9 +169,9 @@ Global
 		{A3269CD7-3601-4562-BD5E-0CE96EF99521} = {AA0452DF-ED3A-4C1C-8A18-69404067D98B}
 		{BCE4B937-19B6-443F-9D37-8814C0116DB8} = {AA0452DF-ED3A-4C1C-8A18-69404067D98B}
 		{6CBEC797-A34C-45DD-8832-B21213901E7A} = {440E68F2-3619-47AC-A113-DE93A86BA4E6}
-		{B1D99B18-184D-4EDA-956C-771C32F67089} = {440E68F2-3619-47AC-A113-DE93A86BA4E6}
 		{3C5739A5-F7BF-4D1E-8727-FC0C11C5BD21} = {440E68F2-3619-47AC-A113-DE93A86BA4E6}
-		{FF226CA7-6129-4E82-84BA-10B0EEB167CA} = {AA0452DF-ED3A-4C1C-8A18-69404067D98B}
+		{0C9F13FD-666F-4CC9-8DC1-15B3B11A6E9A} = {AA0452DF-ED3A-4C1C-8A18-69404067D98B}
+		{8CCA4BAE-B1A9-4A26-B967-9BD70C2064AF} = {440E68F2-3619-47AC-A113-DE93A86BA4E6}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E12C0C51-F3CC-4F13-AF15-DC92FCA9915B}
