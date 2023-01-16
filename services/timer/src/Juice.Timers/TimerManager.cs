@@ -10,9 +10,9 @@ namespace Juice.Timers
 
         public Guid[] ManagedIds => _timers.Select(t => t.Id).ToArray();
 
-        public TimerManager(IServiceProvider serviceProvider)
+        public TimerManager(IServiceScopeFactory scopeFactory)
         {
-            _serviceProvider = serviceProvider;
+            _serviceProvider = scopeFactory.CreateScope().ServiceProvider;
         }
 
         public async Task StartAsync(TimerRequest request)
