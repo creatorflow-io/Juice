@@ -1,0 +1,60 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.1.32407.343
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{CDC1709E-A821-4B87-9989-F851A5365A15}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Locks", "src\Juice.Locks\Juice.Locks.csproj", "{7314F36A-033B-4E34-B7CA-1766B735897E}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{C910D53B-ABC3-4DA2-9236-C3BEB3C5464A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.Locks.Tests", "test\Juice.Locks.Tests\Juice.Locks.Tests.csproj", "{89407F8B-D268-4239-BEF5-95C2BEAF21A0}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice", "..\..\core\src\Juice\Juice.csproj", "{8FF8E2A9-BA55-49A3-AFB6-DF7475A9C8EA}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Juice.XUnit", "..\..\test\Juice.XUnit\Juice.XUnit.shproj", "{3C5739A5-F7BF-4D1E-8727-FC0C11C5BD21}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.Locks.Redis", "src\Juice.Locks.Redis\Juice.Locks.Redis.csproj", "{056F6287-3D88-4673-A3DB-F886E3818B30}"
+EndProject
+Global
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		..\..\test\Juice.XUnit\Juice.XUnit.projitems*{3c5739a5-f7bf-4d1e-8727-fc0c11c5bd21}*SharedItemsImports = 13
+		..\..\test\Juice.XUnit\Juice.XUnit.projitems*{89407f8b-d268-4239-bef5-95c2beaf21a0}*SharedItemsImports = 5
+	EndGlobalSection
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7314F36A-033B-4E34-B7CA-1766B735897E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7314F36A-033B-4E34-B7CA-1766B735897E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7314F36A-033B-4E34-B7CA-1766B735897E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7314F36A-033B-4E34-B7CA-1766B735897E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{89407F8B-D268-4239-BEF5-95C2BEAF21A0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{89407F8B-D268-4239-BEF5-95C2BEAF21A0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{89407F8B-D268-4239-BEF5-95C2BEAF21A0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{89407F8B-D268-4239-BEF5-95C2BEAF21A0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8FF8E2A9-BA55-49A3-AFB6-DF7475A9C8EA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8FF8E2A9-BA55-49A3-AFB6-DF7475A9C8EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8FF8E2A9-BA55-49A3-AFB6-DF7475A9C8EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8FF8E2A9-BA55-49A3-AFB6-DF7475A9C8EA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{056F6287-3D88-4673-A3DB-F886E3818B30}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{056F6287-3D88-4673-A3DB-F886E3818B30}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{056F6287-3D88-4673-A3DB-F886E3818B30}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{056F6287-3D88-4673-A3DB-F886E3818B30}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{7314F36A-033B-4E34-B7CA-1766B735897E} = {CDC1709E-A821-4B87-9989-F851A5365A15}
+		{89407F8B-D268-4239-BEF5-95C2BEAF21A0} = {C910D53B-ABC3-4DA2-9236-C3BEB3C5464A}
+		{8FF8E2A9-BA55-49A3-AFB6-DF7475A9C8EA} = {CDC1709E-A821-4B87-9989-F851A5365A15}
+		{3C5739A5-F7BF-4D1E-8727-FC0C11C5BD21} = {C910D53B-ABC3-4DA2-9236-C3BEB3C5464A}
+		{056F6287-3D88-4673-A3DB-F886E3818B30} = {CDC1709E-A821-4B87-9989-F851A5365A15}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {342D12C6-6DAF-4FD9-B621-D6939BB97D01}
+	EndGlobalSection
+EndGlobal
