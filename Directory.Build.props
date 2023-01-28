@@ -24,6 +24,7 @@
     <OrchardCoreVersion>1.2.2</OrchardCoreVersion>
     <GrpcVersion>2.50.0</GrpcVersion>
     <MediatRVersion>10.0.1</MediatRVersion>
+    <RedisVersion>2.6.90</RedisVersion>
     <JuiceRefVersion Condition="$(JuiceRefVersion)==''">6.0.0-alpha.*</JuiceRefVersion>
   </PropertyGroup>
 

@@ -9,7 +9,7 @@ namespace Juice.Integrations.MediatR.Behaviors
         where TResponse : IOperationResult
     {
         private readonly ILogger _logger;
-        public OperationExceptionBehavior(ILogger<TRequest> logger)
+        public OperationExceptionBehavior(ILogger<OperationExceptionBehavior<TRequest, TResponse>> logger)
         {
             _logger = logger;
         }
@@ -19,7 +19,8 @@ namespace Juice.Integrations.MediatR.Behaviors
             try
             {
                 var result = await next();
-                if (!result.Succeeded)
+
+                if (result != null && !result.Succeeded)
                 {
                     _logger.LogError("Command {typeName} {request} not success. {message}", typeName, request?.ToString() ?? "", result.Message);
                 }
@@ -28,7 +29,7 @@ namespace Juice.Integrations.MediatR.Behaviors
             catch (Exception ex)
             {
                 _logger.LogError("ERROR Handling command {typeName} {request}. {message}", typeName, request?.ToString() ?? "", ex.Message);
-                _logger.LogTrace(ex, "ERROR Handling command {typeName}.", typeName);
+                _logger.LogTrace("ERROR Handling command {typeName}. Trace: {trace}", typeName, ex.StackTrace);
                 return OperationResult.Failed(ex, $"Failed to handle command {typeName}") is TResponse response ? response : default;
             }
         }

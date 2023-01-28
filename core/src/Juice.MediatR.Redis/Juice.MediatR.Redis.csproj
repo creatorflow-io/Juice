@@ -7,11 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Juice.Locks\Juice.Locks.csproj" />
+    <ProjectReference Include="..\Juice.MediatR\Juice.MediatR.csproj" />
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="StackExchange.Redis" Version="$(RedisVersion)" />
   </ItemGroup>
-
 </Project>

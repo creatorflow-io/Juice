@@ -6,8 +6,11 @@ namespace Juice.Timers.Domain.Commands
     {
         private ITimerRepository _repository;
         private TimerManager _timer;
-        public CompleteTimerCommandHandler(ITimerRepository repository, TimerManager timer)
+        private ILogger _logger;
+        public CompleteTimerCommandHandler(ILogger<CompleteTimerCommandHandler> logger,
+            ITimerRepository repository, TimerManager timer)
         {
+            _logger = logger;
             _repository = repository;
             _timer = timer;
         }
@@ -16,17 +19,23 @@ namespace Juice.Timers.Domain.Commands
             try
             {
                 var timerRequest = await _repository.GetAsync(request.TimerRequestId, cancellationToken);
+                if (timerRequest == null)
+                {
+                    _logger.LogWarning("Timer {Id} not found", request.TimerRequestId);
+                    return OperationResult.Failed("Timer not found");
+                }
                 if (timerRequest.IsCompleted)
                 {
                     return OperationResult.Success;
                 }
                 timerRequest.Complete();
                 await _repository.UpdateAsync(timerRequest, cancellationToken);
-                _timer.Remove(timerRequest.Id);
+                _timer.TryRemove(timerRequest.Id);
                 return OperationResult.Success;
             }
             catch (Exception ex)
             {
+                _logger.LogTrace(ex.StackTrace);
                 return OperationResult.Failed(ex);
             }
         }
@@ -34,21 +43,20 @@ namespace Juice.Timers.Domain.Commands
 
     // Use for Idempotency in Command process
     public class CompleteTimerIdentifiedCommandHandler
-        : IdentifiedCommandHandler<CompleteTimerCommand, IOperationResult>
+        : IdentifiedCommandHandler<CompleteTimerCommand>
     {
 
         public CompleteTimerIdentifiedCommandHandler(IMediator mediator,
-            IRequestManager requestManager, ILogger<CreateTimerIdentifiedCommandHandler> logger)
+            IRequestManager requestManager, ILogger<CompleteTimerIdentifiedCommandHandler> logger)
             : base(mediator, requestManager, logger)
         {
         }
 
-        protected override async Task<IOperationResult> CreateResultForDuplicateRequestAsync(IdentifiedCommand<CompleteTimerCommand, IOperationResult> message)
-        {
-            return OperationResult.Success;
-        }
+        protected override Task<IOperationResult?> CreateResultForDuplicateRequestAsync(IdentifiedCommand<CompleteTimerCommand> message)
+            => Task.FromResult(default(IOperationResult));
 
         protected override (string IdProperty, string CommandId) ExtractInfo(CompleteTimerCommand command)
             => (nameof(command.TimerRequestId), command.TimerRequestId.ToString());
+
     }
 }

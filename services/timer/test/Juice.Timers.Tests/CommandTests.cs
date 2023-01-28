@@ -145,7 +145,7 @@ namespace Juice.Timers.Tests
         }
 
         [IgnoreOnCITheory(DisplayName = "Create 100 TimerRequests"), TestPriority(900)]
-        [InlineData("PostgreSQL")]
+        [InlineData("SqlServer")]
         public async Task Should_create_100_Async(string provider)
         {
             var resolver = new DependencyResolver
@@ -183,14 +183,85 @@ namespace Juice.Timers.Tests
             using var scope = resolver.ServiceProvider.CreateScope();
 
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+            var ids = new HashSet<string>();
             for (var i = 0; i < 100; i++)
             {
                 var id = new DefaultStringIdGenerator().GenerateRandomId(6);
-
                 var request = await mediator.Send(new CreateTimerCommand("xunit", id, DateTimeOffset.Now.AddSeconds(2)));
+                if (request != null)
+                {
+                    ids.Add(id);
+                }
             }
+
+            ids.Count.Should().Be(100);
         }
 
+        [IgnoreOnCIFact(DisplayName = "Complete via EventBus"), TestPriority(900)]
+        public async Task Should_complete_via_eventbus_Async()
+        {
+            var resolver = new DependencyResolver
+            {
+                CurrentDirectory = AppContext.BaseDirectory
+            };
+
+            resolver.ConfigureServices(services =>
+            {
+                var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
+                var configuration = configService.GetConfiguration();
+
+                services.AddSingleton(provider => _output);
+
+                services.AddLogging(builder =>
+                {
+                    builder.ClearProviders()
+                    .AddTestOutputLogger()
+                    .AddConfiguration(configuration.GetSection("Logging"));
+                });
+                services.AddSingleton<SharedToken>();
+                services.AddTransient<TimerExpiredIntegrationEventHandler>();
+                services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"),
+                    options => options.SubscriptionClientName = "event_bus_test1");
+
+            });
+
+            using var scope = resolver.ServiceProvider.CreateScope();
+
+            var eventBus = scope.ServiceProvider.GetRequiredService<IEventBus>();
+            eventBus.Subscribe<TimerExpiredIntegrationEvent, TimerExpiredIntegrationEventHandler>();
+
+            var expiredTime = DateTimeOffset.Now.AddSeconds(2);
+
+            int numberOfEvent = 50;
+            var ids = new HashSet<string>();
+            for (var i = 0; i < numberOfEvent; i++)
+            {
+                var id = new DefaultStringIdGenerator().GenerateRandomId(6);
+                var request = new TimerStartIntegrationEvent("xunit", id, DateTimeOffset.Now.AddSeconds(2));
+                await eventBus.PublishAsync(request);
+                ids.Add(id);
+                //await Task.Delay(1000);
+            }
+            var tokenSource = new CancellationTokenSource(10000);
+
+            while (!tokenSource.IsCancellationRequested)
+            {
+                _output.WriteLine("Waiting for timer");
+                try
+                {
+                    await Task.Delay(TimeSpan.FromMilliseconds(300), tokenSource.Token);
+                }
+                catch { }
+            }
+
+            var delayTime = (DateTimeOffset.Now - expiredTime);
+            _output.WriteLine($"Delayed: {delayTime}");
+
+            eventBus.Unsubscribe<TimerExpiredIntegrationEvent, TimerExpiredIntegrationEventHandler>();
+            await Task.Delay(TimeSpan.FromSeconds(1));
+            //delayTime.Should().BeLessThan(TimeSpan.FromSeconds(2)); // timer interval option
+            ids.Count.Should().Be(numberOfEvent);
+        }
 
         [IgnoreOnCITheory(DisplayName = "Complete 100 TimerRequests"), TestPriority(900)]
         [InlineData("PostgreSQL")]
@@ -284,6 +355,7 @@ namespace Juice.Timers.Tests
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
 
+                services.AddSingleton<SharedToken>();
                 services.AddTimerService(configuration.GetSection("Timer"));
 
                 services.AddTimerDbContext(configuration, options =>
