@@ -131,9 +131,14 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Locks", "services\dis
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Locks.Redis", "services\distributed-lock\src\Juice.Locks.Redis\Juice.Locks.Redis.csproj", "{63A93F37-D215-4CC1-9554-EC12B7829602}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.MediatR.Redis", "core\src\Juice.MediatR.Redis\Juice.MediatR.Redis.csproj", "{77FC7CE4-ECF5-41BE-B27B-48049284562D}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Timers.Tests", "services\timer\test\Juice.Timers.Tests\Juice.Timers.Tests.csproj", "{2A3D36A0-A109-4C57-8624-6FE7F7BEF8DE}"
+EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		test\Juice.XUnit\Juice.XUnit.projitems*{04534853-a342-49c9-96d7-94d174a8f98d}*SharedItemsImports = 5
+		test\Juice.XUnit\Juice.XUnit.projitems*{2a3d36a0-a109-4c57-8624-6fe7f7bef8de}*SharedItemsImports = 5
 		test\Juice.XUnit\Juice.XUnit.projitems*{3c5739a5-f7bf-4d1e-8727-fc0c11c5bd21}*SharedItemsImports = 13
 		test\Juice.XUnit\Juice.XUnit.projitems*{c7fe1197-8aa2-4155-a011-5968245578f7}*SharedItemsImports = 5
 	EndGlobalSection
@@ -330,6 +335,14 @@ Global
 		{63A93F37-D215-4CC1-9554-EC12B7829602}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{63A93F37-D215-4CC1-9554-EC12B7829602}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{63A93F37-D215-4CC1-9554-EC12B7829602}.Release|Any CPU.Build.0 = Release|Any CPU
+		{77FC7CE4-ECF5-41BE-B27B-48049284562D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{77FC7CE4-ECF5-41BE-B27B-48049284562D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{77FC7CE4-ECF5-41BE-B27B-48049284562D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{77FC7CE4-ECF5-41BE-B27B-48049284562D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2A3D36A0-A109-4C57-8624-6FE7F7BEF8DE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2A3D36A0-A109-4C57-8624-6FE7F7BEF8DE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2A3D36A0-A109-4C57-8624-6FE7F7BEF8DE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2A3D36A0-A109-4C57-8624-6FE7F7BEF8DE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -388,6 +401,8 @@ Global
 		{D3C54E8B-3783-4A70-81B6-576B7BACD4DB} = {EBC37EAD-B924-450D-8AE3-4184706E137A}
 		{77BF67E8-EBB3-4F42-A869-0169C200D485} = {D3C54E8B-3783-4A70-81B6-576B7BACD4DB}
 		{63A93F37-D215-4CC1-9554-EC12B7829602} = {D3C54E8B-3783-4A70-81B6-576B7BACD4DB}
+		{77FC7CE4-ECF5-41BE-B27B-48049284562D} = {9E4FFBBB-2E8E-4463-B502-260D502D43E1}
+		{2A3D36A0-A109-4C57-8624-6FE7F7BEF8DE} = {F0C1DDC9-295A-4DD8-AB19-3CE592CFA928}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DD654E02-538D-4E29-A098-413DEBAE4D98}

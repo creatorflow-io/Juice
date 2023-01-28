@@ -1,9 +1,12 @@
-﻿using Juice.EventBus.IntegrationEventLog.EF.DependencyInjection;
+﻿using Juice.EventBus;
+using Juice.EventBus.IntegrationEventLog.EF.DependencyInjection;
 using Juice.Integrations.EventBus.DependencyInjection;
 using Juice.Integrations.MediatR.DependencyInjection;
-using Juice.MediatR.RequestManager.EF.DependencyInjection;
+using Juice.MediatR.Redis.DependencyInjection;
 using Juice.Timers.Api.Behaviors.DependencyInjection;
 using Juice.Timers.Api.Domain.EventHandlers;
+using Juice.Timers.Api.IntegrationEvents.Events;
+using Juice.Timers.Api.IntegrationEvents.Handlers;
 using Juice.Timers.BackgroundTasks.DependencyInjection;
 using Juice.Timers.DependencyInjection;
 using Juice.Timers.Domain.Events;
@@ -13,10 +16,12 @@ using MediatR;
 
 var builder = WebApplication.CreateBuilder(args);
 
-ConfigureTimer(builder.Services, "PostgreSQL", builder.Configuration);
-ConfigureIntegrations(builder.Services, "PostgreSQL", builder.Configuration);
+ConfigureTimer(builder.Services, "SqlServer", builder.Configuration);
+ConfigureIntegrations(builder.Services, "SqlServer", builder.Configuration);
 
 var app = builder.Build();
+
+InitEvenBusEvent(app);
 
 app.MapGet("/", () => "Hello World!");
 
@@ -36,6 +41,8 @@ static void ConfigureTimer(IServiceCollection services, string provider, IConfig
     services.AddMediatR(typeof(TimerExpiredDomainEventHandler), typeof(TimerExpiredDomainEvent));
     services.AddOperationExceptionBehavior();
     services.AddMediatRTimerBehaviors();
+
+    services.AddTransient<TimerStartIntegrationEventHandler>();
 }
 
 static void ConfigureIntegrations(IServiceCollection services, string provider, IConfiguration configuration)
@@ -47,15 +54,27 @@ static void ConfigureIntegrations(IServiceCollection services, string provider, 
     services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"),
         options => options.SubscriptionClientName = "event_bus_test1");
 
-    services.AddRequestManager(configuration, options =>
+    //services.AddRequestManager(configuration, options =>
+    //{
+    //    options.ConnectionName = provider switch
+    //    {
+    //        "PostgreSQL" => "PostgreConnection",
+    //        "SqlServer" => "SqlServerConnection",
+    //        _ => throw new NotSupportedException($"Unsupported provider: {provider}")
+    //    };
+    //    options.DatabaseProvider = provider;
+    //    options.Schema = "App"; // default schema of Tenant
+    //});
+
+    services.AddRedisRequestManager(options =>
     {
-        options.ConnectionName = provider switch
-        {
-            "PostgreSQL" => "PostgreConnection",
-            "SqlServer" => "SqlServerConnection",
-            _ => throw new NotSupportedException($"Unsupported provider: {provider}")
-        };
-        options.DatabaseProvider = provider;
-        options.Schema = "App"; // default schema of Tenant
+        options.ConnectionString = configuration.GetConnectionString("Redis");
     });
+}
+
+static void InitEvenBusEvent(WebApplication app)
+{
+    var eventBus = app.Services.GetRequiredService<IEventBus>();
+
+    eventBus.Subscribe<TimerStartIntegrationEvent, TimerStartIntegrationEventHandler>();
 }

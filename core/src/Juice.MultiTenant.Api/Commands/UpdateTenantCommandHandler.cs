@@ -41,14 +41,14 @@ namespace Juice.MultiTenant.Api.Commands
     }
 
     public class UpdateTenantIdentifiedCommandHandler
-        : IdentifiedCommandHandler<UpdateTenantCommand, IOperationResult>
+        : IdentifiedCommandHandler<UpdateTenantCommand>
     {
         public UpdateTenantIdentifiedCommandHandler(IMediator mediator, IRequestManager requestManager, ILogger<UpdateTenantIdentifiedCommandHandler> logger)
             : base(mediator, requestManager, logger)
         {
         }
 
-        protected override Task<IOperationResult> CreateResultForDuplicateRequestAsync(IdentifiedCommand<UpdateTenantCommand, IOperationResult> mesage)
+        protected override Task<IOperationResult> CreateResultForDuplicateRequestAsync(IdentifiedCommand<UpdateTenantCommand> mesage)
             => Task.FromResult((IOperationResult)OperationResult.Success);
 
         protected override (string IdProperty, string CommandId) ExtractInfo(UpdateTenantCommand command) => (nameof(command.Id), command.Id);

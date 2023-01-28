@@ -28,29 +28,33 @@ namespace Juice.Timers
             Interlocked.Increment(ref globalCounter);
         }
 
-        public async Task StartAsync(TimerRequest request)
+        public Task StartAsync(TimerRequest request)
         {
+            if (request == null)
+            {
+                throw new ArgumentNullException(nameof(request));
+            }
+            if (request.Id == Guid.Empty)
+            {
+                throw new ArgumentException("Request Id is required and could not be empty");
+            }
             Id = request.Id;
             if (request.IsCompleted)
             {
                 IsCompleted = true;
-                return;
-            }
-
-            if (request.IsExpired)
-            {
-                await DispatchAsync(request);
-                return;
+                return Task.CompletedTask;
             }
 
             if (request.AbsoluteExpired > DateTimeOffset.Now.Add(_options.MaxWaitTime))
             {
-                return;
+                return Task.CompletedTask;
             }
+
 
             _shutdown = new CancellationTokenSource();
             _request = request;
-            _backgroundTask = Task.Run(WaitAndDispatchAsync);
+            _backgroundTask = request.IsExpired ? Task.Run(DispatchImmediatelyAsync) : Task.Run(WaitAndDispatchAsync);
+            return Task.CompletedTask;
         }
 
         public async Task CancelAsync()
@@ -59,6 +63,20 @@ namespace Juice.Timers
             if (_backgroundTask != null)
             {
                 await Task.WhenAny(_backgroundTask, Task.Delay(500));
+            }
+        }
+
+        protected virtual async Task DispatchImmediatelyAsync()
+        {
+            if (_request != null)
+            {
+                try
+                {
+                    await DispatchAsync(_request);
+                }
+                catch (Exception)
+                {
+                }
             }
         }
 
@@ -81,7 +99,7 @@ namespace Juice.Timers
         {
             using var scope = _scopeFactory.CreateScope();
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-            var rs = await mediator.Send(new IdentifiedCommand<CompleteTimerCommand, IOperationResult>(new CompleteTimerCommand(request.Id), request.Id));
+            var rs = await mediator.Send(new IdentifiedCommand<CompleteTimerCommand>(new CompleteTimerCommand(request.Id), request.Id));
             if (rs == null)
             {
                 var logger = scope.ServiceProvider.GetRequiredService<ILogger<Timer>>();
@@ -90,7 +108,7 @@ namespace Juice.Timers
             else if (!rs.Succeeded)
             {
                 var logger = scope.ServiceProvider.GetRequiredService<ILogger<Timer>>();
-                logger.LogError("Cannot complete timer. {Message}", rs.Message ?? "");
+                logger.LogError("Cannot complete timer. Id: {Id} {Message}", request.Id, rs.Message ?? "");
             }
 
             IsCompleted = true;

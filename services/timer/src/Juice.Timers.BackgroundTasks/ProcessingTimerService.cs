@@ -29,6 +29,7 @@ namespace Juice.Timers.BackgroundTasks
         protected async override Task ExecuteAsync(CancellationToken stoppingToken)
         {
             var count = 0;
+            var processedIds = new List<Guid>();
             while (!stoppingToken.IsCancellationRequested)
             {
                 try
@@ -36,51 +37,68 @@ namespace Juice.Timers.BackgroundTasks
                     using var scope = _scopeFactory.CreateScope();
                     var options = scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<TimerServiceOptions>>();
                     var dbContext = scope.ServiceProvider.GetRequiredService<TimerDbContext>();
-                    var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+
                     var expiredTimerIds = await dbContext.TimerRequests
                         .AsNoTracking()
-                        .Where(x => !x.IsCompleted && x.AbsoluteExpired < DateTimeOffset.Now)
+                        .Where(x => !_timer.ManagedIds.Contains(x.Id) && !processedIds.Contains(x.Id) && !x.IsCompleted && x.AbsoluteExpired < DateTimeOffset.Now)
                         .OrderBy(x => x.AbsoluteExpired)
-                        .Take(10)
+                        //.Skip(count)
+                        .Take(30)
                         .Select(x => x.Id)
                         .ToListAsync(stoppingToken);
 
                     if (expiredTimerIds.Any())
                     {
                         /// Try complete timer
-                        foreach (var expiredTimerId in expiredTimerIds)
+                        count += expiredTimerIds.Count;
+                        /// 
+                        var notProcessedIds = new List<Guid>();
+                        await Parallel.ForEachAsync(expiredTimerIds, async (expiredTimerId, token) =>
                         {
-                            await mediator.Send(new IdentifiedCommand<CompleteTimerCommand, IOperationResult>(new CompleteTimerCommand(expiredTimerId), expiredTimerId));
-                        }
+                            using var scope1 = _scopeFactory.CreateScope();
+                            var mediator = scope1.ServiceProvider.GetRequiredService<IMediator>();
+
+                            var rs = await mediator.Send(new IdentifiedCommand<CompleteTimerCommand>(new CompleteTimerCommand(expiredTimerId), expiredTimerId));
+                            if (rs == null || !rs.Succeeded)
+                            {
+                                notProcessedIds.Add(expiredTimerId);
+                            }
+                            else
+                            {
+                                processedIds.Add(expiredTimerId);
+                            }
+                        });
 
                         var notCompletedTimers = await dbContext.TimerRequests
                             .AsNoTracking()
-                            .Where(x => expiredTimerIds.Contains(x.Id) && !x.IsCompleted)
+                            .Where(x => notProcessedIds.Contains(x.Id) && !x.IsCompleted)
                             .OrderBy(x => x.AbsoluteExpired)
                             .Select(x => x.Id)
                             .ToListAsync(stoppingToken);
 
                         if (notCompletedTimers.Any())
                         {
-                            await Task.Delay(1000);
+                            await Task.Delay(2000);
                             notCompletedTimers = await dbContext.TimerRequests
                                 .AsNoTracking()
-                                .Where(x => expiredTimerIds.Contains(x.Id) && !x.IsCompleted)
+                                .Where(x => notProcessedIds.Contains(x.Id) && !x.IsCompleted)
                                 .OrderBy(x => x.AbsoluteExpired)
                                 .Select(x => x.Id)
                                 .ToListAsync(stoppingToken);
                             // Force complete timer
-                            foreach (var expiredTimerId in expiredTimerIds)
+                            await Parallel.ForEachAsync(expiredTimerIds, async (expiredTimerId, token) =>
                             {
+                                using var scope1 = _scopeFactory.CreateScope();
+                                var mediator = scope1.ServiceProvider.GetRequiredService<IMediator>();
                                 await mediator.Send(new CompleteTimerCommand(expiredTimerId));
-                            }
+                            });
                         }
                     }
 
                     if (!expiredTimerIds.Any())
                     {
                         count = 0;
-
+                        processedIds.Clear();
                         var managedIds = _timer.ManagedIds;
                         if (managedIds.Length < 100)
                         {
@@ -98,10 +116,7 @@ namespace Juice.Timers.BackgroundTasks
                         }
                         await Task.Delay(TimeSpan.FromSeconds(options.Value.ProcessingSecondsInterval));
                     }
-                    else
-                    {
-                        count += expiredTimerIds.Count;
-                    }
+
                 }
                 catch (TaskCanceledException)
                 {

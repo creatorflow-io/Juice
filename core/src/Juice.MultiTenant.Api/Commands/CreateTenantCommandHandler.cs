@@ -52,16 +52,15 @@ namespace Juice.MultiTenant.Api.Commands
 
     // Use for Idempotency in Command process
     public class CreateTenantIdentifiedCommandHandler
-        : IdentifiedCommandHandler<CreateTenantCommand, IOperationResult>
+        : IdentifiedCommandHandler<CreateTenantCommand>
     {
         public CreateTenantIdentifiedCommandHandler(IMediator mediator, IRequestManager requestManager, ILogger<CreateTenantIdentifiedCommandHandler> logger)
             : base(mediator, requestManager, logger)
         {
         }
 
-        protected override Task<IOperationResult> CreateResultForDuplicateRequestAsync(IdentifiedCommand<CreateTenantCommand, IOperationResult> mesage)
+        protected override Task<IOperationResult?> CreateResultForDuplicateRequestAsync(IdentifiedCommand<CreateTenantCommand> mesage)
             => Task.FromResult((IOperationResult)OperationResult.Success);
-
         protected override (string IdProperty, string CommandId) ExtractInfo(CreateTenantCommand command)
             => (nameof(command.Identifier), command.Identifier);
     }

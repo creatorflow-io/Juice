@@ -35,12 +35,12 @@ namespace Juice.Timers
             }
         }
 
-        public void Remove(Guid id)
+        public void TryRemove(Guid id)
         {
-            var timer = _timers.Where(t => t.Id == id).FirstOrDefault();
-            if (timer != null)
+            lock (_lock)
             {
-                lock (_lock)
+                var timer = _timers.Where(t => t.Id == id).FirstOrDefault();
+                if (timer != null)
                 {
                     _timers.Remove(timer);
                 }

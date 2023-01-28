@@ -7,21 +7,15 @@ namespace Juice.Timers.Domain.Commands
     {
         private ITimerRepository _repository;
 
-        private TimerManager _timer;
-
-        public CreateTimerCommandHandler(ITimerRepository repository, TimerManager timer)
+        public CreateTimerCommandHandler(ITimerRepository repository)
         {
             _repository = repository;
-            _timer = timer;
         }
 
         public async Task<TimerRequest> Handle(CreateTimerCommand request, CancellationToken cancellationToken)
         {
             var timerRequest = new TimerRequest(request.Issuer, request.CorrelationId, request.AbsoluteExpired);
-            var id = await _repository.CreateAsync(timerRequest, cancellationToken);
-
-            await _timer.StartAsync(timerRequest);
-
+            await _repository.CreateAsync(timerRequest, cancellationToken);
             return timerRequest;
         }
     }
@@ -32,7 +26,8 @@ namespace Juice.Timers.Domain.Commands
     {
         private ITimerRepository _repository;
 
-        public CreateTimerIdentifiedCommandHandler(IMediator mediator,
+        public CreateTimerIdentifiedCommandHandler(
+            IMediator mediator,
             ITimerRepository timerRepository,
             IRequestManager requestManager, ILogger<CreateTimerIdentifiedCommandHandler> logger)
             : base(mediator, requestManager, logger)
@@ -40,13 +35,12 @@ namespace Juice.Timers.Domain.Commands
             _repository = timerRepository;
         }
 
-        protected override async Task<TimerRequest> CreateResultForDuplicateRequestAsync(IdentifiedCommand<CreateTimerCommand, TimerRequest> message)
+        protected override async Task<TimerRequest?> CreateResultForDuplicateRequestAsync(IdentifiedCommand<CreateTimerCommand, TimerRequest> message)
         {
             var timerRequest = await _repository.GetByCorrelationIdAsync(message.Command.CorrelationId, default);
-
-            if (timerRequest.IsExpired && !timerRequest.IsCompleted)
+            if (timerRequest == null)
             {
-                await _mediator.Send(new IdentifiedCommand<CompleteTimerCommand, IOperationResult>(new CompleteTimerCommand(timerRequest.Id), timerRequest.Id));
+                return await _mediator.Send(new CreateTimerCommand(message.Command.Issuer, message.Command.CorrelationId, message.Command.AbsoluteExpired));
             }
             return timerRequest;
         }
