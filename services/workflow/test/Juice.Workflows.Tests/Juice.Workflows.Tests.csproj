@@ -45,6 +45,7 @@
   </ItemGroup>
   
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Juice.Workflows.Api\Juice.Workflows.Api.csproj" />
     <ProjectReference Include="..\..\src\Juice.Workflows.Bpmn\Juice.Workflows.Bpmn.csproj" />
     <ProjectReference Include="..\..\src\Juice.Workflows.EF.PostgreSQL\Juice.Workflows.EF.PostgreSQL.csproj" />
     <ProjectReference Include="..\..\src\Juice.Workflows.EF.SqlServer\Juice.Workflows.EF.SqlServer.csproj" />

@@ -32,7 +32,7 @@ namespace Juice.Workflows.Builder
             foreach (var node in nodes)
             {
                 var nodeImpl = _nodeLibrary.CreateInstance(node.TypeName, _serviceProvider);
-                nodesContext.Add(new NodeContext(node.NodeRecord, nodeImpl));
+                nodesContext.Add(new NodeContext(node.NodeRecord, nodeImpl, node.Properties));
             }
             foreach (var flow in flows)
             {

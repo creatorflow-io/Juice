@@ -7,11 +7,17 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Juice.Workflows\Juice.Workflows.csproj" />
+    <Compile Remove="Builder\**" />
+    <EmbeddedResource Remove="Builder\**" />
+    <None Remove="Builder\**" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Builder\" />
+    <ProjectReference Include="..\..\..\..\core\src\Juice.Integrations\Juice.Integrations.csproj" />
+    <ProjectReference Include="..\..\..\timer\src\Juice.Timers.Api.Contracts\Juice.Timers.Api.Contracts.csproj" />
+    <ProjectReference Include="..\Juice.Workflows.Api.Contracts\Juice.Workflows.Api.Contracts.csproj" />
+    <ProjectReference Include="..\Juice.Workflows.EF\Juice.Workflows.EF.csproj" />
+    <ProjectReference Include="..\Juice.Workflows\Juice.Workflows.csproj" />
   </ItemGroup>
 
 </Project>

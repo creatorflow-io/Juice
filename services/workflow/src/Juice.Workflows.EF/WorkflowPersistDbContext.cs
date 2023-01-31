@@ -1,6 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace Juice.Workflows.EF
 {
@@ -46,7 +45,7 @@ namespace Juice.Workflows.EF
                 c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
                 c => c.ToDictionary(k => k.Key, k => k.Value));
 
-            var dictJObjectValueComparer = new ValueComparer<IDictionary<string, JObject>>(
+            var dictObjectValueComparer = new ValueComparer<IDictionary<string, Dictionary<string, object>>>(
                 (c1, c2) => (c1 == null && c2 == null) || (c1 != null && c2 != null && c1.SequenceEqual(c2)),
                 c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
                 c => c.ToDictionary(k => k.Key, k => k.Value));
@@ -138,8 +137,8 @@ namespace Juice.Workflows.EF
                 entity.Property(e => e.NodeStates)
                  .UsePropertyAccessMode(PropertyAccessMode.PreferFieldDuringConstruction)
                  .HasConversion(s => JsonConvert.SerializeObject(s),
-                     s => JsonConvert.DeserializeObject<Dictionary<string, JObject>>(s) ?? new Dictionary<string, JObject>(),
-                     dictJObjectValueComparer
+                     s => JsonConvert.DeserializeObject<Dictionary<string, Dictionary<string, object>>>(s) ?? new Dictionary<string, Dictionary<string, object>>(),
+                     dictObjectValueComparer
                      );
 
                 entity.HasMany(e => e.NodeSnapshots)

@@ -14,7 +14,6 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <returns></returns>
         public static IServiceCollection RegisterRabbitMQEventBus(this IServiceCollection services, IConfiguration configuration, Action<RabbitMQOptions> configure = null)
         {
-
             var enabled = configuration.GetValue<bool>(nameof(RabbitMQOptions.RabbitMQEnabled));
             if (enabled)
             {

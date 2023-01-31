@@ -51,6 +51,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Timers.BackgroundTask
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Timers.Tests", "test\Juice.Timers.Tests\Juice.Timers.Tests.csproj", "{8CCA4BAE-B1A9-4A26-B967-9BD70C2064AF}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.MediatR.Redis", "..\..\core\src\Juice.MediatR.Redis\Juice.MediatR.Redis.csproj", "{34BE705E-0104-4FA5-AD91-40B9E68E9954}"
+EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		..\..\test\Juice.XUnit\Juice.XUnit.projitems*{3c5739a5-f7bf-4d1e-8727-fc0c11c5bd21}*SharedItemsImports = 13
@@ -145,6 +147,10 @@ Global
 		{8CCA4BAE-B1A9-4A26-B967-9BD70C2064AF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8CCA4BAE-B1A9-4A26-B967-9BD70C2064AF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8CCA4BAE-B1A9-4A26-B967-9BD70C2064AF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{34BE705E-0104-4FA5-AD91-40B9E68E9954}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{34BE705E-0104-4FA5-AD91-40B9E68E9954}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{34BE705E-0104-4FA5-AD91-40B9E68E9954}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{34BE705E-0104-4FA5-AD91-40B9E68E9954}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -172,6 +178,7 @@ Global
 		{3C5739A5-F7BF-4D1E-8727-FC0C11C5BD21} = {440E68F2-3619-47AC-A113-DE93A86BA4E6}
 		{0C9F13FD-666F-4CC9-8DC1-15B3B11A6E9A} = {AA0452DF-ED3A-4C1C-8A18-69404067D98B}
 		{8CCA4BAE-B1A9-4A26-B967-9BD70C2064AF} = {440E68F2-3619-47AC-A113-DE93A86BA4E6}
+		{34BE705E-0104-4FA5-AD91-40B9E68E9954} = {AA0452DF-ED3A-4C1C-8A18-69404067D98B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E12C0C51-F3CC-4F13-AF15-DC92FCA9915B}

@@ -13,6 +13,8 @@ namespace Juice.Workflows.Builder
 
         protected Dictionary<string, ProcessRecord> _processRecords = new Dictionary<string, ProcessRecord>();
 
+        protected Dictionary<string, Dictionary<string, object>> _properties = new Dictionary<string, Dictionary<string, object>>();
+
         protected IStringIdGenerator _idGenerator;
         protected INodeLibrary _nodeLibrary;
         protected IServiceProvider _serviceProvider;
