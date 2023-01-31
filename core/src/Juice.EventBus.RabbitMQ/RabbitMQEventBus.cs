@@ -14,12 +14,12 @@ namespace Juice.EventBus.RabbitMQ
 {
     public class RabbitMQEventBus : EventBusBase, IDisposable
     {
-        public const string BROKER_NAME = "juice_event_bus";
+        public string BROKER_NAME = "juice_event_bus";
 
         private readonly IRabbitMQPersistentConnection _persistentConnection;
 
         private IModel _consumerChannel;
-        private string _queueName;
+        //private string _queueName;
         private readonly int _retryCount;
 
         private readonly IServiceScopeFactory _scopeFactory;
@@ -34,7 +34,11 @@ namespace Juice.EventBus.RabbitMQ
             : base(subscriptionsManager, logger)
         {
             _persistentConnection = mQPersistentConnection;
-            _queueName = options.Value.SubscriptionClientName;
+            //_queueName = options.Value.SubscriptionClientName;
+            if (!string.IsNullOrEmpty(options.Value.BrokerName))
+            {
+                BROKER_NAME = options.Value.BrokerName;
+            }
             _consumerChannel = CreateConsumerChannel();
             _scopeFactory = scopeFactory;
             _retryCount = options.Value.RetryCount;
@@ -42,24 +46,29 @@ namespace Juice.EventBus.RabbitMQ
         }
 
         #region Init consume channel and processing incoming event
+
+        private string GetQueueName(string eventName)
+        {
+            return eventName.ToLower() + "_queue";
+        }
+
         private void SubsManager_OnEventRemoved(object sender, string eventName)
         {
             if (!_persistentConnection.IsConnected)
             {
                 _persistentConnection.TryConnect();
             }
-
+            var queueName = GetQueueName(eventName);
             using (var channel = _persistentConnection.CreateModel())
             {
-                channel.QueueUnbind(queue: _queueName,
+                channel.QueueUnbind(queue: queueName,
                     exchange: BROKER_NAME,
                     routingKey: eventName);
 
-                Logger.LogInformation("Queue unbind {queueName}", _queueName);
+                Logger.LogInformation("Queue unbind {queueName}", queueName);
 
                 if (SubsManager.IsEmpty)
                 {
-                    _queueName = string.Empty;
                     _consumerChannel.Close();
                 }
             }
@@ -78,7 +87,19 @@ namespace Juice.EventBus.RabbitMQ
                     throw new InvalidOperationException($"Fake exception requested: \"{message}\"");
                 }
 
-                await ProcessingEventAsync(eventName, message);
+                var processed = await ProcessingEventAsync(eventName, message);
+                if (processed)
+                {
+
+                    // Even on exception we take the message off the queue.
+                    // in a REAL WORLD app this should be handled with a Dead Letter Exchange (DLX). 
+                    // For more information see: https://www.rabbitmq.com/dlx.html
+                    _consumerChannel.BasicAck(eventArgs.DeliveryTag, multiple: false);
+                }
+                else
+                {
+                    _consumerChannel.BasicNack(eventArgs.DeliveryTag, multiple: true, requeue: true);
+                }
             }
             catch (Exception ex)
             {
@@ -86,15 +107,11 @@ namespace Juice.EventBus.RabbitMQ
                 Logger.LogTrace(ex.StackTrace);
             }
 
-            // Even on exception we take the message off the queue.
-            // in a REAL WORLD app this should be handled with a Dead Letter Exchange (DLX). 
-            // For more information see: https://www.rabbitmq.com/dlx.html
-            _consumerChannel.BasicAck(eventArgs.DeliveryTag, multiple: false);
         }
 
-        private void StartBasicConsume()
+        private void StartBasicConsume(string queueName)
         {
-            Logger.LogInformation("Starting RabbitMQ basic consume");
+            Logger.LogInformation("Starting RabbitMQ basic consume queue {queueName}.", queueName);
 
             if (_consumerChannel != null)
             {
@@ -103,9 +120,11 @@ namespace Juice.EventBus.RabbitMQ
                 consumer.Received += Consumer_ReceivedAsync;
 
                 _consumerChannel.BasicConsume(
-                    queue: _queueName,
+                    queue: queueName,
                     autoAck: false,
                     consumer: consumer);
+
+                _consumerChannel.BasicQos(0, 1, false);
             }
             else
             {
@@ -120,18 +139,13 @@ namespace Juice.EventBus.RabbitMQ
                 _persistentConnection.TryConnect();
             }
 
-            Logger.LogInformation("Creating RabbitMQ consumer channel");
+            Logger.LogInformation("Creating RabbitMQ consumer channel. Broker: {Broker}.", BROKER_NAME);
 
             var channel = _persistentConnection.CreateModel();
 
             channel.ExchangeDeclare(exchange: BROKER_NAME,
                                     type: "direct");
 
-            channel.QueueDeclare(queue: _queueName,
-                                 durable: true,
-                                 exclusive: false,
-                                 autoDelete: false,
-                                 arguments: null);
 
             channel.CallbackException += (sender, ea) =>
             {
@@ -139,13 +153,13 @@ namespace Juice.EventBus.RabbitMQ
 
                 _consumerChannel.Dispose();
                 _consumerChannel = CreateConsumerChannel();
-                StartBasicConsume();
+                //StartBasicConsume();
             };
 
             return channel;
         }
 
-        private async Task ProcessingEventAsync(string eventName, string message)
+        private async Task<bool> ProcessingEventAsync(string eventName, string message)
         {
             Logger.LogDebug("Processing RabbitMQ event: {EventName}", eventName);
 
@@ -178,10 +192,12 @@ namespace Juice.EventBus.RabbitMQ
                         Logger.LogError(ex, "{handler} failed to handle event: {EventName}, eventId: {eventId}", handler.GetGenericTypeName(), eventName, eventId);
                     }
                 }
+                return true;
             }
             else
             {
                 Logger.LogDebug("No subscription for RabbitMQ event: {EventName}", eventName);
+                return false;
             }
         }
 
@@ -198,7 +214,7 @@ namespace Juice.EventBus.RabbitMQ
 
             SubsManager.AddSubscription<T, TH>();
 
-            StartBasicConsume();
+            StartBasicConsume(GetQueueName(eventName));
 
         }
 
@@ -213,7 +229,16 @@ namespace Juice.EventBus.RabbitMQ
                 }
 
                 using var channel = _persistentConnection.CreateModel();
-                channel.QueueBind(queue: _queueName,
+
+                var queueName = GetQueueName(eventName);
+
+                channel.QueueDeclare(queue: queueName,
+                                     durable: true,
+                                     exclusive: false,
+                                     autoDelete: false,
+                                     arguments: null);
+
+                channel.QueueBind(queue: queueName,
                                   exchange: BROKER_NAME,
                                   routingKey: eventName);
             }

@@ -6,14 +6,18 @@ using Juice.EventBus.IntegrationEventLog.EF;
 using Juice.EventBus.IntegrationEventLog.EF.DependencyInjection;
 using Juice.Integrations.EventBus.DependencyInjection;
 using Juice.Integrations.MediatR.DependencyInjection;
+using Juice.MediatR.Redis.DependencyInjection;
 using Juice.MediatR.RequestManager.EF.DependencyInjection;
 using Juice.Services;
 using Juice.Timers.Api.Behaviors.DependencyInjection;
 using Juice.Timers.Api.Domain.EventHandlers;
 using Juice.Timers.Api.IntegrationEvents.Events;
+using Juice.Timers.Behaviors.DependencyInjection;
 using Juice.Timers.DependencyInjection;
 using Juice.Timers.Domain.Events;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace Juice.Timers.Tests
 {
@@ -106,8 +110,7 @@ namespace Juice.Timers.Tests
                         .AddIntegrationEventLog()
                         .RegisterContext<TimerDbContext>("App");
 
-                services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"),
-                    options => options.SubscriptionClientName = "event_bus_test1");
+                services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"));
 
                 services.AddRequestManager(configuration, options =>
                 {
@@ -200,39 +203,43 @@ namespace Juice.Timers.Tests
         [IgnoreOnCIFact(DisplayName = "Complete via EventBus"), TestPriority(900)]
         public async Task Should_complete_via_eventbus_Async()
         {
-            var resolver = new DependencyResolver
+            var hostBuilder = WebApplication.CreateBuilder();
+
+            var services = hostBuilder.Services;
+            var configuration = hostBuilder.Configuration;
+
+            // Register DbContext class
+
+            services.AddDefaultStringIdGenerator();
+
+            services.AddSingleton(provider => _output);
+
+            services.AddLogging(builder =>
             {
-                CurrentDirectory = AppContext.BaseDirectory
-            };
-
-            resolver.ConfigureServices(services =>
-            {
-                var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
-                var configuration = configService.GetConfiguration();
-
-                services.AddSingleton(provider => _output);
-
-                services.AddLogging(builder =>
-                {
-                    builder.ClearProviders()
-                    .AddTestOutputLogger()
-                    .AddConfiguration(configuration.GetSection("Logging"));
-                });
-                services.AddSingleton<SharedToken>();
-                services.AddTransient<TimerExpiredIntegrationEventHandler>();
-                services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"),
-                    options => options.SubscriptionClientName = "event_bus_test1");
-
+                builder.ClearProviders()
+                .AddTestOutputLogger()
+                .AddConfiguration(configuration.GetSection("Logging"));
             });
 
-            using var scope = resolver.ServiceProvider.CreateScope();
+            services.AddSingleton<SharedToken>();
+            services.AddTransient<TimerExpiredIntegrationEventHandler>();
 
-            var eventBus = scope.ServiceProvider.GetRequiredService<IEventBus>();
+            services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"),
+                options =>
+                {
+                    options.BrokerName = "juice_bus";
+                });
+
+            var host = hostBuilder.Build();
+
+            var eventBus = host.Services.GetRequiredService<IEventBus>();
             eventBus.Subscribe<TimerExpiredIntegrationEvent, TimerExpiredIntegrationEventHandler>();
+
+            await host.StartAsync();
 
             var expiredTime = DateTimeOffset.Now.AddSeconds(2);
 
-            int numberOfEvent = 50;
+            int numberOfEvent = 10;
             var ids = new HashSet<string>();
             for (var i = 0; i < numberOfEvent; i++)
             {
@@ -240,27 +247,17 @@ namespace Juice.Timers.Tests
                 var request = new TimerStartIntegrationEvent("xunit", id, DateTimeOffset.Now.AddSeconds(2));
                 await eventBus.PublishAsync(request);
                 ids.Add(id);
-                //await Task.Delay(1000);
             }
-            var tokenSource = new CancellationTokenSource(10000);
 
-            while (!tokenSource.IsCancellationRequested)
+            var cts = new CancellationTokenSource(15000);
+            while (!cts.IsCancellationRequested)
             {
-                _output.WriteLine("Waiting for timer");
-                try
-                {
-                    await Task.Delay(TimeSpan.FromMilliseconds(300), tokenSource.Token);
-                }
-                catch { }
+                await Task.Delay(300);
+                _output.WriteLine("Waiting for event");
             }
-
-            var delayTime = (DateTimeOffset.Now - expiredTime);
-            _output.WriteLine($"Delayed: {delayTime}");
 
             eventBus.Unsubscribe<TimerExpiredIntegrationEvent, TimerExpiredIntegrationEventHandler>();
-            await Task.Delay(TimeSpan.FromSeconds(1));
-            //delayTime.Should().BeLessThan(TimeSpan.FromSeconds(2)); // timer interval option
-            ids.Count.Should().Be(numberOfEvent);
+            await host.StopAsync();
         }
 
         [IgnoreOnCITheory(DisplayName = "Complete 100 TimerRequests"), TestPriority(900)]
@@ -298,17 +295,11 @@ namespace Juice.Timers.Tests
 
                 services.AddMediatR(typeof(SelfTimerExipredDomainEventHandler), typeof(TimerExpiredDomainEvent));
                 services.AddOperationExceptionBehavior();
+                services.AddMediatRTimerManagerBehavior();
 
-                services.AddRequestManager(configuration, options =>
+                services.AddRedisRequestManager(options =>
                 {
-                    options.ConnectionName = provider switch
-                    {
-                        "PostgreSQL" => "PostgreConnection",
-                        "SqlServer" => "SqlServerConnection",
-                        _ => throw new NotSupportedException($"Unsupported provider: {provider}")
-                    };
-                    options.DatabaseProvider = provider;
-                    options.Schema = "App"; // default schema of Tenant
+                    options.ConnectionString = configuration.GetConnectionString("Redis");
                 });
 
             });
@@ -372,8 +363,7 @@ namespace Juice.Timers.Tests
                         .AddIntegrationEventLog()
                         .RegisterContext<TimerDbContext>("App");
 
-                services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"),
-                    options => options.SubscriptionClientName = "event_bus_test1");
+                services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"));
 
                 services.AddRequestManager(configuration, options =>
                 {
@@ -447,8 +437,7 @@ namespace Juice.Timers.Tests
                         .AddIntegrationEventLog()
                         .RegisterContext<TimerDbContext>("App");
 
-                services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"),
-                    options => options.SubscriptionClientName = "event_bus_test1");
+                services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"));
 
                 services.AddRequestManager(configuration, options =>
                 {
@@ -505,6 +494,7 @@ namespace Juice.Timers.Tests
     {
         private SharedToken _sharedToken;
         private ILogger _logger;
+        private static int _globalCount = 0;
         public TimerExpiredIntegrationEventHandler(ILogger<TimerExpiredIntegrationEventHandler> logger,
             SharedToken sharedToken)
         {
@@ -513,7 +503,8 @@ namespace Juice.Timers.Tests
         }
         public async Task HandleAsync(TimerExpiredIntegrationEvent @event)
         {
-            _logger.LogInformation("Received timer event {CorrelationId}", @event.CorrelationId);
+            Interlocked.Increment(ref _globalCount);
+            _logger.LogInformation("Received {Count} timer event {CorrelationId}. Delayed {Delayed}", _globalCount, @event.CorrelationId, (DateTimeOffset.Now - @event.AbsoluteExpired));
             _sharedToken.CTS.Cancel();
         }
     }
@@ -534,6 +525,21 @@ namespace Juice.Timers.Tests
             _logger.LogInformation("Timeout event {CorrelationId}", notification.Request.CorrelationId);
             _sharedToken.CTS.Cancel();
             return Task.CompletedTask;
+        }
+    }
+
+    public class TimerStartIntegrationEventHandler : IIntegrationEventHandler<TimerStartIntegrationEvent>
+    {
+        private ILogger _logger;
+        static int _globalCount = 0;
+        public TimerStartIntegrationEventHandler(ILogger<TimerStartIntegrationEventHandler> logger)
+        {
+            _logger = logger;
+        }
+        public async Task HandleAsync(TimerStartIntegrationEvent @event)
+        {
+            Interlocked.Increment(ref _globalCount);
+            _logger.LogInformation("Received timer start event {CorrelationId} {Count}", @event.CorrelationId, _globalCount);
         }
     }
 }

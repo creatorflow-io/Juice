@@ -17,10 +17,10 @@ namespace Juice.Timers.Api.Domain.EventHandlers
         public async Task Handle(TimerExpiredDomainEvent notification, CancellationToken cancellationToken)
         {
             _logger.CreateLogger<TimerExpiredDomainEventHandler>()
-                .LogTrace("Timer {Identifier} has been completed",
-                    notification.Request.Id);
+                .LogTrace("Timer {Identifier} has been completed. Delayed: {Delayed}",
+                    notification.Request.Id, DateTimeOffset.Now - notification.Request.AbsoluteExpired);
 
-            var @event = new TimerExpiredIntegrationEvent(notification.Request.Issuer, notification.Request.CorrelationId);
+            var @event = new TimerExpiredIntegrationEvent(notification.Request.Issuer, notification.Request.CorrelationId, notification.Request.AbsoluteExpired);
             await _integrationService.AddAndSaveEventAsync(@event);
         }
     }

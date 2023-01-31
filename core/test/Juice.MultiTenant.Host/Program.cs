@@ -63,7 +63,6 @@ static void ConfigureGRPC(IServiceCollection services)
 static void ConfigureEvents(WebApplicationBuilder builder)
 {
 
-    builder.Services.RegisterRabbitMQEventBus(builder.Configuration.GetSection("RabbitMQ"),
-        options => options.SubscriptionClientName = "event_bus_test1");
+    builder.Services.RegisterRabbitMQEventBus(builder.Configuration.GetSection("RabbitMQ"));
 
 }

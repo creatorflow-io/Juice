@@ -52,19 +52,10 @@ static void ConfigureIntegrations(IServiceCollection services, string provider, 
         .RegisterContext<TimerDbContext>("App");
 
     services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"),
-        options => options.SubscriptionClientName = "event_bus_test1");
-
-    //services.AddRequestManager(configuration, options =>
-    //{
-    //    options.ConnectionName = provider switch
-    //    {
-    //        "PostgreSQL" => "PostgreConnection",
-    //        "SqlServer" => "SqlServerConnection",
-    //        _ => throw new NotSupportedException($"Unsupported provider: {provider}")
-    //    };
-    //    options.DatabaseProvider = provider;
-    //    options.Schema = "App"; // default schema of Tenant
-    //});
+        options =>
+        {
+            options.BrokerName = "juice_bus";
+        });
 
     services.AddRedisRequestManager(options =>
     {
