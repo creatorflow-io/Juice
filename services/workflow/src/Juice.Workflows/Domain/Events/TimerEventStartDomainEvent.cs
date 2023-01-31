@@ -1,12 +1,12 @@
-﻿using MediatR;
-
-namespace Juice.Workflows.Domain.Events
+﻿namespace Juice.Workflows.Domain.Events
 {
     public class TimerEventStartDomainEvent : INotification
     {
+        public string WorkflowId { get; init; }
         public NodeContext Node { get; init; }
-        public TimerEventStartDomainEvent(NodeContext node)
+        public TimerEventStartDomainEvent(string workflowId, NodeContext node)
         {
+            WorkflowId = workflowId;
             Node = node;
         }
     }

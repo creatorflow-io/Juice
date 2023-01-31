@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using Juice.Extensions;
 
 namespace Juice.Workflows.Execution
 {
@@ -7,13 +7,13 @@ namespace Juice.Workflows.Execution
     /// </summary>
     public class NodeContext
     {
-        public NodeContext(NodeRecord record, INode node, JObject? properties = default)
+        public NodeContext(NodeRecord record, INode node, Dictionary<string, object?>? properties = default)
         {
             Record = record;
             Node = node;
             if (properties != null)
             {
-                Properties.Merge(properties);
+                Properties.MergeOptions(properties);
             }
         }
         /// <summary>
@@ -29,7 +29,7 @@ namespace Juice.Workflows.Execution
         /// </summary>
         public string DisplayName => Record.Name ?? Node.DisplayText.Value;
 
-        public JObject Properties { get; set; } = new JObject();
+        public Dictionary<string, object?> Properties { get; set; } = new Dictionary<string, object?>();
 
     }
 }

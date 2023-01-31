@@ -1,6 +1,4 @@
 ﻿using Juice.Domain;
-using MediatR;
-using Newtonsoft.Json.Linq;
 
 namespace Juice.Workflows.Domain.AggregatesModel.WorkflowStateAggregate
 {
@@ -55,7 +53,7 @@ namespace Juice.Workflows.Domain.AggregatesModel.WorkflowStateAggregate
         /// <summary>
         /// A dictionary of node states. Each entry contains runtime state for a particular node.
         /// </summary>
-        public IDictionary<string, JObject> NodeStates { get; init; } = new Dictionary<string, JObject>();
+        public IDictionary<string, Dictionary<string, object>> NodeStates { get; init; } = new Dictionary<string, Dictionary<string, object>>();
 
         /// <summary>
         /// The list of executed nodes.

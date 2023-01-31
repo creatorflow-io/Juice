@@ -18,7 +18,7 @@ namespace Juice.Workflows.Builder
             return new WorkflowContext(
                 workflow.Id
                 , workflow.Name ?? _name
-                , _nodeRecords.Values.Select(n => new NodeContext(n, _nodes[n.Id])).ToList()
+                , _nodeRecords.Values.Select(n => new NodeContext(n, _nodes[n.Id], _properties.ContainsKey(n.Id) ? _properties[n.Id] : default)).ToList()
                 , _flowRecords.Values.Select(f => new FlowContext(f, _flows[f.Id])).ToList()
                 , _processRecords.Values
                 , this.GetType().FullName
@@ -95,6 +95,16 @@ namespace Juice.Workflows.Builder
         public WorkflowContextBuilder SetName(string name)
         {
             _name = name;
+            return this;
+        }
+
+        public WorkflowContextBuilder SetProperties(Dictionary<string, object> properties)
+        {
+            if (string.IsNullOrEmpty(_currentNodeId))
+            {
+                throw new InvalidOperationException("Workflow must has current node before");
+            }
+            _properties[_currentNodeId] = properties;
             return this;
         }
 

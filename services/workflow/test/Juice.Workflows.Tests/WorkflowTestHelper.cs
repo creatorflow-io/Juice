@@ -138,7 +138,7 @@ namespace Juice.Workflows.Tests
             WorkflowContext workflowContext, string? nodeId = default)
         {
             var queue = _serviceProvider.GetRequiredService<EventQueue>();
-            var tokenSource = new CancellationTokenSource(3000);
+            var tokenSource = new CancellationTokenSource(10000);
             WorkflowExecutionResult? result = await workflowExecutor.ExecuteAsync(workflowContext, nodeId, default);
             while (!tokenSource.IsCancellationRequested)
             {

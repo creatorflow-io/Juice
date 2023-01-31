@@ -110,6 +110,21 @@ namespace Juice.Workflows.Bpmn.Builder
                         AddUnknownNode(boundaryEvent, processId);
                     }
                 }
+                else if (element is tStartEvent startEvent)
+                {
+                    if (startEvent.IsSignal())
+                    {
+                        AddNode<SignalStartEvent>(element, processId);
+                    }
+                    else if (startEvent.IsTimer())
+                    {
+                        AddNode<TimerStartEvent>(element, processId);
+                    }
+                    else
+                    {
+                        AddNode<StartEvent>(element, processId);
+                    }
+                }
                 else if (element is tEndEvent endEvent)
                 {
                     if (endEvent.IsCancel())

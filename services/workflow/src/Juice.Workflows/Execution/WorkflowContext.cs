@@ -1,4 +1,4 @@
-﻿using MediatR;
+﻿using Juice.Extensions;
 
 namespace Juice.Workflows.Execution
 {
@@ -45,19 +45,11 @@ namespace Juice.Workflows.Execution
             get
             {
                 _state.SetExecutionInfo(Input, LastMessages.Reverse(), _domainEvents);
+                foreach (var node in Nodes)
+                {
+                    _state.NodeStates[node.Key] = node.Value.Properties;
+                }
                 return _state;
-                //return new WorkflowState
-                //{
-                //    Input = Input,
-                //    Output = Output,
-                //    NodeSnapshots = NodeSnapshots,
-                //    NodeStates = Nodes.ToDictionary(x => x.Key, x => x.Value.Properties),
-                //    FlowSnapshots = FlowSnapshots,
-                //    ProcessSnapshots = ProcessSnapshots,
-                //    LastMessages = LastMessages.Reverse(),
-                //    IdlingNodes = IdlingNodes,
-                //    DomainEvents = _domainEvents
-                //};
             }
         }
 
@@ -71,19 +63,7 @@ namespace Juice.Workflows.Execution
 
         public WorkflowContext SetState(WorkflowState? state)
         {
-            //if (state == null)
-            //{
-            //    Output = state?.Output ?? new Dictionary<string, object?>();
 
-            //    ProcessSnapshots = Processes.Select(p => new ProcessSnapshot
-            //    {
-            //        Id = p.Id,
-            //        Name = p.Name,
-            //        Status = state?.ProcessSnapshots?.FirstOrDefault(s => s.Id == p.Id)?.Status ?? WorkflowStatus.Idle
-            //    }).ToList();
-            //    NodeSnapshots = state?.NodeSnapshots ?? new List<NodeSnapshot>();
-            //    FlowSnapshots = state?.FlowSnapshots ?? new List<FlowSnapshot>();
-            //}
             if (state != null)
             {
                 _state = state;
@@ -99,6 +79,14 @@ namespace Juice.Workflows.Execution
                         Name = process.Name,
                         Status = WorkflowStatus.Idle
                     });
+                }
+            }
+
+            foreach (var node in Nodes)
+            {
+                if (_state.NodeStates.ContainsKey(node.Key))
+                {
+                    node.Value.Properties.MergeOptions(_state.NodeStates[node.Key]);
                 }
             }
 

@@ -35,11 +35,21 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.EventBus.IntegrationE
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.EventBus", "..\..\core\src\Juice.EventBus\Juice.EventBus.csproj", "{BEAF4BDB-C264-4D91-BE4D-0195E6679451}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.Workflows.EF.SqlServer", "src\Juice.Workflows.EF.SqlServer\Juice.Workflows.EF.SqlServer.csproj", "{9B526B6B-75CB-470B-BAAB-FC35DB2986DA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Workflows.EF.SqlServer", "src\Juice.Workflows.EF.SqlServer\Juice.Workflows.EF.SqlServer.csproj", "{9B526B6B-75CB-470B-BAAB-FC35DB2986DA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.Workflows.EF.PostgreSQL", "src\Juice.Workflows.EF.PostgreSQL\Juice.Workflows.EF.PostgreSQL.csproj", "{7123CC5D-1DC4-45E8-9E3B-18237540C761}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Workflows.EF.PostgreSQL", "src\Juice.Workflows.EF.PostgreSQL\Juice.Workflows.EF.PostgreSQL.csproj", "{7123CC5D-1DC4-45E8-9E3B-18237540C761}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.Workflows.Tests.Host", "test\Juice.Workflows.Tests.Host\Juice.Workflows.Tests.Host.csproj", "{87B6FBC8-2C2E-4CAB-94AB-9C383F5E1677}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Workflows.Tests.Host", "test\Juice.Workflows.Tests.Host\Juice.Workflows.Tests.Host.csproj", "{87B6FBC8-2C2E-4CAB-94AB-9C383F5E1677}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Workflows.Api.Contracts", "src\Juice.Workflows.Api.Contracts\Juice.Workflows.Api.Contracts.csproj", "{A308B02F-9F03-47BB-BFF7-DF1D5DBF58FD}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Timers.Api.Contracts", "..\timer\src\Juice.Timers.Api.Contracts\Juice.Timers.Api.Contracts.csproj", "{4E70581E-B159-4E4A-A4F1-A5FB941BD119}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.EventBus.RabbitMQ", "..\..\core\src\Juice.EventBus.RabbitMQ\Juice.EventBus.RabbitMQ.csproj", "{170180A1-D55B-487A-90B5-DFA9ED255A25}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.EventBus.IntegrationEventLog.EF.PostgreSQL", "..\..\core\src\Juice.EventBus.IntegrationEventLog.EF.PostgreSQL\Juice.EventBus.IntegrationEventLog.EF.PostgreSQL.csproj", "{D9D0BB81-6F3B-47AF-96F1-E5B2A6B2D4C3}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.MediatR.Redis", "..\..\core\src\Juice.MediatR.Redis\Juice.MediatR.Redis.csproj", "{33250DAC-5386-4FD1-B6F4-ACE97576C6DB}"
 EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
@@ -111,6 +121,26 @@ Global
 		{87B6FBC8-2C2E-4CAB-94AB-9C383F5E1677}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{87B6FBC8-2C2E-4CAB-94AB-9C383F5E1677}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{87B6FBC8-2C2E-4CAB-94AB-9C383F5E1677}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A308B02F-9F03-47BB-BFF7-DF1D5DBF58FD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A308B02F-9F03-47BB-BFF7-DF1D5DBF58FD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A308B02F-9F03-47BB-BFF7-DF1D5DBF58FD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A308B02F-9F03-47BB-BFF7-DF1D5DBF58FD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4E70581E-B159-4E4A-A4F1-A5FB941BD119}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4E70581E-B159-4E4A-A4F1-A5FB941BD119}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4E70581E-B159-4E4A-A4F1-A5FB941BD119}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4E70581E-B159-4E4A-A4F1-A5FB941BD119}.Release|Any CPU.Build.0 = Release|Any CPU
+		{170180A1-D55B-487A-90B5-DFA9ED255A25}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{170180A1-D55B-487A-90B5-DFA9ED255A25}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{170180A1-D55B-487A-90B5-DFA9ED255A25}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{170180A1-D55B-487A-90B5-DFA9ED255A25}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D9D0BB81-6F3B-47AF-96F1-E5B2A6B2D4C3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D9D0BB81-6F3B-47AF-96F1-E5B2A6B2D4C3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D9D0BB81-6F3B-47AF-96F1-E5B2A6B2D4C3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D9D0BB81-6F3B-47AF-96F1-E5B2A6B2D4C3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{33250DAC-5386-4FD1-B6F4-ACE97576C6DB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{33250DAC-5386-4FD1-B6F4-ACE97576C6DB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{33250DAC-5386-4FD1-B6F4-ACE97576C6DB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{33250DAC-5386-4FD1-B6F4-ACE97576C6DB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -132,6 +162,11 @@ Global
 		{9B526B6B-75CB-470B-BAAB-FC35DB2986DA} = {D8B637D6-824B-43D3-B4A3-5B43EED4EA49}
 		{7123CC5D-1DC4-45E8-9E3B-18237540C761} = {D8B637D6-824B-43D3-B4A3-5B43EED4EA49}
 		{87B6FBC8-2C2E-4CAB-94AB-9C383F5E1677} = {70B24DBB-F994-47D6-9525-10B03203740D}
+		{A308B02F-9F03-47BB-BFF7-DF1D5DBF58FD} = {D8B637D6-824B-43D3-B4A3-5B43EED4EA49}
+		{4E70581E-B159-4E4A-A4F1-A5FB941BD119} = {D8B637D6-824B-43D3-B4A3-5B43EED4EA49}
+		{170180A1-D55B-487A-90B5-DFA9ED255A25} = {D8B637D6-824B-43D3-B4A3-5B43EED4EA49}
+		{D9D0BB81-6F3B-47AF-96F1-E5B2A6B2D4C3} = {D8B637D6-824B-43D3-B4A3-5B43EED4EA49}
+		{33250DAC-5386-4FD1-B6F4-ACE97576C6DB} = {D8B637D6-824B-43D3-B4A3-5B43EED4EA49}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {34388FC1-08EB-42D1-A46D-72835FA4FCA4}

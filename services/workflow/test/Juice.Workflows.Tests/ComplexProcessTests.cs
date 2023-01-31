@@ -431,7 +431,7 @@ namespace Juice.Workflows.Tests
 
                     definition.SetData(
                         context.Processes,
-                        context.Nodes.Values.Select(n => new NodeData(n.Record, n.Node.GetType().Name)),
+                        context.Nodes.Values.Select(n => new NodeData(n.Record, n.Node.GetType().Name, n.Properties)),
                         context.Flows.Select(f => new FlowData(f.Record, f.Flow.GetType().Name))
                         );
 

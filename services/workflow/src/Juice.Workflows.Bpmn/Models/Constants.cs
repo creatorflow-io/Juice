@@ -9,7 +9,7 @@
                 { "tExclusiveGateway", "ExclusiveGateway" },
                 { "tEventBasedGateway", "EventBasedGateway"},
                 //{ "tComplexGateway", "ComplexGateway"},
-                { "tStartEvent", "StartEvent"},
+                //{ "tStartEvent", "StartEvent"},
                 { "tUserTask", "UserTask"},
                 { "tServiceTask", "ServiceTask"},
                 { "tSendTask", "SendTask"},

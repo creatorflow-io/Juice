@@ -10,7 +10,7 @@
 
         public override Task<NodeExecutionResult> StartAsync(WorkflowContext workflowContext, NodeContext node, FlowContext? flow, CancellationToken token)
         {
-            workflowContext.AddDomainEvent(new TimerEventStartDomainEvent(node));
+            workflowContext.AddDomainEvent(new TimerEventStartDomainEvent(workflowContext.WorkflowId, node));
             return base.StartAsync(workflowContext, node, flow, token);
         }
     }

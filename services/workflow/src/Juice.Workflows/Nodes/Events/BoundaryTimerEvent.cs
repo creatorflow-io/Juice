@@ -22,7 +22,7 @@
         {
             // Should register a timer
             _logger.LogDebug("Registed a timer");
-            workflowContext.AddDomainEvent(new TimerEventStartDomainEvent(node));
+            workflowContext.AddDomainEvent(new TimerEventStartDomainEvent(workflowContext.WorkflowId, node));
             return Task.FromResult(Halt());
         }
 

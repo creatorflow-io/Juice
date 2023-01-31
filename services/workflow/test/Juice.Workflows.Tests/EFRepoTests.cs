@@ -122,7 +122,7 @@ namespace Juice.Workflows.Tests
             {
                 var definition = new WorkflowDefinition("diagram", "Bpmn diagram");
                 definition.SetData(context.Processes,
-                    context.Nodes.Values.Select(n => new NodeData(n.Record, n.Node.GetType().Name)),
+                    context.Nodes.Values.Select(n => new NodeData(n.Record, n.Node.GetType().Name, n.Properties)),
                     context.Flows.Select(n => new FlowData(n.Record, n.Flow.GetType().Name)));
                 var createResult = await definitionRepo.CreateAsync(definition, default);
                 createResult.Succeeded.Should().BeTrue();
