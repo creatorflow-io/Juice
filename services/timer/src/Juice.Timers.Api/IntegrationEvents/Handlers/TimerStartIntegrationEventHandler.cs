@@ -8,7 +8,6 @@ namespace Juice.Timers.Api.IntegrationEvents.Handlers
     public class TimerStartIntegrationEventHandler : IIntegrationEventHandler<TimerStartIntegrationEvent>
     {
         private IMediator _mediator;
-        private static int globalCounter = 0;
         private ILogger _logger;
         public TimerStartIntegrationEventHandler(ILogger<TimerStartIntegrationEventHandler> logger,
             IMediator mediator)
@@ -19,8 +18,6 @@ namespace Juice.Timers.Api.IntegrationEvents.Handlers
 
         public async Task HandleAsync(TimerStartIntegrationEvent @event)
         {
-            Interlocked.Increment(ref globalCounter);
-            _logger.LogInformation("Handle {count} events", globalCounter);
             var command = new CreateTimerCommand(@event.Issuer, @event.CorrelationId, @event.AbsoluteExpired);
             var rs = await _mediator.Send(new IdentifiedCommand<CreateTimerCommand, TimerRequest>(command, @event.Id));
             if (rs == null)

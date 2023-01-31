@@ -164,8 +164,7 @@ namespace Juice.MultiTenant.Tests
                         .AddIntegrationEventLog()
                         .RegisterContext<TenantStoreDbContext<Tenant>>("App");
 
-                services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"),
-                    options => options.SubscriptionClientName = "event_bus_test1");
+                services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"));
 
                 services.AddTenantIntegrationEventSelfHandlers<Tenant>();
 

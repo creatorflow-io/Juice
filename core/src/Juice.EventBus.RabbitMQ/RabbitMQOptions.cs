@@ -5,5 +5,6 @@
         public bool RabbitMQEnabled { get; set; }
         public int Port { get; set; }
         public string VirtualHost { get; set; }
+        public string? BrokerName { get; set; }
     }
 }

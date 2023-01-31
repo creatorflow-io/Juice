@@ -46,7 +46,7 @@ namespace Juice.EventBus.Tests
 
                 services.AddHttpContextAccessor();
 
-                services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"), options => options.SubscriptionClientName = "event_bus_test1");
+                services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"));
 
                 services.AddTransient<ContentPublishedIntegrationEventHandler>();
 
@@ -58,7 +58,10 @@ namespace Juice.EventBus.Tests
             {
                 eventBus.Subscribe<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler>();
 
-                await eventBus.PublishAsync(new ContentPublishedIntegrationEvent("Hello"));
+                for (var i = 0; i < 10; i++)
+                {
+                    await eventBus.PublishAsync(new ContentPublishedIntegrationEvent($"Hello {i}"));
+                }
 
                 await Task.Delay(TimeSpan.FromSeconds(3));
 

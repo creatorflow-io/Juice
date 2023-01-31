@@ -161,7 +161,7 @@ namespace Juice.EventBus.Tests
                 services.AddIntegrationEventLog()
                    .RegisterContext<TestContext>(TestSchema1);
 
-                services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"), options => options.SubscriptionClientName = "event_bus_test1");
+                services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"));
 
                 services.AddTransient<ContentPublishedIntegrationEventHandler>();
             });
