@@ -50,7 +50,8 @@ namespace Juice.EventBus.RabbitMQ
 
         private string GetQueueName(string eventName)
         {
-            return Regex.Replace(eventName, "[A-Z]", "_$0").ToLower().Trim('_');
+            return Regex.Replace(eventName, "[A-Z]", "_$0").ToLower().Trim('_')
+                .Replace("_integration_event", "");
         }
 
         private void SubsManager_OnEventRemoved(object sender, string eventName)
