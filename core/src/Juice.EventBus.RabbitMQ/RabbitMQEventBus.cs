@@ -1,6 +1,7 @@
 ﻿using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -49,7 +50,7 @@ namespace Juice.EventBus.RabbitMQ
 
         private string GetQueueName(string eventName)
         {
-            return eventName.ToLower() + "_queue";
+            return Regex.Replace(eventName, "[A-Z]", "_$0").ToLower().Trim('_');
         }
 
         private void SubsManager_OnEventRemoved(object sender, string eventName)
