@@ -16,18 +16,18 @@ namespace Juice.EventBus
 
         public abstract Task PublishAsync(IntegrationEvent @event);
 
-        public virtual void Subscribe<T, TH>()
+        public virtual void Subscribe<T, TH>(string? key = default)
             where T : IntegrationEvent
             where TH : IIntegrationEventHandler<T>
         {
-            var eventName = SubsManager.GetEventKey<T>();
+            var eventName = key ?? SubsManager.GetEventKey<T>();
             Logger.LogInformation("Subscribing event {EventName} with {EventHandler}", eventName, typeof(TH).GetGenericTypeName());
 
-            SubsManager.AddSubscription<T, TH>();
+            SubsManager.AddSubscription<T, TH>(key);
 
         }
 
-        public virtual void Unsubscribe<T, TH>()
+        public virtual void Unsubscribe<T, TH>(string? key = default)
             where T : IntegrationEvent
             where TH : IIntegrationEventHandler<T>
         {
@@ -35,7 +35,7 @@ namespace Juice.EventBus
 
             Logger.LogInformation("Unsubscribing event {EventName} for hanler {Handler}", eventName, typeof(TH).GetGenericTypeName());
 
-            SubsManager.RemoveSubscription<T, TH>();
+            SubsManager.RemoveSubscription<T, TH>(key);
 
         }
 

@@ -20,6 +20,7 @@ namespace Juice.EventBus.RabbitMQ
 
         private IModel _consumerChannel;
         private string _queueName;
+        private string _type;
         private readonly int _retryCount;
 
         private readonly IServiceScopeFactory _scopeFactory;
@@ -35,6 +36,7 @@ namespace Juice.EventBus.RabbitMQ
         {
             _persistentConnection = mQPersistentConnection;
             _queueName = options.Value.SubscriptionClientName ?? string.Empty;
+            _type = options.Value.ExchangeType ?? "direct";
             if (!string.IsNullOrEmpty(options.Value.BrokerName))
             {
                 BROKER_NAME = options.Value.BrokerName;
@@ -138,7 +140,7 @@ namespace Juice.EventBus.RabbitMQ
             var channel = _persistentConnection.CreateModel();
 
             channel.ExchangeDeclare(exchange: BROKER_NAME,
-                                    type: "direct");
+                                    type: _type);
 
             var queuDeclareOk = channel.QueueDeclare(queue: _queueName,
                                  durable: true,
@@ -210,15 +212,15 @@ namespace Juice.EventBus.RabbitMQ
         #endregion
 
         #region Subscribe/UnSubscribe
-        public override void Subscribe<T, TH>()
+        public override void Subscribe<T, TH>(string? key = default)
         {
-            var eventName = SubsManager.GetEventKey<T>();
+            var eventName = key ?? SubsManager.GetEventKey<T>();
 
             DoInternalSubscription(eventName);
 
             Logger.LogInformation("Subscribing to event {EventName} with {EventHandler}", eventName, typeof(TH).GetGenericTypeName());
 
-            SubsManager.AddSubscription<T, TH>();
+            SubsManager.AddSubscription<T, TH>(key);
 
             StartBasicConsume();
 
@@ -261,7 +263,7 @@ namespace Juice.EventBus.RabbitMQ
                     Logger.LogWarning(ex, "Could not publish event: {EventId} after {Timeout}s ({ExceptionMessage})", @event.Id, $"{time.TotalSeconds:n1}", ex.Message);
                 });
 
-            var eventName = SubsManager.GetEventKey(@event.GetType());
+            var eventName = @event.GetEventKey();
 
             Logger.LogTrace("Creating RabbitMQ channel to publish event: {EventId} ({EventName})", @event.Id, eventName);
 
@@ -269,7 +271,7 @@ namespace Juice.EventBus.RabbitMQ
             {
                 Logger.LogTrace("Declaring RabbitMQ exchange to publish event: {EventId}", @event.Id);
 
-                channel.ExchangeDeclare(exchange: BROKER_NAME, type: "direct");
+                channel.ExchangeDeclare(exchange: BROKER_NAME, type: _type);
 
                 var body = JsonSerializer.SerializeToUtf8Bytes(@event, @event.GetType(), new JsonSerializerOptions
                 {

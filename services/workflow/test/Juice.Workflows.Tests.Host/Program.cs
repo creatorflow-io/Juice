@@ -116,7 +116,9 @@ static void ConfigureIntegrations(IServiceCollection services, IConfiguration co
     services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"),
         options =>
         {
-            options.BrokerName = "juice_bus";
+            options.BrokerName = "topic.juice_bus";
+            options.SubscriptionClientName = "topic_wf";
+            options.ExchangeType = "topic";
         });
 
     services.AddRedisRequestManager(options =>
