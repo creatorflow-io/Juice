@@ -46,6 +46,12 @@
     <ProjectReference Include="..\..\src\Juice.Timers.EF.SqlServer\Juice.Timers.EF.SqlServer.csproj" />
   </ItemGroup>
   
+  <ItemGroup>
+    <None Update="appsettings.Development.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  
   <Import Project="..\..\..\..\test\Juice.XUnit\Juice.XUnit.projitems" Label="Shared" />
 
 </Project>

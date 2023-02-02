@@ -26,7 +26,7 @@ namespace Microsoft.Extensions.DependencyInjection
                     }
                 });
 
-                services.AddSingleton<IEventBusSubscriptionsManager, InMemoryEventBusSubscriptionsManager>();
+                services.AddSingleton<IEventBusSubscriptionsManager, Juice.EventBus.RabbitMQ.InMemoryEventBusSubscriptionsManager>();
 
                 services.AddSingleton<IRabbitMQPersistentConnection, DefaultRabbitMQPersistentConnection>();
 

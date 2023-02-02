@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 
-namespace Juice.EventBus
+namespace Juice.EventBus.RabbitMQ
 {
     public class InMemoryEventBusSubscriptionsManager : IEventBusSubscriptionsManager
     {
@@ -90,6 +90,13 @@ namespace Juice.EventBus
         {
             _logger.LogDebug("{Id} Get subscriptions of {eventName}.", _guid, eventName);
             if (_handlers.ContainsKey(eventName)) return _handlers[eventName];
+            foreach (var key in _handlers.Keys)
+            {
+                if (RabbitMQUtils.IsTopicMatch(eventName, key))
+                {
+                    return _handlers[key];
+                }
+            }
             return Array.Empty<SubscriptionInfo>();
         }
 
@@ -111,7 +118,7 @@ namespace Juice.EventBus
         }
 
         public bool HasSubscriptionsForEvent(string eventName) => _handlers.ContainsKey(eventName)
-            ;
+            || _handlers.Keys.Any(key => RabbitMQUtils.IsTopicMatch(eventName, key));
 
         public Type GetEventTypeByName(string eventName)
         {
@@ -119,7 +126,13 @@ namespace Juice.EventBus
             {
                 return _eventTypes[eventName];
             }
-
+            foreach (var key in _eventTypes.Keys)
+            {
+                if (RabbitMQUtils.IsTopicMatch(eventName, key))
+                {
+                    return _eventTypes[key];
+                }
+            }
             return default;
         }
 

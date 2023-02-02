@@ -22,5 +22,10 @@ namespace Juice.EventBus
 
         [JsonInclude]
         public DateTime CreationDate { get; private init; }
+
+        public virtual string GetEventKey()
+        {
+            return GetType().Name;
+        }
     }
 }

@@ -16,7 +16,7 @@
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <typeparam name="TH"></typeparam>
-        void Subscribe<T, TH>()
+        void Subscribe<T, TH>(string? key = default)
             where T : IntegrationEvent
             where TH : IIntegrationEventHandler<T>;
 
@@ -25,7 +25,7 @@
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <typeparam name="TH"></typeparam>
-        void Unsubscribe<T, TH>()
+        void Unsubscribe<T, TH>(string? key = default)
             where TH : IIntegrationEventHandler<T>
             where T : IntegrationEvent;
     }

@@ -43,6 +43,7 @@ static void ConfigureTimer(IServiceCollection services, string provider, IConfig
     services.AddMediatRTimerBehaviors();
 
     services.AddTransient<TimerStartIntegrationEventHandler>();
+    services.AddTransient<LogEventHandler>();
 }
 
 static void ConfigureIntegrations(IServiceCollection services, string provider, IConfiguration configuration)
@@ -54,7 +55,9 @@ static void ConfigureIntegrations(IServiceCollection services, string provider, 
     services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"),
         options =>
         {
-            options.BrokerName = "juice_bus";
+            options.BrokerName = "topic.juice_bus";
+            options.SubscriptionClientName = "topic_timer_events";
+            options.ExchangeType = "topic";
         });
 
     services.AddRedisRequestManager(options =>
@@ -68,4 +71,26 @@ static void InitEvenBusEvent(WebApplication app)
     var eventBus = app.Services.GetRequiredService<IEventBus>();
 
     eventBus.Subscribe<TimerStartIntegrationEvent, TimerStartIntegrationEventHandler>();
+    eventBus.Subscribe<LogEvent, LogEventHandler>("kernel.*");
+}
+
+public record LogEvent : IntegrationEvent
+{
+    public LogLevel Serverty { get; set; }
+    public string Facility { get; set; }
+
+    public override string GetEventKey() => (Facility + "." + Serverty).ToLower();
+}
+public class LogEventHandler : IIntegrationEventHandler<LogEvent>
+{
+    private ILogger _logger;
+    public LogEventHandler(ILogger<LogEventHandler> logger)
+    {
+        _logger = logger;
+    }
+    public Task HandleAsync(LogEvent @event)
+    {
+        _logger.LogInformation("Received log event. {Facility} {Serverty}", @event.Facility, @event.Serverty);
+        return Task.CompletedTask;
+    }
 }
