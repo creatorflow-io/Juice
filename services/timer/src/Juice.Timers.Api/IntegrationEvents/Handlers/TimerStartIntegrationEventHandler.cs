@@ -22,7 +22,7 @@ namespace Juice.Timers.Api.IntegrationEvents.Handlers
             var rs = await _mediator.Send(new IdentifiedCommand<CreateTimerCommand, TimerRequest>(command, @event.Id));
             if (rs == null)
             {
-                _logger.LogInformation("No handler found.");
+                _logger.LogWarning("No handler found.");
             }
             else
             {

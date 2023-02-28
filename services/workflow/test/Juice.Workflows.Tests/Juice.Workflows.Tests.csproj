@@ -45,6 +45,8 @@
   </ItemGroup>
   
   <ItemGroup>
+    <ProjectReference Include="..\..\..\..\core\src\Juice.EventBus.RabbitMQ\Juice.EventBus.RabbitMQ.csproj" />
+    <ProjectReference Include="..\..\..\..\test\Juice.XUnit\Juice.XUnit.csproj" />
     <ProjectReference Include="..\..\src\Juice.Workflows.Api\Juice.Workflows.Api.csproj" />
     <ProjectReference Include="..\..\src\Juice.Workflows.Bpmn\Juice.Workflows.Bpmn.csproj" />
     <ProjectReference Include="..\..\src\Juice.Workflows.EF.PostgreSQL\Juice.Workflows.EF.PostgreSQL.csproj" />
@@ -61,7 +63,5 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
-
-  <Import Project="..\..\..\..\test\Juice.XUnit\Juice.XUnit.projitems" Label="Shared" />
 
 </Project>

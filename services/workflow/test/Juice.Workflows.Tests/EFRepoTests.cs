@@ -1,9 +1,12 @@
 ﻿using Juice.EF.Extensions;
+using Juice.Workflows.Api.Domain.CommandHandlers;
 using Juice.Workflows.Bpmn.DependencyInjection;
 using Juice.Workflows.Domain.AggregatesModel.DefinitionAggregate;
+using Juice.Workflows.Domain.Commands;
 using Juice.Workflows.EF;
 using Juice.Workflows.EF.DependencyInjection;
 using Juice.XUnit;
+using Microsoft.EntityFrameworkCore;
 
 namespace Juice.Workflows.Tests
 {
@@ -106,6 +109,9 @@ namespace Juice.Workflows.Tests
                 });
 
                 services.RegisterBpmnWorkflows();
+
+                services.AddMediatR(typeof(StartEvent), typeof(TimerEventStartDomainEventHandler), typeof(StartUserTaskCommandHandler));
+
             });
 
             using var scope = resolver.ServiceProvider.CreateScope();
@@ -122,10 +128,14 @@ namespace Juice.Workflows.Tests
             {
                 var definition = new WorkflowDefinition("diagram", "Bpmn diagram");
                 definition.SetData(context.Processes,
-                    context.Nodes.Values.Select(n => new NodeData(n.Record, n.Node.GetType().Name, n.Properties)),
+                    context.Nodes.Values.Select(n => new NodeData(n.Record, n.Node.GetType().Name, context.Processes.Any(p => n.IsStartOf(p.Id)), n.Properties)),
                     context.Flows.Select(n => new FlowData(n.Record, n.Flow.GetType().Name)));
                 var createResult = await definitionRepo.CreateAsync(definition, default);
                 createResult.Succeeded.Should().BeTrue();
+            }
+            else
+            {
+                await definitionRepo.DeleteAsync("diagram", default);
             }
         }
 
@@ -176,7 +186,15 @@ namespace Juice.Workflows.Tests
 
                 services.AddDbWorkflows();
 
-                services.AddMediatR(typeof(StartEvent), typeof(TimerEventStartDomainEventHandler));
+                services.AddMediatR(typeof(StartEvent), typeof(TimerEventStartDomainEventHandler), typeof(StartUserTaskCommandHandler));
+
+                services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"),
+                    options =>
+                    {
+                        options.BrokerName = "direct.juice_bus";
+                        options.SubscriptionClientName = "direct_wf";
+                    });
+
                 services.AddSingleton<EventQueue>();
 
             });
@@ -207,6 +225,81 @@ namespace Juice.Workflows.Tests
                 _output.WriteLine("Builder: " + context.ResolvedBy);
                 _output.WriteLine(ContextPrintHelper.Visualize(context));
             }
+        }
+
+        [IgnoreOnCITheory(DisplayName = "Start workflow from event"), TestPriority(800)]
+        [InlineData("SqlServer")]
+        [InlineData("PostgreSQL")]
+        public async Task Should_start_from_event_Async(string provider)
+        {
+            var resolver = new DependencyResolver
+            {
+                CurrentDirectory = AppContext.BaseDirectory
+            };
+
+            resolver.ConfigureServices(services =>
+            {
+                var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
+                var configuration = configService.GetConfiguration();
+
+                services.AddLocalization(options => options.ResourcesPath = "Resources");
+
+                services.AddDefaultStringIdGenerator();
+
+                services.AddSingleton(provider => _output);
+
+                services.AddLogging(builder =>
+                {
+                    builder.ClearProviders()
+                    .AddTestOutputLogger()
+                    .AddConfiguration(configuration.GetSection("Logging"));
+                });
+
+                services.AddWorkflowServices()
+                    .AddEFWorkflowRepo()
+                    .AddEFWorkflowStateRepo();
+
+                services.RegisterNodes(typeof(OutcomeBranchUserTask));
+
+                services.AddWorkflowDbContext(configuration, options =>
+                {
+                    options.Schema = "Workflows";
+                    options.DatabaseProvider = provider;
+                });
+                services.AddWorkflowPersistDbContext(configuration, options =>
+                {
+                    options.Schema = "Workflows";
+                    options.DatabaseProvider = provider;
+                });
+
+                services.AddDbWorkflows();
+
+                services.AddMediatR(typeof(StartEvent), typeof(TimerEventStartDomainEventHandler), typeof(StartUserTaskCommandHandler));
+
+                services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"),
+                    options =>
+                    {
+                        options.BrokerName = "direct.juice_bus";
+                        options.SubscriptionClientName = "direct_wf";
+                    });
+
+                services.AddSingleton<EventQueue>();
+
+            });
+
+            using var scope = resolver.ServiceProvider.CreateScope();
+
+            var dbContext = scope.ServiceProvider.GetRequiredService<WorkflowDbContext>();
+            var eventId = (await dbContext.EventRecords.FirstOrDefaultAsync(e => e.IsStartEvent))?.Id;
+
+            if (eventId.HasValue)
+            {
+                _output.WriteLine($"Start event {eventId}");
+                var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+                var rs = await mediator.Send(new DispatchWorkflowEventCommand(eventId.Value, false, default));
+                rs.Succeeded.Should().BeTrue();
+            }
+
         }
     }
 }

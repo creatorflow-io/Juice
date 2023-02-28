@@ -39,6 +39,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\test\Juice.XUnit\Juice.XUnit.csproj" />
     <ProjectReference Include="..\..\src\Juice.EF\Juice.EF.csproj" />
   </ItemGroup>
 
@@ -52,7 +53,5 @@
     </None>
   </ItemGroup>
 
-
-  <Import Project="..\..\..\test\Juice.XUnit\Juice.XUnit.projitems" Label="Shared" />
 
 </Project>

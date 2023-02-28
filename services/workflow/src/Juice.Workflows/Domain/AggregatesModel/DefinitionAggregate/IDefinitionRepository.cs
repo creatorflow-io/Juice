@@ -6,5 +6,6 @@
         Task<OperationResult> UpdateAsync(WorkflowDefinition workflowDefinition, CancellationToken token);
         Task<WorkflowDefinition?> GetAsync(string definitionId, CancellationToken token);
         Task<bool> ExistAsync(string definitionId, CancellationToken token);
+        Task<OperationResult> DeleteAsync(string definitionId, CancellationToken token);
     }
 }

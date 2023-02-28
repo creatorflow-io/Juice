@@ -7,11 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="IntegrationEvents\Events\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\..\..\..\core\src\Juice.EventBus\Juice.EventBus.csproj" />
+    <ProjectReference Include="..\Juice.Workflows\Juice.Workflows.csproj" />
   </ItemGroup>
 
 </Project>

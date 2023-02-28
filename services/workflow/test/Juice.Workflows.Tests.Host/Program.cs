@@ -172,6 +172,9 @@ static async Task MigrateDbAsync(WebApplication app)
         var timerContext = scope.ServiceProvider.GetRequiredService<WorkflowPersistDbContext>();
         var logContext = logContextFactory(timerContext);
         await logContext.MigrateAsync();
+
+        var wfContext = scope.ServiceProvider.GetRequiredService<WorkflowDbContext>();
+        await wfContext.MigrateAsync();
     }
 }
 

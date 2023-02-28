@@ -33,7 +33,7 @@
     <EnableSourceLink>false</EnableSourceLink>
     <BaseIntermediateOutputPath>$(SolutionDir)/build/obj/$(MSBuildProjectName)</BaseIntermediateOutputPath>
     <OutputPath>$(SolutionDir)/build/bin/$(Configuration)/$(MSBuildProjectName)</OutputPath>
-    <PackageLocation>$(SolutionDir)/build/publish/$(Configuration)/</PackageLocation>
+    <PackageLocation>$(SolutionDir)build/publish/$(Configuration)/</PackageLocation>
   </PropertyGroup>
 
 </Project>

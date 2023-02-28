@@ -1,6 +1,5 @@
 ﻿using Juice.Domain;
 using Juice.Domain.AggregatesModel;
-using MediatR;
 using Newtonsoft.Json;
 
 namespace Juice.Workflows.Domain.AggregatesModel.DefinitionAggregate
@@ -34,16 +33,16 @@ namespace Juice.Workflows.Domain.AggregatesModel.DefinitionAggregate
             RawFormat = rawFormat;
         }
 
-        private void ClearData()
+        public void ClearData()
         {
             Data = default;
-            this.AddDomainEvent(new DefinitionDataChangedDomainEvent(this));
+            this.AddDomainEvent(new DefinitionDataChangedDomainEvent(this, Array.Empty<ProcessRecord>(), Array.Empty<NodeData>(), Array.Empty<FlowData>()));
         }
 
         public void SetData(IEnumerable<ProcessRecord> processes, IEnumerable<NodeData> nodes, IEnumerable<FlowData> flows)
         {
             Data = JsonConvert.SerializeObject((processes, nodes, flows));
-            this.AddDomainEvent(new DefinitionDataChangedDomainEvent(this));
+            this.AddDomainEvent(new DefinitionDataChangedDomainEvent(this, processes, nodes, flows));
         }
 
         public (IEnumerable<ProcessRecord> Processes, IEnumerable<NodeData> Nodes, IEnumerable<FlowData> Flows) GetData()

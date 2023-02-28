@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\core\src\Juice\Juice.csproj" />
+    <ProjectReference Include="..\..\..\..\test\Juice.XUnit\Juice.XUnit.csproj" />
     <ProjectReference Include="..\..\src\Juice.Storage.Local\Juice.Storage.Local.csproj" />
     <ProjectReference Include="..\..\src\Juice.Storage\Juice.Storage.csproj" />
   </ItemGroup>

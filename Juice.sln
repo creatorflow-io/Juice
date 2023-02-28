@@ -7,8 +7,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{9E4FFBBB-2E8
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{F0C1DDC9-295A-4DD8-AB19-3CE592CFA928}"
 EndProject
-Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Juice.XUnit", "test\Juice.XUnit\Juice.XUnit.shproj", "{3C5739A5-F7BF-4D1E-8727-FC0C11C5BD21}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{CD84B6B7-9A64-4E5E-80A4-462AF323BD97}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
@@ -135,13 +133,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.MediatR.Redis", "core
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Timers.Tests", "services\timer\test\Juice.Timers.Tests\Juice.Timers.Tests.csproj", "{2A3D36A0-A109-4C57-8624-6FE7F7BEF8DE}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.XUnit", "test\Juice.XUnit\Juice.XUnit.csproj", "{CCEC43D2-687C-4AF6-9F1C-21663B517F9A}"
+EndProject
 Global
-	GlobalSection(SharedMSBuildProjectFiles) = preSolution
-		test\Juice.XUnit\Juice.XUnit.projitems*{04534853-a342-49c9-96d7-94d174a8f98d}*SharedItemsImports = 5
-		test\Juice.XUnit\Juice.XUnit.projitems*{2a3d36a0-a109-4c57-8624-6fe7f7bef8de}*SharedItemsImports = 5
-		test\Juice.XUnit\Juice.XUnit.projitems*{3c5739a5-f7bf-4d1e-8727-fc0c11c5bd21}*SharedItemsImports = 13
-		test\Juice.XUnit\Juice.XUnit.projitems*{c7fe1197-8aa2-4155-a011-5968245578f7}*SharedItemsImports = 5
-	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
@@ -343,12 +337,15 @@ Global
 		{2A3D36A0-A109-4C57-8624-6FE7F7BEF8DE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2A3D36A0-A109-4C57-8624-6FE7F7BEF8DE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2A3D36A0-A109-4C57-8624-6FE7F7BEF8DE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CCEC43D2-687C-4AF6-9F1C-21663B517F9A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CCEC43D2-687C-4AF6-9F1C-21663B517F9A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CCEC43D2-687C-4AF6-9F1C-21663B517F9A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CCEC43D2-687C-4AF6-9F1C-21663B517F9A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{3C5739A5-F7BF-4D1E-8727-FC0C11C5BD21} = {F0C1DDC9-295A-4DD8-AB19-3CE592CFA928}
 		{AE9C2C13-ECD6-4990-B85B-9F12A5F6B2CE} = {CD84B6B7-9A64-4E5E-80A4-462AF323BD97}
 		{2B012B5D-C09D-460D-8219-CBC877416FDF} = {9E4FFBBB-2E8E-4463-B502-260D502D43E1}
 		{F0DAAAF8-5E72-46FF-87BF-6741365193C8} = {9E4FFBBB-2E8E-4463-B502-260D502D43E1}
@@ -403,6 +400,7 @@ Global
 		{63A93F37-D215-4CC1-9554-EC12B7829602} = {D3C54E8B-3783-4A70-81B6-576B7BACD4DB}
 		{77FC7CE4-ECF5-41BE-B27B-48049284562D} = {9E4FFBBB-2E8E-4463-B502-260D502D43E1}
 		{2A3D36A0-A109-4C57-8624-6FE7F7BEF8DE} = {F0C1DDC9-295A-4DD8-AB19-3CE592CFA928}
+		{CCEC43D2-687C-4AF6-9F1C-21663B517F9A} = {F0C1DDC9-295A-4DD8-AB19-3CE592CFA928}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DD654E02-538D-4E29-A098-413DEBAE4D98}

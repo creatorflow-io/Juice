@@ -53,7 +53,8 @@ namespace Juice.Workflows
             {
                 var id = _idGenerator.GenerateUniqueId();
 
-                var createResult = await _workflowRepository.CreateAsync(new WorkflowRecord(id, workflowId, correlationId, name), token);
+                var workflow = new WorkflowRecord(id, workflowId, correlationId, name);
+                var createResult = await _workflowRepository.CreateAsync(workflow, token);
 
                 if (!createResult.Succeeded)
                 {
@@ -114,10 +115,16 @@ namespace Juice.Workflows
             return OperationResult.Failed<WorkflowExecutionResult>($"Cannot resolve workflow context to execute {workflowId}");
         }
 
-        private async Task<OperationResult<WorkflowExecutionResult>> ExecuteAsync(WorkflowContext context, string? nodeId = default, CancellationToken token = default)
+        private async Task<OperationResult<WorkflowExecutionResult>> ExecuteAsync(
+            WorkflowContext context, string? nodeId = default, CancellationToken token = default)
         {
             try
             {
+                if (context.WorkflowRecord != null)
+                {
+                    context.WorkflowRecord.UpdateStatus(WorkflowStatus.Executing, default);
+                    await _workflowRepository.UpdateAsync(context.WorkflowRecord, token);
+                }
 
                 var executor = _serviceProvider.GetRequiredService<WorkflowExecutor>();
 
@@ -126,6 +133,12 @@ namespace Juice.Workflows
                 var state = rs.Context.State;
 
                 await _stateReposistory.PersistAsync(context.WorkflowId, state, token);
+
+                if (context.WorkflowRecord != null)
+                {
+                    context.WorkflowRecord.UpdateStatus(rs.Status, default);
+                    await _workflowRepository.UpdateAsync(context.WorkflowRecord, token);
+                }
 
                 return OperationResult.Result(rs);
             }

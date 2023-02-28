@@ -43,11 +43,10 @@
         {
             if (string.IsNullOrEmpty(message)) { return NodeExecutionResult.Empty; }
 
-            var rs = new NodeExecutionResult(WorkflowStatus.Idle, Array.Empty<string>())
+            return new NodeExecutionResult(WorkflowStatus.Idle, Array.Empty<string>())
             {
                 Message = message
             };
-            return rs;
         }
 
         /// <summary>
@@ -57,6 +56,19 @@
         /// <returns></returns>
         protected static NodeExecutionResult Fault(string message)
             => NodeExecutionResult.Fault(message);
+
+        /// <summary>
+        /// Node was started to execute outside workflow
+        /// </summary>
+        /// <param name="message"></param>
+        /// <returns></returns>
+        protected static NodeExecutionResult Executing(string? message = default)
+        {
+            return new NodeExecutionResult(WorkflowStatus.Executing, Array.Empty<string>())
+            {
+                Message = message
+            };
+        }
         #endregion
 
 

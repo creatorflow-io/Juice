@@ -30,6 +30,7 @@
   
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\core\src\Juice\Juice.csproj" />
+    <ProjectReference Include="..\..\..\..\test\Juice.XUnit\Juice.XUnit.csproj" />
     <ProjectReference Include="..\..\src\Juice.Locks.Redis\Juice.Locks.Redis.csproj" />
   </ItemGroup>
   
@@ -39,6 +40,4 @@
     </None>
   </ItemGroup>
   
-  <Import Project="..\..\..\..\test\Juice.XUnit\Juice.XUnit.projitems" Label="Shared" />
-
 </Project>
