@@ -9,7 +9,7 @@ namespace Juice.Integrations.MediatR.Behaviors
         where TResponse : IOperationResult
     {
         private readonly ILogger _logger;
-        public OperationExceptionBehavior(ILogger<OperationExceptionBehavior<TRequest, TResponse>> logger)
+        public OperationExceptionBehavior(ILogger<TRequest> logger)
         {
             _logger = logger;
         }
@@ -23,6 +23,18 @@ namespace Juice.Integrations.MediatR.Behaviors
                 if (result != null && !result.Succeeded)
                 {
                     _logger.LogError("Command {typeName} {request} not success. {message}", typeName, request?.ToString() ?? "", result.Message);
+                    if (_logger.IsEnabled(LogLevel.Debug) && result is OperationResult rs1 && rs1.Exception != null)
+                    {
+                        _logger.LogDebug(rs1.Exception.StackTrace);
+                    }
+                }
+                else if (result == null)
+                {
+                    _logger.LogError("Command {typeName} {request} return invalid result", typeName, request?.ToString() ?? "");
+                }
+                else if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogError("Command {typeName} {request} return Succeeded state", typeName, request?.ToString() ?? "");
                 }
                 return result;
             }

@@ -23,7 +23,7 @@ namespace Juice
                 _message = value;
             }
         }
-        public bool Succeeded { get; protected set; }
+        public bool Succeeded { get; init; }
 
         [JsonIgnore]
         public Exception? Exception { get; protected set; }

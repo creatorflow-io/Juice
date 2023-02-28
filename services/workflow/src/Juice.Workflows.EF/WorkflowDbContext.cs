@@ -1,4 +1,6 @@
-﻿namespace Juice.Workflows.EF
+﻿using Juice.Workflows.Domain.AggregatesModel.EventAggregate;
+
+namespace Juice.Workflows.EF
 {
     public class WorkflowDbContext : DbContextBase
     {
@@ -6,6 +8,8 @@
         public DbSet<WorkflowDefinition> WorkflowDefinitions { get; set; }
 
         public DbSet<WorkflowRecord> WorkflowRecords { get; set; }
+
+        public DbSet<EventRecord> EventRecords { get; set; }
 
         public WorkflowDbContext(IServiceProvider serviceProvider, DbContextOptions<WorkflowDbContext> options) : base(serviceProvider, options)
         {
@@ -35,6 +39,18 @@
                 entity.Property(e => e.DefinitionId).HasMaxLength(Constants.IdentityLength);
                 entity.Property(e => e.CorrelationId).HasMaxLength(Constants.IdentityLength);
                 entity.Property(e => e.FaultMessage).HasMaxLength(Constants.ShortDescriptionLength);
+            });
+
+            modelBuilder.Entity<EventRecord>(entity =>
+            {
+                entity.ToTable(nameof(EventRecord), Schema);
+
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.WorkflowId).HasMaxLength(Constants.IdentityLength);
+                entity.Property(e => e.CorrelationId).HasMaxLength(Constants.IdentityLength);
+                entity.Property(e => e.NodeId).HasMaxLength(Constants.IdentityLength);
+                entity.Property(e => e.DisplayName).HasMaxLength(Constants.NameLength);
             });
         }
     }

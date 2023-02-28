@@ -63,7 +63,7 @@ namespace Juice.Workflows.Services
                     if (context != null)
                     {
                         var state = await _workflowStateRepository.GetAsync(instanceId, token);
-                        return context.SetState(state).SetExecutionInfo(_user, workflowRecord.CorrelationId, input);
+                        return context.SetState(state).SetExecutionInfo(_user, workflowRecord, input);
                     }
                 }
             }

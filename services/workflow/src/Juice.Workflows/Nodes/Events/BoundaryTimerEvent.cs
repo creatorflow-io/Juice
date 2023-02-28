@@ -1,11 +1,17 @@
-﻿namespace Juice.Workflows.Nodes.Events
+﻿using Juice.Workflows.Domain.Commands;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Juice.Workflows.Nodes.Events
 {
     public class BoundaryTimerEvent : BoundaryEvent
     {
         private ILogger _logger;
-        public BoundaryTimerEvent(ILogger<BoundaryErrorEvent> logger, IStringLocalizerFactory stringLocalizer) : base(stringLocalizer)
+        private IServiceScopeFactory _scopeFactory;
+        public BoundaryTimerEvent(ILogger<BoundaryTimerEvent> logger, IServiceScopeFactory scopeFactory,
+            IStringLocalizerFactory stringLocalizer) : base(stringLocalizer)
         {
             _logger = logger;
+            _scopeFactory = scopeFactory;
         }
 
         public override LocalizedString DisplayText => Localizer["Timer Event"];
@@ -18,12 +24,29 @@
             return Task.FromResult(true);
         }
 
-        public override Task<NodeExecutionResult> StartAsync(WorkflowContext workflowContext, NodeContext node, FlowContext? flow, CancellationToken token)
+        public override async Task<NodeExecutionResult> StartAsync(WorkflowContext workflowContext, NodeContext node, FlowContext? flow, CancellationToken token)
         {
-            // Should register a timer
-            _logger.LogDebug("Registed a timer");
-            workflowContext.AddDomainEvent(new TimerEventStartDomainEvent(workflowContext.WorkflowId, node));
-            return Task.FromResult(Halt());
+            try
+            {
+                // Should register a timer
+                using var scope = _scopeFactory.CreateScope();
+                var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+                var rs = await mediator.Send(new StartTimerCommand(workflowContext.WorkflowId, workflowContext.CorrelationId, node));
+                if (rs.Succeeded)
+                {
+                    if (_logger.IsEnabled(LogLevel.Debug))
+                    {
+                        _logger.LogDebug("Registed a timer");
+                    }
+                    workflowContext.AddDomainEvent(new TimerEventStartDomainEvent(workflowContext.WorkflowId, node));
+                    return Halt();
+                }
+                return Fault(rs.Message ?? "Failed to start a timer");
+            }
+            catch (Exception ex)
+            {
+                return Fault(ex.Message);
+            }
         }
 
         public override Task<NodeExecutionResult> ResumeAsync(WorkflowContext workflowContext, NodeContext node, CancellationToken token)

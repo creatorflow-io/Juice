@@ -21,6 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\test\Juice.XUnit\Juice.XUnit.csproj" />
     <ProjectReference Include="..\..\src\Juice.AspNetCore\Juice.AspNetCore.csproj" />
     <ProjectReference Include="..\..\src\Juice.Extensions.Configuration\Juice.Extensions.Configuration.csproj" />
     <ProjectReference Include="..\..\src\Juice.Extensions.Logging\Juice.Extensions.Logging.csproj" />
@@ -49,6 +50,5 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Configuration" Version="$(MicrosoftExtensionsVersion)" />
   </ItemGroup>
   
-  <Import Project="..\..\..\test\Juice.XUnit\Juice.XUnit.projitems" Label="Shared" />
 
 </Project>

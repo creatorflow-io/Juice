@@ -41,6 +41,7 @@
     <ProjectReference Include="..\..\..\..\core\src\Juice.MediatR.Redis\Juice.MediatR.Redis.csproj" />
     <ProjectReference Include="..\..\..\..\core\src\Juice.MediatR.RequestManager.EF.PostgreSQL\Juice.MediatR.RequestManager.EF.PostgreSQL.csproj" />
     <ProjectReference Include="..\..\..\..\core\src\Juice.MediatR.RequestManager.EF.SqlServer\Juice.MediatR.RequestManager.EF.SqlServer.csproj" />
+    <ProjectReference Include="..\..\..\..\test\Juice.XUnit\Juice.XUnit.csproj" />
     <ProjectReference Include="..\..\src\Juice.Timers.Api\Juice.Timers.Api.csproj" />
     <ProjectReference Include="..\..\src\Juice.Timers.EF.PostgreSQL\Juice.Timers.EF.PostgreSQL.csproj" />
     <ProjectReference Include="..\..\src\Juice.Timers.EF.SqlServer\Juice.Timers.EF.SqlServer.csproj" />
@@ -52,6 +53,5 @@
     </None>
   </ItemGroup>
   
-  <Import Project="..\..\..\..\test\Juice.XUnit\Juice.XUnit.projitems" Label="Shared" />
 
 </Project>

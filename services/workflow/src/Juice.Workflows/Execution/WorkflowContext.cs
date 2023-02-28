@@ -93,11 +93,14 @@ namespace Juice.Workflows.Execution
             return this;
         }
 
-        public WorkflowContext SetExecutionInfo(string? user, string? correlationId,
+        public WorkflowRecord? WorkflowRecord { get; private set; }
+
+        public WorkflowContext SetExecutionInfo(string? user, WorkflowRecord? workflowRecord,
             IDictionary<string, object?>? input)
         {
             User = user;
-            CorrelationId = correlationId;
+            WorkflowRecord = workflowRecord;
+            CorrelationId = workflowRecord?.CorrelationId;
             Input = input ?? new Dictionary<string, object?>();
             return this;
         }
@@ -188,8 +191,11 @@ namespace Juice.Workflows.Execution
             {
                 throw new ArgumentNullException("Workflow contains more than one process so the processId is required");
             }
-            return Nodes.Values.Single(n => n.Node is StartEvent
-                && n.Record.ProcessIdRef == processId);
+            if (processId == null && Processes.Count() == 1)
+            {
+                processId = Processes.First().Id;
+            }
+            return Nodes.Values.Single(n => string.IsNullOrEmpty(processId) ? n.IsStart() : n.IsStartOf(processId));
         }
 
         public IEnumerable<FlowContext> GetIncomings(NodeContext node)

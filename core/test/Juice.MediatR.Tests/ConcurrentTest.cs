@@ -50,11 +50,10 @@ namespace Juice.MediatR.Tests
 
             var mediator = resolver.ServiceProvider.GetRequiredService<IMediator>();
 
-            for (var i = 0; i < 10; i++)
-            {
-                await mediator.Publish(new NoticeA());
-            }
+            Parallel.For(0, 10, async i => await mediator.Publish(new NoticeA()));
+            Parallel.For(0, 10, async i => await mediator.Send(new CmdB()));
 
+            await Task.Delay(1000);
         }
     }
 
@@ -73,6 +72,25 @@ namespace Juice.MediatR.Tests
         {
             await Task.Delay(200);
             _logger.LogInformation("Notice created at {Created} and processed after {After} milliseconds", notification.DateTime, (DateTimeOffset.Now - notification.DateTime).TotalMilliseconds);
+        }
+    }
+
+    public class CmdB : IRequest<int>
+    {
+        public DateTimeOffset DateTime { get; } = DateTimeOffset.Now;
+    }
+    public class CmdBHandler : IRequestHandler<CmdB, int>
+    {
+        private ILogger _logger;
+        public CmdBHandler(ILogger<CmdBHandler> logger)
+        {
+            _logger = logger;
+        }
+        public async Task<int> Handle(CmdB request, CancellationToken cancellationToken)
+        {
+            await Task.Delay(200);
+            _logger.LogInformation("Command created at {Created} and processed after {After} milliseconds", request.DateTime, (DateTimeOffset.Now - request.DateTime).TotalMilliseconds);
+            return 0;
         }
     }
 }

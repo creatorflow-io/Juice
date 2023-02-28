@@ -31,5 +31,13 @@ namespace Juice.Workflows.Execution
 
         public Dictionary<string, object?> Properties { get; set; } = new Dictionary<string, object?>();
 
+        public bool IsStart()
+        {
+            return Node is StartEvent;
+        }
+        public bool IsStartOf(string processId)
+        {
+            return Node is StartEvent && Record.ProcessIdRef == processId;
+        }
     }
 }

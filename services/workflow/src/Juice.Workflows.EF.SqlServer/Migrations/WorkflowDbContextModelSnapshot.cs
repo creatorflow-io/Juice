@@ -69,6 +69,47 @@ namespace Juice.Workflows.EF.SqlServer.Migrations
                     b.HasAnnotation("Juice:Auditable", true);
                 });
 
+            modelBuilder.Entity("Juice.Workflows.Domain.AggregatesModel.EventAggregate.EventRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CorrelationId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("CreatedDate")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsStartEvent")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset?>("LastCall")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("NodeId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("WorkflowId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("EventRecord", (string)null);
+                });
+
             modelBuilder.Entity("Juice.Workflows.Domain.AggregatesModel.WorkflowAggregate.WorkflowRecord", b =>
                 {
                     b.Property<string>("Id")

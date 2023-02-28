@@ -16,8 +16,8 @@ using MediatR;
 
 var builder = WebApplication.CreateBuilder(args);
 
-ConfigureTimer(builder.Services, "SqlServer", builder.Configuration);
-ConfigureIntegrations(builder.Services, "SqlServer", builder.Configuration);
+ConfigureTimer(builder.Services, "PostgreSQL", builder.Configuration);
+ConfigureIntegrations(builder.Services, "PostgreSQL", builder.Configuration);
 
 var app = builder.Build();
 

@@ -24,6 +24,25 @@
                 return OperationResult.Failed(ex);
             }
         }
+
+        public async Task<OperationResult> DeleteAsync(string definitionId, CancellationToken token)
+        {
+            try
+            {
+                var definition = await _dbContext.WorkflowDefinitions.FirstOrDefaultAsync(d => d.Id == definitionId);
+                if (definition != null)
+                {
+                    definition.ClearData();
+                    _dbContext.WorkflowDefinitions.Remove(definition);
+                    await _dbContext.SaveChangesAsync(token);
+                }
+                return OperationResult.Success;
+            }
+            catch (Exception ex)
+            {
+                return OperationResult.Failed(ex);
+            }
+        }
         public Task<bool> ExistAsync(string definitionId, CancellationToken token)
             => _dbContext.WorkflowDefinitions.AnyAsync(d => d.Id == definitionId, token);
         public Task<WorkflowDefinition?> GetAsync(string definitionId, CancellationToken token)

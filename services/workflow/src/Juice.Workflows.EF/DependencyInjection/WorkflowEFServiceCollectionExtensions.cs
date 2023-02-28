@@ -1,4 +1,5 @@
 ﻿using Juice.EF.Migrations;
+using Juice.Workflows.Domain.AggregatesModel.EventAggregate;
 using Juice.Workflows.EF.Repositories;
 using Microsoft.EntityFrameworkCore.Migrations;
 
@@ -69,6 +70,7 @@ namespace Juice.Workflows.EF.DependencyInjection
         {
             services.AddScoped<IDefinitionRepository, DefinitionRepository>();
             services.AddScoped<IWorkflowRepository, WorkflowRepository>();
+            services.AddScoped<IEventRepository, EventRepository>();
             return services;
         }
 
