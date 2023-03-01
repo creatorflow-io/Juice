@@ -8,12 +8,10 @@
 
 
   <ItemGroup>
-    <PackageReference Include="xunit" Version="2.4.1" />
-
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="$(MicrosoftExtensionsVersion)" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="$(MicrosoftExtensionsVersion)" />
     <PackageReference Include="Microsoft.Extensions.Logging.Configuration" Version="$(MicrosoftExtensionsVersion)" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="$(MicrosoftExtensionsVersion)" />
+    <PackageReference Include="xunit.core" Version="2.4.1" />
   </ItemGroup>
 
 </Project>
