@@ -1,16 +1,20 @@
-﻿namespace Juice.Workflows.Domain.Commands
+﻿using Juice.Workflows.Nodes;
+
+namespace Juice.Workflows.Domain.Commands
 {
-    public class StartServiceTaskCommand : IRequest<IOperationResult>
+    public class StartTaskCommand<TTask> : IRequest<IOperationResult>
+        where TTask : Activity
     {
         public string WorkflowId { get; init; }
         public string? CorrelationId { get; init; }
         public NodeContext Node { get; init; }
 
-        public StartServiceTaskCommand(string workflowId, string? correlationId, NodeContext node)
+        public StartTaskCommand(string workflowId, string? correlationId, NodeContext node)
         {
             WorkflowId = workflowId;
             CorrelationId = correlationId;
             Node = node;
         }
     }
+
 }

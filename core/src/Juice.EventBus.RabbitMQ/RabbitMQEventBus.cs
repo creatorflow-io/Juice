@@ -283,7 +283,7 @@ namespace Juice.EventBus.RabbitMQ
                     var properties = channel.CreateBasicProperties();
                     properties.DeliveryMode = 2; // persistent
 
-                    Logger.LogDebug("Publishing event to RabbitMQ: {EventId}", @event.Id);
+                    Logger.LogDebug("Publishing event to RabbitMQ: {EventId} {EventName}", @event.Id, eventName);
 
                     channel.BasicPublish(
                         exchange: BROKER_NAME,

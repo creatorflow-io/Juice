@@ -13,7 +13,10 @@
             => new List<Outcome> { new Outcome(Localizer["Catched"]) };
 
         public override Task<NodeExecutionResult> StartAsync(WorkflowContext workflowContext, NodeContext node, FlowContext? flowContext, CancellationToken token)
-            => Task.FromResult(Outcomes("Catched"));
+        {
+            workflowContext.AddDomainEvent(new ProcessStartedDomainEvent(node));
+            return Task.FromResult(Outcomes("Catched"));
+        }
 
     }
 }

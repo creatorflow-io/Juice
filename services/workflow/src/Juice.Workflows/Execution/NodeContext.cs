@@ -31,13 +31,33 @@ namespace Juice.Workflows.Execution
 
         public Dictionary<string, object?> Properties { get; set; } = new Dictionary<string, object?>();
 
+        /// <summary>
+        /// Check node is Start event of any process or sub-process
+        /// </summary>
+        /// <returns></returns>
         public bool IsStart()
         {
             return Node is StartEvent;
         }
+
+        /// <summary>
+        /// Check node is Start event of specified process
+        /// </summary>
+        /// <param name="processId"></param>
+        /// <returns></returns>
         public bool IsStartOf(string processId)
         {
             return Node is StartEvent && Record.ProcessIdRef == processId;
+        }
+
+        /// <summary>
+        /// Return properties that has key startswith $
+        /// </summary>
+        /// <param name="keys"></param>
+        /// <returns></returns>
+        public Dictionary<string, object?> GetSharedProperties()
+        {
+            return Properties.Where(p => p.Key.StartsWith("$")).ToDictionary(p => p.Key, p => p.Value);
         }
     }
 }

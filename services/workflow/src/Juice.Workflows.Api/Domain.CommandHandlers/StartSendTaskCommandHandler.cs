@@ -4,9 +4,9 @@ using Juice.Workflows.Nodes.Activities;
 
 namespace Juice.Workflows.Api.Domain.CommandHandlers
 {
-    public class StartUserTaskCommandHandler : StartTaskCommandHandler<UserTask>
+    public class StartSendTaskCommandHandler : StartTaskCommandHandler<SendTask>
     {
-        public StartUserTaskCommandHandler(IEventBus eventBus, IEventRepository eventRepository) : base(eventBus, eventRepository)
+        public StartSendTaskCommandHandler(IEventBus eventBus, IEventRepository eventRepository) : base(eventBus, eventRepository)
         {
 
         }

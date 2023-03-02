@@ -18,7 +18,7 @@ namespace Juice.Workflows.Nodes.Activities
             {
                 using var scope = _serviceProvider.CreateScope();
                 var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-                var rs = await mediator.Send(new StartUserTaskCommand(workflowContext.WorkflowId, workflowContext.CorrelationId, node));
+                var rs = await mediator.Send(new StartTaskCommand<UserTask>(workflowContext.WorkflowId, workflowContext.CorrelationId, node));
                 if (rs.Succeeded)
                 {
                     workflowContext.AddDomainEvent(new UserTaskRequestDomainEvent(node));

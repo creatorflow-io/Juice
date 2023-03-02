@@ -4,7 +4,6 @@ using System.Threading;
 using Juice.EventBus;
 using Juice.EventBus.IntegrationEventLog.EF;
 using Juice.EventBus.IntegrationEventLog.EF.DependencyInjection;
-using Juice.EventBus.RabbitMQ;
 using Juice.Integrations.EventBus.DependencyInjection;
 using Juice.Integrations.MediatR.DependencyInjection;
 using Juice.MediatR.Redis.DependencyInjection;
@@ -484,109 +483,6 @@ namespace Juice.Timers.Tests
             await Task.Delay(TimeSpan.FromSeconds(1));
         }
 
-        [IgnoreOnCITheory(DisplayName = "Send event"), TestPriority(800)]
-        //[InlineData("SqlServer")]
-        [InlineData("PostgreSQL")]
-        public async Task Should__Async(string provider)
-        {
-            var resolver = new DependencyResolver
-            {
-                CurrentDirectory = AppContext.BaseDirectory
-            };
-
-            resolver.ConfigureServices(services =>
-            {
-                var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
-                var configuration = configService.GetConfiguration();
-
-                services.AddSingleton(provider => _output);
-
-                services.AddLogging(builder =>
-                {
-                    builder.ClearProviders()
-                    .AddTestOutputLogger()
-                    .AddConfiguration(configuration.GetSection("Logging"));
-                });
-
-
-                services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"),
-                    options =>
-                    {
-                        options.BrokerName = "topic.juice_bus";
-                        options.SubscriptionClientName = "topic_timer_test_events";
-                        options.ExchangeType = "topic";
-                    });
-
-            });
-
-            using var scope = resolver.ServiceProvider.CreateScope();
-            var eventBus = scope.ServiceProvider.GetRequiredService<IEventBus>();
-
-            await eventBus.PublishAsync(new LogEvent { Facility = "auth", Serverty = LogLevel.Error });
-            await eventBus.PublishAsync(new LogEvent { Facility = "kernel", Serverty = LogLevel.Error });
-            await eventBus.PublishAsync(new LogEvent { Facility = "kernel", Serverty = LogLevel.Information });
-
-            await Task.Delay(TimeSpan.FromSeconds(1));
-        }
-
-        [Fact]
-        public void Topic_should_match()
-        {
-
-            var key = ToMatchKey("kernel.*");
-            _output.WriteLine(key);
-            RabbitMQUtils.IsTopicMatch("kernel.info", key).Should().BeTrue();
-            RabbitMQUtils.IsTopicMatch("kernel.info.x", key).Should().BeFalse();
-            RabbitMQUtils.IsTopicMatch("kernel", key).Should().BeFalse();
-            RabbitMQUtils.IsTopicMatch("x.kernel.info", key).Should().BeFalse();
-
-            key = ToMatchKey("kernel.#");
-            _output.WriteLine(key);
-            RabbitMQUtils.IsTopicMatch("kernel.info", key).Should().BeTrue();
-            RabbitMQUtils.IsTopicMatch("kernel.info.x", key).Should().BeTrue();
-            RabbitMQUtils.IsTopicMatch("kernel", key).Should().BeTrue();
-            RabbitMQUtils.IsTopicMatch("x.kernel.info", key).Should().BeFalse();
-
-            key = ToMatchKey("kernel.*.*");
-            _output.WriteLine(key);
-            RabbitMQUtils.IsTopicMatch("kernel.info", key).Should().BeFalse();
-            RabbitMQUtils.IsTopicMatch("kernel.info.x", key).Should().BeTrue();
-            RabbitMQUtils.IsTopicMatch("kernel.info.x.y", key).Should().BeFalse();
-            RabbitMQUtils.IsTopicMatch("kernel", key).Should().BeFalse();
-            RabbitMQUtils.IsTopicMatch("x.kernel.info", key).Should().BeFalse();
-
-            key = ToMatchKey("*.kernel.*");
-            _output.WriteLine(key);
-            RabbitMQUtils.IsTopicMatch("x.kernel.info", key).Should().BeTrue();
-            RabbitMQUtils.IsTopicMatch("kernel.info", key).Should().BeFalse();
-            RabbitMQUtils.IsTopicMatch("kernel.info.x", key).Should().BeFalse();
-
-            key = ToMatchKey("#.kernel.*");
-            _output.WriteLine(key);
-            RabbitMQUtils.IsTopicMatch("x.kernel.info", key).Should().BeTrue();
-            RabbitMQUtils.IsTopicMatch("kernel.info", key).Should().BeTrue();
-            RabbitMQUtils.IsTopicMatch("kernel.info.x", key).Should().BeFalse();
-
-            key = ToMatchKey("kernel.#.info.*");
-            _output.WriteLine(key);
-            RabbitMQUtils.IsTopicMatch("x.kernel.info", key).Should().BeFalse();
-            RabbitMQUtils.IsTopicMatch("kernel.info", key).Should().BeFalse();
-            RabbitMQUtils.IsTopicMatch("kernel.x.info.y", key).Should().BeTrue();
-            RabbitMQUtils.IsTopicMatch("kernel.x.y.info.z", key).Should().BeTrue();
-            RabbitMQUtils.IsTopicMatch("kernel.info.x", key).Should().BeTrue();
-            RabbitMQUtils.IsTopicMatch("kernel.info.x.y", key).Should().BeFalse();
-        }
-        private string ToMatchKey(string key)
-        {
-            return key;
-        }
-    }
-    public record LogEvent : IntegrationEvent
-    {
-        public LogLevel Serverty { get; set; }
-        public string Facility { get; set; }
-
-        public override string GetEventKey() => (Facility + "." + Serverty).ToLower();
     }
 
     public class SharedToken

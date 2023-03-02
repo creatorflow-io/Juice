@@ -13,7 +13,7 @@ using Xunit.Abstractions;
 
 namespace Juice.Core.Tests
 {
-    [TestCaseOrderer("Juice.XUnit.PriorityOrderer", "Juice.Core.Tests")]
+    [TestCaseOrderer("Juice.XUnit.PriorityOrderer", "Juice.XUnit")]
     public class TenantsConfigurationTests
     {
         private readonly ITestOutputHelper _output;
