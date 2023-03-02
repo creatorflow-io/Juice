@@ -1,4 +1,7 @@
-﻿namespace Juice.Workflows.Nodes.Activities
+﻿using Juice.Workflows.Domain.Commands;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Juice.Workflows.Nodes.Activities
 {
     public class SendTask : Activity
     {
@@ -9,8 +12,24 @@
 
         public override LocalizedString DisplayText => Localizer["Send Task"];
 
-        public override Task<NodeExecutionResult> StartAsync(WorkflowContext workflowContext, NodeContext node, FlowContext? flow, CancellationToken token)
-            => Task.FromResult(Outcomes("Sent"));
+        public override async Task<NodeExecutionResult> StartAsync(WorkflowContext workflowContext, NodeContext node, FlowContext? flow, CancellationToken token)
+        {
+            try
+            {
+                using var scope = _serviceProvider.CreateScope();
+                var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+                var rs = await mediator.Send(new StartTaskCommand<SendTask>(workflowContext.WorkflowId, workflowContext.CorrelationId, node));
+                if (rs.Succeeded)
+                {
+                    return Outcomes("Sent");
+                }
+                return Fault(rs.Message ?? "Failed to start a send task");
+            }
+            catch (Exception ex)
+            {
+                return Fault(ex.Message);
+            }
+        }
 
         public override Task<NodeExecutionResult> ResumeAsync(WorkflowContext workflowContext, NodeContext node, CancellationToken token) => throw new NotImplementedException();
 

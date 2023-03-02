@@ -7,7 +7,10 @@ using Juice.Integrations.MediatR.DependencyInjection;
 using Juice.MediatR.Redis.DependencyInjection;
 using Juice.Services;
 using Juice.Timers.Api.IntegrationEvents.Events;
+using Juice.Workflows;
 using Juice.Workflows.Api.Behaviors.DependencyInjection;
+using Juice.Workflows.Api.Contracts.IntegrationEvents.Events;
+using Juice.Workflows.Api.DependencyInjection;
 using Juice.Workflows.Api.Domain.EventHandlers;
 using Juice.Workflows.Api.IntegrationEvents.Handlers;
 using Juice.Workflows.DependencyInjection;
@@ -19,12 +22,13 @@ using Juice.Workflows.Helpers;
 using Juice.Workflows.Nodes.Activities;
 using Juice.Workflows.Nodes.Events;
 using Juice.Workflows.Services;
+using Juice.Workflows.Tests.Host.IntegrationEvents.Handlers;
 using MediatR;
 using Newtonsoft.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var workflowId = new DefaultStringIdGenerator().GenerateRandomId(6);
+var workflowId = "incodeWf";
 Console.WriteLine("******** WorkflowId: " + workflowId);
 
 ConfigureCommons(builder.Services);
@@ -41,6 +45,18 @@ InitEvenBusEvent(app);
 await MigrateDbAsync(app);
 
 await StartWorkflowAsync(app, workflowId);
+
+app.MapGet("/", async (context) =>
+{
+    if (!string.IsNullOrEmpty(WorkflowAccessor.WorkflowId))
+    {
+        context.Response.Redirect("/visualize?id=" + WorkflowAccessor.WorkflowId);
+    }
+    else
+    {
+        await context.Response.WriteAsync("Hello world!");
+    }
+});
 
 app.MapGet("/visualize", async (context) =>
 {
@@ -97,7 +113,10 @@ static void ConfigureWorkflow(IServiceCollection services, IConfiguration config
 
     services.AddDbWorkflows();
 
+    services.AddWorkflowCommandHandlers();
+
     services.AddTransient<TimerExpiredIntegrationEventHandler>();
+    services.AddTransient<TaskRequestIntegrationEventHandler>();
 }
 
 static void ConfigureMediator(IServiceCollection services)
@@ -117,7 +136,7 @@ static void ConfigureIntegrations(IServiceCollection services, IConfiguration co
         options =>
         {
             options.BrokerName = "topic.juice_bus";
-            options.SubscriptionClientName = "topic_wf";
+            options.SubscriptionClientName = "juice_wf_test_host_events";
             options.ExchangeType = "topic";
         });
 
@@ -133,6 +152,7 @@ static void RegisterWorkflow(IServiceCollection services, string workflowId)
     {
         builder
             .Start()
+            .Wait<TimerIntermediateCatchEvent>("Wait").SetProperties(new Dictionary<string, object> { { "After", "00:00:15" } })
             .Parallel("p1")
                 .Fork().SubProcess("P-KB", subBuilder =>
                 {
@@ -140,7 +160,7 @@ static void RegisterWorkflow(IServiceCollection services, string workflowId)
                 }, default).Then<UserTask>("Approve Grph")
                 .Seek("P-KB")
                     .Attach<BoundaryTimerEvent>("Timeout")
-                        .SetProperties(new Dictionary<string, object> { { "After", "00:02:00" } })
+                        .SetProperties(new Dictionary<string, object> { { "After", "00:01:00" } })
                     .Then<SendTask>("Author inform").Terminate()
                 .Seek("p1")
                 .Fork().Then<UserTask>("Editing")
@@ -161,6 +181,7 @@ static void InitEvenBusEvent(WebApplication app)
     var eventBus = app.Services.GetRequiredService<IEventBus>();
 
     eventBus.Subscribe<TimerExpiredIntegrationEvent, TimerExpiredIntegrationEventHandler>();
+    eventBus.Subscribe<TaskRequestIntegrationEvent, TaskRequestIntegrationEventHandler>("wftask.*.*");
 }
 
 static async Task MigrateDbAsync(WebApplication app)
@@ -168,13 +189,22 @@ static async Task MigrateDbAsync(WebApplication app)
     using var scope = app.Services.CreateScope();
 
     {
-        var logContextFactory = scope.ServiceProvider.GetRequiredService<Func<WorkflowPersistDbContext, IntegrationEventLogContext>>();
-        var timerContext = scope.ServiceProvider.GetRequiredService<WorkflowPersistDbContext>();
-        var logContext = logContextFactory(timerContext);
-        await logContext.MigrateAsync();
+        try
+        {
+            var logContextFactory = scope.ServiceProvider.GetRequiredService<Func<WorkflowPersistDbContext, IntegrationEventLogContext>>();
+            var persistContext = scope.ServiceProvider.GetRequiredService<WorkflowPersistDbContext>();
+            await persistContext.MigrateAsync();
 
-        var wfContext = scope.ServiceProvider.GetRequiredService<WorkflowDbContext>();
-        await wfContext.MigrateAsync();
+            var logContext = logContextFactory(persistContext);
+            await logContext.MigrateAsync();
+
+            var wfContext = scope.ServiceProvider.GetRequiredService<WorkflowDbContext>();
+            await wfContext.MigrateAsync();
+        }
+        catch (Exception ex)
+        {
+
+        }
     }
 }
 
@@ -184,4 +214,14 @@ static async Task StartWorkflowAsync(WebApplication app, string workflowId)
     var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
     var rs = await mediator.Send(new StartWorkflowCommand(workflowId, "Corre_a8123", "wf name"));
     Console.WriteLine(rs.ToString());
+    if (rs.Succeeded)
+    {
+        var accessor = scope.ServiceProvider.GetRequiredService<IWorkflowContextAccessor>();
+        WorkflowAccessor.WorkflowId = accessor.WorkflowId;
+    }
+}
+
+public class WorkflowAccessor
+{
+    public static string? WorkflowId { get; set; }
 }

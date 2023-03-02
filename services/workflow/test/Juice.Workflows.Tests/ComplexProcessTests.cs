@@ -1,5 +1,6 @@
 ﻿using Juice.Workflows.Bpmn.DependencyInjection;
 using Juice.Workflows.Domain.AggregatesModel.DefinitionAggregate;
+using Juice.Workflows.Extensions;
 using Juice.Workflows.Yaml.DependencyInjection;
 
 namespace Juice.Workflows.Tests
@@ -424,18 +425,9 @@ namespace Juice.Workflows.Tests
 
                     var context = result.Context;
                     context.ResolvedBy.Should().Be(typeof(Bpmn.Builder.WorkflowContextBuilder).FullName);
-                    var definition = new WorkflowDefinition(
-                        "diagram",
-                        context.Name
-                    );
 
-                    definition.SetData(
-                        context.Processes,
-                        context.Nodes.Values.Select(n => new NodeData(n.Record, n.Node.GetType().Name, context.Processes.Any(p => n.IsStartOf(p.Id)), n.Properties)),
-                        context.Flows.Select(f => new FlowData(f.Record, f.Flow.GetType().Name))
-                        );
-
-                    var createResult = await definitionRepo.CreateAsync(definition, default);
+                    var createResult = await definitionRepo.SaveWorkflowContextAsync(context, "diagram", context.Name, true, default);
+                    _output.WriteLine(createResult.ToString());
                     createResult.Succeeded.Should().BeTrue();
 
                 }

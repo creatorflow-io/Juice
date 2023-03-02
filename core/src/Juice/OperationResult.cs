@@ -123,7 +123,7 @@ namespace Juice
         #endregion
 
         public override string? ToString()
-            => Message ?? base.ToString();
+            => Message ?? (Succeeded ? "Operation Succeeded" : "Operation Failed");
 
     }
 

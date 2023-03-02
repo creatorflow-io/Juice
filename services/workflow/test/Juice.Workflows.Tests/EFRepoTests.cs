@@ -5,6 +5,7 @@ using Juice.Workflows.Domain.AggregatesModel.DefinitionAggregate;
 using Juice.Workflows.Domain.Commands;
 using Juice.Workflows.EF;
 using Juice.Workflows.EF.DependencyInjection;
+using Juice.Workflows.Extensions;
 using Juice.XUnit;
 using Microsoft.EntityFrameworkCore;
 
@@ -124,19 +125,9 @@ namespace Juice.Workflows.Tests
             _output.WriteLine(ContextPrintHelper.Visualize(context));
 
             var definitionRepo = scope.ServiceProvider.GetRequiredService<IDefinitionRepository>();
-            if (!await definitionRepo.ExistAsync("diagram", default))
-            {
-                var definition = new WorkflowDefinition("diagram", "Bpmn diagram");
-                definition.SetData(context.Processes,
-                    context.Nodes.Values.Select(n => new NodeData(n.Record, n.Node.GetType().Name, context.Processes.Any(p => n.IsStartOf(p.Id)), n.Properties)),
-                    context.Flows.Select(n => new FlowData(n.Record, n.Flow.GetType().Name)));
-                var createResult = await definitionRepo.CreateAsync(definition, default);
-                createResult.Succeeded.Should().BeTrue();
-            }
-            else
-            {
-                await definitionRepo.DeleteAsync("diagram", default);
-            }
+            var createResult = await definitionRepo.SaveWorkflowContextAsync(context, "diagram", "BPMN diagram", true, default);
+            _output.WriteLine(createResult.ToString());
+            createResult.Succeeded.Should().BeTrue();
         }
 
         [IgnoreOnCITheory(DisplayName = "State should persist to DB"), TestPriority(800)]

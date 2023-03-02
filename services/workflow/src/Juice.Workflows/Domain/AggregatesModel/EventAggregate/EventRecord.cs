@@ -1,5 +1,8 @@
 ﻿namespace Juice.Workflows.Domain.AggregatesModel.EventAggregate
 {
+    /// <summary>
+    /// Record callback event to start or resume workflow
+    /// </summary>
     public class EventRecord
     {
         public EventRecord() { }

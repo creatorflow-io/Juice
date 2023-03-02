@@ -63,13 +63,14 @@ app.UseEndpoints(endpoints =>
     endpoints.MapGet("/", async (context) =>
     {
         var tenant = context.GetMultiTenantContext<Tenant>()?.TenantInfo;
-        ;
+
         var tenant1 = context.RequestServices.GetRequiredService<IMultiTenantContextAccessor<Tenant>>().MultiTenantContext?.TenantInfo!;
         var tenant2 = context.RequestServices.GetService<global::Juice.MultiTenant.Tenant>();
         var tenant3 = context.RequestServices.GetService<ITenantInfo>();
         if (tenant == null)
         {
-            context.Response.StatusCode = StatusCodes.Status404NotFound;
+            await
+           context.Response.WriteAsync("No tenant found. Try /acme, /initech, /megacorp with Juice.MultiTenant.Host is running");
             return;
         }
         var options = context.RequestServices.GetRequiredService<ITenantsOptions<Options>>();
@@ -171,8 +172,15 @@ static void ConfigureEvents(WebApplicationBuilder builder)
 {
     builder.Services.AddTransient<TenantActivatedIntegrationEventHandler>();
     builder.Services.AddTransient<TenantSettingsChangedIntegrationEventHandler>();
+    builder.Services.AddTransient<LogEventHandler>();
 
-    builder.Services.RegisterRabbitMQEventBus(builder.Configuration.GetSection("RabbitMQ"));
+    builder.Services.RegisterRabbitMQEventBus(builder.Configuration.GetSection("RabbitMQ"),
+         options =>
+         {
+             options.BrokerName = "topic.juice_bus";
+             options.SubscriptionClientName = "juice_test_host_events";
+             options.ExchangeType = "topic";
+         });
 }
 
 static void RegisterEvents(WebApplication app)
@@ -181,4 +189,27 @@ static void RegisterEvents(WebApplication app)
 
     eventBus.Subscribe<TenantActivatedIntegrationEvent, TenantActivatedIntegrationEventHandler>();
     eventBus.Subscribe<TenantSettingsChangedIntegrationEvent, TenantSettingsChangedIntegrationEventHandler>();
+    eventBus.Subscribe<LogEvent, LogEventHandler>("kernel.*");
 }
+
+public record LogEvent : IntegrationEvent
+{
+    public LogLevel Serverty { get; set; }
+    public string Facility { get; set; }
+
+    public override string GetEventKey() => (Facility + "." + Serverty).ToLower();
+}
+public class LogEventHandler : IIntegrationEventHandler<LogEvent>
+{
+    private ILogger _logger;
+    public LogEventHandler(ILogger<LogEventHandler> logger)
+    {
+        _logger = logger;
+    }
+    public Task HandleAsync(LogEvent @event)
+    {
+        _logger.LogInformation("Received log event. {Facility} {Serverty}", @event.Facility, @event.Serverty);
+        return Task.CompletedTask;
+    }
+}
+
