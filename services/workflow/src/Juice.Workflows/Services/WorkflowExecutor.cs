@@ -45,7 +45,15 @@
             else
             {
                 var node = workflowContext.GetNode(nodeId);
-
+                if (node == null)
+                {
+                    return new WorkflowExecutionResult
+                    {
+                        Context = workflowContext,
+                        Message = $"Workflow context has not any node that matched id {nodeId}",
+                        Status = WorkflowStatus.Faulted
+                    };
+                }
                 return await ExecuteAsync(workflowContext, node, token);
             }
         }

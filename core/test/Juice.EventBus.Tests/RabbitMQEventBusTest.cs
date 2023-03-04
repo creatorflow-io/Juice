@@ -129,11 +129,11 @@ namespace Juice.EventBus.Tests
             RabbitMQUtils.IsTopicMatch("kernel", key).Should().BeFalse();
             RabbitMQUtils.IsTopicMatch("x.kernel.info", key).Should().BeFalse();
 
-            key = ToMatchKey("kernel.#");
+            key = ToMatchKey("kernel.*.#");
             _output.WriteLine(key);
             RabbitMQUtils.IsTopicMatch("kernel.info", key).Should().BeTrue();
             RabbitMQUtils.IsTopicMatch("kernel.info.x", key).Should().BeTrue();
-            RabbitMQUtils.IsTopicMatch("kernel", key).Should().BeTrue();
+            RabbitMQUtils.IsTopicMatch("kernel", key).Should().BeFalse();
             RabbitMQUtils.IsTopicMatch("x.kernel.info", key).Should().BeFalse();
 
             key = ToMatchKey("kernel.*.*");

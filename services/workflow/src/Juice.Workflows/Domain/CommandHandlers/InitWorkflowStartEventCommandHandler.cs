@@ -1,6 +1,7 @@
 ﻿using Juice.Workflows.Domain.AggregatesModel.EventAggregate;
+using Juice.Workflows.Domain.Commands;
 
-namespace Juice.Workflows.Domain.Commands
+namespace Juice.Workflows.Domain.CommandHandlers
 {
     public class InitWorkflowStartEventCommandHandler : IRequestHandler<InitWorkflowStartEventCommand, IOperationResult>
     {

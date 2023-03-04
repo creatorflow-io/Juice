@@ -6,13 +6,11 @@ using Juice.Integrations.EventBus.DependencyInjection;
 using Juice.Integrations.MediatR.DependencyInjection;
 using Juice.MediatR.Redis.DependencyInjection;
 using Juice.Services;
-using Juice.Timers.Api.IntegrationEvents.Events;
 using Juice.Workflows;
 using Juice.Workflows.Api.Behaviors.DependencyInjection;
 using Juice.Workflows.Api.Contracts.IntegrationEvents.Events;
 using Juice.Workflows.Api.DependencyInjection;
 using Juice.Workflows.Api.Domain.EventHandlers;
-using Juice.Workflows.Api.IntegrationEvents.Handlers;
 using Juice.Workflows.DependencyInjection;
 using Juice.Workflows.Domain.AggregatesModel.WorkflowStateAggregate;
 using Juice.Workflows.Domain.Commands;
@@ -113,10 +111,10 @@ static void ConfigureWorkflow(IServiceCollection services, IConfiguration config
 
     services.AddDbWorkflows();
 
-    services.AddWorkflowCommandHandlers();
+    services.AddWorkflowHandlers();
 
-    services.AddTransient<TimerExpiredIntegrationEventHandler>();
-    services.AddTransient<TaskRequestIntegrationEventHandler>();
+    services.AddTransient<MessageThrowIntegrationEventHandler>();
+
 }
 
 static void ConfigureMediator(IServiceCollection services)
@@ -160,10 +158,10 @@ static void RegisterWorkflow(IServiceCollection services, string workflowId)
                 }, default).Then<UserTask>("Approve Grph")
                 .Seek("P-KB")
                     .Attach<BoundaryTimerEvent>("Timeout")
-                        .SetProperties(new Dictionary<string, object> { { "After", "00:01:00" } })
+                        .SetProperties(new Dictionary<string, object> { { "After", "00:01:15" } })
                     .Then<SendTask>("Author inform").Terminate()
                 .Seek("p1")
-                .Fork().Then<UserTask>("Editing")
+                .Fork().Then<UserTask>("Editing").SetProperties(new Dictionary<string, object> { { "CatchEvent", "uploaded.media.final" }, { "$Shared", "shared value" } })
                     .Parallel("p2")
                         .Fork().Then<ServiceTask>("WEB").Then<UserTask>("Approve Vid")
                         .Fork().Then<ServiceTask>("Social")
@@ -180,8 +178,9 @@ static void InitEvenBusEvent(WebApplication app)
 {
     var eventBus = app.Services.GetRequiredService<IEventBus>();
 
-    eventBus.Subscribe<TimerExpiredIntegrationEvent, TimerExpiredIntegrationEventHandler>();
-    eventBus.Subscribe<TaskRequestIntegrationEvent, TaskRequestIntegrationEventHandler>("wftask.*.*");
+
+    eventBus.Subscribe<MessageThrowIntegrationEvent, MessageThrowIntegrationEventHandler>("wfthrow.*.*");
+    eventBus.InitWorkflowIntegrationEvents();
 }
 
 static async Task MigrateDbAsync(WebApplication app)
@@ -212,7 +211,8 @@ static async Task StartWorkflowAsync(WebApplication app, string workflowId)
 {
     using var scope = app.Services.CreateScope();
     var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-    var rs = await mediator.Send(new StartWorkflowCommand(workflowId, "Corre_a8123", "wf name"));
+    var correlationId = new DefaultStringIdGenerator().GenerateUniqueId();
+    var rs = await mediator.Send(new StartWorkflowCommand(workflowId, correlationId, "wf name"));
     Console.WriteLine(rs.ToString());
     if (rs.Succeeded)
     {

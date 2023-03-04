@@ -1,4 +1,6 @@
-﻿namespace Juice.Workflows.Domain.Commands
+﻿using Juice.Workflows.Domain.Commands;
+
+namespace Juice.Workflows.Domain.CommandHandlers
 {
     public class StartWorkflowCommandHandler : IRequestHandler<StartWorkflowCommand, IOperationResult>
     {

@@ -1,12 +1,15 @@
-﻿namespace Juice.Workflows.Domain.Commands
+﻿using Juice.Workflows.Nodes;
+
+namespace Juice.Workflows.Domain.Commands
 {
-    public class StartTimerCommand : IRequest<IOperationResult>
+    public class StartEventCommand<TEvent> : INodeCommand, IRequest<IOperationResult>
+        where TEvent : Event
     {
         public string WorkflowId { get; init; }
         public string? CorrelationId { get; init; }
         public NodeContext Node { get; init; }
 
-        public StartTimerCommand(string workflowId, string? correlationId, NodeContext node)
+        public StartEventCommand(string workflowId, string? correlationId, NodeContext node)
         {
             WorkflowId = workflowId;
             CorrelationId = correlationId;

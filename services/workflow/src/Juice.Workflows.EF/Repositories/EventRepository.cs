@@ -1,4 +1,5 @@
-﻿using Juice.Workflows.Domain.AggregatesModel.EventAggregate;
+﻿using System.Linq.Expressions;
+using Juice.Workflows.Domain.AggregatesModel.EventAggregate;
 
 namespace Juice.Workflows.EF.Repositories
 {
@@ -9,12 +10,21 @@ namespace Juice.Workflows.EF.Repositories
         {
             _dbContext = dbContext;
         }
-        public async Task<OperationResult> CreateAsync(EventRecord @event, CancellationToken token)
+        public async Task<OperationResult> CreateUniqueByWorkflowAsync(EventRecord @event, CancellationToken token)
         {
             try
             {
-                _dbContext.EventRecords.Add(@event);
-                await _dbContext.SaveChangesAsync(token);
+                var hasKey = !string.IsNullOrEmpty(@event.CatchingKey);
+                if (!await _dbContext.EventRecords.AnyAsync(e => e.WorkflowId == @event.WorkflowId
+                     && !e.IsCompleted
+                     && (e.NodeId == @event.NodeId
+                         || (hasKey && e.CatchingKey == @event.CatchingKey)
+                         )
+                   ))
+                {
+                    _dbContext.EventRecords.Add(@event);
+                    await _dbContext.SaveChangesAsync(token);
+                }
                 return OperationResult.Success;
             }
             catch (Exception ex)
@@ -85,6 +95,11 @@ namespace Juice.Workflows.EF.Repositories
             {
                 return OperationResult.Failed(ex);
             }
+        }
+
+        public async Task<IEnumerable<EventRecord>> FindAllAsync(Expression<Func<EventRecord, bool>> predicate, CancellationToken token)
+        {
+            return await _dbContext.EventRecords.Where(predicate).ToListAsync();
         }
     }
 }
