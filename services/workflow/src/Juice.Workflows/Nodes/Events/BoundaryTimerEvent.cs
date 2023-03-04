@@ -31,7 +31,7 @@ namespace Juice.Workflows.Nodes.Events
                 // Should register a timer
                 using var scope = _scopeFactory.CreateScope();
                 var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-                var rs = await mediator.Send(new StartTimerCommand(workflowContext.WorkflowId, workflowContext.CorrelationId, node));
+                var rs = await mediator.Send(new StartEventCommand<BoundaryTimerEvent>(workflowContext.WorkflowId, workflowContext.CorrelationId, node));
                 if (rs.Succeeded)
                 {
                     if (_logger.IsEnabled(LogLevel.Debug))

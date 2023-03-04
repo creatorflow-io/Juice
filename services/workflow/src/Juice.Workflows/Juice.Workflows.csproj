@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\..\core\src\Juice.EventBus\Juice.EventBus.csproj" />
     <ProjectReference Include="..\..\..\..\core\src\Juice.MediatR\Juice.MediatR.csproj" />
     <ProjectReference Include="..\..\..\..\core\src\Juice\Juice.csproj" />
   </ItemGroup>

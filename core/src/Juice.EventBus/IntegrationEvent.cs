@@ -6,22 +6,21 @@ namespace Juice.EventBus
     {
         public IntegrationEvent()
         {
-            Id = Guid.NewGuid();
-            CreationDate = DateTime.UtcNow;
+
         }
 
         [JsonConstructor]
-        public IntegrationEvent(Guid id, DateTime createDate)
+        public IntegrationEvent(Guid id, DateTime creationDate)
         {
             Id = id;
-            CreationDate = createDate;
+            CreationDate = creationDate;
         }
 
         [JsonInclude]
-        public Guid Id { get; private init; }
+        public Guid Id { get; init; } = Guid.NewGuid();
 
         [JsonInclude]
-        public DateTime CreationDate { get; private init; }
+        public DateTime CreationDate { get; init; } = DateTime.UtcNow;
 
         public virtual string GetEventKey()
         {

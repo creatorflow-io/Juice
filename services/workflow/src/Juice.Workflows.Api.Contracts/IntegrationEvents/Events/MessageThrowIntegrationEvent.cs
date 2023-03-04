@@ -2,7 +2,8 @@
 
 namespace Juice.Workflows.Api.Contracts.IntegrationEvents.Events
 {
-    public record TaskRequestIntegrationEvent(Guid CallbackId, string Key, string? CorrelationId, IDictionary<string, object?> Properties)
+    public record MessageThrowIntegrationEvent(string Key, Guid? CallbackId,
+        string? CorrelationId, Dictionary<string, object?> Properties)
         : IntegrationEvent
     {
         public override string GetEventKey() => Key;

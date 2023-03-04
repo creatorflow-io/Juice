@@ -15,6 +15,12 @@
             DisplayName = displayName;
         }
 
+        public EventRecord(string workflowId, string nodeId, bool isStart, string? correlationId, string? catchingKey, string? displayName)
+            : this(workflowId, nodeId, isStart, correlationId, displayName)
+        {
+            CatchingKey = catchingKey;
+        }
+
         public Guid Id { get; set; }
         public string WorkflowId { get; private set; }
         public string NodeId { get; private set; }
@@ -22,6 +28,8 @@
         public string? DisplayName { get; private set; }
 
         public string? CorrelationId { get; private set; }
+
+        public string? CatchingKey { get; private set; }
 
         public bool IsStartEvent { get; private set; }
 
@@ -41,12 +49,13 @@
             LastCall = DateTimeOffset.Now;
         }
 
-        public void UpdateDisplayName(string? name)
+        public EventRecord UpdateDisplayName(string? name)
         {
             if (DisplayName != name)
             {
                 DisplayName = name;
             }
+            return this;
         }
     }
 }

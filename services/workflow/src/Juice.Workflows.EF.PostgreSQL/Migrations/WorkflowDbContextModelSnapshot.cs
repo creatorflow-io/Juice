@@ -75,6 +75,10 @@ namespace Juice.Workflows.EF.PostgreSQL.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("CatchingKey")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<string>("CorrelationId")
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
@@ -106,6 +110,8 @@ namespace Juice.Workflows.EF.PostgreSQL.Migrations
                         .HasColumnType("character varying(64)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CorrelationId", "CatchingKey");
 
                     b.ToTable("EventRecord", (string)null);
                 });
@@ -146,6 +152,8 @@ namespace Juice.Workflows.EF.PostgreSQL.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CorrelationId");
 
                     b.ToTable("WorkflowRecord", (string)null);
                 });

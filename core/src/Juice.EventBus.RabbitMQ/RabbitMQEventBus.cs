@@ -4,6 +4,7 @@ using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
 using Polly;
 using Polly.Retry;
 using RabbitMQ.Client;
@@ -185,7 +186,7 @@ namespace Juice.EventBus.RabbitMQ
                         continue;
                     }
                     var eventType = SubsManager.GetEventTypeByName(eventName);
-                    var integrationEvent = JsonSerializer.Deserialize(message, eventType, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true });
+                    var integrationEvent = JsonConvert.DeserializeObject(message, eventType);
                     var concreteType = typeof(IIntegrationEventHandler<>).MakeGenericType(eventType);
 
                     await Task.Yield();
@@ -273,7 +274,7 @@ namespace Juice.EventBus.RabbitMQ
 
                 channel.ExchangeDeclare(exchange: BROKER_NAME, type: _type);
 
-                var body = JsonSerializer.SerializeToUtf8Bytes(@event, @event.GetType(), new JsonSerializerOptions
+                var body = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(@event, @event.GetType(), new JsonSerializerOptions
                 {
                     WriteIndented = true
                 });

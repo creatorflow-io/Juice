@@ -39,6 +39,8 @@ namespace Juice.Workflows.EF
                 entity.Property(e => e.DefinitionId).HasMaxLength(Constants.IdentityLength);
                 entity.Property(e => e.CorrelationId).HasMaxLength(Constants.IdentityLength);
                 entity.Property(e => e.FaultMessage).HasMaxLength(Constants.ShortDescriptionLength);
+
+                entity.HasIndex(e => e.CorrelationId);
             });
 
             modelBuilder.Entity<EventRecord>(entity =>
@@ -51,6 +53,9 @@ namespace Juice.Workflows.EF
                 entity.Property(e => e.CorrelationId).HasMaxLength(Constants.IdentityLength);
                 entity.Property(e => e.NodeId).HasMaxLength(Constants.IdentityLength);
                 entity.Property(e => e.DisplayName).HasMaxLength(Constants.NameLength);
+                entity.Property(e => e.CatchingKey).HasMaxLength(Constants.IdentityLength);
+
+                entity.HasIndex("CorrelationId", "CatchingKey");
             });
         }
     }
