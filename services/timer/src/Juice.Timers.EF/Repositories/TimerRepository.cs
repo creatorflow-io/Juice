@@ -27,11 +27,8 @@ namespace Juice.Timers.EF.Repositories
 
         public async Task RemoveTimersBeforeAsync(DateTimeOffset dateTime, CancellationToken token)
         {
-            var cleanupItems = _dbContext.TimerRequests
-                        .AsNoTracking()
-                        .Where(x => x.IsCompleted && x.AbsoluteExpired < dateTime)
-                        ;
-            await _dbContext.BulkDeleteAsync(cleanupItems, options => options.BatchSize = 100, token);
+            await _dbContext.TimerRequests.Where(x => x.IsCompleted && x.AbsoluteExpired < dateTime)
+                .ExecuteDeleteAsync(token);
         }
 
         public async Task UpdateAsync(TimerRequest request, CancellationToken token)
