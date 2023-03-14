@@ -15,7 +15,6 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="$(EFVersion)" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="$(EFVersion)" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="$(NpgsqlVersion)" />
-    <PackageReference Include="Z.EntityFramework.Extensions.EFCore" Version="6.18.1" />
   </ItemGroup>
   
 </Project>
