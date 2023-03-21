@@ -43,6 +43,10 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Configuration" Version="$(MicrosoftExtensionsVersion)" />
     <PackageReference Include="FluentAssertions" Version="6.8.0" />
   </ItemGroup>
+
+  <ItemGroup Label="gRPC">
+    <PackageReference Include="Grpc.Net.ClientFactory" Version="2.50.0" />
+  </ItemGroup>
   
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\core\src\Juice.EventBus.RabbitMQ\Juice.EventBus.RabbitMQ.csproj" />

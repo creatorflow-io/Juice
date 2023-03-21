@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+import "google/protobuf/wrappers.proto";
+
+package juice.workflows.grpc;
+
+service Workflow{
+    rpc Start(StartWorkflowMessage) returns (WorkflowOperationResult);
+    rpc Resume(ResumeWorkflowMessage) returns (WorkflowOperationResult);
+    rpc Catch(CatchMessage) returns (WorkflowOperationResult);
+}
+
+message StartWorkflowMessage{
+    string workflowId = 1;
+    google.protobuf.StringValue correlationId = 2;
+    google.protobuf.StringValue name =  3;
+    string serializedParameters = 4;
+}
+
+message ResumeWorkflowMessage{
+    string workflowId = 1;
+    string nodeId = 2;
+    string serializedParameters = 3;
+}
+
+message CatchMessage{
+    string eventName = 1;
+    google.protobuf.StringValue correlationId = 2;
+    google.protobuf.StringValue callbackId = 3;
+    string serializedParameters = 4;
+    bool isCompleted = 5;
+}
+
+message WorkflowOperationResult{
+    bool succeeded = 1;
+    google.protobuf.StringValue message = 2;
+    google.protobuf.StringValue workflowId = 3;
+}

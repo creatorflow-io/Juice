@@ -2,14 +2,14 @@
 
 namespace Juice.Workflows.Domain.CommandHandlers
 {
-    public class ResumeWorkflowCommandHandler : IRequestHandler<ResumeWorkflowCommand, IOperationResult>
+    public class ResumeWorkflowCommandHandler : IRequestHandler<ResumeWorkflowCommand, IOperationResult<WorkflowExecutionResult>>
     {
         private readonly IWorkflow _workflow;
         public ResumeWorkflowCommandHandler(IWorkflow workflow)
         {
             _workflow = workflow;
         }
-        public async Task<IOperationResult> Handle(ResumeWorkflowCommand request, CancellationToken cancellationToken)
+        public async Task<IOperationResult<WorkflowExecutionResult>> Handle(ResumeWorkflowCommand request, CancellationToken cancellationToken)
         {
             return await _workflow.ResumeAsync(request.WorkflowId, request.NodeId, request.Parameters);
         }

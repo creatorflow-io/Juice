@@ -51,7 +51,31 @@
                     {
                         Context = workflowContext,
                         Message = $"Workflow context has not any node that matched id {nodeId}",
-                        Status = WorkflowStatus.Faulted
+                        Status = WorkflowStatus.Faulted,
+                        IsExecuted = false
+                    };
+                }
+                else if (!workflowContext.IsResumable(node))
+                {
+                    return new WorkflowExecutionResult
+                    {
+                        Context = workflowContext,
+                        Message = $"Node {node.DisplayName} is not resumable",
+                        Status = WorkflowStatus.Idle,
+                        IsExecuted = false
+                    };
+                }
+                else if (workflowContext.Completed)
+                {
+                    var contextStatus = workflowContext.HasTerminated ? WorkflowStatus.Aborted
+                            : workflowContext.IsFinished ? WorkflowStatus.Finished
+                            : WorkflowStatus.Faulted;
+                    return new WorkflowExecutionResult
+                    {
+                        Context = workflowContext,
+                        Message = $"Workflow is {contextStatus}.",
+                        Status = contextStatus,
+                        IsExecuted = false
                     };
                 }
                 return await ExecuteAsync(workflowContext, node, token);
@@ -110,7 +134,8 @@
                             : workflowContext.IsFinished ? WorkflowStatus.Finished
                             : _hasFailure || workflowContext.HasFaulted ? WorkflowStatus.Faulted
                             : _hasBlocking ? WorkflowStatus.Halted
-                            : nodeResult.Status
+                            : nodeResult.Status,
+                    IsExecuted = true
                 };
                 if (string.IsNullOrEmpty(result.Message) && workflowContext.LastMessages.Any())
                 {

@@ -1,6 +1,6 @@
 ﻿namespace Juice.Workflows.Domain.Commands
 {
-    public class ResumeWorkflowCommand : IRequest<IOperationResult>, IWorkflowCommand
+    public class ResumeWorkflowCommand : IRequest<IOperationResult<WorkflowExecutionResult>>, IWorkflowCommand
     {
         public ResumeWorkflowCommand(string workflowId, string nodeId, Dictionary<string, object?>? parameters = default)
         {
