@@ -21,7 +21,7 @@ using Xunit.Abstractions;
 
 namespace Juice.Integrations.Tests
 {
-    [TestCaseOrderer("Juice.XUnit.PriorityOrderer", "Juice.EF.Tests")]
+    [TestCaseOrderer("Juice.XUnit.PriorityOrderer", "Juice.XUnit")]
     public class IntegrationTest
     {
         private readonly string TestSchema1 = "Contents";

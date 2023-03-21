@@ -15,7 +15,7 @@ using Xunit.Abstractions;
 
 namespace Juice.MultiTenant.Tests
 {
-    [TestCaseOrderer("Juice.XUnit.PriorityOrderer", "Juice.EF.Tests")]
+    [TestCaseOrderer("Juice.XUnit.PriorityOrderer", "Juice.XUnit")]
     public class GrpcTest
     {
         ITestOutputHelper _output;

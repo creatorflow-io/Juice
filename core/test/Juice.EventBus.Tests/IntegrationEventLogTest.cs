@@ -20,7 +20,7 @@ using Xunit.Abstractions;
 
 namespace Juice.EventBus.Tests
 {
-    [TestCaseOrderer("Juice.XUnit.PriorityOrderer", "Juice.EF.Tests")]
+    [TestCaseOrderer("Juice.XUnit.PriorityOrderer", "Juice.XUnit")]
     public class IntegrationEventLogTest
     {
         private readonly string TestSchema1 = "Contents";
