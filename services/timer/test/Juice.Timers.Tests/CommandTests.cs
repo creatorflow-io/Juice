@@ -21,7 +21,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace Juice.Timers.Tests
 {
-    [TestCaseOrderer("Juice.XUnit.PriorityOrderer", "Juice.Timers.Tests")]
+    [TestCaseOrderer("Juice.XUnit.PriorityOrderer", "Juice.XUnit")]
     public class CommandTests
     {
         private ITestOutputHelper _output;
