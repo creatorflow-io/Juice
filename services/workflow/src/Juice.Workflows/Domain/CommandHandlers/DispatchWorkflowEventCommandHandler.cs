@@ -35,12 +35,17 @@ namespace Juice.Workflows.Domain.CommandHandlers
                 {
                     if (request.IsCompleted && callbackEvent.IsCompleted)
                     {
-                        return new OperationResult { Message = "Workflow callback event is already completed.", Succeeded = true };
+                        return new OperationResult<WorkflowExecutionResult>
+                        {
+                            Message = "Workflow callback event is already completed.",
+                            Succeeded = true
+                        };
                     }
+
                     var rs = await _mediator.Send(new ResumeWorkflowCommand(callbackEvent.WorkflowId, callbackEvent.NodeId, request.Options));
                     if (rs != null)
                     {
-                        if (request.IsCompleted)
+                        if (request.IsCompleted && rs.Succeeded && (rs.Data?.IsExecuted ?? false))
                         {
                             callbackEvent.Complete();
                         }
@@ -49,14 +54,16 @@ namespace Juice.Workflows.Domain.CommandHandlers
                             callbackEvent.MarkCalled();
                         }
                         await _eventRepository.UpdateAsync(callbackEvent, cancellationToken);
-                        return rs;
+                        return rs.Succeeded && (rs.Data?.IsExecuted ?? false)
+                            ? rs
+                            : OperationResult.Failed<WorkflowExecutionResult>(rs.Data?.Message ?? rs.Message);
                     }
                 }
-                return OperationResult.Failed($"Invalid workflow result");
+                return OperationResult.Failed<WorkflowExecutionResult>($"Invalid workflow result");
             }
             else
             {
-                return OperationResult.Failed($"Workflow callback event is no longer exist. {request.EventRecordId}");
+                return OperationResult.Failed<WorkflowExecutionResult>($"Workflow callback event is no longer exist. {request.EventRecordId}");
             }
 
         }

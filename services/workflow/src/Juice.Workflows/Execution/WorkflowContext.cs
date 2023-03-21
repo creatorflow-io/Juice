@@ -36,6 +36,9 @@ namespace Juice.Workflows.Execution
 
         public string? Name { get; private set; }
 
+        /// <summary>
+        /// Excuting workflow record id
+        /// </summary>
         public string WorkflowId { get; init; }
 
         public string? CorrelationId { get; private set; }
@@ -178,6 +181,14 @@ namespace Juice.Workflows.Execution
         {
             return NodeSnapshots.Any(n => n.Id == id
                 && (n.Status == WorkflowStatus.Aborted));
+        }
+
+        public bool IsResumable(NodeContext node)
+        {
+            return NodeSnapshots.Any(n => n.Id == node.Record.Id
+                && ((n.Status == WorkflowStatus.Halted)
+                    || node.Node is IIntermediate
+                ));
         }
 
         public NodeContext? GetNode(string id)
@@ -364,11 +375,17 @@ namespace Juice.Workflows.Execution
             _domainEvents.Add(evt);
         }
 
+        /// <summary>
+        /// All processes was Finished or Aborted or Faulted
+        /// </summary>
         public bool Completed
             => ProcessSnapshots.All(p => p.Status == WorkflowStatus.Finished
             || p.Status == WorkflowStatus.Aborted
             || p.Status == WorkflowStatus.Faulted);
 
+        /// <summary>
+        /// All processes was Finished 
+        /// </summary>
         public bool IsFinished
             => ProcessSnapshots.All(p => p.Status == WorkflowStatus.Finished);
         public bool HasFinishSignal(string processId)

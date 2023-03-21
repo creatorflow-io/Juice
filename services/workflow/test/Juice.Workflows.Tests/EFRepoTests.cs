@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Juice.Workflows.Tests
 {
-    [TestCaseOrderer("Juice.XUnit.PriorityOrderer", "Juice.Workflows.Tests")]
+    [TestCaseOrderer("Juice.XUnit.PriorityOrderer", "Juice.XUnit")]
     public class EFRepoTests
     {
         private ITestOutputHelper _output;

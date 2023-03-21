@@ -127,7 +127,7 @@ namespace Juice
 
     }
 
-    public class OperationResult<T> : OperationResult, IOperationResult<T?>
+    public class OperationResult<T> : OperationResult, IOperationResult<T>
     {
         public T? Data { get; set; }
 

@@ -35,6 +35,9 @@ ConfigureMediator(builder.Services);
 ConfigureIntegrations(builder.Services, builder.Configuration);
 RegisterWorkflow(builder.Services, workflowId);
 
+// Add services to the container.
+builder.Services.AddGrpc(o => o.EnableDetailedErrors = true);
+
 var app = builder.Build();
 
 var configuration = app.Configuration;
@@ -82,6 +85,8 @@ app.MapGet("/resume", async (context) =>
     await context.Response.WriteAsync(JsonConvert.SerializeObject(rs));
 });
 
+app.MapWorkflowGrpcServices();
+
 app.Run();
 
 static void ConfigureCommons(IServiceCollection services)
@@ -111,7 +116,7 @@ static void ConfigureWorkflow(IServiceCollection services, IConfiguration config
 
     services.AddDbWorkflows();
 
-    services.AddWorkflowHandlers();
+    services.AddWorkflowIntegrationEventHandlers();
 
     services.AddTransient<MessageThrowIntegrationEventHandler>();
 
