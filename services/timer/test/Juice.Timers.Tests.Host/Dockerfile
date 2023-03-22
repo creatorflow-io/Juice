@@ -8,6 +8,7 @@ EXPOSE 443
 FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
 WORKDIR /src
 COPY ["nuget.config", "."]
+COPY ["Directory.Build.props", "."]
 COPY ["services/timer/test/Juice.Timers.Tests.Host/Juice.Timers.Tests.Host.csproj", "services/timer/test/Juice.Timers.Tests.Host/"]
 COPY ["services/timer/src/Juice.Timers.BackgroundTasks/Juice.Timers.BackgroundTasks.csproj", "services/timer/src/Juice.Timers.BackgroundTasks/"]
 COPY ["services/timer/src/Juice.Timers.EF/Juice.Timers.EF.csproj", "services/timer/src/Juice.Timers.EF/"]
