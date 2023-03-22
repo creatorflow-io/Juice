@@ -15,6 +15,7 @@ COPY ["services/timer/src/Juice.Timers.EF/Juice.Timers.EF.csproj", "services/tim
 COPY ["services/timer/src/Juice.Timers/Juice.Timers.csproj", "services/timer/src/Juice.Timers/"]
 COPY ["core/src/Juice/Juice.csproj", "core/src/Juice/"]
 COPY ["core/src/Juice.MediatR/Juice.MediatR.csproj", "core/src/Juice.MediatR/"]
+COPY ["core/src/Juice.MediatR.Redis/Juice.MediatR.Redis.csproj", "core/src/Juice.MediatR.Redis/"]
 COPY ["core/src/Juice.EF/Juice.EF.csproj", "core/src/Juice.EF/"]
 COPY ["core/src/Juice.EventBus.IntegrationEventLog.EF.PostgreSQL/Juice.EventBus.IntegrationEventLog.EF.PostgreSQL.csproj", "core/src/Juice.EventBus.IntegrationEventLog.EF.PostgreSQL/"]
 COPY ["core/src/Juice.EventBus.IntegrationEventLog.EF/Juice.EventBus.IntegrationEventLog.EF.csproj", "core/src/Juice.EventBus.IntegrationEventLog.EF/"]
@@ -23,9 +24,6 @@ COPY ["services/timer/src/Juice.Timers.EF.SqlServer/Juice.Timers.EF.SqlServer.cs
 COPY ["core/src/Juice.EventBus.RabbitMQ/Juice.EventBus.RabbitMQ.csproj", "core/src/Juice.EventBus.RabbitMQ/"]
 COPY ["services/timer/src/Juice.Timers.EF.PostgreSQL/Juice.Timers.EF.PostgreSQL.csproj", "services/timer/src/Juice.Timers.EF.PostgreSQL/"]
 COPY ["core/src/Juice.EventBus.IntegrationEventLog.EF.SqlServer/Juice.EventBus.IntegrationEventLog.EF.SqlServer.csproj", "core/src/Juice.EventBus.IntegrationEventLog.EF.SqlServer/"]
-COPY ["core/src/Juice.MediatR.RequestManager.EF.SqlServer/Juice.MediatR.RequestManager.EF.SqlServer.csproj", "core/src/Juice.MediatR.RequestManager.EF.SqlServer/"]
-COPY ["core/src/Juice.MediatR.RequestManager.EF/Juice.MediatR.RequestManager.EF.csproj", "core/src/Juice.MediatR.RequestManager.EF/"]
-COPY ["core/src/Juice.MediatR.RequestManager.EF.PostgreSQL/Juice.MediatR.RequestManager.EF.PostgreSQL.csproj", "core/src/Juice.MediatR.RequestManager.EF.PostgreSQL/"]
 COPY ["services/timer/src/Juice.Timers.Api/Juice.Timers.Api.csproj", "services/timer/src/Juice.Timers.Api/"]
 COPY ["core/src/Juice.Integrations/Juice.Integrations.csproj", "core/src/Juice.Integrations/"]
 COPY ["services/timer/src/Juice.Timers.Api.Contracts/Juice.Timers.Api.Contracts.csproj", "services/timer/src/Juice.Timers.Api.Contracts/"]
@@ -38,6 +36,7 @@ FROM build AS publish
 RUN dotnet publish "Juice.Timers.Tests.Host.csproj" -c Release -o /app/publish
 
 FROM base AS final
+ENV ASPNETCORE_ENVIRONMENT Development
 WORKDIR /app
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "Juice.Timers.Tests.Host.dll"]
