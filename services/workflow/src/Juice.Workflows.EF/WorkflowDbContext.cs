@@ -5,12 +5,6 @@ namespace Juice.Workflows.EF
     public class WorkflowDbContext : DbContextBase
     {
 
-        public DbSet<WorkflowDefinition> WorkflowDefinitions { get; set; }
-
-        public DbSet<WorkflowRecord> WorkflowRecords { get; set; }
-
-        public DbSet<EventRecord> EventRecords { get; set; }
-
         public WorkflowDbContext(IServiceProvider serviceProvider, DbContextOptions<WorkflowDbContext> options) : base(serviceProvider, options)
         {
 

@@ -402,7 +402,7 @@ namespace Juice.Workflows.Tests
                 services.AddSingleton<EventQueue>();
 
                 services.AddWorkflowServices()
-                    .AddDbWorkflows()
+                    .RegisterDbWorkflows()
                     .AddInMemoryReposistories();
 
                 services.RegisterNodes(typeof(FailureTask));

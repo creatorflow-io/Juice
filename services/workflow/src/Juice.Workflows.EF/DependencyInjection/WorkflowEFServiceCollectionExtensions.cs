@@ -7,6 +7,31 @@ namespace Juice.Workflows.EF.DependencyInjection
 {
     public static class WorkflowEFServiceCollectionExtensions
     {
+        #region EF repos
+        public static IServiceCollection AddEFWorkflowRepo<TContext>(this IServiceCollection services)
+             where TContext : DbContext
+        {
+            services.AddScoped(typeof(IDefinitionRepository),
+                typeof(DefinitionRepository<>).MakeGenericType(typeof(TContext)));
+
+            services.AddScoped(typeof(IWorkflowRepository),
+                typeof(WorkflowRepository<>).MakeGenericType(typeof(TContext)));
+
+            services.AddScoped(typeof(IEventRepository),
+                typeof(EventRepository<>).MakeGenericType(typeof(TContext)));
+            return services;
+        }
+
+        public static IServiceCollection AddEFWorkflowStateRepo<TContext>(this IServiceCollection services)
+             where TContext : DbContext
+        {
+            services.AddScoped(typeof(IWorkflowStateRepository),
+                typeof(StateRepository<>).MakeGenericType(typeof(TContext)));
+            return services;
+        }
+        #endregion
+
+        #region Default DbContext
         public static IServiceCollection AddWorkflowDbContext(this IServiceCollection services,
             IConfiguration configuration, Action<DbOptions>? configureOptions)
         {
@@ -63,14 +88,6 @@ namespace Juice.Workflows.EF.DependencyInjection
 
             });
 
-            return services;
-        }
-
-        public static IServiceCollection AddEFWorkflowRepo(this IServiceCollection services)
-        {
-            services.AddScoped<IDefinitionRepository, DefinitionRepository>();
-            services.AddScoped<IWorkflowRepository, WorkflowRepository>();
-            services.AddScoped<IEventRepository, EventRepository>();
             return services;
         }
 
@@ -132,11 +149,22 @@ namespace Juice.Workflows.EF.DependencyInjection
 
             return services;
         }
+        #endregion
 
-        public static IServiceCollection AddEFWorkflowStateRepo(this IServiceCollection services)
+        #region Workflow store registration
+        public static IServiceCollection StoreWorkflowToEFRepo(this IServiceCollection services,
+            IConfiguration configuration, Action<DbOptions>? configureOptions)
         {
-            services.AddScoped<IWorkflowStateRepository, StateRepository>();
-            return services;
+            return services.AddWorkflowDbContext(configuration, configureOptions)
+                .AddEFWorkflowRepo<WorkflowDbContext>();
         }
+
+        public static IServiceCollection PersistStateToEFRepo(this IServiceCollection services,
+            IConfiguration configuration, Action<DbOptions>? configureOptions)
+        {
+            return services.AddWorkflowPersistDbContext(configuration, configureOptions)
+                .AddEFWorkflowStateRepo<WorkflowPersistDbContext>();
+        }
+        #endregion
     }
 }

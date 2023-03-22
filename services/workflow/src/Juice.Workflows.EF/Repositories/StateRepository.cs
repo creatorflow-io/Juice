@@ -2,19 +2,20 @@
 
 namespace Juice.Workflows.EF.Repositories
 {
-    internal class StateRepository : IWorkflowStateRepository
+    internal class StateRepository<TContext> : IWorkflowStateRepository
+        where TContext : DbContext
     {
-        private readonly WorkflowPersistDbContext _dbContext;
+        private readonly TContext _dbContext;
         private readonly ILogger _logger;
-        public StateRepository(ILogger<StateRepository> logger, WorkflowPersistDbContext dbContext)
+        public StateRepository(ILoggerFactory loggerFactory, TContext dbContext)
         {
-            _logger = logger;
+            _logger = loggerFactory.CreateLogger(GetType());
             _dbContext = dbContext;
         }
 
         public async Task<WorkflowState> GetAsync(string workflowId, CancellationToken token)
         {
-            var state = await _dbContext.WorkflowStates
+            var state = await _dbContext.Set<WorkflowState>()
                 .Where(p => Microsoft.EntityFrameworkCore.EF.Property<string>(p, "WorkflowId") == workflowId)
                 .Include(p => p.ProcessSnapshots)
                 .Include(p => p.FlowSnapshots)
@@ -44,7 +45,8 @@ namespace Juice.Workflows.EF.Repositories
                 }
                 _dbContext.Entry(state).Property("WorkflowId").CurrentValue = workflowId;
 
-                var exists = await _dbContext.WorkflowStates.AnyAsync(s => Microsoft.EntityFrameworkCore.EF.Property<string>(s, "WorkflowId") == workflowId, token);
+                var exists = await _dbContext.Set<WorkflowState>()
+                    .AnyAsync(s => Microsoft.EntityFrameworkCore.EF.Property<string>(s, "WorkflowId") == workflowId, token);
 
                 if (!exists)
                 {

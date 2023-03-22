@@ -66,7 +66,7 @@ namespace Juice.Workflows.Tests
         [IgnoreOnCIFact(DisplayName = "Wf shoud resume KB"), TestPriority(998)]
         public async Task Should_resume_wf_Async()
         {
-            var resumeNodeId = "Activity_T6MTDX";
+            var resumeNodeId = "Activity_RHQ2D6";
             await Task.Delay(3000);
             var timer = new Stopwatch();
             timer.Start();

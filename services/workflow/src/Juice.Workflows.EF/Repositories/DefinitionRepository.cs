@@ -1,9 +1,11 @@
 ﻿namespace Juice.Workflows.EF.Repositories
 {
-    internal class DefinitionRepository : IDefinitionRepository
+    internal class DefinitionRepository<TContext> : IDefinitionRepository
+        where TContext : DbContext
     {
-        private readonly WorkflowDbContext _dbContext;
-        public DefinitionRepository(WorkflowDbContext dbContext)
+        private readonly TContext _dbContext;
+        public virtual IQueryable<WorkflowDefinition> WorkflowDefinitions => _dbContext.Set<WorkflowDefinition>();
+        public DefinitionRepository(TContext dbContext)
         {
             _dbContext = dbContext;
         }
@@ -11,11 +13,11 @@
         {
             try
             {
-                if (await _dbContext.WorkflowDefinitions.AnyAsync(d => d.Id == workflowDefinition.Id))
+                if (await WorkflowDefinitions.AnyAsync(d => d.Id == workflowDefinition.Id))
                 {
                     return OperationResult.Failed(default, "Workflow is already exists.");
                 }
-                _dbContext.WorkflowDefinitions.Add(workflowDefinition);
+                _dbContext.Add(workflowDefinition);
                 await _dbContext.SaveChangesAsync(token);
                 return OperationResult.Success;
             }
@@ -29,11 +31,11 @@
         {
             try
             {
-                var definition = await _dbContext.WorkflowDefinitions.FirstOrDefaultAsync(d => d.Id == definitionId);
+                var definition = await WorkflowDefinitions.FirstOrDefaultAsync(d => d.Id == definitionId);
                 if (definition != null)
                 {
                     definition.ClearData();
-                    _dbContext.WorkflowDefinitions.Remove(definition);
+                    _dbContext.Remove(definition);
                     await _dbContext.SaveChangesAsync(token);
                 }
                 return OperationResult.Success;
@@ -44,18 +46,18 @@
             }
         }
         public Task<bool> ExistAsync(string definitionId, CancellationToken token)
-            => _dbContext.WorkflowDefinitions.AnyAsync(d => d.Id == definitionId, token);
+            => WorkflowDefinitions.AnyAsync(d => d.Id == definitionId, token);
         public Task<WorkflowDefinition?> GetAsync(string definitionId, CancellationToken token)
-            => _dbContext.WorkflowDefinitions.FirstOrDefaultAsync(d => d.Id == definitionId, token);
+            => WorkflowDefinitions.FirstOrDefaultAsync(d => d.Id == definitionId, token);
         public async Task<OperationResult> UpdateAsync(WorkflowDefinition workflowDefinition, CancellationToken token)
         {
             try
             {
-                if (!await _dbContext.WorkflowDefinitions.AnyAsync(d => d.Id == workflowDefinition.Id))
+                if (!await WorkflowDefinitions.AnyAsync(d => d.Id == workflowDefinition.Id))
                 {
                     return OperationResult.Failed(default, "Workflow not found.");
                 }
-                _dbContext.WorkflowDefinitions.Update(workflowDefinition);
+                _dbContext.Update(workflowDefinition);
                 await _dbContext.SaveChangesAsync(token);
                 return OperationResult.Success;
             }

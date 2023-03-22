@@ -5,13 +5,6 @@ namespace Juice.Workflows.EF
 {
     public class WorkflowPersistDbContext : DbContextBase
     {
-
-        public DbSet<FlowSnapshot> FlowSnapshots { get; set; }
-        public DbSet<NodeSnapshot> NodeSnapshots { get; set; }
-        public DbSet<ProcessSnapshot> ProcessSnapshots { get; set; }
-
-        public DbSet<WorkflowState> WorkflowStates { get; set; }
-
         public WorkflowPersistDbContext(IServiceProvider serviceProvider, DbContextOptions<WorkflowPersistDbContext> options) : base(serviceProvider, options)
         {
         }
