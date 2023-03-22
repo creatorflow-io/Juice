@@ -3,10 +3,12 @@ using Juice.Workflows.Domain.AggregatesModel.EventAggregate;
 
 namespace Juice.Workflows.EF.Repositories
 {
-    internal class EventRepository : IEventRepository
+    internal class EventRepository<TContext> : IEventRepository
+        where TContext : DbContext
     {
-        private WorkflowDbContext _dbContext;
-        public EventRepository(WorkflowDbContext dbContext)
+        private TContext _dbContext;
+        public virtual IQueryable<EventRecord> EventRecords => _dbContext.Set<EventRecord>();
+        public EventRepository(TContext dbContext)
         {
             _dbContext = dbContext;
         }
@@ -15,14 +17,14 @@ namespace Juice.Workflows.EF.Repositories
             try
             {
                 var hasKey = !string.IsNullOrEmpty(@event.CatchingKey);
-                if (!await _dbContext.EventRecords.AnyAsync(e => e.WorkflowId == @event.WorkflowId
+                if (!await EventRecords.AnyAsync(e => e.WorkflowId == @event.WorkflowId
                      && !e.IsCompleted
                      && (e.NodeId == @event.NodeId
                          || (hasKey && e.CatchingKey == @event.CatchingKey)
                          )
                    ))
                 {
-                    _dbContext.EventRecords.Add(@event);
+                    _dbContext.Add(@event);
                     await _dbContext.SaveChangesAsync(token);
                 }
                 return OperationResult.Success;
@@ -33,12 +35,12 @@ namespace Juice.Workflows.EF.Repositories
             }
         }
         public async Task<EventRecord?> GetAsync(Guid id, CancellationToken token)
-            => await _dbContext.EventRecords.FirstOrDefaultAsync(e => e.Id == id, token);
+            => await EventRecords.FirstOrDefaultAsync(e => e.Id == id, token);
         public async Task<OperationResult> UpdateAsync(EventRecord @event, CancellationToken token)
         {
             try
             {
-                _dbContext.EventRecords.Update(@event);
+                _dbContext.Update(@event);
                 await _dbContext.SaveChangesAsync(token);
                 return OperationResult.Success;
             }
@@ -52,7 +54,7 @@ namespace Juice.Workflows.EF.Repositories
         {
             try
             {
-                _dbContext.EventRecords.Remove(@event);
+                _dbContext.Remove(@event);
                 await _dbContext.SaveChangesAsync(token);
                 return OperationResult.Success;
             }
@@ -66,7 +68,7 @@ namespace Juice.Workflows.EF.Repositories
         {
             try
             {
-                var existingEvents = await _dbContext.EventRecords.Where(e => e.WorkflowId == workflowId && e.IsStartEvent)
+                var existingEvents = await EventRecords.Where(e => e.WorkflowId == workflowId && e.IsStartEvent)
                     .ToArrayAsync();
 
                 var removedEvents = existingEvents.Where(e => !events.Any(ne => ne.NodeId.Equals(e.NodeId, StringComparison.OrdinalIgnoreCase)))
@@ -99,7 +101,7 @@ namespace Juice.Workflows.EF.Repositories
 
         public async Task<IEnumerable<EventRecord>> FindAllAsync(Expression<Func<EventRecord, bool>> predicate, CancellationToken token)
         {
-            return await _dbContext.EventRecords.Where(predicate).ToListAsync();
+            return await EventRecords.Where(predicate).ToListAsync();
         }
     }
 }

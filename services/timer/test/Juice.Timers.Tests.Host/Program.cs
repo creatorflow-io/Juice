@@ -1,4 +1,6 @@
-﻿using Juice.EventBus;
+﻿using Juice.EF.Extensions;
+using Juice.EventBus;
+using Juice.EventBus.IntegrationEventLog.EF;
 using Juice.EventBus.IntegrationEventLog.EF.DependencyInjection;
 using Juice.Integrations.EventBus.DependencyInjection;
 using Juice.Integrations.MediatR.DependencyInjection;
@@ -13,6 +15,7 @@ using Juice.Timers.Domain.Events;
 using Juice.Timers.EF;
 using Juice.Timers.EF.DependencyInjection;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,7 +26,16 @@ var app = builder.Build();
 
 InitEvenBusEvent(app);
 
-app.MapGet("/", () => "Hello World!");
+await MigrateDbAsync(app);
+
+app.MapGet("/", async (context) =>
+{
+    var dbContext = context.RequestServices.GetRequiredService<TimerDbContext>();
+    var pendingCount = await dbContext.TimerRequests.CountAsync(t => !t.IsCompleted);
+    var expiredCount = await dbContext.TimerRequests.CountAsync(t => !t.IsCompleted && t.AbsoluteExpired < DateTimeOffset.Now);
+    var totalCount = await dbContext.TimerRequests.CountAsync();
+    await context.Response.WriteAsJsonAsync(new { pendingCount, expiredCount, totalCount });
+});
 
 app.Run();
 
@@ -70,4 +82,15 @@ static void InitEvenBusEvent(WebApplication app)
     var eventBus = app.Services.GetRequiredService<IEventBus>();
 
     eventBus.Subscribe<TimerStartIntegrationEvent, TimerStartIntegrationEventHandler>();
+}
+
+static async Task MigrateDbAsync(WebApplication app)
+{
+    using var scope = app.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<TimerDbContext>();
+    await dbContext.MigrateAsync();
+
+    var logContextFactory = scope.ServiceProvider.GetRequiredService<Func<TimerDbContext, IntegrationEventLogContext>>();
+    var logContext = logContextFactory(dbContext);
+    await logContext.MigrateAsync();
 }

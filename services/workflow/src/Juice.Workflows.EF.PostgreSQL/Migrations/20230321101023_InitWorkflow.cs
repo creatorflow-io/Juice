@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Juice.Workflows.EF.PostgreSQL.Migrations
 {
+    /// <inheritdoc />
     public partial class InitWorkflow : Migration
     {
         private string _schema;
@@ -15,13 +16,35 @@ namespace Juice.Workflows.EF.PostgreSQL.Migrations
         {
             _schema = schema.Schema;
         }
-
+        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+
             if (_schema != null)
             {
                 migrationBuilder.EnsureSchema(_schema);
             }
+
+            migrationBuilder.CreateTable(
+                name: "EventRecord",
+                schema: _schema,
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    WorkflowId = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    NodeId = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    DisplayName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    CorrelationId = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
+                    CatchingKey = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
+                    IsStartEvent = table.Column<bool>(type: "boolean", nullable: false),
+                    IsCompleted = table.Column<bool>(type: "boolean", nullable: false),
+                    CreatedDate = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    LastCall = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_EventRecord", x => x.Id);
+                });
 
             migrationBuilder.CreateTable(
                 name: "WorkflowDefinition",
@@ -62,17 +85,34 @@ namespace Juice.Workflows.EF.PostgreSQL.Migrations
                 {
                     table.PrimaryKey("PK_WorkflowRecord", x => x.Id);
                 });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_EventRecord_CorrelationId_CatchingKey",
+                table: "EventRecord",
+                schema: _schema,
+                columns: new[] { "CorrelationId", "CatchingKey" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_WorkflowRecord_CorrelationId",
+                table: "WorkflowRecord",
+                schema: _schema,
+                column: "CorrelationId");
         }
 
+        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "WorkflowDefinition",
-                schema: _schema);
+                schema: _schema,
+                name: "EventRecord");
 
             migrationBuilder.DropTable(
-                name: "WorkflowRecord",
-                schema: _schema);
+                schema: _schema,
+                name: "WorkflowDefinition");
+
+            migrationBuilder.DropTable(
+                schema: _schema,
+                name: "WorkflowRecord");
         }
     }
 }

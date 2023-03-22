@@ -55,7 +55,7 @@ namespace Juice.Workflows.DependencyInjection
         /// <param name="services"></param>
         /// <param name="directory"></param>
         /// <returns></returns>
-        public static IServiceCollection AddDbWorkflows(this IServiceCollection services)
+        public static IServiceCollection RegisterDbWorkflows(this IServiceCollection services)
         {
             services.AddScoped<IWorkflowContextBuilder, DbWorkflowContextBuilder>();
 

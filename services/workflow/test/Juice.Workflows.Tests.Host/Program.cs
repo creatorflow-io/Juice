@@ -100,21 +100,18 @@ static void ConfigureWorkflow(IServiceCollection services, IConfiguration config
     string provider = "PostgreSQL")
 {
     services.AddWorkflowServices()
-        .AddEFWorkflowRepo()
-        .AddEFWorkflowStateRepo();
-
-    services.AddWorkflowDbContext(configuration, options =>
+    .StoreWorkflowToEFRepo(configuration, options =>
     {
         options.Schema = "Workflows";
         options.DatabaseProvider = provider;
-    });
-    services.AddWorkflowPersistDbContext(configuration, options =>
+    })
+    .PersistStateToEFRepo(configuration, options =>
     {
         options.Schema = "Workflows";
         options.DatabaseProvider = provider;
     });
 
-    services.AddDbWorkflows();
+    services.RegisterDbWorkflows();
 
     services.AddWorkflowIntegrationEventHandlers();
 

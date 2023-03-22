@@ -12,14 +12,15 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Juice.Workflows.EF.PostgreSQL.Migrations
 {
     [DbContext(typeof(WorkflowDbContext))]
-    [Migration("20230201082432_AddEventAggregate")]
-    partial class AddEventAggregate
+    [Migration("20230321101023_AddEventRecord")]
+    partial class InitWorkflow
     {
+        /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "6.0.11")
+                .HasAnnotation("ProductVersion", "7.0.3")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -77,12 +78,29 @@ namespace Juice.Workflows.EF.PostgreSQL.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("CatchingKey")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<string>("CorrelationId")
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
+                    b.Property<DateTimeOffset>("CreatedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsStartEvent")
                         .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("LastCall")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("NodeId")
                         .IsRequired()
@@ -95,6 +113,8 @@ namespace Juice.Workflows.EF.PostgreSQL.Migrations
                         .HasColumnType("character varying(64)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CorrelationId", "CatchingKey");
 
                     b.ToTable("EventRecord", (string)null);
                 });
@@ -135,6 +155,8 @@ namespace Juice.Workflows.EF.PostgreSQL.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CorrelationId");
 
                     b.ToTable("WorkflowRecord", (string)null);
                 });

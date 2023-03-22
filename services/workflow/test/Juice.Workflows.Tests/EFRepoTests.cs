@@ -2,6 +2,7 @@
 using Juice.Workflows.Api.Domain.CommandHandlers;
 using Juice.Workflows.Bpmn.DependencyInjection;
 using Juice.Workflows.Domain.AggregatesModel.DefinitionAggregate;
+using Juice.Workflows.Domain.AggregatesModel.EventAggregate;
 using Juice.Workflows.Domain.Commands;
 using Juice.Workflows.EF;
 using Juice.Workflows.EF.DependencyInjection;
@@ -100,14 +101,13 @@ namespace Juice.Workflows.Tests
                 });
 
                 services.AddWorkflowServices()
-                    .AddEFWorkflowRepo()
-                    .AddDbWorkflows()
+                    .StoreWorkflowToEFRepo(configuration, options =>
+                    {
+                        options.Schema = "Workflows";
+                        options.DatabaseProvider = provider;
+                    })
+                    .RegisterDbWorkflows()
                     ;
-                services.AddWorkflowDbContext(configuration, options =>
-                {
-                    options.Schema = "Workflows";
-                    options.DatabaseProvider = provider;
-                });
 
                 services.RegisterBpmnWorkflows();
 
@@ -159,23 +159,20 @@ namespace Juice.Workflows.Tests
                 });
 
                 services.AddWorkflowServices()
-                    .AddEFWorkflowRepo()
-                    .AddEFWorkflowStateRepo();
+                    .StoreWorkflowToEFRepo(configuration, options =>
+                    {
+                        options.Schema = "Workflows";
+                        options.DatabaseProvider = provider;
+                    })
+                    .PersistStateToEFRepo(configuration, options =>
+                    {
+                        options.Schema = "Workflows";
+                        options.DatabaseProvider = provider;
+                    });
 
                 services.RegisterNodes(typeof(OutcomeBranchUserTask));
 
-                services.AddWorkflowDbContext(configuration, options =>
-                {
-                    options.Schema = "Workflows";
-                    options.DatabaseProvider = provider;
-                });
-                services.AddWorkflowPersistDbContext(configuration, options =>
-                {
-                    options.Schema = "Workflows";
-                    options.DatabaseProvider = provider;
-                });
-
-                services.AddDbWorkflows();
+                services.RegisterDbWorkflows();
 
                 services.AddMediatR(typeof(StartEvent), typeof(TimerEventStartDomainEventHandler), typeof(StartUserTaskCommandHandler));
 
@@ -247,23 +244,20 @@ namespace Juice.Workflows.Tests
                 });
 
                 services.AddWorkflowServices()
-                    .AddEFWorkflowRepo()
-                    .AddEFWorkflowStateRepo();
+                   .StoreWorkflowToEFRepo(configuration, options =>
+                   {
+                       options.Schema = "Workflows";
+                       options.DatabaseProvider = provider;
+                   })
+                    .PersistStateToEFRepo(configuration, options =>
+                    {
+                        options.Schema = "Workflows";
+                        options.DatabaseProvider = provider;
+                    });
 
                 services.RegisterNodes(typeof(OutcomeBranchUserTask));
 
-                services.AddWorkflowDbContext(configuration, options =>
-                {
-                    options.Schema = "Workflows";
-                    options.DatabaseProvider = provider;
-                });
-                services.AddWorkflowPersistDbContext(configuration, options =>
-                {
-                    options.Schema = "Workflows";
-                    options.DatabaseProvider = provider;
-                });
-
-                services.AddDbWorkflows();
+                services.RegisterDbWorkflows();
 
                 services.AddMediatR(typeof(StartEvent), typeof(TimerEventStartDomainEventHandler), typeof(StartUserTaskCommandHandler));
 
@@ -281,7 +275,7 @@ namespace Juice.Workflows.Tests
             using var scope = resolver.ServiceProvider.CreateScope();
 
             var dbContext = scope.ServiceProvider.GetRequiredService<WorkflowDbContext>();
-            var eventId = (await dbContext.EventRecords.FirstOrDefaultAsync(e => e.IsStartEvent))?.Id;
+            var eventId = (await dbContext.Set<EventRecord>().FirstOrDefaultAsync(e => e.IsStartEvent))?.Id;
 
             if (eventId.HasValue)
             {
