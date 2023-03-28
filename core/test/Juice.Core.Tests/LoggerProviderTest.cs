@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Juice.Extensions.Logging;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
@@ -42,6 +43,7 @@ namespace Juice.Core.Tests
         [Fact(DisplayName = "Logging to test output")]
         public void LogTest()
         {
+            Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Production");
             var builder = WebApplication.CreateBuilder();
             var services = builder.Services;
             var configuration = builder.Configuration;
