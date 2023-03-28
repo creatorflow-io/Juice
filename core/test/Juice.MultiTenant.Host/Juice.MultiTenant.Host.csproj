@@ -20,5 +20,6 @@
 
   <ItemGroup>
     <PackageReference Include="Finbuckle.MultiTenant.AspNetCore" Version="6.*" />
+    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="*" />
   </ItemGroup>
 </Project>

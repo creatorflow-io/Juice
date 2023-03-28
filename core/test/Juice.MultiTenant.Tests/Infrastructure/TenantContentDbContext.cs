@@ -13,8 +13,9 @@ namespace Juice.MultiTenant.Tests.Infrastructure
     public class TenantContentDbContext : MultiTenantDbContext
     {
         public DbSet<TenantContent> TenantContents { get; set; }
-        public TenantContentDbContext(IServiceProvider serviceProvider, DbContextOptions options) : base(serviceProvider, options)
+        public TenantContentDbContext(IServiceProvider serviceProvider, DbContextOptions options) : base(options)
         {
+            ConfigureServices(serviceProvider);
         }
 
         protected override void ConfigureModel(ModelBuilder modelBuilder)

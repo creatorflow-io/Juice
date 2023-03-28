@@ -19,32 +19,44 @@ namespace Juice.EF
         #endregion
 
         #region Auditable context
-        public string? User => _httpContextAccessor?.HttpContext?.User?.FindFirst(ClaimTypes.Name)?.Value;
+        public string? User { get; protected set; }
 
-        private IHttpContextAccessor? _httpContextAccessor;
         public List<AuditEntry>? PendingAuditEntries { get; protected set; }
 
         #endregion
 
-        private readonly IMediator? _mediator;
+        protected IMediator? _mediator;
 
-        private ILogger? _logger;
-        private IServiceProvider _serviceProvider;
-        private CancellationTokenSource _cts = new CancellationTokenSource();
+        protected ILogger? _logger;
 
-        private readonly DbOptions? _options;
-        public DbContextBase(IServiceProvider serviceProvider, DbContextOptions options)
+        protected DbOptions? _options;
+
+        /// <summary>
+        /// Please call <c>ConfigureServices(IServiceProvider serviceProvider)</c> directly in your constructor
+        /// <para>or inside <c>IDbContextFactory.CreateDbContext()</c> if you are using PooledDbContextFactory</para>
+        /// <para>to init internal services</para>
+        /// </summary>
+        /// <param name="options"></param>
+        public DbContextBase(DbContextOptions options)
             : base(options)
         {
-            _serviceProvider = serviceProvider;
-            _httpContextAccessor = serviceProvider.GetService<IHttpContextAccessor>();
-            if (_httpContextAccessor?.HttpContext != null)
+
+        }
+
+        public virtual void ConfigureServices(IServiceProvider serviceProvider)
+        {
+            var httpContextAccessor = serviceProvider.GetService<IHttpContextAccessor>();
+            User = httpContextAccessor?.HttpContext?.User?.FindFirst(ClaimTypes.Name)?.Value;
+
+            if (_logger == null)
             {
-                _cts = CancellationTokenSource.CreateLinkedTokenSource(_httpContextAccessor.HttpContext.RequestAborted);
+                var loggerFactory = serviceProvider.GetService<ILoggerFactory>();
+                _logger = loggerFactory != null ? loggerFactory.CreateLogger(GetType()) : null;
+                if (_logger?.IsEnabled(LogLevel.Debug) ?? false)
+                {
+                    _logger?.LogDebug("Logger initialized for {type}", GetType().Name);
+                }
             }
-            var loggerFactory = serviceProvider.GetService<ILoggerFactory>();
-            _logger = loggerFactory != null ? loggerFactory.CreateLogger(GetType()) : null;
-            _logger?.LogInformation("Logger initialized for {type}", GetType().Name);
             try
             {
                 _mediator = serviceProvider.GetService<IMediator>();
@@ -64,15 +76,6 @@ namespace Juice.EF
             base.OnModelCreating(modelBuilder);
             modelBuilder.ConfigureDynamicExpandableEntities(this);
             ConfigureModel(modelBuilder);
-
-            var collections = _serviceProvider
-                .GetServices<IModelConfiguration>()
-                .Where(c => typeof(ModelConfigurationBase<>).MakeGenericType(GetType()).IsAssignableFrom(c.GetType()));
-            foreach (var callback in collections)
-            {
-                callback.OnModelCreating(modelBuilder);
-            }
-
         }
 
 
@@ -106,7 +109,7 @@ namespace Juice.EF
 
         public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default(CancellationToken))
         {
-            var cts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, cancellationToken);
+            //var cts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, cancellationToken);
             this.SetAuditInformation(_logger);
             PendingAuditEntries = _mediator != null ? this.TrackingChanges(_logger)?.ToList() : default;
 
@@ -115,13 +118,13 @@ namespace Juice.EF
                 await _mediator.DispatchDomainEventsAsync(this);
                 if (_options != null && _options.JsonPropertyBehavior == JsonPropertyBehavior.UpdateALL)
                 {
-                    return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cts.Token);
+                    return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
                 }
 
                 var (affects, refeshEntries) = await this.TryUpdateDynamicPropertyAsync(_logger);
                 if (this.HasUnsavedChanges())
                 {
-                    affects = await base.SaveChangesAsync(acceptAllChangesOnSuccess, cts.Token);
+                    affects = await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
                 }
 
                 ProcessingRefreshEntries(refeshEntries);
@@ -160,6 +163,23 @@ namespace Juice.EF
             {
                 ProcessingChanges();
             }
+        }
+
+        public override void Dispose()
+        {
+            base.Dispose();
+
+            // cleanup self services and data
+            _logger?.LogDebug(GetType().Name + " is disposing...");
+            _options = null;
+            Schema = null;
+            User = null;
+            _currentTransaction = null;
+            _commitedTransactionId = null;
+            _mediator = null;
+            _logger = null;
+            _pendingRefreshEntities.Clear();
+            PendingAuditEntries = null;
         }
 
         #region UnitOfWork
@@ -231,38 +251,5 @@ namespace Juice.EF
         }
         #endregion
 
-
-        #region IDisposable Support
-
-        private bool disposedValue = false; // To detect redundant calls
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!disposedValue)
-            {
-                if (disposing)
-                {
-                    //  dispose managed state (managed objects).
-                    try
-                    {
-                        PendingAuditEntries = null;
-                        _pendingRefreshEntities = null;
-                    }
-                    catch { }
-                }
-                disposedValue = true;
-            }
-        }
-
-        // This code added to correctly implement the disposable pattern.
-        public override void Dispose()
-        {
-            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            base.Dispose();
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        #endregion
     }
 }

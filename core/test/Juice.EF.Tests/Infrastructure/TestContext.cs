@@ -11,8 +11,9 @@ namespace Juice.EF.Tests.Infrastructure
         public const string SCHEMA = "Contents";
         public DbSet<Content> Contents { get; set; }
 
-        public TestContext(IServiceProvider serviceProvider, DbContextOptions<TestContext> options) : base(serviceProvider, options)
+        public TestContext(IServiceProvider serviceProvider, DbContextOptions<TestContext> options) : base(options)
         {
+            ConfigureServices(serviceProvider);
         }
 
         protected override void ConfigureModel(ModelBuilder modelBuilder)

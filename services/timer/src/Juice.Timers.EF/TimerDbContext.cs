@@ -10,10 +10,12 @@ namespace Juice.Timers.EF
 {
     public class TimerDbContext : DbContextBase
     {
-
+        public string Schema { get; } = "App";
         public DbSet<TimerRequest> TimerRequests { get; set; }
 
-        public TimerDbContext(IServiceProvider serviceProvider, DbContextOptions<TimerDbContext> options) : base(serviceProvider, options)
+        public bool HasActiveTransaction => throw new NotImplementedException();
+
+        public TimerDbContext(DbContextOptions<TimerDbContext> options) : base(options)
         {
         }
 
@@ -36,6 +38,7 @@ namespace Juice.Timers.EF
                 entity.HasIndex(e => new { e.AbsoluteExpired, e.IsCompleted });
             });
         }
+
     }
 
     public class TimerDbContextFactory : IDesignTimeDbContextFactory<TimerDbContext>
@@ -106,6 +109,28 @@ namespace Juice.Timers.EF
             });
 
             return resolver.ServiceProvider.GetRequiredService<TimerDbContext>();
+        }
+    }
+
+    public class TimerDbContextScopedFactory : IDbContextFactory<TimerDbContext>
+    {
+
+        private readonly IDbContextFactory<TimerDbContext> _pooledFactory;
+        private readonly IServiceProvider _serviceProvider;
+
+        public TimerDbContextScopedFactory(
+            IDbContextFactory<TimerDbContext> pooledFactory,
+            IServiceProvider serviceProvider)
+        {
+            _pooledFactory = pooledFactory;
+            _serviceProvider = serviceProvider;
+        }
+
+        public TimerDbContext CreateDbContext()
+        {
+            var context = _pooledFactory.CreateDbContext();
+            context.ConfigureServices(_serviceProvider);
+            return context;
         }
     }
 }

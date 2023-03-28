@@ -32,7 +32,7 @@ namespace Juice.Timers.EF.DependencyInjection
                     _ => throw new NotSupportedException($"Unsupported provider: {provider}")
                 };
 
-            services.AddDbContext<TimerDbContext>(options =>
+            services.AddPooledDbContextFactory<TimerDbContext>((serviceProvider, options) =>
             {
                 switch (provider)
                 {
@@ -59,13 +59,13 @@ namespace Juice.Timers.EF.DependencyInjection
                     default:
                         throw new NotSupportedException($"Unsupported provider: {provider}");
                 }
-
-
                 options
                     .ReplaceService<IMigrationsAssembly, DbSchemaAwareMigrationAssembly>()
                 ;
-
             });
+
+            services.AddScoped<TimerDbContextScopedFactory>();
+            services.AddScoped(sp => sp.GetRequiredService<TimerDbContextScopedFactory>().CreateDbContext());
 
             return services;
         }

@@ -8,7 +8,6 @@ using Juice.Integrations.MediatR.DependencyInjection;
 using Juice.MediatR.RequestManager.EF.DependencyInjection;
 using Juice.MultiTenant.Api.Behaviors.DependencyInjection;
 using Juice.MultiTenant.Api.Commands;
-using Juice.MultiTenant.Api.IntegrationEvents.DependencyInjection;
 using Juice.MultiTenant.EF;
 using Juice.MultiTenant.EF.DependencyInjection;
 using Juice.MultiTenant.Finbuckle.DependencyInjection;
@@ -28,7 +27,8 @@ namespace Juice.MultiTenant.Api.DependencyInjection
         /// <para></para>Configure MediatR, add Integration event service (NOTE: Required an event bus)
         /// </summary>
         /// <returns></returns>
-        public static FinbuckleMultiTenantBuilder<TTenantInfo> ConfigureTenantHost<TTenantInfo>(this FinbuckleMultiTenantBuilder<TTenantInfo> builder, IConfiguration configuration,
+        public static FinbuckleMultiTenantBuilder<TTenantInfo> ConfigureTenantHost<TTenantInfo>(this FinbuckleMultiTenantBuilder<TTenantInfo> builder,
+            IConfiguration configuration,
             Action<DbOptions> configureTenantDb)
             where TTenantInfo : class, IDynamic, ITenantInfo, new()
         {
@@ -52,7 +52,8 @@ namespace Juice.MultiTenant.Api.DependencyInjection
                     .RegisterContext<TenantStoreDbContext<TTenantInfo>>(dbOptions.Schema)
                     .RegisterContext<TenantSettingsDbContext>(dbOptions.Schema);
 
-            builder.Services.AddTenantIntegrationEventSelfHandlers<TTenantInfo>();
+            //add service manually with distributed cache together
+            //builder.Services.AddTenantIntegrationEventSelfHandlers<TTenantInfo>();
 
             builder.Services.AddTenantSettingsDbContext(configuration, configureTenantDb);
 

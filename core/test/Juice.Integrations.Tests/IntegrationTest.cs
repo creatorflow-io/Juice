@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Juice.EF.Extensions;
 using Juice.EF.Tests.Domain;
 using Juice.EF.Tests.Infrastructure;
 using Juice.EventBus;
@@ -89,6 +90,12 @@ namespace Juice.Integrations.Tests
 
             using var scope = resolver.ServiceProvider.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<TestContext>();
+
+            var logContextFactory = scope.ServiceProvider.GetRequiredService<Func<TestContext, IntegrationEventLogContext>>();
+
+            var logContext = logContextFactory(context);
+
+            await logContext.MigrateAsync();
 
             var integrationEventService = scope.ServiceProvider.GetRequiredService<IIntegrationEventService<TestContext>>();
 
