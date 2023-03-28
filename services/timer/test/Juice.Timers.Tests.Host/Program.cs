@@ -33,8 +33,15 @@ app.MapGet("/", async (context) =>
     var dbContext = context.RequestServices.GetRequiredService<TimerDbContext>();
     var pendingCount = await dbContext.TimerRequests.CountAsync(t => !t.IsCompleted);
     var expiredCount = await dbContext.TimerRequests.CountAsync(t => !t.IsCompleted && t.AbsoluteExpired < DateTimeOffset.Now);
+    var completedCount = await dbContext.TimerRequests.CountAsync(t => t.IsCompleted);
     var totalCount = await dbContext.TimerRequests.CountAsync();
-    await context.Response.WriteAsJsonAsync(new { pendingCount, expiredCount, totalCount });
+    await context.Response.WriteAsJsonAsync(new { pendingCount, expiredCount, completedCount, totalCount });
+});
+
+app.MapGet("/gc", async (context) =>
+{
+    GC.Collect();
+    context.Response.StatusCode = StatusCodes.Status200OK;
 });
 
 app.Run();

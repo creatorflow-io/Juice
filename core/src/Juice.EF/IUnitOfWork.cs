@@ -2,7 +2,7 @@
 
 namespace Juice.EF
 {
-    public interface IUnitOfWork : IDisposable
+    public interface IUnitOfWork
     {
         IDbContextTransaction? GetCurrentTransaction();
         bool HasActiveTransaction { get; }

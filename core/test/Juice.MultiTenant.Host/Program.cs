@@ -14,6 +14,8 @@ ConfigureGRPC(builder.Services);
 
 ConfigureEvents(builder);
 
+ConfigureDistributedCache(builder.Services, builder.Configuration);
+
 
 // For unit test
 builder.Services.AddScoped<TenantStoreService>();
@@ -52,6 +54,8 @@ static void ConfigureMultiTenant(WebApplicationBuilder builder)
         options.ConnectionName = "PostgreConnection";
         options.Schema = "App";
     });
+
+    builder.Services.AddTenantIntegrationEventSelfHandlers<Tenant>();
 }
 
 static void ConfigureGRPC(IServiceCollection services)
@@ -65,4 +69,13 @@ static void ConfigureEvents(WebApplicationBuilder builder)
 
     builder.Services.RegisterRabbitMQEventBus(builder.Configuration.GetSection("RabbitMQ"));
 
+}
+
+static void ConfigureDistributedCache(IServiceCollection services, IConfiguration configuration)
+{
+    services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration = configuration.GetConnectionString("Redis");
+        options.InstanceName = "SampleInstance";
+    });
 }

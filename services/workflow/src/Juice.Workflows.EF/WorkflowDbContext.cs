@@ -5,9 +5,9 @@ namespace Juice.Workflows.EF
     public class WorkflowDbContext : DbContextBase
     {
 
-        public WorkflowDbContext(IServiceProvider serviceProvider, DbContextOptions<WorkflowDbContext> options) : base(serviceProvider, options)
+        public WorkflowDbContext(IServiceProvider serviceProvider, DbContextOptions<WorkflowDbContext> options) : base(options)
         {
-
+            ConfigureServices(serviceProvider);
         }
 
         protected override void ConfigureModel(ModelBuilder modelBuilder)
