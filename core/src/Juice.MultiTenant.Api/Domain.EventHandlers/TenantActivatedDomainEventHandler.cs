@@ -1,5 +1,5 @@
 ﻿using Juice.Integrations.EventBus;
-using Juice.MultiTenant.Api.IntegrationEvents.Events;
+using Juice.MultiTenant.Api.Contracts.IntegrationEvents.Events;
 using Juice.MultiTenant.Domain.Events;
 using Juice.MultiTenant.EF;
 

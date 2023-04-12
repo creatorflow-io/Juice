@@ -1,8 +1,7 @@
-﻿using Juice.EventBus;
-using Juice.EventBus.RabbitMQ;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace Microsoft.Extensions.DependencyInjection
+namespace Juice.EventBus.RabbitMQ.DependencyInjection
 {
     public static class RabbitMQServiceCollectionExtensions
     {

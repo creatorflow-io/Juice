@@ -4,6 +4,7 @@ using System.Threading;
 using Juice.EventBus;
 using Juice.EventBus.IntegrationEventLog.EF;
 using Juice.EventBus.IntegrationEventLog.EF.DependencyInjection;
+using Juice.EventBus.RabbitMQ.DependencyInjection;
 using Juice.Integrations.EventBus.DependencyInjection;
 using Juice.Integrations.MediatR.DependencyInjection;
 using Juice.MediatR.Redis.DependencyInjection;

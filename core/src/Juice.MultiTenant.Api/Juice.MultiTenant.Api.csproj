@@ -18,6 +18,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Juice.Integrations\Juice.Integrations.csproj" />
     <ProjectReference Include="..\Juice.MediatR.RequestManager.EF\Juice.MediatR.RequestManager.EF.csproj" />
+    <ProjectReference Include="..\Juice.MultiTenant.Api.Contracts\Juice.MultiTenant.Api.Contracts.csproj" />
     <ProjectReference Include="..\Juice.MultiTenant.EF\Juice.MultiTenant.EF.csproj" />
   </ItemGroup>
 </Project>

@@ -1,6 +1,6 @@
 ﻿using Juice.BgService.Management.File;
 using Juice.Extensions.Configuration;
-using Juice.Extensions.Options;
+using Juice.Extensions.Options.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 

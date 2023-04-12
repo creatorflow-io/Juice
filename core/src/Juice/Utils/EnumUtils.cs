@@ -2,7 +2,7 @@
 {
     public static class EnumUtils
     {
-        public static T FromInt<T>(int value)
+        public static T? FromInt<T>(int value)
         {
             if (Enum.IsDefined(typeof(T), value))
             {

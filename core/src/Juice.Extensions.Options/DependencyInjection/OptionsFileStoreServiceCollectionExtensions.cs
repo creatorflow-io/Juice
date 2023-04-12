@@ -2,7 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace Juice.Extensions.Options
+namespace Juice.Extensions.Options.DependencyInjection
 {
     public static class OptionsFileStoreServiceCollectionExtensions
     {

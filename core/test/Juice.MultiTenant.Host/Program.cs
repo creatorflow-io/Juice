@@ -1,4 +1,5 @@
-﻿using Juice.MultiTenant;
+﻿using Juice.EventBus.RabbitMQ.DependencyInjection;
+using Juice.MultiTenant;
 using Juice.MultiTenant.Api.DependencyInjection;
 using Juice.MultiTenant.Api.IntegrationEvents.DependencyInjection;
 using Juice.MultiTenant.EF.Grpc.Services;

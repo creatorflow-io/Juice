@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(AppTargetFramework)</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Juice.EventBus\Juice.EventBus.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Label="gRPC">
+    <Protobuf Include="Protos\tenant.proto" />
+    <Protobuf Include="Protos\tenantsettings.proto" />
+    <PackageReference Include="Google.Protobuf" Version="3.18.1" />
+    <PackageReference Include="Grpc.Tools" Version="$(GrpcVersion)" PrivateAssets="All" />
+    <PackageReference Include="Grpc.Core.Api" Version="$(GrpcVersion)" />
+  </ItemGroup>
+</Project>
