@@ -153,6 +153,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Workflows.EF.PostgreS
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Workflows.EF.SqlServer", "services\workflow\src\Juice.Workflows.EF.SqlServer\Juice.Workflows.EF.SqlServer.csproj", "{0D47F69F-BA0D-40BA-AD9A-CD0ECE2DFE27}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Workflows.Api", "services\workflow\src\Juice.Workflows.Api\Juice.Workflows.Api.csproj", "{D1B5C378-D1BB-40DC-A49B-05CE6B01551A}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Workflows.Tests", "services\workflow\test\Juice.Workflows.Tests\Juice.Workflows.Tests.csproj", "{526ED776-397C-4DB0-B81C-E86BB8320EA5}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Workflows.Tests.Host", "services\workflow\test\Juice.Workflows.Tests.Host\Juice.Workflows.Tests.Host.csproj", "{088DD433-3BA5-40C2-AB7B-BAC7D31F26F1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -391,6 +397,18 @@ Global
 		{0D47F69F-BA0D-40BA-AD9A-CD0ECE2DFE27}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0D47F69F-BA0D-40BA-AD9A-CD0ECE2DFE27}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0D47F69F-BA0D-40BA-AD9A-CD0ECE2DFE27}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D1B5C378-D1BB-40DC-A49B-05CE6B01551A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D1B5C378-D1BB-40DC-A49B-05CE6B01551A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D1B5C378-D1BB-40DC-A49B-05CE6B01551A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D1B5C378-D1BB-40DC-A49B-05CE6B01551A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{526ED776-397C-4DB0-B81C-E86BB8320EA5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{526ED776-397C-4DB0-B81C-E86BB8320EA5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{526ED776-397C-4DB0-B81C-E86BB8320EA5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{526ED776-397C-4DB0-B81C-E86BB8320EA5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{088DD433-3BA5-40C2-AB7B-BAC7D31F26F1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{088DD433-3BA5-40C2-AB7B-BAC7D31F26F1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{088DD433-3BA5-40C2-AB7B-BAC7D31F26F1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{088DD433-3BA5-40C2-AB7B-BAC7D31F26F1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -460,6 +478,9 @@ Global
 		{B1AB143F-7C67-4376-80E5-0F484B0ACAF3} = {6EC3652A-D78A-4BE8-9BFE-534B968C339B}
 		{5E52DCCF-1D11-408A-9C13-C390013DA0DA} = {6EC3652A-D78A-4BE8-9BFE-534B968C339B}
 		{0D47F69F-BA0D-40BA-AD9A-CD0ECE2DFE27} = {6EC3652A-D78A-4BE8-9BFE-534B968C339B}
+		{D1B5C378-D1BB-40DC-A49B-05CE6B01551A} = {6EC3652A-D78A-4BE8-9BFE-534B968C339B}
+		{526ED776-397C-4DB0-B81C-E86BB8320EA5} = {F0C1DDC9-295A-4DD8-AB19-3CE592CFA928}
+		{088DD433-3BA5-40C2-AB7B-BAC7D31F26F1} = {F0C1DDC9-295A-4DD8-AB19-3CE592CFA928}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DD654E02-538D-4E29-A098-413DEBAE4D98}
