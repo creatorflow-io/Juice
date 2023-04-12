@@ -1,6 +1,6 @@
 ﻿using Finbuckle.MultiTenant.Stores;
 using Juice.EventBus;
-using Juice.MultiTenant.Api.IntegrationEvents.Events;
+using Juice.MultiTenant.Api.Contracts.IntegrationEvents.Events;
 
 namespace Juice.MultiTenant.Api.IntegrationEvents.Handlers
 {

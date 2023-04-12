@@ -5,6 +5,7 @@ using Juice.EF.Tests.Domain;
 using Juice.EF.Tests.Infrastructure;
 using Juice.EventBus.IntegrationEventLog.EF;
 using Juice.EventBus.IntegrationEventLog.EF.DependencyInjection;
+using Juice.EventBus.RabbitMQ.DependencyInjection;
 using Juice.EventBus.Tests.Events;
 using Juice.EventBus.Tests.Handlers;
 using Juice.Extensions.DependencyInjection;

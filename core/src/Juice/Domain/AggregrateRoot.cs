@@ -1,8 +1,23 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Juice.Domain.AggregatesModel
+namespace Juice.Domain
 {
-    public class AuditAggregrateRoot<TKey, TNotification> : AuditEntity<TKey>, IAggregrateRoot<TNotification>
+    /// <summary>
+    /// Default aggregrate root
+    /// </summary>
+    /// <typeparam name="TNotification"></typeparam>
+    public abstract class AggregrateRoot<TNotification> : IAggregrateRoot<TNotification>
+    {
+        [NotMapped]
+        public IList<TNotification> DomainEvents { get; } = new List<TNotification>();
+    }
+
+    /// <summary>
+    /// Use for aggregrate root that mapped to single auditable entity
+    /// </summary>
+    /// <typeparam name="TKey"></typeparam>
+    /// <typeparam name="TNotification"></typeparam>
+    public abstract class AuditAggregrateRoot<TKey, TNotification> : AuditEntity<TKey>, IAggregrateRoot<TNotification>
         where TKey : IEquatable<TKey>
     {
         [NotMapped]

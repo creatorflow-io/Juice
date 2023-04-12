@@ -1,7 +1,9 @@
 ﻿using Finbuckle.MultiTenant;
 using Finbuckle.MultiTenant.Stores;
 using Juice.EventBus;
+using Juice.EventBus.RabbitMQ.DependencyInjection;
 using Juice.Extensions.Options;
+using Juice.Extensions.Options.DependencyInjection;
 using Juice.MultiTenant;
 using Juice.MultiTenant.Grpc.Finbuckle.DependencyInjection;
 using Juice.Tests.Host;

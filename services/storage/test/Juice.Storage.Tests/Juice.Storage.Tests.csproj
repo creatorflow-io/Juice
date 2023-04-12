@@ -27,6 +27,4 @@
     <ProjectReference Include="..\..\src\Juice.Storage\Juice.Storage.csproj" />
   </ItemGroup>
 
-  <Import Project="..\..\..\..\test\Juice.XUnit\Juice.XUnit.projitems" Label="Shared" />
-
 </Project>

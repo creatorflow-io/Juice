@@ -7,6 +7,7 @@ using Juice.EF.Extensions;
 using Juice.EF.Tests.EventHandlers;
 using Juice.EventBus.IntegrationEventLog.EF;
 using Juice.EventBus.IntegrationEventLog.EF.DependencyInjection;
+using Juice.EventBus.RabbitMQ.DependencyInjection;
 using Juice.Extensions.DependencyInjection;
 using Juice.Integrations.EventBus.DependencyInjection;
 using Juice.Integrations.MediatR;

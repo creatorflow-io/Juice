@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\core\src\Juice.AspNetCore\Juice.AspNetCore.csproj" />
+    <ProjectReference Include="..\..\..\..\core\src\Juice.Extensions.Options\Juice.Extensions.Options.csproj" />
     <ProjectReference Include="..\Juice.BgService\Juice.BgService.csproj" />
   </ItemGroup>
 

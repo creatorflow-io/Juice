@@ -53,6 +53,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.MediatR.Redis", "..\.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.XUnit", "..\..\test\Juice.XUnit\Juice.XUnit.csproj", "{7FB16C81-2B90-41CC-98CE-FABDAC88AD85}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Extensions.Logging", "..\..\core\src\Juice.Extensions.Logging\Juice.Extensions.Logging.csproj", "{F48639F2-C2A2-4129-A2BD-8352C8B144A7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -151,6 +153,10 @@ Global
 		{7FB16C81-2B90-41CC-98CE-FABDAC88AD85}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7FB16C81-2B90-41CC-98CE-FABDAC88AD85}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7FB16C81-2B90-41CC-98CE-FABDAC88AD85}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F48639F2-C2A2-4129-A2BD-8352C8B144A7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F48639F2-C2A2-4129-A2BD-8352C8B144A7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F48639F2-C2A2-4129-A2BD-8352C8B144A7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F48639F2-C2A2-4129-A2BD-8352C8B144A7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -179,6 +185,7 @@ Global
 		{8CCA4BAE-B1A9-4A26-B967-9BD70C2064AF} = {440E68F2-3619-47AC-A113-DE93A86BA4E6}
 		{34BE705E-0104-4FA5-AD91-40B9E68E9954} = {AA0452DF-ED3A-4C1C-8A18-69404067D98B}
 		{7FB16C81-2B90-41CC-98CE-FABDAC88AD85} = {440E68F2-3619-47AC-A113-DE93A86BA4E6}
+		{F48639F2-C2A2-4129-A2BD-8352C8B144A7} = {AA0452DF-ED3A-4C1C-8A18-69404067D98B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E12C0C51-F3CC-4F13-AF15-DC92FCA9915B}

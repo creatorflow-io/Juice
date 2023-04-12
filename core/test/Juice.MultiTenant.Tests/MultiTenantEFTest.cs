@@ -7,6 +7,7 @@ using Juice.EF.Tests.EventHandlers;
 using Juice.Extensions.Configuration;
 using Juice.Extensions.DependencyInjection;
 using Juice.Extensions.Options;
+using Juice.Extensions.Options.DependencyInjection;
 using Juice.Extensions.Options.Stores;
 using Juice.MultiTenant.EF;
 using Juice.MultiTenant.EF.DependencyInjection;

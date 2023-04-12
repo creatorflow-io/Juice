@@ -21,6 +21,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice", "..\..\core\src\Jui
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.XUnit", "..\..\test\Juice.XUnit\Juice.XUnit.csproj", "{A777DEC8-5DE6-45C0-8E87-ED9AEB25F5DB}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Extensions.Logging", "..\..\core\src\Juice.Extensions.Logging\Juice.Extensions.Logging.csproj", "{7CB2C860-322A-4160-800A-6E9070B26052}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -55,6 +57,10 @@ Global
 		{A777DEC8-5DE6-45C0-8E87-ED9AEB25F5DB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A777DEC8-5DE6-45C0-8E87-ED9AEB25F5DB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A777DEC8-5DE6-45C0-8E87-ED9AEB25F5DB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7CB2C860-322A-4160-800A-6E9070B26052}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7CB2C860-322A-4160-800A-6E9070B26052}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7CB2C860-322A-4160-800A-6E9070B26052}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7CB2C860-322A-4160-800A-6E9070B26052}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -67,6 +73,7 @@ Global
 		{A21C0E10-D1BC-4643-A1AB-DD1224A1DFA5} = {6931CF9C-705C-477D-BDAD-D87CFEDD0BF2}
 		{DF3D100E-6740-4C30-9F9A-CB80BBC07162} = {602474EE-1C88-469E-832E-AE06B00D2288}
 		{A777DEC8-5DE6-45C0-8E87-ED9AEB25F5DB} = {6931CF9C-705C-477D-BDAD-D87CFEDD0BF2}
+		{7CB2C860-322A-4160-800A-6E9070B26052} = {602474EE-1C88-469E-832E-AE06B00D2288}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {46DC06F6-883A-4568-B0BA-0C90702C5583}

@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Juice.MultiTenant.Api.Contracts\Juice.MultiTenant.Api.Contracts.csproj" />
     <ProjectReference Include="..\Juice.MultiTenant\Juice.MultiTenant.csproj" />
   </ItemGroup>
 

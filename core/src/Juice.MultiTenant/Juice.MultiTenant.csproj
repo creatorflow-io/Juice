@@ -18,12 +18,4 @@
     <PackageReference Include="MediatR" Version="$(MediatRVersion)" />
   </ItemGroup>
 
-  <ItemGroup Label="gRPC">
-    <Protobuf Include="Protos\tenant.proto" />
-    <Protobuf Include="Protos\tenantsettings.proto" />
-    <PackageReference Include="Google.Protobuf" Version="3.18.1" />
-    <PackageReference Include="Grpc.Tools" Version="$(GrpcVersion)" PrivateAssets="All" />
-    <PackageReference Include="Grpc.Core.Api" Version="$(GrpcVersion)" />
-  </ItemGroup>
-
 </Project>

@@ -1,4 +1,5 @@
 ﻿using Juice.EF.Extensions;
+using Juice.EventBus.RabbitMQ.DependencyInjection;
 using Juice.Workflows.Api.Domain.CommandHandlers;
 using Juice.Workflows.Bpmn.DependencyInjection;
 using Juice.Workflows.Domain.AggregatesModel.DefinitionAggregate;

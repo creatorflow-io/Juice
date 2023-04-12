@@ -85,7 +85,7 @@ namespace Juice.EF.MultiTenant
         {
             base.OnModelCreating(modelBuilder);
             modelBuilder.ConfigureDynamicExpandableEntities(this);
-
+            modelBuilder.ConfigureMultiTenant();
             ConfigureModel(modelBuilder);
         }
 

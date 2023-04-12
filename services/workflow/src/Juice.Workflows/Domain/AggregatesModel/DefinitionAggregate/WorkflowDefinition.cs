@@ -1,5 +1,4 @@
 ﻿using Juice.Domain;
-using Juice.Domain.AggregatesModel;
 using Newtonsoft.Json;
 
 namespace Juice.Workflows.Domain.AggregatesModel.DefinitionAggregate

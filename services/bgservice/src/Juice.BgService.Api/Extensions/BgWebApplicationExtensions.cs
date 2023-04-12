@@ -1,5 +1,5 @@
 ﻿using Juice.BgService.Management.File;
-using Juice.Extensions.Options;
+using Juice.Extensions.Options.DependencyInjection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 

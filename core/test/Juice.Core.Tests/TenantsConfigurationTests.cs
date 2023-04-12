@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Juice.Extensions.Configuration;
 using Juice.Extensions.Options;
+using Juice.Extensions.Options.DependencyInjection;
 using Juice.Tenants;
 using Juice.XUnit;
 using Microsoft.Extensions.Configuration;
