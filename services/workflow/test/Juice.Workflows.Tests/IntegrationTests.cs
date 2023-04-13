@@ -38,7 +38,6 @@ namespace Juice.Workflows.Tests
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
 
-
                 services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"),
                     options =>
                     {
