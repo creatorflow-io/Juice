@@ -38,7 +38,7 @@
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
 
-                services.AddMediatR(typeof(StartEvent));
+                services.AddMediatR(typeof(StartEvent), typeof(TimerEventStartDomainEventHandler));
                 services.AddSingleton<EventQueue>();
 
                 services.AddWorkflowServices()
