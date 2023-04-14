@@ -1,11 +1,10 @@
 ﻿using Finbuckle.MultiTenant;
-using Finbuckle.MultiTenant.Stores;
+using Juice.Conventions.StartupDiscovery.Extensions;
 using Juice.EventBus;
 using Juice.EventBus.RabbitMQ.DependencyInjection;
 using Juice.Extensions.Options;
 using Juice.Extensions.Options.DependencyInjection;
 using Juice.MultiTenant;
-using Juice.MultiTenant.Grpc.Finbuckle.DependencyInjection;
 using Juice.Tests.Host;
 using Juice.Tests.Host.IntegrationEvents;
 using Microsoft.AspNetCore.DataProtection;
@@ -14,49 +13,53 @@ using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddMemoryCache();
+builder.AddDiscoveredModules();
+
+//builder.Services.AddMemoryCache();
 
 // Add MultiTenant
-builder.Services
-    .AddMultiTenant<Tenant>(options =>
-    {
-        options.IgnoredIdentifiers = new List<string> { "asset" };
-        options.Events.OnTenantResolved = async (context) =>
-        {
-            if (context.StoreType == typeof(InMemoryStore<Tenant>))
-            {
-                return;
-            }
-            if (context.Context is Microsoft.AspNetCore.Http.HttpContext httpContent
-            && context.TenantInfo is Tenant tenant)
-            {
-                var inMemoryStore = httpContent.RequestServices
-                    .GetServices<IMultiTenantStore<Tenant>>()
-                    .FirstOrDefault(s => s.GetType() == typeof(InMemoryStore<Tenant>));
-                if (inMemoryStore != null)
-                {
-                    await inMemoryStore.TryAddAsync(tenant);
-                }
-            }
-        };
-    })
-    .WithBasePathStrategy(options => options.RebaseAspNetCorePathBase = true)
-    .ConfigureTenantClient(builder.Configuration, builder.Environment.EnvironmentName)
-    ;
+//builder.Services
+//    .AddMultiTenant<Tenant>(options =>
+//    {
+//        options.IgnoredIdentifiers = new List<string> { "asset" };
+//        options.Events.OnTenantResolved = async (context) =>
+//        {
+//            if (context.StoreType == typeof(InMemoryStore<Tenant>))
+//            {
+//                return;
+//            }
+//            if (context.Context is Microsoft.AspNetCore.Http.HttpContext httpContent
+//            && context.TenantInfo is Tenant tenant)
+//            {
+//                var inMemoryStore = httpContent.RequestServices
+//                    .GetServices<IMultiTenantStore<Tenant>>()
+//                    .FirstOrDefault(s => s.GetType() == typeof(InMemoryStore<Tenant>));
+//                if (inMemoryStore != null)
+//                {
+//                    await inMemoryStore.TryAddAsync(tenant);
+//                }
+//            }
+//        };
+//    })
+//    .WithBasePathStrategy(options => options.RebaseAspNetCorePathBase = true)
+//    .ConfigureTenantClient(builder.Configuration, builder.Environment.EnvironmentName)
+//    ;
 
-ConfigureTenantOptions(builder.Services, builder.Configuration);
+//ConfigureTenantOptions(builder.Services, builder.Configuration);
 
-ConfigureDataProtection(builder.Services, builder.Configuration.GetSection("Redis:ConfigurationOptions"));
+//ConfigureDataProtection(builder.Services, builder.Configuration.GetSection("Redis:ConfigurationOptions"));
 
-ConfigureDistributedCache(builder.Services, builder.Configuration);
+//ConfigureDistributedCache(builder.Services, builder.Configuration);
 
-ConfigureEvents(builder);
+//ConfigureEvents(builder);
 
 var app = builder.Build();
 
-RegisterEvents(app);
+//RegisterEvents(app);
 
 app.UseMultiTenant();
+
+app.ConfigureDiscoverdModules(app.Environment);
 
 app.UseRouting();
 
