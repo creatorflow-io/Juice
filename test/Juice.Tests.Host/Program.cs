@@ -59,9 +59,9 @@ var app = builder.Build();
 
 app.UseMultiTenant();
 
-app.ConfigureDiscoverdModules(app.Environment);
-
 app.UseRouting();
+
+app.ConfigureDiscoverdModules(app.Environment);
 
 app.UseEndpoints(endpoints =>
 {

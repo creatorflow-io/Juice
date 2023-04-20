@@ -31,7 +31,6 @@ namespace Juice.Conventions.StartupDiscovery.Extensions
             var startups = app.Services.GetServices<IModuleStartup>()
                 .OrderBy(s => s.ConfigureOrder)
                 .ToArray();
-            app.UseRouting();
 
             var loggerFactory = app.Services.GetService<ILoggerFactory>();
             var logger = loggerFactory?.CreateLogger("Startup");

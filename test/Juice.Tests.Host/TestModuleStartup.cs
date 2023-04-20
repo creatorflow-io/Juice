@@ -55,7 +55,8 @@ namespace Juice.Tests.Host
                 {
                     var options = new ConfigurationOptions();
                     configuration.Bind(options);
-                    foreach (var endpoint in configuration.GetSection("EndPoints").Get<string[]>())
+                    var endpoints = configuration.GetSection("EndPoints")?.Get<string[]>() ?? Array.Empty<string>();
+                    foreach (var endpoint in endpoints)
                     {
                         options.EndPoints.Add(endpoint);
                     }
