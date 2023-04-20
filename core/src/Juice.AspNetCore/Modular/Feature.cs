@@ -9,7 +9,7 @@
 
         public string[] Dependencies { get; set; } = Array.Empty<string>();
 
-        public string[] NonCompatibles { get; set; } = Array.Empty<string>();
+        public string[] IncompatibleFeatures { get; set; } = Array.Empty<string>();
 
         public bool Required { get; set; }
     }
