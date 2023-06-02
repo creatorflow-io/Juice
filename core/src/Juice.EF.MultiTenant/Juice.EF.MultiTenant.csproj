@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>$(AppTargetFramework)</TargetFramework>
@@ -8,10 +8,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Juice.EF\Juice.EF.csproj" />
+    <ProjectReference Include="..\Juice.MultiTenant\Juice.MultiTenant.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Finbuckle.MultiTenant.EntityFrameworkCore" Version="6.*" />
+    <PackageReference Include="Finbuckle.MultiTenant.EntityFrameworkCore" Version="$(FinbuckleVersion)" />
   </ItemGroup>
 
 </Project>

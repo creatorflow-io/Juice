@@ -63,60 +63,56 @@ app.UseRouting();
 
 app.ConfigureDiscoverdModules(app.Environment);
 
-app.UseEndpoints(endpoints =>
+app.MapGet("/", async (context) =>
 {
-    endpoints.MapGet("/", async (context) =>
+    var tenant = context.GetMultiTenantContext<Tenant>()?.TenantInfo;
+
+    var tenant1 = context.RequestServices.GetRequiredService<IMultiTenantContextAccessor<Tenant>>().MultiTenantContext?.TenantInfo!;
+    var tenant2 = context.RequestServices.GetService<global::Juice.MultiTenant.Tenant>();
+    var tenant3 = context.RequestServices.GetService<ITenantInfo>();
+    if (tenant == null)
     {
-        var tenant = context.GetMultiTenantContext<Tenant>()?.TenantInfo;
-
-        var tenant1 = context.RequestServices.GetRequiredService<IMultiTenantContextAccessor<Tenant>>().MultiTenantContext?.TenantInfo!;
-        var tenant2 = context.RequestServices.GetService<global::Juice.MultiTenant.Tenant>();
-        var tenant3 = context.RequestServices.GetService<ITenantInfo>();
-        if (tenant == null)
-        {
-            await
-           context.Response.WriteAsync("No tenant found. Try /acme, /initech, /megacorp with Juice.MultiTenant.Host is running");
-            return;
-        }
-        var options = context.RequestServices.GetRequiredService<ITenantsOptions<Options>>();
-
         await
-           context.Response.WriteAsync("Hello " + (tenant?.Name ?? "Host") + ". Your options name is " + (options.Value?.Name ?? "") + " ");
-    });
-
-    endpoints.MapGet("/protect", async (context) =>
-    {
-        var dataProtector = context.RequestServices.GetRequiredService<IDataProtectionProvider>().CreateProtector("abcxyz");
-        var input = "protection data";
-        var protectedPayload = dataProtector.Protect(input);
-        await context.Response.WriteAsync(protectedPayload);
-    });
-
-    endpoints.MapGet("/unprotect", async (context) =>
-    {
-        var dataProtector = context.RequestServices.GetRequiredService<IDataProtectionProvider>().CreateProtector("abcxyz");
-        var input = context.Request.Query["data"].ToString();
-        var unprotectedPayload = dataProtector.Unprotect(input);
-        await context.Response.WriteAsync(unprotectedPayload);
-    });
-
-    endpoints.MapGet("/writecache", async (context) =>
-    {
-        var cache = context.RequestServices.GetRequiredService<IDistributedCache>();
-        var input = context.Request.Query["data"].ToString();
-        await cache.SetStringAsync("cachedKey", input);
-        context.Response.StatusCode = StatusCodes.Status200OK;
+       context.Response.WriteAsync("No tenant found. Try /acme, /initech, /megacorp with Juice.MultiTenant.Host is running");
         return;
-    });
+    }
+    var options = context.RequestServices.GetRequiredService<ITenantsOptions<Options>>();
 
-    endpoints.MapGet("/readcache", async (context) =>
-    {
-        var cache = context.RequestServices.GetRequiredService<IDistributedCache>();
-        var input = context.Request.Query["data"].ToString();
-        var value = await cache.GetStringAsync("cachedKey");
-        await context.Response.WriteAsync(value);
-    });
+    await
+       context.Response.WriteAsync("Hello " + (tenant?.Name ?? "Host") + ". Your options name is " + (options.Value?.Name ?? "") + " ");
+});
 
+app.MapGet("/protect", async (context) =>
+{
+    var dataProtector = context.RequestServices.GetRequiredService<IDataProtectionProvider>().CreateProtector("abcxyz");
+    var input = "protection data";
+    var protectedPayload = dataProtector.Protect(input);
+    await context.Response.WriteAsync(protectedPayload);
+});
+
+app.MapGet("/unprotect", async (context) =>
+{
+    var dataProtector = context.RequestServices.GetRequiredService<IDataProtectionProvider>().CreateProtector("abcxyz");
+    var input = context.Request.Query["data"].ToString();
+    var unprotectedPayload = dataProtector.Unprotect(input);
+    await context.Response.WriteAsync(unprotectedPayload);
+});
+
+app.MapGet("/writecache", async (context) =>
+{
+    var cache = context.RequestServices.GetRequiredService<IDistributedCache>();
+    var input = context.Request.Query["data"].ToString();
+    await cache.SetStringAsync("cachedKey", input);
+    context.Response.StatusCode = StatusCodes.Status200OK;
+    return;
+});
+
+app.MapGet("/readcache", async (context) =>
+{
+    var cache = context.RequestServices.GetRequiredService<IDistributedCache>();
+    var input = context.Request.Query["data"].ToString();
+    var value = await cache.GetStringAsync("cachedKey");
+    await context.Response.WriteAsync(value);
 });
 
 app.Run();

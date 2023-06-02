@@ -33,7 +33,7 @@ namespace Juice.Extensions.Configuration
             }
         }
 
-        public string this[string key]
+        public string? this[string key]
         {
             get
             {

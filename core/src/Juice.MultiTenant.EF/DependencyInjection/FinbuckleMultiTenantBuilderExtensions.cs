@@ -4,8 +4,6 @@ using Juice.Domain;
 using Juice.EF;
 using Juice.Extensions.Configuration;
 using Juice.MultiTenant.EF.Extensions.Configuration.DependencyInjection;
-using Juice.MultiTenant.Extensions.Options.DependencyInjection;
-using Juice.MultiTenant.Finbuckle.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -32,11 +30,6 @@ namespace Juice.MultiTenant.EF.DependencyInjection
 
         /// <summary>
         /// Configure tenant for multi-tenant microservices working with Tenant DB directly
-        /// <para></para>JuiceIntegration
-        /// <para></para>Grpc store
-        /// <para></para>DistributedCache store
-        /// <para></para>TenantConfiguration with grpc
-        /// <para></para>Configure MediatR, add Integration event service (NOTE: Required an event bus)
         /// </summary>
         /// <returns></returns>
         public static FinbuckleMultiTenantBuilder<TTenantInfo> ConfigureTenantEFDirectly<TTenantInfo>(this FinbuckleMultiTenantBuilder<TTenantInfo> builder, IConfiguration configuration,
@@ -44,14 +37,12 @@ namespace Juice.MultiTenant.EF.DependencyInjection
             where TTenantInfo : class, IDynamic, ITenantInfo, new()
         {
 
-            builder.JuiceIntegration()
-                     .WithEFStore(configuration, configureTenantDb, true);
+            builder.WithEFStore(configuration, configureTenantDb, true);
 
             builder.Services.AddTenantsConfiguration()
                 .AddTenantsJsonFile($"appsettings.{environment}.json")
                 .AddTenantsEntityConfiguration(configuration, configureTenantDb);
 
-            builder.Services.AddTenantSettingsOptionsMutableStore();
             return builder;
         }
 

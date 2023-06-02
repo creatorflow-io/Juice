@@ -1,8 +1,6 @@
 ﻿using Finbuckle.MultiTenant;
 using Juice.Domain;
 using Juice.EF.Migrations;
-using Juice.MultiTenant.Domain.AggregatesModel.SettingsAggregate;
-using Juice.MultiTenant.EF.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
@@ -166,7 +164,6 @@ namespace Juice.MultiTenant.EF.DependencyInjection
                    ;
                });
 
-            services.AddScoped<ITenantSettingsRepository, TenantSettingsRepository>();
             return services;
         }
 
@@ -183,5 +180,6 @@ namespace Juice.MultiTenant.EF.DependencyInjection
             configureOptions(options);
             return services.AddTenantSettingsDbContext(configuration, options);
         }
+
     }
 }

@@ -3,6 +3,7 @@ using Juice.Extensions.Configuration;
 using Juice.MultiTenant.Finbuckle.DependencyInjection;
 using Juice.MultiTenant.Grpc.Extensions.Configuration.DependencyInjection;
 using Juice.MultiTenant.Grpc.Extensions.Options.DependencyInjection;
+using Juice.Tenants;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -38,7 +39,7 @@ namespace Juice.MultiTenant.Grpc.Finbuckle.DependencyInjection
         /// <returns></returns>
         public static FinbuckleMultiTenantBuilder<TTenantInfo> ConfigureTenantClient<TTenantInfo>(this FinbuckleMultiTenantBuilder<TTenantInfo> builder, IConfiguration configuration,
             string environment)
-            where TTenantInfo : class, ITenantInfo, new()
+            where TTenantInfo : class, ITenant, ITenantInfo, new()
         {
             var tenantGrpcEndpoint = configuration
                 .GetSection("Finbuckle:MultiTenant:Stores:Grpc:Endpoint")

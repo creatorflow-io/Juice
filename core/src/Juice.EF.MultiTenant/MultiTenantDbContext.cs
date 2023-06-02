@@ -18,9 +18,9 @@ namespace Juice.EF.MultiTenant
     {
         #region Finbuckle
         public ITenantInfo? TenantInfo { get; internal set; }
-        public TenantMismatchMode TenantMismatchMode { get; set; } = TenantMismatchMode.Throw;
+        public virtual TenantMismatchMode TenantMismatchMode { get; set; } = TenantMismatchMode.Throw;
 
-        public TenantNotSetMode TenantNotSetMode { get; set; } = TenantNotSetMode.Throw;
+        public virtual TenantNotSetMode TenantNotSetMode { get; set; } = TenantNotSetMode.Throw;
         #endregion
 
         #region Schema context

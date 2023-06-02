@@ -1,5 +1,4 @@
 ﻿using Finbuckle.MultiTenant;
-using Juice.Domain;
 using Juice.EF;
 using Juice.EventBus.IntegrationEventLog.EF.DependencyInjection;
 using Juice.Integrations.EventBus.DependencyInjection;
@@ -10,7 +9,9 @@ using Juice.MultiTenant.Api.Behaviors.DependencyInjection;
 using Juice.MultiTenant.Api.Commands;
 using Juice.MultiTenant.EF;
 using Juice.MultiTenant.EF.DependencyInjection;
+using Juice.MultiTenant.EF.Extensions.Configuration.DependencyInjection;
 using Juice.MultiTenant.Finbuckle.DependencyInjection;
+using Juice.Tenants;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -30,10 +31,10 @@ namespace Juice.MultiTenant.Api.DependencyInjection
         public static FinbuckleMultiTenantBuilder<TTenantInfo> ConfigureTenantHost<TTenantInfo>(this FinbuckleMultiTenantBuilder<TTenantInfo> builder,
             IConfiguration configuration,
             Action<DbOptions> configureTenantDb)
-            where TTenantInfo : class, IDynamic, ITenantInfo, new()
+            where TTenantInfo : class, ITenant, ITenantInfo, new()
         {
             builder.JuiceIntegration()
-                    .WithHeaderStrategy()
+                    .WithHeaderStrategy() // for grpc incoming request
                     .WithEFStore(configuration, configureTenantDb, true);
 
             builder.Services.AddMediatR(typeof(CreateTenantCommand).Assembly, typeof(AssemblySelector).Assembly);
@@ -54,6 +55,8 @@ namespace Juice.MultiTenant.Api.DependencyInjection
 
             //add service manually with distributed cache together
             //builder.Services.AddTenantIntegrationEventSelfHandlers<TTenantInfo>();
+
+            builder.Services.AddTenantsOptionsMutableEF();
 
             builder.Services.AddTenantSettingsDbContext(configuration, configureTenantDb);
 
