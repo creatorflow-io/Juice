@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Juice.Extensions.Configuration;
 using Juice.Extensions.Options;
@@ -126,6 +128,12 @@ namespace Juice.Core.Tests
         public string? Name { get; set; }
         public string? Identifier { get; set; }
 
+        public Dictionary<string, object> OriginalPropertyValues => throw new NotImplementedException();
+
+        public Dictionary<string, object> CurrentPropertyValues => throw new NotImplementedException();
+
+        public T? GetProperty<T>(Func<T>? defaultValue = null, [CallerMemberName] string? name = null) => throw new NotImplementedException();
+        public void SetProperty(object value, [CallerMemberName] string? name = null) => throw new NotImplementedException();
         public Task TriggerConfigurationChangedAsync() => Task.CompletedTask;
     }
 }
