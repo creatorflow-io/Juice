@@ -8,14 +8,14 @@ namespace Juice.MultiTenant.Extensions.Options.DependencyInjection
     public static class TenantsOptionsStoreServiceCollectionExtensions
     {
         /// <summary>
-        /// Save tenant settings to TenantSettings
+        /// Save tenant settings to TenantSettings, required <see cref="ITenantSettingsRepository"/> service
         /// </summary>
         /// <param name="services"></param>
-        /// <param name="file"></param>
         /// <returns></returns>
         public static IServiceCollection AddTenantSettingsOptionsMutableStore(this IServiceCollection services)
         {
             services.TryAddScoped<ITenantsOptionsMutableStore, TenantSettingsOptionsMutableStore>();
+
             return services;
         }
 

@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Finbuckle.MultiTenant" Version="6.*" />
+    <PackageReference Include="Finbuckle.MultiTenant.AspNetCore" Version="$(FinbuckleVersion)" />
     <PackageReference Include="MediatR" Version="$(MediatRVersion)" />
   </ItemGroup>
 

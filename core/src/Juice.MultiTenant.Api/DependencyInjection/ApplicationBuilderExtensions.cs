@@ -23,7 +23,6 @@ namespace Juice.MultiTenant.Api.DependencyInjection
         {
             builder.MapGrpcService<TenantStoreService>();
             builder.MapGrpcService<TenantSettingsStoreService>();
-
             return builder;
         }
 

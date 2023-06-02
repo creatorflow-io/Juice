@@ -6,5 +6,6 @@
         public static int TenantIdentifierMaxLength = 16;
         public static int ConfigurationKeyMaxLength = 250;
         public static string TenantToken = "__tenant__";
+        public static readonly string MultiTenantAnnotationName = "Finbuckle:MultiTenant";
     }
 }

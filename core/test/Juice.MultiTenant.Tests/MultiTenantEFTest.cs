@@ -13,7 +13,6 @@ using Juice.MultiTenant.EF;
 using Juice.MultiTenant.EF.DependencyInjection;
 using Juice.MultiTenant.EF.Extensions.Configuration.DependencyInjection;
 using Juice.MultiTenant.EF.Migrations;
-using Juice.MultiTenant.Extensions.Options.DependencyInjection;
 using Juice.Services;
 using Juice.Tenants;
 using Juice.XUnit;
@@ -108,7 +107,7 @@ namespace Juice.MultiTenant.Tests
             }
         }
 
-        [IgnoreOnCITheory(DisplayName = "Read/write tenants configuration"), TestPriority(1)]
+        [IgnoreOnCITheory(DisplayName = "Read/write tenants configuration with EF store"), TestPriority(1)]
         [InlineData("SqlServer")]
         [InlineData("PostgreSQL")]
         public async Task Read_write_tenants_settings_Async(string provider)
@@ -164,7 +163,7 @@ namespace Juice.MultiTenant.Tests
                         options.Schema = "App";
                     });
 
-                    services.AddTenantSettingsOptionsMutableStore();
+                    services.AddTenantsOptionsMutableEF();
 
                     services.ConfigureTenantsOptionsMutable<Models.Options>("Options");
 

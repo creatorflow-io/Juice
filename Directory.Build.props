@@ -25,6 +25,8 @@
     <MediatRVersion>10.0.1</MediatRVersion>
     <RedisVersion>2.6.90</RedisVersion>
     <JuiceRefVersion Condition="$(JuiceRefVersion)==''">7.0.0-alpha.*</JuiceRefVersion>
+    <FinbuckleVersion>6.10.0</FinbuckleVersion>
+    <SwashbuckleVersion>6.5.0</SwashbuckleVersion>
   </PropertyGroup>
 
   <PropertyGroup Label="Build">

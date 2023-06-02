@@ -100,6 +100,7 @@ namespace Juice.Storage.Middleware
                 await context.Response.WriteAsync(ex.Message);
             }
         }
+
         #endregion
 
         #region Init upload
@@ -304,6 +305,51 @@ namespace Juice.Storage.Middleware
 
                 context.Response.StatusCode = StatusCodes.Status204NoContent;
                 return;
+            }
+            catch (Exception ex)
+            {
+                context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                await context.Response.WriteAsync(ex.Message);
+            }
+        }
+        #endregion
+
+        #region Download
+
+        private async Task InvokeDownloadAsync(HttpContext context)
+        {
+            if (context.Request.Method != HttpMethod.Get.Method)
+            {
+                context.Response.StatusCode = StatusCodes.Status405MethodNotAllowed;
+                return;
+            }
+            try
+            {
+                var uploadManager = context.RequestServices.GetRequiredService<IUploadManager>();
+
+                var filePath = context.Request.Query
+                    .Where(q => q.Key.Equals("fileName", StringComparison.OrdinalIgnoreCase))
+                    .Select(q => q.Value.ToString())
+                    .FirstOrDefault();
+                if (string.IsNullOrEmpty(filePath))
+                {
+                    context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                    return;
+                }
+
+                var exists = await uploadManager.ExistsAsync(filePath, context.RequestAborted);
+                if (!exists)
+                {
+                    context.Response.StatusCode = StatusCodes.Status404NotFound;
+                    return;
+                }
+
+                context.Response.StatusCode = StatusCodes.Status200OK;
+            }
+            catch (ArgumentException ex)
+            {
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                await context.Response.WriteAsync(ex.Message);
             }
             catch (Exception ex)
             {

@@ -30,6 +30,7 @@ namespace Juice.MultiTenant.EF.Repositories
 
             _dbContext.RemoveRange(settings);
             await _dbContext.SaveChangesAsync();
+
             var evt = new TenantSettingsChangedDomainEvent(_tenant.Id, _tenant.Identifier);
             await _mediator.Publish(evt);
         }

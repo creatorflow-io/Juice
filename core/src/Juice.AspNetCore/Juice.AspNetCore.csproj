@@ -5,6 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RootNamespace>Juice</RootNamespace>
+    <GraphQLServer>5.2.2</GraphQLServer>
   </PropertyGroup>
 
   <ItemGroup Label="AspNetCore">
@@ -13,16 +14,17 @@
 
   <ItemGroup Label="Open API">
     <PackageReference Include="Newtonsoft.Json" Version="*" />
-    <PackageReference Include="Microsoft.OpenApi" Version="1.2.3" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.1.4" />
-    <PackageReference Include="Swashbuckle.AspNetCore.Newtonsoft" Version="6.1.4" />
+    <PackageReference Include="Microsoft.OpenApi" Version="1.6.4" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="$(SwashbuckleVersion)" />
+    <PackageReference Include="Swashbuckle.AspNetCore.Newtonsoft" Version="$(SwashbuckleVersion)" />
   </ItemGroup>
 
   <ItemGroup Label="GraphQL">
-    <PackageReference Include="GraphQL" Version="4.3.0" />
-    <PackageReference Include="GraphQL.Server.Core" Version="5.0.1" />
-    <PackageReference Include="GraphQL.Server.Transports.AspNetCore" Version="5.0.1" />
-    <PackageReference Include="GraphQL.Server.Transports.AspNetCore.SystemTextJson" Version="5.0.1" />
+    <PackageReference Include="GraphQL" Version="7.4.1" />
+    <PackageReference Include="GraphQL.SystemTextJson" Version="7.4.1" />
+    <PackageReference Include="GraphQL.Server.Core" Version="$(GraphQLServer)" />
+    <PackageReference Include="GraphQL.Server.Transports.AspNetCore" Version="$(GraphQLServer)" />
+    <PackageReference Include="GraphQL.Server.Transports.AspNetCore.SystemTextJson" Version="$(GraphQLServer)" />
   </ItemGroup>
 
   <ItemGroup>
