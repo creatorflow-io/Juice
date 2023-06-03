@@ -2,7 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
 
-namespace Juice.BgService.Api.Extensions
+namespace Juice.BgService.Api
 {
     public static class BgServiceCollectionExtensions
     {

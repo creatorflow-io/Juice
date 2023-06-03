@@ -1,7 +1,7 @@
 ﻿using Juice.Storage.Abstractions;
-using Juice.Storage.Local;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace Microsoft.Extensions.DependencyInjection
+namespace Juice.Storage.Local
 {
     public static class LocalStorageServiceCollectionExtensions
     {

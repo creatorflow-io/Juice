@@ -10,9 +10,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-namespace Juice.MultiTenant.Api.DependencyInjection
+namespace Juice.MultiTenant.Api
 {
-    public static class ApplicationBuilderExtensions
+    public static class JuiceMultiTenantGrpcApplicationBuilderExtensions
     {
         /// <summary>
         /// Map tenant/ tenant settings gRPC services

@@ -6,9 +6,9 @@ using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Juice.MultiTenant.EF.DependencyInjection
+namespace Juice.MultiTenant.EF
 {
-    public static class TenantDbServiceCollectionExtensions
+    public static class JuiceTenantDbServiceCollectionExtensions
     {
         /// <summary>
         /// Add TenantDbContext<TTenantInfo> with db options for MultiTenant EFCoreStore<TTenantInfo>

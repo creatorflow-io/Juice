@@ -1,6 +1,5 @@
 ﻿using Grpc.Core;
 using Juice.MultiTenant.Settings.Grpc;
-using Juice.Tenants;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 

@@ -1,8 +1,7 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
-using Juice.Authentication.Cookies.DependencyInjection;
+using Juice.AspNetCore;
 using Juice.MultiTenant;
-using Juice.MultiTenant.EF.DependencyInjection;
-using Juice.MultiTenant.Finbuckle.DependencyInjection;
+using Juice.MultiTenant.EF;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;

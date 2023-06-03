@@ -1,10 +1,10 @@
 ﻿using Juice.BgService.Management.File;
 using Juice.Extensions.Configuration;
-using Juice.Extensions.Options.DependencyInjection;
+using Juice.Extensions.Options;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Juice.BgService.Management.Extensions
+namespace Juice.BgService.Management
 {
     public static class ServiceManagerSeviceCollectionExtensions
     {

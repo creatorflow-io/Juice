@@ -1,6 +1,5 @@
 ﻿using Finbuckle.MultiTenant;
 using Juice.Domain;
-using Juice.Tenants;
 
 namespace Juice.MultiTenant
 {

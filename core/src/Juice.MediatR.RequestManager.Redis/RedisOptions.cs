@@ -1,4 +1,4 @@
-﻿namespace Juice.MediatR.Redis
+﻿namespace Juice.MediatR.RequestManager.Redis
 {
     public class RedisOptions
     {

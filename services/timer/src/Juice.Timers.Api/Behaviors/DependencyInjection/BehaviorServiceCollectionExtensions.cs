@@ -1,8 +1,8 @@
-﻿using Juice.Timers.Behaviors.DependencyInjection;
+﻿using Juice.Timers.Api.Behaviors;
 using Juice.Timers.Domain.AggregratesModel.TimerAggregrate;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Juice.Timers.Api.Behaviors.DependencyInjection
+namespace Juice.Timers.Api
 {
     public static class BehaviorServiceCollectionExtensions
     {

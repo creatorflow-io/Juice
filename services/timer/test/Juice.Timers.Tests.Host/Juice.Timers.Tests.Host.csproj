@@ -25,7 +25,7 @@
     <ProjectReference Include="..\..\..\..\core\src\Juice.EventBus.IntegrationEventLog.EF.PostgreSQL\Juice.EventBus.IntegrationEventLog.EF.PostgreSQL.csproj" />
     <ProjectReference Include="..\..\..\..\core\src\Juice.EventBus.IntegrationEventLog.EF.SqlServer\Juice.EventBus.IntegrationEventLog.EF.SqlServer.csproj" />
     <ProjectReference Include="..\..\..\..\core\src\Juice.EventBus.RabbitMQ\Juice.EventBus.RabbitMQ.csproj" />
-    <ProjectReference Include="..\..\..\..\core\src\Juice.MediatR.Redis\Juice.MediatR.Redis.csproj" />
+    <ProjectReference Include="..\..\..\..\core\src\Juice.MediatR.RequestManager.Redis\Juice.MediatR.RequestManager.Redis.csproj" />
     <ProjectReference Include="..\..\src\Juice.Timers.Api\Juice.Timers.Api.csproj" />
     <ProjectReference Include="..\..\src\Juice.Timers.BackgroundTasks\Juice.Timers.BackgroundTasks.csproj" />
     <ProjectReference Include="..\..\src\Juice.Timers.EF.PostgreSQL\Juice.Timers.EF.PostgreSQL.csproj" />

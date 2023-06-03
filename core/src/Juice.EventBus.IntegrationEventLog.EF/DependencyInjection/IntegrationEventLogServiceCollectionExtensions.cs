@@ -7,7 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace Juice.EventBus.IntegrationEventLog.EF.DependencyInjection
+namespace Juice.EventBus.IntegrationEventLog.EF
 {
     public static class IntegrationEventLogServiceCollectionExtensions
     {

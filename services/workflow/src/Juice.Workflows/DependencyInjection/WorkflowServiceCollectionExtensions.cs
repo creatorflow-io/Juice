@@ -3,7 +3,7 @@ using Juice.Workflows.InMemory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace Juice.Workflows.DependencyInjection
+namespace Juice.Workflows
 {
     public static class WorkflowServiceCollectionExtensions
     {

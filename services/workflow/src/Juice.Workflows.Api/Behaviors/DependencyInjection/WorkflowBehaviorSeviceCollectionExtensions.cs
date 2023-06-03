@@ -1,7 +1,8 @@
-﻿using MediatR;
+﻿using Juice.Workflows.Api.Behaviors;
+using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Juice.Workflows.Api.Behaviors.DependencyInjection
+namespace Juice.Workflows.Api
 {
     public static class WorkflowBehaviorSeviceCollectionExtensions
     {

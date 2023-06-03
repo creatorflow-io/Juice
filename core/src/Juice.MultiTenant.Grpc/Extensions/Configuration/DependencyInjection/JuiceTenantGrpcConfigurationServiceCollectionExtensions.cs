@@ -1,12 +1,12 @@
 ﻿using Juice.Extensions.Configuration;
+using Juice.MultiTenant.Grpc.Extensions.Configuration;
 using Juice.MultiTenant.Settings.Grpc;
-using Juice.Tenants;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace Juice.MultiTenant.Grpc.Extensions.Configuration.DependencyInjection
+namespace Juice.MultiTenant.Grpc
 {
-    public static class ConfigurationBuilderExtensions
+    public static class JuiceTenantGrpcConfigurationServiceCollectionExtensions
     {
         /// <summary>
         /// Read tenant settings from TenantDbContext

@@ -1,7 +1,7 @@
 ﻿using Juice.Workflows.Builder;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Juice.Workflows.Bpmn.DependencyInjection
+namespace Juice.Workflows.Bpmn
 {
     public static class WfBpmnServiceCollectionExtensions
     {

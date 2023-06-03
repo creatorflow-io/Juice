@@ -16,7 +16,7 @@ namespace Juice.Conventions.StartupDiscovery.Extensions
         /// <param name="configuration"></param>
 		/// <returns>The <see cref="IMvcBuilder"/>.</returns>
 		public static IMvcBuilder AddDiscoveredModules(this IMvcBuilder builder, IWebHostEnvironment env,
-            IConfigurationRoot configuration)
+            IConfiguration configuration)
         {
             builder.PartManager.FeatureProviders.Add(new StartupDiscoveryFeatureProvider());
             var feature = new StartupDiscoveryFeature();
@@ -56,7 +56,7 @@ namespace Juice.Conventions.StartupDiscovery.Extensions
             return builder;
         }
 
-        private static void EnableFeatures(IMvcBuilder builder, IEnumerable<Type> types, IConfigurationRoot configuration, ILogger logger)
+        private static void EnableFeatures(IMvcBuilder builder, IEnumerable<Type> types, IConfiguration configuration, ILogger logger)
         {
             var appOptions = new FeatureOptions();
             configuration.GetSection("App").Bind(appOptions);

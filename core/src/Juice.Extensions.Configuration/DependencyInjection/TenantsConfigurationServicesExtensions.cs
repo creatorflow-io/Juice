@@ -1,4 +1,4 @@
-﻿using Juice.Tenants;
+﻿using Juice.MultiTenant;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Juice.Extensions.Configuration

@@ -1,7 +1,7 @@
-﻿using Juice.Workflows.Bpmn.DependencyInjection;
+﻿using Juice.Workflows.Bpmn;
 using Juice.Workflows.Domain.AggregatesModel.DefinitionAggregate;
 using Juice.Workflows.Extensions;
-using Juice.Workflows.Yaml.DependencyInjection;
+using Juice.Workflows.Yaml;
 
 namespace Juice.Workflows.Tests
 {

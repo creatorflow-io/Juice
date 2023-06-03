@@ -2,7 +2,7 @@
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Juice.Integrations.MediatR.DependencyInjection
+namespace Juice.Integrations
 {
     public static class MediatRBehaviorsServiceCollectionExtensions
     {

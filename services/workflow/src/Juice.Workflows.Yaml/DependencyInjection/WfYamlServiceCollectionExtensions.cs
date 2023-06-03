@@ -1,7 +1,7 @@
 ﻿using Juice.Workflows.Builder;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Juice.Workflows.Yaml.DependencyInjection
+namespace Juice.Workflows.Yaml
 {
     public static class WfYamlServiceCollectionExtensions
     {

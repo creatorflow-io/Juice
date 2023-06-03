@@ -1,4 +1,5 @@
-﻿using Juice.Storage.Middleware;
+﻿using Juice.Storage.Local;
+using Juice.Storage.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 

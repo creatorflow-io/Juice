@@ -1,15 +1,12 @@
 ﻿using Finbuckle.MultiTenant;
 using Juice.Extensions.Configuration;
-using Juice.MultiTenant.Finbuckle.DependencyInjection;
-using Juice.MultiTenant.Grpc.Extensions.Configuration.DependencyInjection;
-using Juice.MultiTenant.Grpc.Extensions.Options.DependencyInjection;
-using Juice.Tenants;
+using Juice.MultiTenant.Grpc.Finbuckle;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Juice.MultiTenant.Grpc.Finbuckle.DependencyInjection
+namespace Juice.MultiTenant.Grpc
 {
-    public static class FinbuckleMultiTenantBuilderExtensions
+    public static class GrpcStoreFinbuckleMultiTenantBuilderExtensions
     {
 
         /// <summary>

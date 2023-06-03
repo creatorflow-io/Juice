@@ -5,7 +5,6 @@ global using FluentAssertions;
 global using Juice.Extensions.DependencyInjection;
 global using Juice.Services;
 global using Juice.Workflows.Builder;
-global using Juice.Workflows.DependencyInjection;
 global using Juice.Workflows.Execution;
 global using Juice.Workflows.Helpers;
 global using Juice.Workflows.Models;

@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using FluentAssertions;
 using Juice.EventBus.RabbitMQ;
-using Juice.EventBus.RabbitMQ.DependencyInjection;
 using Juice.EventBus.Tests.Events;
 using Juice.EventBus.Tests.Handlers;
 using Juice.Extensions.DependencyInjection;

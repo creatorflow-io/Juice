@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Juice.Timers.EF.DependencyInjection
+namespace Juice.Timers.EF
 {
     public static class TimerEFServiceCollectionExtensions
     {

@@ -1,12 +1,11 @@
 ﻿using Juice.EF.Extensions;
-using Juice.EventBus.RabbitMQ.DependencyInjection;
+using Juice.EventBus.RabbitMQ;
 using Juice.Workflows.Api.Domain.CommandHandlers;
-using Juice.Workflows.Bpmn.DependencyInjection;
+using Juice.Workflows.Bpmn;
 using Juice.Workflows.Domain.AggregatesModel.DefinitionAggregate;
 using Juice.Workflows.Domain.AggregatesModel.EventAggregate;
 using Juice.Workflows.Domain.Commands;
 using Juice.Workflows.EF;
-using Juice.Workflows.EF.DependencyInjection;
 using Juice.Workflows.Extensions;
 using Juice.XUnit;
 using Microsoft.EntityFrameworkCore;

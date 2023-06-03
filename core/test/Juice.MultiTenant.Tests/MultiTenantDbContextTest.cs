@@ -8,7 +8,6 @@ using Juice.Extensions.DependencyInjection;
 using Juice.MultiTenant.Tests.Domain;
 using Juice.MultiTenant.Tests.Infrastructure;
 using Juice.Services;
-using Juice.Tenants;
 using Juice.XUnit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;

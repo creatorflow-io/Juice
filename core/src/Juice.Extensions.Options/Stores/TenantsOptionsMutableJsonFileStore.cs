@@ -1,4 +1,4 @@
-﻿using Juice.Tenants;
+﻿using Juice.MultiTenant;
 
 namespace Juice.Extensions.Options.Stores
 {

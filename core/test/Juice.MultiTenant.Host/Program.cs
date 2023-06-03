@@ -1,9 +1,7 @@
-﻿using Juice.EventBus.RabbitMQ.DependencyInjection;
+﻿using Juice.EventBus.RabbitMQ;
 using Juice.MultiTenant;
-using Juice.MultiTenant.Api.DependencyInjection;
-using Juice.MultiTenant.Api.IntegrationEvents.DependencyInjection;
+using Juice.MultiTenant.Api;
 using Juice.MultiTenant.EF.Grpc.Services;
-using Juice.Tenants;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
