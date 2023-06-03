@@ -1,9 +1,9 @@
 ﻿using Juice.BgService.Management.File;
-using Juice.Extensions.Options.DependencyInjection;
+using Juice.Extensions.Options;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 
-namespace Juice.BgService.Api.Extensions
+namespace Juice.BgService.Api
 {
     public static class BgWebApplicationExtensions
     {
@@ -22,10 +22,8 @@ namespace Juice.BgService.Api.Extensions
         {
             builder.Services.UseOptionsMutableFileStore<FileStoreOptions>($"appsettings.{name}.{builder.Environment.EnvironmentName}.json");
 
-            builder.Host.ConfigureAppConfiguration((context, config) =>
-            {
-                config.AddJsonFile($"appsettings.{name}.{context.HostingEnvironment.EnvironmentName}.json");
-            });
+            builder.Configuration.AddJsonFile($"appsettings.{name}.{builder.Environment.EnvironmentName}.json");
+
         }
     }
 }

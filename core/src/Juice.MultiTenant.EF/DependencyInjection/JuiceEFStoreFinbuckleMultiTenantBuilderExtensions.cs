@@ -3,16 +3,15 @@ using Finbuckle.MultiTenant.Stores;
 using Juice.Domain;
 using Juice.EF;
 using Juice.Extensions.Configuration;
-using Juice.MultiTenant.EF.Extensions.Configuration.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Juice.MultiTenant.EF.DependencyInjection
+namespace Juice.MultiTenant.EF
 {
     /// <summary>
     /// Provides builder methods for Finbuckle.MultiTenant services and configuration.
     /// </summary>
-    public static class FinbuckleMultiTenantBuilderExtensions
+    public static class JuiceEFStoreFinbuckleMultiTenantBuilderExtensions
     {
         /// <summary>
         /// Adds an EFCore based multitenant store to the application. Will also add the database context service unless it is already added.

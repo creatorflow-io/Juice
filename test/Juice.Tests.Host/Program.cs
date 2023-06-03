@@ -1,9 +1,8 @@
 ﻿using Finbuckle.MultiTenant;
-using Juice.Conventions.StartupDiscovery.Extensions;
 using Juice.EventBus;
-using Juice.EventBus.RabbitMQ.DependencyInjection;
+using Juice.EventBus.RabbitMQ;
 using Juice.Extensions.Options;
-using Juice.Extensions.Options.DependencyInjection;
+using Juice.Modular;
 using Juice.MultiTenant;
 using Juice.Tests.Host;
 using Juice.Tests.Host.IntegrationEvents;

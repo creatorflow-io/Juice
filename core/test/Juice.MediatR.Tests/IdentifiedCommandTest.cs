@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Juice.EF.Tests.Infrastructure;
 using Juice.Extensions.DependencyInjection;
 using Juice.MediatR.RequestManager.EF;
-using Juice.MediatR.RequestManager.EF.DependencyInjection;
 using Juice.Services;
 using Juice.XUnit;
 using MediatR;

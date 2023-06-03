@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 
-namespace Juice.MediatR.Redis
+namespace Juice.MediatR.RequestManager.Redis
 {
     public class RequestManager : IRequestManager
     {

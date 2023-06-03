@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Juice.MediatR.RequestManager.EF.DependencyInjection
+namespace Juice.MediatR.RequestManager.EF
 {
     public static class RequestManagerServiceCollectionExtensions
     {
@@ -68,7 +68,7 @@ namespace Juice.MediatR.RequestManager.EF.DependencyInjection
 
             });
 
-            services.AddScoped<IRequestManager, RequestManager>();
+            services.AddScoped<IRequestManager, MediatR.RequestManager.EF.RequestManager>();
             return services;
         }
     }

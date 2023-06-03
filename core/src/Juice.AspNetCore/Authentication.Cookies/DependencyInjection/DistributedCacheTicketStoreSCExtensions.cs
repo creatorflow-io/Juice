@@ -3,9 +3,9 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
-namespace Juice.Authentication.Cookies.DependencyInjection
+namespace Juice.AspNetCore
 {
-    public static class TicketStoreServiceCollectionExtensions
+    public static class DistributedCacheTicketStoreSCExtensions
     {
         /// <summary>
         /// Store authentication tickets in a distributed cache.

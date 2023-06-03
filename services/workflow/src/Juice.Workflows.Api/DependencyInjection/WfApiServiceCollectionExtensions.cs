@@ -1,7 +1,7 @@
 ﻿using Juice.Workflows.Api.IntegrationEvents.Handlers;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Juice.Workflows.Api.DependencyInjection
+namespace Juice.Workflows.Api
 {
     public static class WfApiServiceCollectionExtensions
     {

@@ -1,11 +1,11 @@
 ﻿using Finbuckle.MultiTenant;
 using Finbuckle.MultiTenant.Stores;
 using Juice.EventBus;
-using Juice.EventBus.RabbitMQ.DependencyInjection;
-using Juice.Extensions.Options.DependencyInjection;
+using Juice.EventBus.RabbitMQ;
+using Juice.Extensions.Options;
 using Juice.Modular;
 using Juice.MultiTenant;
-using Juice.MultiTenant.Grpc.Finbuckle.DependencyInjection;
+using Juice.MultiTenant.Grpc;
 using Juice.Tests.Host.IntegrationEvents;
 using Microsoft.AspNetCore.DataProtection;
 using StackExchange.Redis;
@@ -15,7 +15,7 @@ namespace Juice.Tests.Host
     [Feature(Required = true)]
     public class TestModuleStartup : ModuleStartup
     {
-        public override void ConfigureServices(IServiceCollection services, IMvcBuilder mvc, IWebHostEnvironment env, IConfigurationRoot configuration)
+        public override void ConfigureServices(IServiceCollection services, IMvcBuilder mvc, IWebHostEnvironment env, IConfiguration configuration)
         {
             services.ConfigureTenantsOptions<Options>("Options");
 

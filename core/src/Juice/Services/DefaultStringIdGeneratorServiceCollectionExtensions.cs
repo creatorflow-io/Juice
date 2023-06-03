@@ -2,7 +2,7 @@
 
 namespace Juice.Services
 {
-    public static class ServiceCollectionExtensions
+    public static class DefaultStringIdGeneratorServiceCollectionExtensions
     {
         public static IServiceCollection AddDefaultStringIdGenerator(this IServiceCollection services)
         {

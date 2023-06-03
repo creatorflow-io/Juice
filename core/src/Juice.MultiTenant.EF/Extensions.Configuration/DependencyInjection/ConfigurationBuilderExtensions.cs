@@ -1,12 +1,11 @@
 ﻿using Juice.Extensions.Configuration;
 using Juice.MultiTenant.Domain.AggregatesModel.SettingsAggregate;
-using Juice.MultiTenant.EF.DependencyInjection;
+using Juice.MultiTenant.EF.Extensions.Configuration;
 using Juice.MultiTenant.EF.Repositories;
-using Juice.MultiTenant.Extensions.Options.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Juice.MultiTenant.EF.Extensions.Configuration.DependencyInjection
+namespace Juice.MultiTenant.EF
 {
     public static class ConfigurationBuilderExtensions
     {

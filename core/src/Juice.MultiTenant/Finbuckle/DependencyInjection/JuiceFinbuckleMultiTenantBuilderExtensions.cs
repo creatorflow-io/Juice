@@ -1,16 +1,15 @@
 ﻿using System.Security.Claims;
 using Finbuckle.MultiTenant;
 using Juice.Domain;
-using Juice.Tenants;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace Juice.MultiTenant.Finbuckle.DependencyInjection
+namespace Juice.MultiTenant
 {
-    public static class FinbuckleMultiTenantBuilderExtensions
+    public static class JuiceFinbuckleMultiTenantBuilderExtensions
     {
 
         public static FinbuckleMultiTenantBuilder<TTenantInfo> JuiceIntegration<TTenantInfo>(this FinbuckleMultiTenantBuilder<TTenantInfo> builder)
@@ -25,7 +24,7 @@ namespace Juice.MultiTenant.Finbuckle.DependencyInjection
 
 
         /// <summary>
-        /// Override the default behavior of the <see cref="Microsoft.Extensions.DependencyInjection.FinbuckleMultiTenantBuilderExtensions.WithPerTenantAuthenticationConventions"/> to use dynamic properties of the tenant.
+        /// Override the default behavior of the <see cref="DependencyInjection.FinbuckleMultiTenantBuilderExtensions.WithPerTenantAuthenticationConventions"/> to use dynamic properties of the tenant.
         /// </summary>
         /// <typeparam name="TTenantInfo"></typeparam>
         /// <param name="builder"></param>

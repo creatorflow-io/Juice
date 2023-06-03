@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 
-namespace Juice.Locks.Redis.DependencyInjection
+namespace Juice.Locks.Redis
 {
     public static class LocksServiceCollectionExtensions
     {

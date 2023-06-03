@@ -1,6 +1,5 @@
 ﻿using Juice.EF;
 using Juice.Extensions.DependencyInjection;
-using Juice.MultiTenant.EF.DependencyInjection;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

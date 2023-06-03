@@ -1,10 +1,9 @@
-﻿using Juice.Modular;
-using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace Juice.Conventions.StartupDiscovery.Extensions
+namespace Juice.Modular
 {
     public static class DiscoveredModulesAppBuilderExtensions
     {

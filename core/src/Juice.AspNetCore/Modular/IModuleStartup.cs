@@ -11,7 +11,7 @@ namespace Juice.Modular
         int StartOrder { get; }
         int ConfigureOrder { get; }
 
-        void ConfigureServices(IServiceCollection services, IMvcBuilder mvc, IWebHostEnvironment env, IConfigurationRoot configuration);
+        void ConfigureServices(IServiceCollection services, IMvcBuilder mvc, IWebHostEnvironment env, IConfiguration configuration);
         void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IWebHostEnvironment env);
     }
 

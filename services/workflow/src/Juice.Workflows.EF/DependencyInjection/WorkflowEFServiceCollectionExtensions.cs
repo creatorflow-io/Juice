@@ -3,7 +3,7 @@ using Juice.Workflows.Domain.AggregatesModel.EventAggregate;
 using Juice.Workflows.EF.Repositories;
 using Microsoft.EntityFrameworkCore.Migrations;
 
-namespace Juice.Workflows.EF.DependencyInjection
+namespace Juice.Workflows.EF
 {
     public static class WorkflowEFServiceCollectionExtensions
     {

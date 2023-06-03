@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using Juice.Core.Tests.Models;
 using Juice.Extensions.Options;
-using Juice.Extensions.Options.DependencyInjection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

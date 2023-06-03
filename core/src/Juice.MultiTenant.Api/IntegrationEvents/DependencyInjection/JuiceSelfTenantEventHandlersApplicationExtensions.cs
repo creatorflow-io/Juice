@@ -4,9 +4,9 @@ using Juice.MultiTenant.Api.IntegrationEvents.Handlers;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Juice.MultiTenant.Api.IntegrationEvents.DependencyInjection
+namespace Juice.MultiTenant.Api
 {
-    public static class SelfHandlersApplicationExtensions
+    public static class JuiceSelfTenantEventHandlersApplicationExtensions
     {
         public static void RegisterTenantIntegrationEventSelfHandlers(this WebApplication app)
         {

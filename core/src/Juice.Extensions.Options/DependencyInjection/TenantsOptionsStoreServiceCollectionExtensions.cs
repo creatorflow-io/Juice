@@ -1,9 +1,9 @@
 ﻿using Juice.Extensions.Options.Stores;
-using Juice.Tenants;
+using Juice.MultiTenant;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace Juice.Extensions.Options.DependencyInjection
+namespace Juice.Extensions.Options
 {
     public static class TenantsOptionsStoreServiceCollectionExtensions
     {

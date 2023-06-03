@@ -1,9 +1,10 @@
-﻿using Microsoft.AspNetCore.Hosting;
+﻿using Juice.Conventions.StartupDiscovery.Extensions;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json.Serialization;
 
-namespace Juice.Conventions.StartupDiscovery.Extensions
+namespace Juice.Modular
 {
     public static class DiscoveredModulesServiceCollectionExtension
     {

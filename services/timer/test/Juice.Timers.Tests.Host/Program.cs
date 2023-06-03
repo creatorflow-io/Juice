@@ -1,20 +1,17 @@
 ﻿using Juice.EF.Extensions;
 using Juice.EventBus;
 using Juice.EventBus.IntegrationEventLog.EF;
-using Juice.EventBus.IntegrationEventLog.EF.DependencyInjection;
-using Juice.EventBus.RabbitMQ.DependencyInjection;
-using Juice.Integrations.EventBus.DependencyInjection;
-using Juice.Integrations.MediatR.DependencyInjection;
-using Juice.MediatR.Redis.DependencyInjection;
-using Juice.Timers.Api.Behaviors.DependencyInjection;
+using Juice.EventBus.RabbitMQ;
+using Juice.Integrations;
+using Juice.MediatR.RequestManager.Redis;
+using Juice.Timers;
+using Juice.Timers.Api;
 using Juice.Timers.Api.Domain.EventHandlers;
 using Juice.Timers.Api.IntegrationEvents.Events;
 using Juice.Timers.Api.IntegrationEvents.Handlers;
-using Juice.Timers.BackgroundTasks.DependencyInjection;
-using Juice.Timers.DependencyInjection;
+using Juice.Timers.BackgroundTasks;
 using Juice.Timers.Domain.Events;
 using Juice.Timers.EF;
-using Juice.Timers.EF.DependencyInjection;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 

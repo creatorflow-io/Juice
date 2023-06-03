@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 
-namespace Juice.Workflows.Api.DependencyInjection
+namespace Juice.Workflows.Api
 {
     public static class WfApplicationBuilderExtensions
     {

@@ -16,4 +16,8 @@
   <ItemGroup>
     <ProjectReference Include="..\Juice\Juice.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Extensions\" />
+  </ItemGroup>
 </Project>

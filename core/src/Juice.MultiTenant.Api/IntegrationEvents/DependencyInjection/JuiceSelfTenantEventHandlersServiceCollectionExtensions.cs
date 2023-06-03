@@ -5,9 +5,9 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace Juice.MultiTenant.Api.IntegrationEvents.DependencyInjection
+namespace Juice.MultiTenant.Api
 {
-    public static class SelfHandlersServiceCollectionExtensions
+    public static class JuiceSelfTenantEventHandlersServiceCollectionExtensions
     {
         /// <summary>
         /// Self handle tenant integration events to update tenant DistributedCacheStore. Required DistributedCache.

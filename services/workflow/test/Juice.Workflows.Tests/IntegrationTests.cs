@@ -1,5 +1,5 @@
 ﻿using Juice.EventBus;
-using Juice.EventBus.RabbitMQ.DependencyInjection;
+using Juice.EventBus.RabbitMQ;
 using Juice.Workflows.Api.Contracts.IntegrationEvents.Events;
 using Juice.XUnit;
 

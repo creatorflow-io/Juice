@@ -1,6 +1,7 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Juice.Timers.Behaviors;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace Juice.Timers.Behaviors.DependencyInjection
+namespace Juice.Timers
 {
     public static class BehaviorServiceCollectionExtensions
     {

@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Juice.Timers.DependencyInjection
+namespace Juice.Timers
 {
     public static class TimerServiceCollectionExtensions
     {

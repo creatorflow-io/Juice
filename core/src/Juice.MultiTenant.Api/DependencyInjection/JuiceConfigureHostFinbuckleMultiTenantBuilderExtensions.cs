@@ -1,23 +1,18 @@
 ﻿using Finbuckle.MultiTenant;
 using Juice.EF;
-using Juice.EventBus.IntegrationEventLog.EF.DependencyInjection;
-using Juice.Integrations.EventBus.DependencyInjection;
+using Juice.EventBus.IntegrationEventLog.EF;
+using Juice.Integrations;
 using Juice.Integrations.MediatR;
-using Juice.Integrations.MediatR.DependencyInjection;
-using Juice.MediatR.RequestManager.EF.DependencyInjection;
+using Juice.MediatR.RequestManager.EF;
 using Juice.MultiTenant.Api.Behaviors.DependencyInjection;
 using Juice.MultiTenant.Api.Commands;
 using Juice.MultiTenant.EF;
-using Juice.MultiTenant.EF.DependencyInjection;
-using Juice.MultiTenant.EF.Extensions.Configuration.DependencyInjection;
-using Juice.MultiTenant.Finbuckle.DependencyInjection;
-using Juice.Tenants;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Juice.MultiTenant.Api.DependencyInjection
+namespace Juice.MultiTenant.Api
 {
-    public static class FinbuckleMultiTenantBuilderExtensions
+    public static class JuiceConfigureHostFinbuckleMultiTenantBuilderExtensions
     {
         /// <summary>
         /// Configure Tenant microservice to provide tenant service, tenant settings service

@@ -3,7 +3,7 @@ using Juice.MultiTenant.Extensions.Options.Stores;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace Juice.MultiTenant.Extensions.Options.DependencyInjection
+namespace Juice.MultiTenant
 {
     public static class TenantsOptionsStoreServiceCollectionExtensions
     {

@@ -1,6 +1,6 @@
 ﻿using Juice.Domain;
 
-namespace Juice.Tenants
+namespace Juice.MultiTenant
 {
     public interface ITenant : IDynamic
     {

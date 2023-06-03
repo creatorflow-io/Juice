@@ -1,5 +1,4 @@
-﻿using Juice.Tenants;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Juice.MultiTenant.SelfHost.Controllers

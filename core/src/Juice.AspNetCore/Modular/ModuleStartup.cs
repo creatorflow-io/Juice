@@ -15,7 +15,7 @@ namespace Juice.Modular
         {
         }
 
-        public virtual void ConfigureServices(IServiceCollection services, IMvcBuilder mvc, IWebHostEnvironment env, IConfigurationRoot configuration)
+        public virtual void ConfigureServices(IServiceCollection services, IMvcBuilder mvc, IWebHostEnvironment env, IConfiguration configuration)
         {
         }
     }
