@@ -1,8 +1,8 @@
 ﻿using System;
 using Finbuckle.MultiTenant.EntityFrameworkCore;
 using Juice.EF.Extensions;
-using Juice.EF.MultiTenant;
 using Juice.Extensions.DependencyInjection;
+using Juice.MultiTenant.EF;
 using Juice.MultiTenant.Tests.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;

@@ -8,7 +8,7 @@ namespace Juice.MultiTenant.SelfHost.Controllers
     {
         public IActionResult Index([FromServices] ITenant? tenant = null)
         {
-            return Json(new { Message = $"Hello World! {tenant?.Identifier ?? "root"}" });
+            return Json(new { Message = $"Hello World! {User?.Identity?.Name ?? ""} {tenant?.Identifier ?? "root"}" });
         }
     }
 }

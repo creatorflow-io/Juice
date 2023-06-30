@@ -13,7 +13,8 @@ using Juice.Integrations.MediatR;
 using Juice.MediatR.RequestManager.EF;
 using Juice.MultiTenant.Api;
 using Juice.MultiTenant.Api.Behaviors.DependencyInjection;
-using Juice.MultiTenant.Api.Commands;
+using Juice.MultiTenant.Api.Commands.Tenants;
+using Juice.MultiTenant.Domain.AggregatesModel.TenantAggregate;
 using Juice.MultiTenant.EF;
 using Juice.MultiTenant.EF.Migrations;
 using Juice.Services;
@@ -79,17 +80,17 @@ namespace Juice.MultiTenant.Tests
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
                 services.AddMediatR(typeof(DataEventHandler));
-                services.AddTenantDbContext<Tenant>(configuration, options =>
+                services.AddTenantDbContext(configuration, options =>
                 {
                     options.Schema = "App";
                     options.DatabaseProvider = provider;
                     //options.JsonPropertyBehavior = JsonPropertyBehavior.UpdateALL;
-                }, true);
+                });
 
             });
 
             var context = resolver.ServiceProvider.
-                CreateScope().ServiceProvider.GetRequiredService<TenantStoreDbContextWrapper>();
+                CreateScope().ServiceProvider.GetRequiredService<TenantStoreDbContext>();
 
             await context.MigrateAsync();
             await context.SeedAsync(resolver.ServiceProvider.GetRequiredService<IConfigurationService>()
@@ -120,6 +121,8 @@ namespace Juice.MultiTenant.Tests
                 var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
                 var configuration = configService.GetConfiguration();
 
+                services.AddHttpContextAccessor();
+
                 // Register DbContext class
 
                 services.AddRequestManager(configuration, options =>
@@ -145,12 +148,14 @@ namespace Juice.MultiTenant.Tests
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
                 services.AddMediatR(typeof(DataEventHandler));
-                services.AddTenantDbContext<Tenant>(configuration, options =>
+                services.AddTenantDbContext(configuration, options =>
                 {
                     options.Schema = "App";
                     options.DatabaseProvider = provider;
                     //options.JsonPropertyBehavior = JsonPropertyBehavior.UpdateALL;
-                }, true);
+                });
+
+                services.AddTenantOwnerResolverDefault();
 
                 services.AddMediatR(typeof(CreateTenantCommand).Assembly, typeof(AssemblySelector).Assembly);
 
@@ -159,7 +164,7 @@ namespace Juice.MultiTenant.Tests
 
                 services.AddIntegrationEventService()
                         .AddIntegrationEventLog()
-                        .RegisterContext<TenantStoreDbContext<Tenant>>("App");
+                        .RegisterContext<TenantStoreDbContext>("App");
 
                 services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"));
 
@@ -176,8 +181,8 @@ namespace Juice.MultiTenant.Tests
             if (migrate)
             {
                 using var scope = resolver.ServiceProvider.CreateScope();
-                var logContextFactory = scope.ServiceProvider.GetRequiredService<Func<TenantStoreDbContext<Tenant>, IntegrationEventLogContext>>();
-                var tenantContext = scope.ServiceProvider.GetRequiredService<TenantStoreDbContext<Tenant>>();
+                var logContextFactory = scope.ServiceProvider.GetRequiredService<Func<TenantStoreDbContext, IntegrationEventLogContext>>();
+                var tenantContext = scope.ServiceProvider.GetRequiredService<TenantStoreDbContext>();
                 var logContext = logContextFactory(tenantContext);
                 logContext.MigrateAsync().GetAwaiter().GetResult();
             }
@@ -203,9 +208,9 @@ namespace Juice.MultiTenant.Tests
                 CreateScope();
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
-            scope.ServiceProvider.RegisterTenantIntegrationEventSelfHandlers();
+            scope.ServiceProvider.RegisterTenantIntegrationEventSelfHandlers<Tenant>();
 
-            var createCommand = new CreateTenantCommand("test", "test", "Test tenant", default);
+            var createCommand = new CreateTenantCommand("test", "test", "Test tenant", default, default);
 
             var stopwatch = new Stopwatch();
 
@@ -230,7 +235,7 @@ namespace Juice.MultiTenant.Tests
                 CreateScope();
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
-            var createCommand = new CreateTenantCommand("test", "test", "Test tenant", default);
+            var createCommand = new CreateTenantCommand("test", "test", "Test tenant", default, default);
 
             var stopwatch = new Stopwatch();
 
@@ -294,50 +299,186 @@ namespace Juice.MultiTenant.Tests
         }
 
 
-        [IgnoreOnCITheory(DisplayName = "Disable tenant"), TestPriority(760)]
+        [IgnoreOnCITheory(DisplayName = "Aproval tenant"), TestPriority(760)]
         [InlineData("SqlServer")]
         [InlineData("PostgreSQL")]
-        public async Task Tenant_should_disable_Async(string provider)
+        public async Task Tenant_should_accept_Async(string provider)
         {
             using var scope = BuildServiceProvider(_output, provider).
                 CreateScope();
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
 
-            var command = new DisableTenantCommand("test");
+            var command = new ApprovalProcessCommand("test", Shared.Enums.TenantStatus.PendingApproval);
 
             var stopwatch = new Stopwatch();
 
             stopwatch.Start();
 
-            var disableResult = await mediator.Send(command);
-            _output.WriteLine(command.GetType().Name + " take {0} milliseconds.", stopwatch.ElapsedMilliseconds);
+            var result = await mediator.Send(command);
 
-            disableResult.Succeeded.Should().BeTrue();
+            _output.WriteLine(command.GetType().Name + " take {0} milliseconds.", stopwatch.ElapsedMilliseconds);
+            _output.WriteLine(result.Message ?? "");
+
+            result.Succeeded.Should().BeTrue();
+
+            var acceptCommand = new ApprovalProcessCommand("test", Shared.Enums.TenantStatus.Approved);
+            stopwatch.Start();
+
+            var acceptResult = await mediator.Send(acceptCommand);
+
+            _output.WriteLine(acceptCommand.GetType().Name + " take {0} milliseconds.", stopwatch.ElapsedMilliseconds);
+            _output.WriteLine(acceptResult.Message ?? "");
+
+            acceptResult.Succeeded.Should().BeTrue();
         }
 
-        [IgnoreOnCITheory(DisplayName = "Enable tenant"), TestPriority(750)]
+
+        [IgnoreOnCITheory(DisplayName = "Init tenant"), TestPriority(755)]
         [InlineData("SqlServer")]
         [InlineData("PostgreSQL")]
-        public async Task Tenant_should_enable_Async(string provider)
+        public async Task Tenant_should_init_Async(string provider)
         {
             using var scope = BuildServiceProvider(_output, provider).
                 CreateScope();
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
 
-            var command = new EnableTenantCommand("test");
+            var command = new InitializationProcessCommand("test", Shared.Enums.TenantStatus.Initializing);
 
             var stopwatch = new Stopwatch();
 
             stopwatch.Start();
 
-            var enableResult = await mediator.Send(command);
+            var result = await mediator.Send(command);
+
             _output.WriteLine(command.GetType().Name + " take {0} milliseconds.", stopwatch.ElapsedMilliseconds);
-            _output.WriteLine(enableResult.Message ?? "");
-            enableResult.Succeeded.Should().BeTrue();
+            _output.WriteLine(result.Message ?? "");
+
+            result.Succeeded.Should().BeTrue();
+
+            var command2 = new InitializationProcessCommand("test", Shared.Enums.TenantStatus.Initialized);
+            stopwatch.Start();
+
+            var result2 = await mediator.Send(command2);
+
+            _output.WriteLine(command2.GetType().Name + " take {0} milliseconds.", stopwatch.ElapsedMilliseconds);
+            _output.WriteLine(result2.Message ?? "");
+
+            result2.Succeeded.Should().BeTrue();
         }
 
+
+        [IgnoreOnCITheory(DisplayName = "Active tenant"), TestPriority(750)]
+        [InlineData("SqlServer")]
+        [InlineData("PostgreSQL")]
+        public async Task Tenant_should_active_Async(string provider)
+        {
+            using var scope = BuildServiceProvider(_output, provider).
+                CreateScope();
+            var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+
+
+            var command = new AdminStatusCommand("test", Shared.Enums.TenantStatus.PendingToActive);
+
+            var stopwatch = new Stopwatch();
+
+            stopwatch.Start();
+
+            var result = await mediator.Send(command);
+
+            _output.WriteLine(command.GetType().Name + " take {0} milliseconds.", stopwatch.ElapsedMilliseconds);
+            _output.WriteLine(result.Message ?? "");
+
+            result.Succeeded.Should().BeTrue();
+
+            var command2 = new AdminStatusCommand("test", Shared.Enums.TenantStatus.Active);
+            stopwatch.Start();
+
+            var result2 = await mediator.Send(command2);
+
+            _output.WriteLine(command2.GetType().Name + " take {0} milliseconds.", stopwatch.ElapsedMilliseconds);
+            _output.WriteLine(result2.Message ?? "");
+
+            result2.Succeeded.Should().BeTrue();
+        }
+
+
+        [IgnoreOnCITheory(DisplayName = "Operation status"), TestPriority(740)]
+        [InlineData("SqlServer")]
+        [InlineData("PostgreSQL")]
+        public async Task Operation_status_change_Async(string provider)
+        {
+            using var scope = BuildServiceProvider(_output, provider).
+                CreateScope();
+            var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+
+            scope.ServiceProvider.RegisterTenantIntegrationEventSelfHandlers<Tenant>();
+
+            var command = new OperationStatusCommand("test", Shared.Enums.TenantStatus.Inactive);
+
+            var stopwatch = new Stopwatch();
+
+            stopwatch.Start();
+
+            var result = await mediator.Send(command);
+            _output.WriteLine(command.GetType().Name + " take {0} milliseconds.", stopwatch.ElapsedMilliseconds);
+            _output.WriteLine(result.Message ?? "");
+            result.Succeeded.Should().BeTrue();
+
+            await Task.Delay(1000); // waitting for integration events
+
+            var command2 = new OperationStatusCommand("test", Shared.Enums.TenantStatus.Active);
+            stopwatch.Start();
+
+            var result2 = await mediator.Send(command2);
+            _output.WriteLine(command2.GetType().Name + " take {0} milliseconds.", stopwatch.ElapsedMilliseconds);
+            _output.WriteLine(result2.Message ?? "");
+            result2.Succeeded.Should().BeTrue();
+
+            await Task.Delay(1000); // waitting for integration events
+
+            var command3 = new OperationStatusCommand("test", Shared.Enums.TenantStatus.Suspended);
+            stopwatch.Start();
+
+            var result3 = await mediator.Send(command3);
+            _output.WriteLine(command3.GetType().Name + " take {0} milliseconds.", stopwatch.ElapsedMilliseconds);
+            _output.WriteLine(result3.Message ?? "");
+
+            result3.Succeeded.Should().BeTrue();
+            await Task.Delay(1000);
+
+
+            result2 = await mediator.Send(command2);
+            _output.WriteLine(command2.GetType().Name + " take {0} milliseconds.", stopwatch.ElapsedMilliseconds);
+            _output.WriteLine(result2.Message ?? "");
+            result2.Succeeded.Should().BeTrue();
+        }
+
+        [IgnoreOnCITheory(DisplayName = "Abandon tenant"), TestPriority(730)]
+        [InlineData("SqlServer")]
+        [InlineData("PostgreSQL")]
+        public async Task Tenant_should_abandoned_Async(string provider)
+        {
+            using var scope = BuildServiceProvider(_output, provider).
+                CreateScope();
+            var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+
+            scope.ServiceProvider.RegisterTenantIntegrationEventSelfHandlers<Tenant>();
+
+            var command = new AbandonTenantCommand("test");
+
+            var stopwatch = new Stopwatch();
+
+            stopwatch.Start();
+
+            var result = await mediator.Send(command);
+            _output.WriteLine(command.GetType().Name + " take {0} milliseconds.", stopwatch.ElapsedMilliseconds);
+            _output.WriteLine(result.Message ?? "");
+            result.Succeeded.Should().BeTrue();
+
+            await Task.Delay(1000); // waitting for integration events
+        }
 
         [IgnoreOnCITheory(DisplayName = "Delete tenant"), TestPriority(700)]
         [InlineData("SqlServer")]
@@ -348,7 +489,7 @@ namespace Juice.MultiTenant.Tests
                 CreateScope();
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
-            scope.ServiceProvider.RegisterTenantIntegrationEventSelfHandlers();
+            scope.ServiceProvider.RegisterTenantIntegrationEventSelfHandlers<Tenant>();
 
             var command = new DeleteTenantCommand("test");
 
@@ -363,6 +504,7 @@ namespace Juice.MultiTenant.Tests
 
             await Task.Delay(1000); // waitting for integration events
         }
+
 
     }
 }

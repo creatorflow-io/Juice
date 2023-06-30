@@ -5,21 +5,20 @@ namespace Juice.MultiTenant.EF.Extensions.Configuration
 {
     internal class EntityConfigurationProvider : ConfigurationProvider
     {
-        private readonly TenantSettingsDbContext _context;
+        private readonly ITenantSettingsRepository _repository;
 
-        public EntityConfigurationProvider(TenantSettingsDbContext dbContext)
+        public EntityConfigurationProvider(ITenantSettingsRepository repository)
         {
-            _context = dbContext;
+            _repository = repository;
         }
 
 
         public override void Load()
         {
-            if (_context.TenantInfo != null)
-            {
-                Data =
-                     _context.Settings.ToDictionary<TenantSettings, string, string?>(c => c.Key, c => c.Value, StringComparer.OrdinalIgnoreCase);
-            }
+            Data =
+                _repository.GetAllAsync(default).ConfigureAwait(false)
+                .GetAwaiter().GetResult()
+                .ToDictionary<TenantSettings, string, string?>(c => c.Key, c => c.Value, StringComparer.OrdinalIgnoreCase);
         }
 
     }

@@ -3,6 +3,9 @@ using Finbuckle.MultiTenant;
 using Finbuckle.MultiTenant.EntityFrameworkCore;
 using Juice.EF;
 using Juice.MultiTenant.Domain.AggregatesModel.SettingsAggregate;
+using Juice.MultiTenant.Domain.Events;
+using Juice.MultiTenant.EF.Extensions;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
@@ -11,21 +14,34 @@ namespace Juice.MultiTenant.EF
     public class TenantSettingsDbContext : DbContext, ISchemaDbContext, IMultiTenantDbContext, IUnitOfWork
     {
         #region Finbuckle
-        public ITenantInfo? TenantInfo { get; internal set; }
+        public ITenantInfo TenantInfo { get; internal set; }
         public TenantMismatchMode TenantMismatchMode { get; set; } = TenantMismatchMode.Throw;
 
         public TenantNotSetMode TenantNotSetMode { get; set; } = TenantNotSetMode.Throw;
         #endregion
         public string? Schema { get; protected set; }
 
-        public DbSet<TenantSettings> Settings { get; set; }
+        public DbSet<TenantSettings> TenantSettings { get; set; }
 
+        private readonly IMediator? _mediator;
         public TenantSettingsDbContext(
             DbOptions<TenantSettingsDbContext> dbOptions,
             DbContextOptions<TenantSettingsDbContext> options,
-            ITenantInfo? tenantInfo = null) : base(options)
+            ITenantInfo? tenantInfo = null,
+            IMediator? mediator = null
+            ) : base(options)
         {
             Schema ??= dbOptions?.Schema ?? "App";
+            TenantInfo = tenantInfo ?? new TenantInfo { Id = "" };
+            _mediator = mediator;
+        }
+
+        /// <summary>
+        /// Force the tenant to be set.
+        /// </summary>
+        /// <param name="tenantInfo"></param>
+        public void EnforceTenant(ITenantInfo tenantInfo)
+        {
             TenantInfo = tenantInfo;
         }
 
@@ -39,15 +55,28 @@ namespace Juice.MultiTenant.EF
             {
                 entity.ToTable(nameof(TenantSettings), Schema);
                 entity.Property(p => p.Key).HasMaxLength(Constants.ConfigurationKeyMaxLength);
-                entity.IsMultiTenant();
+                entity.Property(p => p.Value).HasMaxLength(Constants.ConfigurationValueMaxLength);
+                entity.IsCrossTenant();
                 entity.HasKey(p => p.Id);
                 entity.HasIndex("Key", "TenantId").IsUnique();
             });
         }
 
+        protected async Task DispatchDomainEventsAsync()
+        {
+            var hasModified = ChangeTracker.Entries()
+                .Any(x => x.State == EntityState.Added || x.State == EntityState.Modified || x.State == EntityState.Deleted);
+            if (hasModified && _mediator != null)
+            {
+                var tenantSettingsChangedEvent = new TenantSettingsChangedDomainEvent(TenantInfo.Id ?? "", TenantInfo.Identifier ?? "");
+                await _mediator.Publish(tenantSettingsChangedEvent);
+            }
+        }
+
         public override int SaveChanges(bool acceptAllChangesOnSuccess)
         {
             this.EnforceMultiTenant();
+            DispatchDomainEventsAsync().GetAwaiter().GetResult();
             return base.SaveChanges(acceptAllChangesOnSuccess);
         }
 
@@ -55,18 +84,22 @@ namespace Juice.MultiTenant.EF
             CancellationToken cancellationToken = default(CancellationToken))
         {
             this.EnforceMultiTenant();
+            await DispatchDomainEventsAsync();
             return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
         }
 
         #region UnitOfWork
-        private IDbContextTransaction _currentTransaction;
-        public IDbContextTransaction GetCurrentTransaction() => _currentTransaction;
+        private IDbContextTransaction? _currentTransaction;
+        public IDbContextTransaction? GetCurrentTransaction() => _currentTransaction;
         public bool HasActiveTransaction => _currentTransaction != null;
         private Guid? _commitedTransactionId;
 
         public async Task<IDbContextTransaction?> BeginTransactionAsync()
         {
-            if (_currentTransaction != null) return default;
+            if (_currentTransaction != null)
+            {
+                return default;
+            }
 
             _commitedTransactionId = default;
             _currentTransaction = await Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);

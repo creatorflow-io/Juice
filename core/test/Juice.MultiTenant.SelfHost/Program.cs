@@ -1,7 +1,9 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using Juice.AspNetCore;
 using Juice.MultiTenant;
+using Juice.MultiTenant.AspNetCore;
 using Juice.MultiTenant.EF;
+using Juice.MultiTenant.Shared.Authorization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
@@ -59,10 +61,11 @@ static void ConfigureMultiTenant(WebApplicationBuilder builder)
         options.Authority = tenantAuthority?.Replace(Constants.TenantToken, tc.Identifier);
     })
     .WithPerTenantAuthenticationCore()
-    .WithPerTenantAuthenticationConventions(crossTenantAuthorize: (authTenant, currentTenant, principal) =>
-        authTenant == null // root tenant
-        && (principal?.Identity?.IsAuthenticated ?? false) // authenticated
-        && principal.IsInRole("admin"))
+    //.WithPerTenantAuthenticationConventions(crossTenantAuthorize: (authTenant, currentTenant, principal) =>
+    //    authTenant == null // root tenant
+    //    && (principal?.Identity?.IsAuthenticated ?? false) // authenticated
+    //    && principal.IsInRole("admin"))
+    .WithPerTenantAuthenticationConventions(crossTenantAuthorize: null)
     .WithRemoteAuthenticationCallbackStrategy()
     .WithRouteStrategy()
     ;
@@ -113,6 +116,11 @@ static void ConfigureSecurity(WebApplicationBuilder builder)
 
         options.Events = new OpenIdConnectEvents
         {
+            OnRedirectToIdentityProvider = context =>
+            {
+                //context.Properties.Items["session_id"] = context.HttpContext.Session.Id;
+                return Task.CompletedTask;
+            },
             OnRedirectToIdentityProviderForSignOut = OnRedirectToIdentityProviderForSignOut,
             OnAccessDenied = context =>
             {

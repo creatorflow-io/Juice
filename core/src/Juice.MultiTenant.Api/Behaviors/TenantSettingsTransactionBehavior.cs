@@ -1,7 +1,5 @@
 ﻿using Juice.Integrations.EventBus;
 using Juice.Integrations.MediatR.Behaviors;
-using Juice.MultiTenant.Api.Commands;
-using Juice.MultiTenant.EF;
 
 namespace Juice.MultiTenant.Api.Behaviors
 {

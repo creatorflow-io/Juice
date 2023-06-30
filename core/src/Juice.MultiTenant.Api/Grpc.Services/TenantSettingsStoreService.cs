@@ -1,10 +1,8 @@
 ﻿using Finbuckle.MultiTenant;
 using Grpc.Core;
-using Juice.MultiTenant.Api.Commands;
-using Juice.MultiTenant.Domain.AggregatesModel.SettingsAggregate;
-using Juice.MultiTenant.EF;
 using Juice.MultiTenant.Settings.Grpc;
-using Microsoft.EntityFrameworkCore;
+using Juice.MultiTenant.Shared.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Juice.MultiTenant.Api.Grpc.Services
@@ -22,6 +20,7 @@ namespace Juice.MultiTenant.Api.Grpc.Services
             _tenantInfo = tenantInfo;
             _logger = logger;
         }
+
         public override async Task<TenantSettingsResult> GetAll(TenantSettingQuery request, ServerCallContext context)
         {
             _logger.LogInformation("Tenant Identifier: " + _tenantInfo?.Identifier ?? "Unk");
@@ -35,10 +34,10 @@ namespace Juice.MultiTenant.Api.Grpc.Services
                 };
             }
 
-            var dbContext = context.GetHttpContext().RequestServices.GetService<TenantSettingsDbContext>();
-            if (dbContext == null)
+            var repository = context.GetHttpContext().RequestServices.GetService<ITenantSettingsRepository>();
+            if (repository == null)
             {
-                _logger.LogError("TenantSettingsDbContext was not registerd.");
+                _logger.LogError("ITenantSettingsRepository was not registerd.");
                 return new TenantSettingsResult
                 {
                     Succeeded = false,
@@ -50,7 +49,8 @@ namespace Juice.MultiTenant.Api.Grpc.Services
             {
                 Succeeded = true
             };
-            var data = await dbContext.Settings.ToDictionaryAsync<TenantSettings, string, string?>(c => c.Key, c => c.Value);
+            var data = (await repository!.GetAllAsync(context.CancellationToken))
+                .ToDictionary<TenantSettings, string, string?>(c => c.Key, c => c.Value);
 
             result.Settings.Add(data);
 
@@ -58,6 +58,7 @@ namespace Juice.MultiTenant.Api.Grpc.Services
 
         }
 
+        [Authorize(Policies.TenantSettingsPolicy)]
         public override async Task<UpdateSectionResult> UpdateSection(UpdateSectionParams request, ServerCallContext context)
         {
             var mediator = context.GetHttpContext().RequestServices.GetService<IMediator>();
@@ -89,6 +90,8 @@ namespace Juice.MultiTenant.Api.Grpc.Services
             };
         }
 
+
+        [Authorize(Policies.TenantSettingsPolicy)]
         public override async Task<UpdateSectionResult> DeleteSection(UpdateSectionParams request, ServerCallContext context)
         {
             var mediator = context.GetHttpContext().RequestServices.GetService<IMediator>();

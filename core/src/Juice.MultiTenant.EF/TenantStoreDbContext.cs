@@ -1,10 +1,8 @@
 ﻿using System.Data;
 using System.Security.Claims;
-using Finbuckle.MultiTenant;
-using Finbuckle.MultiTenant.Stores;
-using Juice.Domain;
 using Juice.EF;
 using Juice.EF.Extensions;
+using Juice.MultiTenant.Domain.AggregatesModel.TenantAggregate;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -15,8 +13,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Juice.MultiTenant.EF
 {
-    public class TenantStoreDbContext<TTenantInfo> : EFCoreStoreDbContext<TTenantInfo>, ISchemaDbContext, IAuditableDbContext, IUnitOfWork
-        where TTenantInfo : class, IDynamic, ITenantInfo, new()
+    public class TenantStoreDbContext : DbContext, ISchemaDbContext, IAuditableDbContext, IUnitOfWork
     {
         #region Audit/Schema
         public string? Schema { get; protected set; }
@@ -31,20 +28,22 @@ namespace Juice.MultiTenant.EF
         private ILogger? _logger;
         private readonly DbOptions? _options;
 
+        public DbSet<Tenant> TenantInfo { get; set; }
+
         public TenantStoreDbContext(
             IServiceProvider serviceProvider,
-            DbContextOptions<TenantStoreDbContext<TTenantInfo>> options) : base(options)
+            DbContextOptions<TenantStoreDbContext> options) : base(options)
         {
-            _options = serviceProvider.GetService<DbOptions<TenantStoreDbContext<TTenantInfo>>>();
+            _options = serviceProvider.GetService<DbOptions<TenantStoreDbContext>>();
             Schema = _options?.Schema;
             _httpContextAccessor = serviceProvider.GetService<IHttpContextAccessor>();
-            _logger = serviceProvider.GetService<ILogger<TenantStoreDbContext<TTenantInfo>>>();
+            _logger = serviceProvider.GetService<ILogger<TenantStoreDbContext>>();
             _mediator = serviceProvider.GetService<IMediator>();
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<TTenantInfo>(entity =>
+            modelBuilder.Entity<Tenant>(entity =>
             {
                 entity.ToTable(nameof(Tenant), Schema);
 
@@ -55,6 +54,13 @@ namespace Juice.MultiTenant.EF
                 entity.Property(ti => ti.Id).HasMaxLength(Constants.TenantIdMaxLength);
 
                 entity.Property(ti => ti.Identifier).HasMaxLength(Constants.TenantIdentifierMaxLength);
+
+                entity.Property(ti => ti.Name).HasMaxLength(Juice.EF.Constants.NameLength);
+
+                entity.Property(ti => ti.ConnectionString).HasMaxLength(Constants.ConfigurationValueMaxLength);
+
+                entity.Property(ti => ti.OwnerUser).HasMaxLength(Constants.TenantOwnerMaxLength);
+
                 entity.HasIndex(ti => ti.Identifier).IsUnique();
             });
 
@@ -96,6 +102,7 @@ namespace Juice.MultiTenant.EF
             PendingAuditEntries = _mediator != null ? this.TrackingChanges(_logger)?.ToList() : default;
             try
             {
+                _mediator.DispatchDomainEventsAsync(this).GetAwaiter().GetResult();
                 if (_options != null && _options.JsonPropertyBehavior == JsonPropertyBehavior.UpdateALL)
                 {
                     return base.SaveChanges(acceptAllChangesOnSuccess);
@@ -127,6 +134,8 @@ namespace Juice.MultiTenant.EF
 
             try
             {
+                await _mediator.DispatchDomainEventsAsync(this);
+
                 if (_options != null && _options.JsonPropertyBehavior == JsonPropertyBehavior.UpdateALL)
                 {
                     return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
@@ -250,13 +259,4 @@ namespace Juice.MultiTenant.EF
         #endregion
     }
 
-    /// <summary>
-    /// TenantStoreDbContext for migration
-    /// </summary>
-    public class TenantStoreDbContextWrapper : TenantStoreDbContext<Tenant>
-    {
-        public TenantStoreDbContextWrapper(IServiceProvider serviceProvider, DbContextOptions<TenantStoreDbContext<Tenant>> options) : base(serviceProvider, options)
-        {
-        }
-    }
 }

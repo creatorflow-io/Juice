@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Juice.Services
 {
@@ -6,7 +7,7 @@ namespace Juice.Services
     {
         public static IServiceCollection AddDefaultStringIdGenerator(this IServiceCollection services)
         {
-            services.AddScoped<IStringIdGenerator, DefaultStringIdGenerator>();
+            services.TryAddScoped<IStringIdGenerator, DefaultStringIdGenerator>();
             return services;
         }
     }

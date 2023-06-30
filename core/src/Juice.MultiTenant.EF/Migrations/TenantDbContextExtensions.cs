@@ -1,5 +1,4 @@
-﻿using Finbuckle.MultiTenant;
-using Juice.Domain;
+﻿using Juice.MultiTenant.Domain.AggregatesModel.TenantAggregate;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 
@@ -7,17 +6,18 @@ namespace Juice.MultiTenant.EF.Migrations
 {
     public static class TenantDbContextExtensions
     {
-        public static async Task SeedAsync<TTenantInfo>(this TenantStoreDbContext<TTenantInfo> context, IConfiguration configuration)
-            where TTenantInfo : class, IDynamic, ITenantInfo, new()
+        public static async Task SeedAsync(this TenantStoreDbContext context, IConfiguration configuration)
         {
             if (!await context.TenantInfo.AnyAsync())
             {
                 var tenants = configuration
                     .GetSection("Finbuckle:MultiTenant:Stores:ConfigurationStore:Tenants")
                     .Get<Tenant[]>();
-
-                context.AddRange(tenants);
-                await context.SaveChangesAsync();
+                if (tenants != null && tenants.Length > 0)
+                {
+                    context.AddRange(tenants);
+                    await context.SaveChangesAsync();
+                }
             }
         }
 

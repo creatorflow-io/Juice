@@ -1,4 +1,5 @@
-﻿using Finbuckle.MultiTenant.Stores;
+﻿using Finbuckle.MultiTenant;
+using Finbuckle.MultiTenant.Stores;
 using Juice.EventBus;
 using Juice.MultiTenant.Api.Contracts.IntegrationEvents.Events;
 
@@ -7,14 +8,15 @@ namespace Juice.MultiTenant.Api.IntegrationEvents.Handlers
     /// <summary>
     /// Self handle TenantDeactivatedIntegrationEvent to update distributed cache store if exists.
     /// </summary>
-    public class TenantDeactivatedIngtegrationEventSelfHandler : IIntegrationEventHandler<TenantDeactivatedIntegrationEvent>
+    public class TenantDeactivatedIngtegrationEventSelfHandler<TTenantInfo> : IIntegrationEventHandler<TenantDeactivatedIntegrationEvent>
+        where TTenantInfo : class, ITenantInfo, new()
     {
-        private readonly DistributedCacheStore<Tenant>? _cacheStore;
+        private readonly DistributedCacheStore<TTenantInfo>? _cacheStore;
         private readonly ILogger _logger;
 
         public TenantDeactivatedIngtegrationEventSelfHandler(
-            ILogger<TenantDeactivatedIngtegrationEventSelfHandler> logger,
-            DistributedCacheStore<Tenant>? cacheStore = null)
+            ILogger<TenantDeactivatedIngtegrationEventSelfHandler<TTenantInfo>> logger,
+            DistributedCacheStore<TTenantInfo>? cacheStore = null)
         {
             _cacheStore = cacheStore;
             _logger = logger;

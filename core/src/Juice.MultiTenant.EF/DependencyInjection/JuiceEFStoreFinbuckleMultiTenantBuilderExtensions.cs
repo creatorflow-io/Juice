@@ -1,8 +1,8 @@
 ﻿using Finbuckle.MultiTenant;
-using Finbuckle.MultiTenant.Stores;
-using Juice.Domain;
 using Juice.EF;
 using Juice.Extensions.Configuration;
+using Juice.MultiTenant.EF.Stores;
+using Juice.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -18,11 +18,13 @@ namespace Juice.MultiTenant.EF
         /// </summary>
         /// <returns>The same MultiTenantBuilder passed into the method.</returns>
         // ReSharper disable once InconsistentNaming
-        public static FinbuckleMultiTenantBuilder<TTenantInfo> WithEFStore<TTenantInfo>(this FinbuckleMultiTenantBuilder<TTenantInfo> builder, IConfiguration configuration, Action<Juice.EF.DbOptions> configureOptions, bool migrate)
-            where TTenantInfo : class, IDynamic, ITenantInfo, new()
+        public static FinbuckleMultiTenantBuilder<TTenantInfo> WithEFStore<TTenantInfo>(this FinbuckleMultiTenantBuilder<TTenantInfo> builder, IConfiguration configuration, Action<Juice.EF.DbOptions> configureOptions)
+            where TTenantInfo : class, ITenant, ITenantInfo, new()
         {
-            builder.Services.AddTenantDbContext<TTenantInfo>(configuration, configureOptions, migrate);
-            builder.WithStore<EFCoreStore<TenantStoreDbContext<TTenantInfo>, TTenantInfo>>(ServiceLifetime.Scoped);
+            builder.Services.AddDefaultStringIdGenerator();
+            builder.Services.AddTenantDbContext(configuration, configureOptions);
+            builder.WithStore<MultiTenantEFCoreStore<TTenantInfo>>(ServiceLifetime.Scoped);
+            builder.Services.AddScoped<MultiTenantEFCoreStore<TTenantInfo>>();
             return builder;
         }
 
@@ -33,10 +35,10 @@ namespace Juice.MultiTenant.EF
         /// <returns></returns>
         public static FinbuckleMultiTenantBuilder<TTenantInfo> ConfigureTenantEFDirectly<TTenantInfo>(this FinbuckleMultiTenantBuilder<TTenantInfo> builder, IConfiguration configuration,
             Action<DbOptions> configureTenantDb, string environment)
-            where TTenantInfo : class, IDynamic, ITenantInfo, new()
+            where TTenantInfo : class, ITenant, ITenantInfo, new()
         {
 
-            builder.WithEFStore(configuration, configureTenantDb, true);
+            builder.WithEFStore(configuration, configureTenantDb);
 
             builder.Services.AddTenantsConfiguration()
                 .AddTenantsJsonFile($"appsettings.{environment}.json")

@@ -10,26 +10,27 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Juice.MultiTenant.EF.SqlServer.Migrations.TenantStore
 {
-    [DbContext(typeof(TenantStoreDbContextWrapper))]
+    [DbContext(typeof(TenantStoreDbContext))]
     partial class TenantStoreDbContextWrapperModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "6.0.1")
+                .HasAnnotation("ProductVersion", "7.0.3")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
-            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder, 1L, 1);
+            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("Juice.MultiTenant.Tenant", b =>
+            modelBuilder.Entity("Juice.MultiTenant.Domain.AggregatesModel.TenantAggregate.Tenant", b =>
                 {
                     b.Property<string>("Id")
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("ConnectionString")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<DateTimeOffset>("CreatedDate")
                         .HasColumnType("datetimeoffset");
@@ -53,7 +54,13 @@ namespace Juice.MultiTenant.EF.SqlServer.Migrations.TenantStore
                         .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("Name")
-                        .HasColumnType("nvarchar(max)");
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("OwnerUser")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("Properties")
                         .IsRequired()
@@ -61,13 +68,16 @@ namespace Juice.MultiTenant.EF.SqlServer.Migrations.TenantStore
                         .HasColumnType("nvarchar(max)")
                         .HasDefaultValue("{}");
 
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Identifier")
                         .IsUnique()
                         .HasFilter("[Identifier] IS NOT NULL");
 
-                    b.ToTable("Tenant", "App");
+                    b.ToTable("Tenant", (string)null);
 
                     b
                         .HasAnnotation("Juice:Auditable", true)

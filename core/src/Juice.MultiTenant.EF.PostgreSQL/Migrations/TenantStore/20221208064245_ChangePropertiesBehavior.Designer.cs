@@ -11,7 +11,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 namespace Juice.MultiTenant.EF.PostgreSQL.Migrations.TenantStore
 {
-    [DbContext(typeof(TenantStoreDbContextWrapper))]
+    [DbContext(typeof(TenantStoreDbContext))]
     [Migration("20221208064245_ChangePropertiesBehavior")]
     partial class ChangePropertiesBehavior
     {

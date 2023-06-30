@@ -24,6 +24,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Juice.AspNetCore\Juice.AspNetCore.csproj" />
     <ProjectReference Include="..\..\src\Juice.MultiTenant.Api\Juice.MultiTenant.Api.csproj" />
+    <ProjectReference Include="..\..\src\Juice.MultiTenant.AspNetCore\Juice.MultiTenant.AspNetCore.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -5,8 +5,7 @@ using Juice.Integrations;
 using Juice.Integrations.MediatR;
 using Juice.MediatR.RequestManager.EF;
 using Juice.MultiTenant.Api.Behaviors.DependencyInjection;
-using Juice.MultiTenant.Api.Commands;
-using Juice.MultiTenant.EF;
+using Juice.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -30,8 +29,9 @@ namespace Juice.MultiTenant.Api
         {
             builder.JuiceIntegration()
                     .WithHeaderStrategy() // for grpc incoming request
-                    .WithEFStore(configuration, configureTenantDb, true);
+                    .WithEFStore(configuration, configureTenantDb);
 
+            builder.Services.AddDefaultStringIdGenerator();
             builder.Services.AddMediatR(typeof(CreateTenantCommand).Assembly, typeof(AssemblySelector).Assembly);
 
             builder.Services
@@ -40,12 +40,12 @@ namespace Juice.MultiTenant.Api
                 .AddMediatRTenantSettingsBehaviors()
                 ;
 
-            var dbOptions = new DbOptions<TenantStoreDbContext<TTenantInfo>>();
+            var dbOptions = new DbOptions<TenantStoreDbContext>();
             configureTenantDb(dbOptions);
 
             builder.Services.AddIntegrationEventService()
                     .AddIntegrationEventLog()
-                    .RegisterContext<TenantStoreDbContext<TTenantInfo>>(dbOptions.Schema)
+                    .RegisterContext<TenantStoreDbContext>(dbOptions.Schema)
                     .RegisterContext<TenantSettingsDbContext>(dbOptions.Schema);
 
             //add service manually with distributed cache together
@@ -57,6 +57,7 @@ namespace Juice.MultiTenant.Api
 
             builder.Services.AddRequestManager(configuration, configureTenantDb);
 
+            builder.Services.AddHttpContextAccessor();
 
             return builder;
         }

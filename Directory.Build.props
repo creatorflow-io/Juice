@@ -7,7 +7,7 @@
     <JuiceDescription>$(Product) is a media management framework</JuiceDescription>
     <Description>$(Product) - Media Managment System.</Description>
     <PackageTags>$(PackageTags); $(Company); $(Product); Media Management</PackageTags>
-    <PackageIconUrl>https://avatars.githubusercontent.com/u/107674950?s=96</PackageIconUrl>
+    <PackageIconUrl>https://avatars.githubusercontent.com/u/107674950</PackageIconUrl>
     <RepositoryUrl>https://github.com/creatorflow-io/Juice</RepositoryUrl>
 
     <VersionPrefix>7.0.0</VersionPrefix>

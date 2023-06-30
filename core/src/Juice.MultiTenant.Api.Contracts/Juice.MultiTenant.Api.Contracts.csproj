@@ -4,10 +4,13 @@
     <TargetFramework>$(AppTargetFramework)</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Juice.EventBus\Juice.EventBus.csproj" />
+    <ProjectReference Include="..\Juice.MultiTenant.Shared\Juice.MultiTenant.Shared.csproj" />
+    <ProjectReference Include="..\Juice\Juice.csproj" />
   </ItemGroup>
 
   <ItemGroup Label="gRPC">
@@ -16,5 +19,6 @@
     <PackageReference Include="Google.Protobuf" Version="3.18.1" />
     <PackageReference Include="Grpc.Tools" Version="$(GrpcVersion)" PrivateAssets="All" />
     <PackageReference Include="Grpc.Core.Api" Version="$(GrpcVersion)" />
+    <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
   </ItemGroup>
 </Project>

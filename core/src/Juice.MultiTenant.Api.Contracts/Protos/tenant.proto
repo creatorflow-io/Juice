@@ -7,6 +7,11 @@ package juice.multiTenant.grpc;
 service TenantStore {
   rpc TryAdd(TenantInfo) returns (TenantOperationResult);
   rpc TryUpdate(TenantInfo) returns (TenantOperationResult);
+  rpc TryUpdateProperties(TenantInfo) returns (TenantOperationResult);
+  rpc TryActivate(TenantIdenfier) returns (TenantOperationResult);
+  rpc TryReactivate(TenantIdenfier) returns (TenantOperationResult);
+  rpc TryDeactivate(TenantIdenfier) returns (TenantOperationResult);
+  rpc TrySuspend(TenantIdenfier) returns (TenantOperationResult);
   rpc TryRemove(TenantIdenfier) returns (TenantOperationResult);
   rpc TryGetByIdentifier(TenantIdenfier) returns (TenantInfo);
   rpc TryGet(TenantIdenfier) returns (TenantInfo);
@@ -22,7 +27,12 @@ message TenantQueryResult{
     repeated TenantInfo tenants = 1;
 }
 
-message TenantQuery{}
+message TenantQuery{
+    string query = 1;
+    string status = 2;
+    int32 skip = 3;
+    int32 take = 4;
+}
 
 message TenantInfo
 {
@@ -32,6 +42,7 @@ message TenantInfo
     google.protobuf.StringValue connectionString = 4;
     string serializedProperties = 5;
     bool disabled = 6;
+    string status = 7;
 }
 
 message TenantOperationResult{

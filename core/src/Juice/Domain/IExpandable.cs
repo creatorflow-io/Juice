@@ -2,8 +2,8 @@
 {
     public interface IExpandable
     {
-        Dictionary<string, object> OriginalPropertyValues { get; }
-        Dictionary<string, object> CurrentPropertyValues { get; }
+        Dictionary<string, object?> OriginalPropertyValues { get; }
+        Dictionary<string, object?> CurrentPropertyValues { get; }
 
     }
 }

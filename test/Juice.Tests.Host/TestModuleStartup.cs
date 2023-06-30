@@ -4,7 +4,7 @@ using Juice.EventBus;
 using Juice.EventBus.RabbitMQ;
 using Juice.Extensions.Options;
 using Juice.Modular;
-using Juice.MultiTenant;
+using Juice.MultiTenant.Domain.AggregatesModel.TenantAggregate;
 using Juice.MultiTenant.Grpc;
 using Juice.Tests.Host.IntegrationEvents;
 using Microsoft.AspNetCore.DataProtection;
@@ -33,7 +33,7 @@ namespace Juice.Tests.Host
                         {
                             return;
                         }
-                        if (context.Context is Microsoft.AspNetCore.Http.HttpContext httpContent
+                        if (context.Context is HttpContext httpContent
                         && context.TenantInfo is Tenant tenant)
                         {
                             var inMemoryStore = httpContent.RequestServices
@@ -54,8 +54,8 @@ namespace Juice.Tests.Host
                 .PersistKeysToStackExchangeRedis(() =>
                 {
                     var options = new ConfigurationOptions();
-                    configuration.Bind(options);
-                    var endpoints = configuration.GetSection("EndPoints")?.Get<string[]>() ?? Array.Empty<string>();
+                    configuration.GetSection("Redis:ConfigurationOptions").Bind(options);
+                    var endpoints = configuration.GetSection("Redis:ConfigurationOptions:EndPoints")?.Get<string[]>() ?? Array.Empty<string>();
                     foreach (var endpoint in endpoints)
                     {
                         options.EndPoints.Add(endpoint);
@@ -83,6 +83,7 @@ namespace Juice.Tests.Host
                      options.SubscriptionClientName = "juice_test_host_events";
                      options.ExchangeType = "topic";
                  });
+
         }
 
         public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IWebHostEnvironment env)

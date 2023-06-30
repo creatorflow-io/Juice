@@ -18,7 +18,7 @@ namespace Juice.MultiTenant.Api.Domain.EventHandlers
 
         public async Task Handle(TenantSettingsChangedDomainEvent notification, CancellationToken cancellationToken)
         {
-            _logger.CreateLogger<TenantDeactivatedDomainEventHandler>()
+            _logger.CreateLogger<TenantDeletedDomainEventHandler>()
             .LogTrace("Tenant settings with Identifier: {Identifier} has been successfully updated.",
                 notification.TenantIdentifier);
 

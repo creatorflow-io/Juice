@@ -23,8 +23,9 @@ namespace Juice.MultiTenant.Api
                 return new DistributedCacheStore<TTenantInfo>(cache, Constants.TenantToken, default);
             });
 
-            services.AddScoped<TenantActivatedIngtegrationEventSelfHandler>();
-            services.AddScoped<TenantDeactivatedIngtegrationEventSelfHandler>();
+            services.AddScoped<TenantActivatedIngtegrationEventSelfHandler<TTenantInfo>>();
+            services.AddScoped<TenantDeactivatedIngtegrationEventSelfHandler<TTenantInfo>>();
+            services.AddScoped<TenantSuspendedIngtegrationEventSelfHandler<TTenantInfo>>();
             return services;
         }
     }

@@ -10,12 +10,13 @@
   <ItemGroup>
     <ProjectReference Include="..\Juice.Extensions.Configuration\Juice.Extensions.Configuration.csproj" />
     <ProjectReference Include="..\Juice.Extensions.Options\Juice.Extensions.Options.csproj" />
+    <ProjectReference Include="..\Juice.MultiTenant.Shared\Juice.MultiTenant.Shared.csproj" />
     <ProjectReference Include="..\Juice\Juice.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Finbuckle.MultiTenant.AspNetCore" Version="$(FinbuckleVersion)" />
     <PackageReference Include="MediatR" Version="$(MediatRVersion)" />
+    <PackageReference Include="Finbuckle.MultiTenant" Version="$(FinbuckleVersion)" />
   </ItemGroup>
 
 </Project>
