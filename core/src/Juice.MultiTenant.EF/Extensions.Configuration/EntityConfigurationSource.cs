@@ -1,20 +1,21 @@
 ﻿using Juice.Extensions.Configuration;
+using Juice.MultiTenant.Domain.AggregatesModel.SettingsAggregate;
 using Microsoft.Extensions.Configuration;
 
 namespace Juice.MultiTenant.EF.Extensions.Configuration
 {
     internal class EntityConfigurationSource : IConfigurationSource, ITenantsConfigurationSource
     {
-        private readonly TenantSettingsDbContext _context;
+        private readonly ITenantSettingsRepository _repository;
 
-        public EntityConfigurationSource(TenantSettingsDbContext dbContext)
+        public EntityConfigurationSource(ITenantSettingsRepository repository)
         {
-            _context = dbContext;
+            _repository = repository;
         }
 
         public IConfigurationProvider Build(IConfigurationBuilder builder)
         {
-            return new EntityConfigurationProvider(_context);
+            return new EntityConfigurationProvider(_repository);
         }
     }
 }

@@ -22,7 +22,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Juice.AspNetCore\Juice.AspNetCore.csproj" />
-    <ProjectReference Include="..\..\src\Juice.EF.MultiTenant\Juice.EF.MultiTenant.csproj" />
     <ProjectReference Include="..\..\src\Juice.EventBus.IntegrationEventLog.EF.PostgreSQL\Juice.EventBus.IntegrationEventLog.EF.PostgreSQL.csproj" />
     <ProjectReference Include="..\..\src\Juice.EventBus.IntegrationEventLog.EF.SqlServer\Juice.EventBus.IntegrationEventLog.EF.SqlServer.csproj" />
     <ProjectReference Include="..\..\src\Juice.EventBus.RabbitMQ\Juice.EventBus.RabbitMQ.csproj" />

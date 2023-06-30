@@ -5,17 +5,20 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Description>Provide Tenant/TenantSettings services via gRPC and integration events</Description>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Grpc.AspNetCore.Server" Version="$(GrpcVersion)" />
   </ItemGroup>
-
+  
   <ItemGroup>
     <PackageReference Include="Finbuckle.MultiTenant.AspNetCore" Version="6.*" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Versioning" Version="5.1.0" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Juice.AspNetCore\Juice.AspNetCore.csproj" />
     <ProjectReference Include="..\Juice.Integrations\Juice.Integrations.csproj" />
     <ProjectReference Include="..\Juice.MediatR.RequestManager.EF\Juice.MediatR.RequestManager.EF.csproj" />
     <ProjectReference Include="..\Juice.MultiTenant.Api.Contracts\Juice.MultiTenant.Api.Contracts.csproj" />

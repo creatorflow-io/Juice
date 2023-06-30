@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Juice.Extensions.Configuration;
 using Juice.Extensions.Options;
 using Juice.MultiTenant;
+using Juice.MultiTenant.Shared.Enums;
 using Juice.XUnit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -124,12 +125,19 @@ namespace Juice.Core.Tests
 
     internal class MyTenant : ITenant
     {
+        public string? Id { get; set; }
+        public object? this[string key] { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+
         public string? Name { get; set; }
         public string? Identifier { get; set; }
 
         public Dictionary<string, object> OriginalPropertyValues => throw new NotImplementedException();
 
         public Dictionary<string, object> CurrentPropertyValues => throw new NotImplementedException();
+
+        public TenantStatus Status => throw new NotImplementedException();
+
+        public string? OwnerUser => throw new NotImplementedException();
 
         public T? GetProperty<T>(Func<T>? defaultValue = null, [CallerMemberName] string? name = null) => throw new NotImplementedException();
         public void SetProperty(object value, [CallerMemberName] string? name = null) => throw new NotImplementedException();

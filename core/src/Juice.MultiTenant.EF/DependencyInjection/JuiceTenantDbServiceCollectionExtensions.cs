@@ -1,6 +1,4 @@
-﻿using Finbuckle.MultiTenant;
-using Juice.Domain;
-using Juice.EF.Migrations;
+﻿using Juice.EF.Migrations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
@@ -18,11 +16,10 @@ namespace Juice.MultiTenant.EF
         /// <param name="dbOptions"></param>
         /// <returns></returns>
         /// <exception cref="NotSupportedException"></exception>
-        public static IServiceCollection AddTenantDbContext<TTenantInfo>(this IServiceCollection services, IConfiguration configuration, Juice.EF.DbOptions dbOptions, bool migrate)
-             where TTenantInfo : class, IDynamic, ITenantInfo, new()
+        public static IServiceCollection AddTenantDbContext(this IServiceCollection services, IConfiguration configuration, Juice.EF.DbOptions dbOptions)
         {
             services.AddScoped(sp =>
-                new Juice.EF.DbOptions<TenantStoreDbContext<TTenantInfo>>
+                new Juice.EF.DbOptions<TenantStoreDbContext>
                 {
                     Schema = dbOptions.Schema,
                     ConnectionName = dbOptions.ConnectionName,
@@ -77,14 +74,7 @@ namespace Juice.MultiTenant.EF
                 ;
             };
 
-            services.AddDbContext<TenantStoreDbContext<TTenantInfo>>(configure);
-
-            // for migration only
-            if (migrate)
-            {
-                services.AddDbContext<TenantStoreDbContextWrapper>(
-                   configure);
-            }
+            services.AddDbContext<TenantStoreDbContext>(configure);
 
             return services;
         }
@@ -96,12 +86,11 @@ namespace Juice.MultiTenant.EF
         /// <param name="configuration"></param>
         /// <param name="configureOptions"></param>
         /// <returns></returns>
-        public static IServiceCollection AddTenantDbContext<TTenantInfo>(this IServiceCollection services, IConfiguration configuration, Action<Juice.EF.DbOptions> configureOptions, bool migrate)
-            where TTenantInfo : class, IDynamic, ITenantInfo, new()
+        public static IServiceCollection AddTenantDbContext(this IServiceCollection services, IConfiguration configuration, Action<Juice.EF.DbOptions> configureOptions)
         {
-            var options = new Juice.EF.DbOptions<TenantStoreDbContext<TTenantInfo>>();
+            var options = new Juice.EF.DbOptions<TenantStoreDbContext>();
             configureOptions(options);
-            return services.AddTenantDbContext<TTenantInfo>(configuration, options, migrate);
+            return services.AddTenantDbContext(configuration, options);
         }
 
         /// <summary>

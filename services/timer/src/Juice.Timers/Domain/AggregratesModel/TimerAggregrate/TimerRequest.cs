@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Juice.Timers.Domain.AggregratesModel.TimerAggregrate
 {
-    public class TimerRequest : IAggregrateRoot<INotification>
+    public class TimerRequest : AggregrateRoot<INotification>
     {
         public TimerRequest() { }
         public TimerRequest(string issuer, string correlationId, DateTimeOffset absoluteExpiried)
@@ -26,10 +26,6 @@ namespace Juice.Timers.Domain.AggregratesModel.TimerAggregrate
 
         [NotMapped]
         public bool IsExpired => AbsoluteExpired < DateTimeOffset.Now;
-
-        [NotMapped]
-        public IList<INotification> DomainEvents { get; } = new List<INotification>();
-
 
         #region Methods
 

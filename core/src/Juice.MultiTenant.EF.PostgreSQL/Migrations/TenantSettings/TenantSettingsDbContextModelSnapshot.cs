@@ -17,12 +17,12 @@ namespace Juice.MultiTenant.EF.PostgreSQL.Migrations.TenantSettings
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "6.0.1")
+                .HasAnnotation("ProductVersion", "7.0.3")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("Juice.MultiTenant.TenantSettings", b =>
+            modelBuilder.Entity("Juice.MultiTenant.Domain.AggregatesModel.SettingsAggregate.TenantSettings", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -34,13 +34,12 @@ namespace Juice.MultiTenant.EF.PostgreSQL.Migrations.TenantSettings
                         .HasColumnType("character varying(250)");
 
                     b.Property<string>("TenantId")
-                        .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
                     b.Property<string>("Value")
-                        .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.HasKey("Id");
 

@@ -96,7 +96,7 @@ namespace Juice.Domain
             }
             set
             {
-                Properties = JsonConvert.DeserializeObject<JObject>(string.IsNullOrEmpty(value) ? "{}" : value);
+                Properties = JsonConvert.DeserializeObject<JObject>(string.IsNullOrEmpty(value) ? "{}" : value) ?? new JObject();
             }
         }
 
@@ -105,28 +105,40 @@ namespace Juice.Domain
         [NotMapped]
         [JsonIgnore]
         [System.Text.Json.Serialization.JsonIgnore]
-        public virtual Dictionary<string, object> OriginalPropertyValues { get; set; } = new Dictionary<string, object>();
+        public virtual Dictionary<string, object?> OriginalPropertyValues { get; set; } = new Dictionary<string, object?>();
 
         [NotMapped]
         [JsonIgnore]
         [System.Text.Json.Serialization.JsonIgnore]
-        public virtual Dictionary<string, object> CurrentPropertyValues { get; set; } = new Dictionary<string, object>();
+        public virtual Dictionary<string, object?> CurrentPropertyValues { get; set; } = new Dictionary<string, object?>();
 
         public virtual T? GetProperty<T>(Func<T>? defaultValue = null, [CallerMemberName] string? name = null)
         {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new ArgumentNullException(nameof(name));
+            }
             var item = Properties[name];
             return item != null ? item.ToObject<T>() : defaultValue != null ? defaultValue() : default;
         }
 
         public virtual T? GetProperty<T>(Type type, Func<T>? defaultValue = null, [CallerMemberName] string? name = null)
         {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new ArgumentNullException(nameof(name));
+            }
             var item = Properties[name];
-            return item != null ? (T)item.ToObject(type) : defaultValue != null ? defaultValue() : default;
+            return item != null ? (T?)item?.ToObject(type) : defaultValue != null ? defaultValue() : default;
         }
 
-        public virtual void SetProperty(object value, [CallerMemberName] string? name = null)
+        public virtual void SetProperty(object? value, [CallerMemberName] string? name = null)
         {
-            Properties = new JObject(Properties);
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new ArgumentNullException(nameof(name));
+            }
+            Properties = new JObject(Properties) ?? new JObject();
 
             OriginalPropertyValues[name] = Properties[name];
 
@@ -166,7 +178,7 @@ namespace Juice.Domain
         /// <param name="name"></param>
         /// <param name="value"></param>
         /// <returns></returns>
-        protected bool SetSelfProperty(string name, object value)
+        protected bool SetSelfProperty(string name, object? value)
         {
             var miArray = GetType().GetMember(name, BindingFlags.Public | BindingFlags.SetProperty | BindingFlags.Instance);
             if (miArray != null && miArray.Length > 0)
@@ -219,7 +231,7 @@ namespace Juice.Domain
         // If you try to get a value of a property
         // not defined in the class, this method is called.
         public override bool TryGetMember(
-            GetMemberBinder binder, out object result)
+            GetMemberBinder binder, out object? result)
         {
             // Converting the property name to lowercase
             // so that property names become case-insensitive.
@@ -227,14 +239,14 @@ namespace Juice.Domain
             // If the property name is found in a dictionary,
             // set the result parameter to the property value and return true.
             // Otherwise, return false.
-            result = GetProperty<object>(() => null, binder.Name);
+            result = GetProperty<object?>(() => default, binder.Name);
             return true;
         }
 
         // If you try to set a value of a property that is
         // not defined in the class, this method is called.
         public override bool TrySetMember(
-            SetMemberBinder binder, object value)
+            SetMemberBinder binder, object? value)
         {
             // Converting the property name to lowercase
             // so that property names become case-insensitive.

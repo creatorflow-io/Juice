@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Juice.MultiTenant.EF.SqlServer.Migrations.TenantStore
 {
-    [DbContext(typeof(TenantStoreDbContextWrapper))]
+    [DbContext(typeof(TenantStoreDbContext))]
     [Migration("20221208064413_ChangePropertiesBehavior")]
     partial class ChangePropertiesBehavior
     {

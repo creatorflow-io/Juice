@@ -8,6 +8,7 @@ using Juice.Extensions.Configuration;
 using Juice.Extensions.DependencyInjection;
 using Juice.Extensions.Options;
 using Juice.Extensions.Options.Stores;
+using Juice.MultiTenant.Domain.AggregatesModel.TenantAggregate;
 using Juice.MultiTenant.EF;
 using Juice.MultiTenant.EF.Migrations;
 using Juice.Services;
@@ -62,12 +63,12 @@ namespace Juice.MultiTenant.Tests
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
                 services.AddMediatR(typeof(DataEventHandler));
-                services.AddTenantDbContext<Tenant>(configuration, options =>
+                services.AddTenantDbContext(configuration, options =>
                 {
                     options.Schema = "App";
                     options.DatabaseProvider = provider;
                     //options.JsonPropertyBehavior = JsonPropertyBehavior.UpdateALL;
-                }, true);
+                });
 
                 services.AddTenantSettingsDbContext(configuration, options =>
                 {
@@ -77,7 +78,7 @@ namespace Juice.MultiTenant.Tests
             });
 
             var context = resolver.ServiceProvider.
-                CreateScope().ServiceProvider.GetRequiredService<TenantStoreDbContextWrapper>();
+                CreateScope().ServiceProvider.GetRequiredService<TenantStoreDbContext>();
 
             await context.MigrateAsync();
             await context.SeedAsync(resolver.ServiceProvider.GetRequiredService<IConfigurationService>()

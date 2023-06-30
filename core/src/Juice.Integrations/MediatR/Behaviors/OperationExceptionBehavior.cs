@@ -42,7 +42,7 @@ namespace Juice.Integrations.MediatR.Behaviors
             {
                 _logger.LogError("ERROR Handling command {typeName} {request}. {message}", typeName, request?.ToString() ?? "", ex.Message);
                 _logger.LogTrace("ERROR Handling command {typeName}. Trace: {trace}", typeName, ex.StackTrace);
-                return OperationResult.Failed(ex, $"Failed to handle command {typeName}") is TResponse response ? response : default;
+                return OperationResult.Failed(ex, $"Failed to handle command {typeName}. {ex.Message}") is TResponse response ? response : default;
             }
         }
     }

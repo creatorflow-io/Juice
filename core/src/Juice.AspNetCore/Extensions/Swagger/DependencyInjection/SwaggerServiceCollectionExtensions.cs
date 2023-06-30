@@ -1,9 +1,16 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Juice.Extensions.Swagger
 {
     public static class SwaggerServiceCollectionExtensions
     {
+        public static IServiceCollection ConfigureSwaggerApiOptions(this IServiceCollection services,
+            IConfiguration configuration)
+        {
+            services.Configure<ApiOptions>(configuration);
+            return services;
+        }
         public static IServiceCollection AddSwaggerWithDefaultConfigs(this IServiceCollection services)
         {
             services.AddSwaggerGen(c =>

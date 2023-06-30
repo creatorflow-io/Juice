@@ -6,9 +6,9 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Juice.MultiTenant.EF.Migrations
 {
-    public class TenantStoreContextFactory : IDesignTimeDbContextFactory<TenantStoreDbContextWrapper>
+    public class TenantStoreContextFactory : IDesignTimeDbContextFactory<TenantStoreDbContext>
     {
-        public TenantStoreDbContextWrapper CreateDbContext(string[] args)
+        public TenantStoreDbContext CreateDbContext(string[] args)
         {
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
             var resolver = new DependencyResolver
@@ -16,7 +16,7 @@ namespace Juice.MultiTenant.EF.Migrations
                 CurrentDirectory = AppContext.BaseDirectory
             };
 
-            resolver.ConfigureServices(services =>
+            resolver.ConfigureServices((Action<IServiceCollection>)(services =>
             {
 
                 // Register DbContext class
@@ -26,14 +26,14 @@ namespace Juice.MultiTenant.EF.Migrations
 
                 var provider = configuration.GetSection("Provider").Get<string>() ?? "SqlServer";
 
-                services.AddTenantDbContext<Tenant>(configuration, new DbOptions<TenantStoreDbContextWrapper>
+                services.AddTenantDbContext(configuration, new DbOptions<TenantStoreDbContext>
                 {
                     DatabaseProvider = provider
-                }, true);
+                });
 
-            });
+            }));
 
-            return resolver.ServiceProvider.GetRequiredService<TenantStoreDbContextWrapper>();
+            return resolver.ServiceProvider.GetRequiredService<TenantStoreDbContext>();
         }
     }
 }

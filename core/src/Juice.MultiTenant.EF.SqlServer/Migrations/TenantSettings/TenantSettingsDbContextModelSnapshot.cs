@@ -17,12 +17,12 @@ namespace Juice.MultiTenant.EF.SqlServer.Migrations.TenantSettings
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "6.0.1")
+                .HasAnnotation("ProductVersion", "7.0.3")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
-            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder, 1L, 1);
+            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("Juice.MultiTenant.TenantSettings", b =>
+            modelBuilder.Entity("Juice.MultiTenant.Domain.AggregatesModel.SettingsAggregate.TenantSettings", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -34,18 +34,18 @@ namespace Juice.MultiTenant.EF.SqlServer.Migrations.TenantSettings
                         .HasColumnType("nvarchar(250)");
 
                     b.Property<string>("TenantId")
-                        .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("Value")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("Key", "TenantId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[TenantId] IS NOT NULL");
 
                     b.ToTable("TenantSettings", "App");
 

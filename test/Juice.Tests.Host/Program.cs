@@ -3,7 +3,7 @@ using Juice.EventBus;
 using Juice.EventBus.RabbitMQ;
 using Juice.Extensions.Options;
 using Juice.Modular;
-using Juice.MultiTenant;
+using Juice.MultiTenant.Domain.AggregatesModel.TenantAggregate;
 using Juice.Tests.Host;
 using Juice.Tests.Host.IntegrationEvents;
 using Microsoft.AspNetCore.DataProtection;
@@ -67,7 +67,7 @@ app.MapGet("/", async (context) =>
     var tenant = context.GetMultiTenantContext<Tenant>()?.TenantInfo;
 
     var tenant1 = context.RequestServices.GetRequiredService<IMultiTenantContextAccessor<Tenant>>().MultiTenantContext?.TenantInfo!;
-    var tenant2 = context.RequestServices.GetService<global::Juice.MultiTenant.Tenant>();
+    var tenant2 = context.RequestServices.GetService<global::Juice.MultiTenant.Domain.AggregatesModel.TenantAggregate.Tenant>();
     var tenant3 = context.RequestServices.GetService<ITenantInfo>();
     if (tenant == null)
     {

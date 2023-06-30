@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <RootNamespace>Juice</RootNamespace>
     <GraphQLServer>5.2.2</GraphQLServer>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup Label="AspNetCore">
@@ -27,6 +28,9 @@
     <PackageReference Include="GraphQL.Server.Transports.AspNetCore.SystemTextJson" Version="$(GraphQLServer)" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="$(EFVersion)" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Juice.Extensions.Configuration\Juice.Extensions.Configuration.csproj" />
     <ProjectReference Include="..\Juice.Extensions.Options\Juice.Extensions.Options.csproj" />

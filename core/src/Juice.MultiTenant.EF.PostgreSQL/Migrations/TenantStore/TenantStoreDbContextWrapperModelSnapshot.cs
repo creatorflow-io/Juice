@@ -10,26 +10,27 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 namespace Juice.MultiTenant.EF.PostgreSQL.Migrations.TenantStore
 {
-    [DbContext(typeof(TenantStoreDbContextWrapper))]
+    [DbContext(typeof(TenantStoreDbContext))]
     partial class TenantStoreDbContextWrapperModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "6.0.1")
+                .HasAnnotation("ProductVersion", "7.0.3")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("Juice.MultiTenant.Tenant", b =>
+            modelBuilder.Entity("Juice.MultiTenant.Domain.AggregatesModel.TenantAggregate.Tenant", b =>
                 {
                     b.Property<string>("Id")
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
                     b.Property<string>("ConnectionString")
-                        .HasColumnType("text");
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<DateTimeOffset>("CreatedDate")
                         .HasColumnType("timestamp with time zone");
@@ -53,7 +54,13 @@ namespace Juice.MultiTenant.EF.PostgreSQL.Migrations.TenantStore
                         .HasColumnType("character varying(256)");
 
                     b.Property<string>("Name")
-                        .HasColumnType("text");
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("OwnerUser")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
 
                     b.Property<string>("Properties")
                         .IsRequired()
@@ -61,12 +68,15 @@ namespace Juice.MultiTenant.EF.PostgreSQL.Migrations.TenantStore
                         .HasColumnType("jsonb")
                         .HasDefaultValue("{}");
 
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Identifier")
                         .IsUnique();
 
-                    b.ToTable("Tenant", "App");
+                    b.ToTable("Tenant", (string)null);
 
                     b
                         .HasAnnotation("Juice:Auditable", true)

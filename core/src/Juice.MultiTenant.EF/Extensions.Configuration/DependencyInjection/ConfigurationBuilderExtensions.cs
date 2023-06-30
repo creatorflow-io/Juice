@@ -4,6 +4,7 @@ using Juice.MultiTenant.EF.Extensions.Configuration;
 using Juice.MultiTenant.EF.Repositories;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Juice.MultiTenant.EF
 {
@@ -29,7 +30,8 @@ namespace Juice.MultiTenant.EF
         {
             services.AddTenantSettingsOptionsMutableStore();
 
-            return services.AddScoped<ITenantSettingsRepository, TenantSettingsRepository>();
+            services.TryAddScoped<ITenantSettingsRepository, TenantSettingsRepository>();
+            return services;
         }
 
     }

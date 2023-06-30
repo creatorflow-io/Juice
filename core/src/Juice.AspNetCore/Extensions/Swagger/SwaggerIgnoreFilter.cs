@@ -17,7 +17,8 @@ namespace Juice.Extensions.Swagger
         {
             var excludedProperties = context.Type.GetProperties()
                                          .Where(t =>
-                                                t.HasAttribute<ApiIgnoreAttribute>());
+                                                t.HasAttribute<ApiIgnoreAttribute>())
+                                         .ToArray();
 
             var keys = schema.Properties.Keys.Where(k => excludedProperties.Select(p => p.Name)
                 .Contains(k, new PropertyNameComparer()));
