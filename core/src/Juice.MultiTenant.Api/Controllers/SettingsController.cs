@@ -14,7 +14,7 @@ namespace Juice.MultiTenant.Api.Controllers
     [ApiController]
     [Route("api/v{version:apiVersion}/[controller]")]
     [IgnoreAntiforgeryToken]
-    public class TenantSettingsController : ControllerBase
+    public class SettingsController : ControllerBase
     {
 
         /// <summary>
@@ -62,7 +62,7 @@ namespace Juice.MultiTenant.Api.Controllers
         /// <param name="model"></param>
         /// <param name="section"></param>
         /// <returns></returns>
-        [HttpPut("all/{section?}")]
+        [HttpPut("{section?}")]
         [Consumes(MediaTypeNames.Application.Json)]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -92,7 +92,7 @@ namespace Juice.MultiTenant.Api.Controllers
         /// <param name="section">Setting Key like Logger:Enabled</param>
         /// <param name="value">Setting Value like False</param>
         /// <returns></returns>
-        [HttpPut("{section}")]
+        [HttpPut("section/{section}")]
         [Consumes(MediaTypeNames.Text.Plain)]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
