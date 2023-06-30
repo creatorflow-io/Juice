@@ -1,10 +1,10 @@
-{
+﻿{
   "version": "1.0",
   "defaultProvider": "unpkg",
   "libraries": [
     {
-      "library": "@creatorflow-io/juice-upload@1.0.3",
-      "destination": "wwwroot/lib/creatorflow-io/juice-upload/"
+      "library": "@juice-js/upload@1.0.4",
+      "destination": "wwwroot/lib/juice-js/upload/"
     },
     {
       "library": "jquery@3.6.3",
