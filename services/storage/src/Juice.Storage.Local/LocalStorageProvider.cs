@@ -162,7 +162,8 @@ namespace Juice.Storage.Local
                 ostream.Seek(0L, SeekOrigin.End);
 
                 await stream.CopyToAsync(ostream, token);
-
+                await ostream.FlushAsync();
+                ostream.Close();
             });
         }
 
