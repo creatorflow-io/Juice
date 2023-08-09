@@ -10,7 +10,7 @@
     <PackageIconUrl>https://avatars.githubusercontent.com/u/107674950</PackageIconUrl>
     <RepositoryUrl>https://github.com/creatorflow-io/Juice</RepositoryUrl>
 
-    <VersionPrefix Condition="$(JuiceRefVersion)==''">7.0.0</VersionPrefix>
+    <VersionPrefix>7.0.0</VersionPrefix>
     <VersionSuffix>local.$([System.DateTime]::Now.ToString(`yyyyMMdd`)).1</VersionSuffix>
   </PropertyGroup>
 
