@@ -51,7 +51,7 @@ namespace Juice.Workflows.Tests
             using var scope = resolver.ServiceProvider.CreateScope();
             var eventBus = scope.ServiceProvider.GetRequiredService<IEventBus>();
 
-            await eventBus.PublishAsync(new MessageCatchIntegrationEvent("wfcatch.uploaded.media.final", default, "1tw7p6stykr4s9pwmhzsnnn6gr",
+            await eventBus.PublishAsync(new MessageCatchIntegrationEvent("wfcatch.uploaded.media.final", default, "89czp0dd01r4b72zr19fc61jkr",
                 true, new System.Collections.Generic.Dictionary<string, object?> { { "Transfered", "Success" } }));
 
             await Task.Delay(TimeSpan.FromSeconds(1));
