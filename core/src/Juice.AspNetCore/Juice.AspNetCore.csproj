@@ -1,12 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>$(AppTargetFramework)</TargetFramework>
+    <TargetFrameworks>$(AppTargetFramework)</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RootNamespace>Juice</RootNamespace>
     <GraphQLServer>5.2.2</GraphQLServer>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <OpenApiGenerateDocuments>false</OpenApiGenerateDocuments>
   </PropertyGroup>
 
   <ItemGroup Label="AspNetCore">

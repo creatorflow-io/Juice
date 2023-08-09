@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>$(AppTargetFramework)</TargetFramework>
+    <TargetFrameworks>$(AppTargetFramework)</TargetFrameworks>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>a29db157-a9bf-4478-a827-019062e02f59</UserSecretsId>

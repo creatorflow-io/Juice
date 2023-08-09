@@ -210,7 +210,7 @@ namespace Juice.MultiTenant.Tests
 
             scope.ServiceProvider.RegisterTenantIntegrationEventSelfHandlers<Tenant>();
 
-            var createCommand = new CreateTenantCommand("test", "test", "Test tenant", default, default);
+            var createCommand = new CreateTenantCommand("xunittest", "xunittest", "Test tenant", default, default);
 
             var stopwatch = new Stopwatch();
 
@@ -235,7 +235,7 @@ namespace Juice.MultiTenant.Tests
                 CreateScope();
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
-            var createCommand = new CreateTenantCommand("test", "test", "Test tenant", default, default);
+            var createCommand = new CreateTenantCommand("xunittest", "xunittest", "Test tenant", default, default);
 
             var stopwatch = new Stopwatch();
 
@@ -261,7 +261,7 @@ namespace Juice.MultiTenant.Tests
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
 
-            var updateCommand = new UpdateTenantCommand("test", "test1", "Changed name", default);
+            var updateCommand = new UpdateTenantCommand("xunittest", "test1", "Changed name", default);
 
             var stopwatch = new Stopwatch();
 
@@ -309,7 +309,7 @@ namespace Juice.MultiTenant.Tests
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
 
-            var command = new ApprovalProcessCommand("test", Shared.Enums.TenantStatus.PendingApproval);
+            var command = new ApprovalProcessCommand("xunittest", Shared.Enums.TenantStatus.PendingApproval);
 
             var stopwatch = new Stopwatch();
 
@@ -322,7 +322,7 @@ namespace Juice.MultiTenant.Tests
 
             result.Succeeded.Should().BeTrue();
 
-            var acceptCommand = new ApprovalProcessCommand("test", Shared.Enums.TenantStatus.Approved);
+            var acceptCommand = new ApprovalProcessCommand("xunittest", Shared.Enums.TenantStatus.Approved);
             stopwatch.Start();
 
             var acceptResult = await mediator.Send(acceptCommand);
@@ -344,7 +344,7 @@ namespace Juice.MultiTenant.Tests
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
 
-            var command = new InitializationProcessCommand("test", Shared.Enums.TenantStatus.Initializing);
+            var command = new InitializationProcessCommand("xunittest", Shared.Enums.TenantStatus.Initializing);
 
             var stopwatch = new Stopwatch();
 
@@ -357,7 +357,7 @@ namespace Juice.MultiTenant.Tests
 
             result.Succeeded.Should().BeTrue();
 
-            var command2 = new InitializationProcessCommand("test", Shared.Enums.TenantStatus.Initialized);
+            var command2 = new InitializationProcessCommand("xunittest", Shared.Enums.TenantStatus.Initialized);
             stopwatch.Start();
 
             var result2 = await mediator.Send(command2);
@@ -379,7 +379,7 @@ namespace Juice.MultiTenant.Tests
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
 
-            var command = new AdminStatusCommand("test", Shared.Enums.TenantStatus.PendingToActive);
+            var command = new AdminStatusCommand("xunittest", Shared.Enums.TenantStatus.PendingToActive);
 
             var stopwatch = new Stopwatch();
 
@@ -392,7 +392,7 @@ namespace Juice.MultiTenant.Tests
 
             result.Succeeded.Should().BeTrue();
 
-            var command2 = new AdminStatusCommand("test", Shared.Enums.TenantStatus.Active);
+            var command2 = new AdminStatusCommand("xunittest", Shared.Enums.TenantStatus.Active);
             stopwatch.Start();
 
             var result2 = await mediator.Send(command2);
@@ -415,7 +415,7 @@ namespace Juice.MultiTenant.Tests
 
             scope.ServiceProvider.RegisterTenantIntegrationEventSelfHandlers<Tenant>();
 
-            var command = new OperationStatusCommand("test", Shared.Enums.TenantStatus.Inactive);
+            var command = new OperationStatusCommand("xunittest", Shared.Enums.TenantStatus.Inactive);
 
             var stopwatch = new Stopwatch();
 
@@ -428,7 +428,7 @@ namespace Juice.MultiTenant.Tests
 
             await Task.Delay(1000); // waitting for integration events
 
-            var command2 = new OperationStatusCommand("test", Shared.Enums.TenantStatus.Active);
+            var command2 = new OperationStatusCommand("xunittest", Shared.Enums.TenantStatus.Active);
             stopwatch.Start();
 
             var result2 = await mediator.Send(command2);
@@ -438,7 +438,7 @@ namespace Juice.MultiTenant.Tests
 
             await Task.Delay(1000); // waitting for integration events
 
-            var command3 = new OperationStatusCommand("test", Shared.Enums.TenantStatus.Suspended);
+            var command3 = new OperationStatusCommand("xunittest", Shared.Enums.TenantStatus.Suspended);
             stopwatch.Start();
 
             var result3 = await mediator.Send(command3);
@@ -466,7 +466,7 @@ namespace Juice.MultiTenant.Tests
 
             scope.ServiceProvider.RegisterTenantIntegrationEventSelfHandlers<Tenant>();
 
-            var command = new AbandonTenantCommand("test");
+            var command = new AbandonTenantCommand("xunittest");
 
             var stopwatch = new Stopwatch();
 
@@ -491,7 +491,7 @@ namespace Juice.MultiTenant.Tests
 
             scope.ServiceProvider.RegisterTenantIntegrationEventSelfHandlers<Tenant>();
 
-            var command = new DeleteTenantCommand("test");
+            var command = new DeleteTenantCommand("xunittest");
 
             var stopwatch = new Stopwatch();
 
