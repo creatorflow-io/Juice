@@ -8,7 +8,7 @@
 console.log(JUpload);
 
 window.uploader = new JUpload("/storage1");
-let uploader1 = new JUpload("/storage2");
+let uploader1 = new JUpload("/storage");
 
 setTimeout(function () {
     console.clear();

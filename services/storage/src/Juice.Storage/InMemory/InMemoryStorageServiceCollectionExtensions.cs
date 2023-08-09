@@ -1,5 +1,7 @@
 ﻿using Juice.Storage;
+using Juice.Storage.Abstractions;
 using Juice.Storage.InMemory;
+using Juice.Storage.Services;
 using Microsoft.Extensions.Configuration;
 
 namespace Microsoft.Extensions.DependencyInjection
@@ -10,8 +12,11 @@ namespace Microsoft.Extensions.DependencyInjection
         {
             services.Configure<InMemoryStorageOptions>(configuration);
 
-            services.AddScoped<InMemoryStorageFactory>();
+            services.AddScoped<IStorageFactory, InMemoryStorageFactory>();
             services.AddScoped<IUploadManager, InMemoryUploadManager>();
+
+            services.AddScoped<RequestEndpointAccessor>();
+            services.AddScoped<IStorage, StorageProxy>();
 
             return services;
         }

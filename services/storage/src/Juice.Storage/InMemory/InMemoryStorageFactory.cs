@@ -1,30 +1,61 @@
 ﻿using Juice.Storage.Abstractions;
+using Juice.Storage.Services;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Juice.Storage.InMemory
 {
-    public class InMemoryStorageFactory
+    public class InMemoryStorageFactory : IStorageFactory
     {
-        private InMemoryStorageOptions _storageOptions;
-        private IEnumerable<IStorageProvider> _providers;
+        private IServiceProvider _serviceProvider;
+        private ILogger _logger;
 
-        public InMemoryStorageFactory(IOptionsSnapshot<InMemoryStorageOptions> options, IEnumerable<IStorageProvider> providers)
+        public InMemoryStorageFactory(IServiceProvider serviceProvider,
+            ILogger<InMemoryStorageFactory> logger)
         {
-            _storageOptions = options.Value;
-            _providers = providers;
+            _serviceProvider = serviceProvider;
+            _logger = logger;
         }
-        public IStorageProvider CreateStorageProvider()
+
+        public IStorageProvider? CreateProvider(Protocol protocol, StorageEndpoint endpoint)
         {
-            var provider = _providers.FirstOrDefault(s => s.GetType().Name == _storageOptions.StorageProvider);
-            if (provider == null)
+            var providers = _serviceProvider.GetServices<IStorageProvider>();
+            var provider = providers.FirstOrDefault(p => p.Protocols.Contains(protocol));
+            if (provider != null)
             {
-                throw new Exception($"{_storageOptions.StorageProvider} not found");
-            }
-            if (_storageOptions.Endpoint != null)
-            {
-                return provider.Configure(_storageOptions.Endpoint.ToStorageEndpoint());
+                provider.Configure(endpoint);
             }
             return provider;
+        }
+
+        public IStorageProvider[] CreateProviders()
+        {
+            var accessor = _serviceProvider.GetRequiredService<RequestEndpointAccessor>();
+            var options = _serviceProvider
+                .GetRequiredService<IOptionsSnapshot<InMemoryStorageOptions>>();
+
+            var storage = options.Value.Storages.Where(s => s.WebBasePath == accessor.Endpoint).FirstOrDefault();
+
+            if (storage == null)
+            {
+                return Array.Empty<IStorageProvider>();
+            }
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug($"Found {storage.Endpoints.Count()} endpoints that matched {accessor.Endpoint}");
+            }
+            var providersToReturn = new List<IStorageProvider>();
+            foreach (var endpoint in storage.Endpoints)
+            {
+                var provider = CreateProvider(endpoint.Protocol, endpoint.ToStorageEndpoint());
+                if (provider != null)
+                {
+                    providersToReturn.Add(provider);
+                }
+            }
+
+            return providersToReturn.ToArray();
         }
     }
 }

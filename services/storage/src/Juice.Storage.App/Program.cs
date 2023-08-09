@@ -37,6 +37,7 @@ app.UseAuthorization();
 
 app.MapRazorPages();
 
-app.UseStorage(options => options.Endpoint = "/storage1");
+app.UseStorage(options => options.Endpoint = "/storage");
+app.UseStorage(options => { options.Endpoint = "/storage1"; options.WriteOnly = true; });
 
 app.Run();

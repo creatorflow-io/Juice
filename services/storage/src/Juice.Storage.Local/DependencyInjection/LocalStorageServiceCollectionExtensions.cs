@@ -7,8 +7,8 @@ namespace Juice.Storage.Local
     {
         public static IServiceCollection AddLocalStorageProviders(this IServiceCollection services)
         {
-            services.AddScoped<IStorageProvider, LocalStorageProvider>();
-            services.AddScoped<IStorageProvider, FTPStorageProvider>();
+            services.AddTransient<IStorageProvider, LocalStorageProvider>();
+            services.AddTransient<IStorageProvider, FTPStorageProvider>();
 
             return services;
         }

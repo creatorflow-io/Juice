@@ -1,5 +1,7 @@
-﻿using Juice.Storage.Abstractions;
+﻿using System.Text.RegularExpressions;
+using Juice.Storage.Abstractions;
 using Juice.Storage.Dto;
+using Juice.Storage.Services;
 using Juice.Storage.Utilities;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -15,6 +17,8 @@ namespace Juice.Storage.Middleware
     {
         private RequestDelegate _next;
         private StorageMiddlewareOptions _options;
+
+        public string Endpoint => _options?.Endpoint ?? "/storage";
         public StorageMiddleware(RequestDelegate next,
             StorageMiddlewareOptions options)
         {
@@ -25,33 +29,46 @@ namespace Juice.Storage.Middleware
         public async Task InvokeAsync(HttpContext context)
         {
 
-            var endpoint = _options?.Endpoint ?? "/storage";
-
             var path = context.Request.Path.ToString().ToLower();
-            if (path.StartsWith(endpoint))
+            if (path.StartsWith(Endpoint))
             {
-                var action = path.Substring(endpoint.Length);
-
-                switch (action)
+                var match = Regex.Match(path, @"^" + Endpoint + @"(?<action>\/[\w]+)");
+                if (match.Success)
                 {
-                    case "/exists":
-                        await InvokeExistsAsync(context);
-                        break;
-                    case "/init":
-                        await InvokeInitAsync(context);
-                        break;
-                    case "/upload":
-                        await InvokeUploadAsync(context);
-                        break;
-                    case "/complete":
-                        await InvokeCompleteAsync(context);
-                        break;
-                    case "/failure":
-                        await InvokeFailureAsync(context);
-                        break;
-                    default:
-                        await _next(context);
-                        break;
+                    var endpointAccessor = context.RequestServices.GetRequiredService<RequestEndpointAccessor>();
+                    endpointAccessor.SetEndpoint(Endpoint);
+
+
+                    var action = match.Groups["action"].ToString();
+
+                    switch (action)
+                    {
+                        case "/exists":
+                            await InvokeExistsAsync(context);
+                            break;
+                        case "/init":
+                            await InvokeInitAsync(context);
+                            break;
+                        case "/upload":
+                            await InvokeUploadAsync(context);
+                            break;
+                        case "/complete":
+                            await InvokeCompleteAsync(context);
+                            break;
+                        case "/failure":
+                            await InvokeFailureAsync(context);
+                            break;
+                        case "/file":
+                            await InvokeDownloadAsync(context);
+                            break;
+                        default:
+                            await _next(context);
+                            break;
+                    }
+                }
+                else
+                {
+                    await _next(context);
                 }
             }
             else
@@ -325,19 +342,28 @@ namespace Juice.Storage.Middleware
             }
             try
             {
-                var uploadManager = context.RequestServices.GetRequiredService<IUploadManager>();
+                if (_options.WriteOnly)
+                {
+                    context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                    await context.Response.WriteAsync("This storage supports writing only!");
+                    return;
+                }
+                var path = Endpoint + "/file";
+                var filePath = context.Request.Path.ToString().Substring(path.Length)
+                    .TrimStart('/');
+                var storage = context.RequestServices.GetRequiredService<IStorage>();
 
-                var filePath = context.Request.Query
+                filePath ??= context.Request.Query
                     .Where(q => q.Key.Equals("fileName", StringComparison.OrdinalIgnoreCase))
                     .Select(q => q.Value.ToString())
-                    .FirstOrDefault();
+                    .FirstOrDefault()?.TrimStart('/');
                 if (string.IsNullOrEmpty(filePath))
                 {
                     context.Response.StatusCode = StatusCodes.Status400BadRequest;
                     return;
                 }
 
-                var exists = await uploadManager.ExistsAsync(filePath, context.RequestAborted);
+                var exists = await storage.ExistsAsync(filePath, context.RequestAborted);
                 if (!exists)
                 {
                     context.Response.StatusCode = StatusCodes.Status404NotFound;
@@ -345,6 +371,9 @@ namespace Juice.Storage.Middleware
                 }
 
                 context.Response.StatusCode = StatusCodes.Status200OK;
+
+                using var stream = await storage.ReadAsync(filePath, context.RequestAborted);
+                await stream.CopyToAsync(context.Response.Body, context.RequestAborted);
             }
             catch (ArgumentException ex)
             {
