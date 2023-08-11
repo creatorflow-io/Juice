@@ -88,11 +88,11 @@ namespace Juice.Storage
                     Id = id,
                     Name = createdFileName,
                     PackageSize = fileInfo.FileSize,
-                    ContentType = fileInfo.ContentType ?? "unknown",
+                    ContentType = fileInfo.ContentType,
                     CorrelationId = fileInfo.CorrelationId,
                     Metadata = fileInfo.Metadata,
-                    OriginalName = fileInfo.Name,
-                    LastModified = DateTimeOffset.Now
+                    OriginalName = fileInfo.OriginalName,
+                    LastModified = fileInfo.LastModified
                 });
                 return new UploadConfiguration(id, createdFileName, _options.Value.SectionSize, false, fileInfo.FileSize, 0);
             }

@@ -146,6 +146,8 @@ namespace Juice.Storage.Middleware
                 throw new ArgumentException("filePath is missing in form");
             }
 
+            var originalFilePath = context.Request.Form["originalFilePath"].ToString();
+
             var fileSizeStr = context.Request.Form["fileSize"];
             if (string.IsNullOrWhiteSpace(fileSizeStr) || !long.TryParse(fileSizeStr, out var fileSize))
             {
@@ -157,6 +159,20 @@ namespace Juice.Storage.Middleware
                 || !Enum.TryParse<FileExistsBehavior>(fileExistsBehaviorStr, out var fileExistsBehavior))
             {
                 throw new ArgumentException("fileExistsBehavior is missing in form");
+            }
+
+            DateTimeOffset? lastModified = null;
+            var lastModifiedDate = context.Request.Form["lastModifiedDate"].ToString();
+            if (!string.IsNullOrWhiteSpace(lastModifiedDate))
+            {
+                if (DateTimeOffset.TryParse(lastModifiedDate, out var tmp))
+                {
+                    lastModified = tmp;
+                }
+                else
+                {
+                    throw new ArgumentException("lastModifiedDate is invalid format. Try to convert to ISO format like this '2021-01-18T17:08:50.327+07:00'.");
+                }
             }
 
             var contentType = context.Request.Form.ContainsKey("contentType") ?
@@ -182,11 +198,11 @@ namespace Juice.Storage.Middleware
             var uploadIdStr = context.Request.Form["uploadId"];
             if (!string.IsNullOrWhiteSpace(fileSizeStr) && Guid.TryParse(uploadIdStr, out var uploadId))
             {
-                return new InitialFileInfo(filePath, fileSize, contentType, correlationId,
+                return new InitialFileInfo(filePath, fileSize, contentType, originalFilePath, lastModified, correlationId,
                     metadataObj, fileExistsBehavior, uploadId);
             }
 
-            return new InitialFileInfo(filePath, fileSize, contentType, correlationId,
+            return new InitialFileInfo(filePath, fileSize, contentType, originalFilePath, lastModified, correlationId,
                     metadataObj, fileExistsBehavior);
 
         }
@@ -207,9 +223,8 @@ namespace Juice.Storage.Middleware
                 var logger = context.RequestServices.GetRequiredService<ILogger<StorageMiddleware>>();
                 if (logger.IsEnabled(LogLevel.Debug))
                 {
-                    logger.LogDebug("Init upload {filePath} {fileSize} {contentType} {correlationId} {metadata} {fileExistsBehavior} {uploadId}",
-                                               fileInfo.Name, fileInfo.FileSize, fileInfo.ContentType, fileInfo.CorrelationId,
-                                                                      fileInfo.Metadata, fileInfo.FileExistsBehavior, fileInfo.UploadId);
+                    logger.LogDebug("Init upload {filePath} {fileSize} {contentType} {originalFilePath} {lastModified} {correlationId} {metadata} {fileExistsBehavior}",
+                                               fileInfo.Name, fileInfo.FileSize, fileInfo.ContentType, fileInfo.OriginalName, fileInfo.LastModified, fileInfo.CorrelationId, fileInfo.Metadata, fileInfo.FileExistsBehavior);
                 }
 
                 var configuration = await uploadManager.InitAsync(fileInfo, context.RequestAborted);
