@@ -27,9 +27,9 @@ namespace Juice.Storage.InMemory
         public Guid Id { get; init; }
         public string Name { get; set; }
         public long PackageSize { get; set; }
-        public DateTimeOffset LastModified { get; set; }
-        public string ContentType { get; set; }
-        public string OriginalName { get; init; }
+        public DateTimeOffset? LastModified { get; set; }
+        public string? ContentType { get; set; }
+        public string? OriginalName { get; init; }
         public string? CorrelationId { get; set; }
         public JObject? Metadata { get; set; }
     }
