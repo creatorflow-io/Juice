@@ -54,7 +54,14 @@ document.getElementById("file").onchange = function (event) {
         if (!uploadId) {
 
             uploader.upload(this.files[0]
-                //, { fileExistsBehavior: FileExistsBehavior.RaiseError }
+                , { 
+                    //fileExistsBehavior: FileExistsBehavior.RaiseError
+                    correlationId: "1234",
+                    metadata: {
+                        "key1": "value1",
+                        "key2": "value2"
+                    }
+                }
             );
         }
         else {
