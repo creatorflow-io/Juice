@@ -25,7 +25,14 @@ Object.defineProperty(JUpload.prototype, "endpoint", {
 
 JUpload.prototype.upload = function (file, options) {
 
-    options = options || {};
+    options = $.extend({
+        "metadata": {},
+        "fileExistsBehavior": FileExistsBehavior.AscendedCopyNumber,
+    }, options || {});
+
+    if(typeof options.metadata === "object") {
+        options.metadata = JSON.stringify(options.metadata);
+    }
 
     let that = this;
 
@@ -100,14 +107,30 @@ JUpload.prototype.abort = function () {
         that._xhr.abort();
     }
 }
+function toIsoString(date) {
+    var tzo = -date.getTimezoneOffset(),
+        dif = tzo >= 0 ? '+' : '-',
+        pad = function(num) {
+            return (num < 10 ? '0' : '') + num;
+        };
 
+    return date.getFullYear() +
+        '-' + pad(date.getMonth() + 1) +
+        '-' + pad(date.getDate()) +
+        'T' + pad(date.getHours()) +
+        ':' + pad(date.getMinutes()) +
+        ':' + pad(date.getSeconds()) +
+        '.' + date.getMilliseconds() +
+        dif + pad(Math.floor(Math.abs(tzo) / 60)) +
+        ':' + pad(Math.abs(tzo) % 60);
+}
 var initUpload = function (file, options) {
 
     if (typeof this.endpoint === "undefined" || !this.endpoint) {
         throw "The endpoint must be configured.";
     }
-
-    let filePath = options.filePath || file.name;
+    let relativePath = file.webkitRelativePath || file.name;
+    let filePath = options.filePath || relativePath;
     let fileExistsBehavior = typeof options.fileExistsBehavior === "undefined" ?
         FileExistsBehavior.AscendedCopyNumber
         : options.fileExistsBehavior;
@@ -118,8 +141,13 @@ var initUpload = function (file, options) {
         crossDomain: true,
         data: {
             filePath: filePath,
+            contentType: file.type,
+            correlationId: options.correlationId,
+            metadata: options.metadata,
             fileExistsBehavior: fileExistsBehavior,
             fileSize: file.size,
+            originalFilePath: relativePath,
+            lastModifiedDate: toIsoString(file.lastModifiedDate),
             uploadId: this.uploadId
         }
     });

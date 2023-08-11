@@ -80,7 +80,12 @@ document.getElementById("file").onchange = function (event) {
             uploader.upload(this.files[0]
                 //, { 
                 //    fileExistsBehavior: FileExistsBehavior.RaiseError, 
-                //    filePath: "foo/bar/"+this.files[0].name 
+                //    filePath: "foo/bar/"+this.files[0].name,
+                //    correlationId: "1234",
+                //    metadata: {
+                //        "key1": "value1",
+                //        "key2": "value2"
+                //    }
                 //  } // option
             );
         }
