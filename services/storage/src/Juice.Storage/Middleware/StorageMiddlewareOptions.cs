@@ -2,7 +2,7 @@
 {
     public class StorageMiddlewareOptions
     {
-        public string? Endpoint { get; set; }
+        public string[] Endpoints { get; set; }
         public bool WriteOnly { get; set; }
     }
 }

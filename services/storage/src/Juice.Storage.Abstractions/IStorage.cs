@@ -1,5 +1,9 @@
 ﻿namespace Juice.Storage.Abstractions
 {
+    /// <summary>
+    /// Implementation of this interface should be able to connect to storage for read/write file operations
+    /// via implementation of IStorageProvider and not depends on any protocol
+    /// </summary>
     public interface IStorage : IDisposable
     {
         /// <summary>

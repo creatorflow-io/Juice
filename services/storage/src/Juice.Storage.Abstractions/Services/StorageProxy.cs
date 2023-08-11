@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 
-namespace Juice.Storage.Abstractions
+namespace Juice.Storage.Abstractions.Services
 {
     public class StorageProxy : IStorage
     {
@@ -9,16 +9,34 @@ namespace Juice.Storage.Abstractions
         public Protocol[] Protocols => _providers.SelectMany(p => p.Protocols).ToArray();
 
         private ILogger _logger;
-        public StorageProxy(IStorageFactory factory,
+        public StorageProxy(IEnumerable<IStorageProvider> providers,
             ILoggerFactory logger)
         {
-            _providers = factory.CreateProviders();
+            _providers = providers.OrderByDescending(p => p.Priority);
             _logger = logger.CreateLogger<StorageProxy>();
         }
 
         #region IDisposable Support
 
-        protected virtual void Cleanup() { }
+        protected virtual void Cleanup()
+        {
+            foreach (var provider in _providers)
+            {
+                try
+                {
+                    provider.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    if (_logger.IsEnabled(LogLevel.Debug))
+                    {
+                        _logger.LogDebug(ex, "Error disposing provider {provider}", provider.GetType().FullName);
+                    }
+                }
+            }
+
+            _providers = Array.Empty<IStorageProvider>();
+        }
 
         private bool disposedValue = false; // To detect redundant calls
 
@@ -83,25 +101,36 @@ namespace Juice.Storage.Abstractions
             }
             throw new Exception($"Could not read file {filePath} from any endpoint");
         }
+
         public async Task WriteAsync(string filePath, Stream stream, long offset, TransferOptions options, CancellationToken token)
         {
+            var count = 0;
             foreach (var provider in _providers)
             {
+                count++;
                 try
                 {
+                    _logger.LogInformation($"Writing to {filePath} on {provider.GetType().Name}");
                     await provider.WriteAsync(filePath, stream, offset, options, token);
                     return;
                 }
-                catch (Exception ex)
+                catch (IOException ex)
                 {
                     _logger.LogError(ex, $"Could not write to {filePath} on {provider.GetType().Name}. {ex.Message}");
                     if (_logger.IsEnabled(LogLevel.Trace))
                     {
                         _logger.LogTrace(ex.StackTrace);
                     }
+                    if (count == _providers.Count())
+                    {
+                        throw;
+                    }
                 }
             }
-            throw new Exception($"Could not write to {filePath} on any endpoint");
+            if (!token.IsCancellationRequested)
+            {
+                throw new Exception($"Could not write to {filePath} on any endpoint");
+            }
         }
         public async Task<string> CreateAsync(string filePath, CreateFileOptions options, CancellationToken token)
         {

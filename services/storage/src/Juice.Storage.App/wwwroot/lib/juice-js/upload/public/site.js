@@ -4,7 +4,7 @@
 
 console.log(JUpload, FileExistsBehavior);
 
-var uploader = new JUpload("https://localhost:44368/storage1");
+var uploader = new JUpload("https://localhost:7206/storage1");
 
 function clear() {
     history.pushState({ UploadId: "" }, "Upload ", "?");

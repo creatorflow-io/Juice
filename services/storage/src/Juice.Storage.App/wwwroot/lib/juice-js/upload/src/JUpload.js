@@ -34,10 +34,10 @@ JUpload.prototype.upload = function (file, options) {
     initUpload.call(that, file, options)
         .then((result) => {
             that._initializedUpload = JSON.parse(result);
-            that._startUploadTime = new Date();
-            that._totalTransferSize = result.PackageSize - result.Offset;
 
             console.log("File initialized", that._initializedUpload);
+            _startTrackingProgress.call(that, result.PackageSize - result.Offset);
+
             return that._initializedUpload;
         }, (response) => { _retry.call(that, "Failed to init: " + response.responseText); })
         .then((result) => {
@@ -150,6 +150,8 @@ var doUpload = function (file, offset, sectionSize) {
     }
 
     that._sectionOffset = offset;
+    that._sectionLoaded = 0;
+
     let data = new FormData();
     let end = Math.min(offset + sectionSize, file.size);
     let section = file.slice(offset, end);
@@ -171,12 +173,7 @@ var doUpload = function (file, offset, sectionSize) {
             var xhr = new XMLHttpRequest();
             if (xhr.upload && typeof that.onprogress === "function") {
                 xhr.upload.onprogress = function (evt) {
-                    try {
-                        let progress = _calcProgress.call(that, evt);
-                        that.onprogress(progress);
-                    } catch (e) {
-                        console.debug("Progress erorr", e);
-                    }
+                    that._sectionLoaded = evt.position || evt.loaded;
                 };
             }
             return xhr;
@@ -226,9 +223,9 @@ var resumeUpload = function (isManual) {
             that._initializedUpload = JSON.parse(result);
             if (isManual) {
                 // update start upload time and total transfer size if manual resume.
-                that._startUploadTime = new Date();
-                that._totalTransferSize = result.PackageSize - result.Offset;
+                _startTrackingProgress.call(that, result.PackageSize - result.Offset);
             }
+
             console.log("File resume initialized", that._initializedUpload);
             return that._initializedUpload;
         }, (response) => { _retry.call(that, "Failed to init resume: " + response.responseText); })
@@ -244,6 +241,8 @@ var resumeUpload = function (isManual) {
 }
 
 var _success = function (uploadId) {
+    _stopTrackingProgress.call(this);
+
     return $.ajax({
         type: "PUT",
         url: `${this.endpoint}/complete`,
@@ -256,6 +255,7 @@ var _success = function (uploadId) {
 
 var _error = function (error) {
     let that = this;
+    _stopTrackingProgress.call(that);
 
     console.error("Upload error", error);
     try {
@@ -294,14 +294,47 @@ var _abort = function () {
     let that = this;
     that._abort = true;
 
+    _stopTrackingProgress.call(that);
+
     if (typeof that.onabort === "function") {
         try { that.onabort(that._initializedUpload); } catch (e) { console.error("Failed to process onabort event"); }
     }
 }
 
-var _calcProgress = function (e) {
+var _startTrackingProgress = function (totalTransferSize) {
     let that = this;
-    let _loaded = e.position || e.loaded;
+    that._startUploadTime = new Date();
+    that._totalTransferSize = totalTransferSize;
+    _stopTrackingProgress.call(that);
+    console.debug("Start tracking progress");
+    that._progressTimer = setInterval(function () {
+        try{
+            let progress = _calcProgress.call(that);
+            if (typeof that.onprogress === "function") {
+                try { that.onprogress(progress); } catch (e) { console.error("Failed to process onprogress event"); }
+            }
+        }catch(e){
+            console.error("Failed to track progress", e);
+        }
+    }, 1000);
+}
+
+var _stopTrackingProgress = function () {
+    let that = this;
+    try{
+        if (that._progressTimer) {
+            console.debug("Stop tracking progress");
+            clearInterval(that._progressTimer);
+            that._progressTimer = null;
+        }
+    }catch(e){
+        console.error("Failed to stop tracking progress", e);
+    }
+}
+
+var _calcProgress = function () {
+    let that = this;
+    let _loaded = that._sectionLoaded || 0;
     let _total = that._file.size;
     let _sectionOffset = that._sectionOffset || 0;
     let _last = that._lastProgressCalc || new Date();

@@ -2,10 +2,14 @@
 
 namespace Juice.Storage.Abstractions
 {
+    /// <summary>
+    /// Implementation of this interface should be able to connect to storage for read/write file operations by specified protocol
+    /// </summary>
     public interface IStorageProvider : IStorage
     {
         StorageEndpoint? StorageEndpoint { get; }
         NetworkCredential? Credential { get; }
+        int Priority { get; }
 
         /// <summary>
         /// Configure credential to authenticate
@@ -19,7 +23,7 @@ namespace Juice.Storage.Abstractions
         /// </summary>
         /// <param name="endpoint"></param>
         /// <returns></returns>
-        IStorageProvider Configure(StorageEndpoint endpoint);
+        IStorageProvider Configure(StorageEndpoint endpoint, int? priority = default);
 
     }
 }

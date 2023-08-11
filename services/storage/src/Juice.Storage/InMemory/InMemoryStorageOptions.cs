@@ -4,7 +4,6 @@ namespace Juice.Storage.InMemory
 {
     public class InMemoryStorageOptions
     {
-        public long SectionSize { get; set; } = 10485760;
         public bool RandomFilename { get; set; }
         public Storage[] Storages { get; set; }
     }
@@ -24,7 +23,7 @@ namespace Juice.Storage.InMemory
 
         public StorageEndpoint ToStorageEndpoint()
         {
-            return new StorageEndpoint(Uri, BasePath, Identity, Password);
+            return new StorageEndpoint(Uri, BasePath, Identity, Password, Protocol);
         }
     }
 }
