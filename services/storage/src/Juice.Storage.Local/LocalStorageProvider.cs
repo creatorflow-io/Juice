@@ -40,7 +40,9 @@ namespace Juice.Storage.Local
         {
             CheckEndpoint();
 
-            if (_connection == null && !string.IsNullOrWhiteSpace(StorageEndpoint?.BasePath))
+            if (_connection == null
+                && !string.IsNullOrWhiteSpace(StorageEndpoint?.BasePath)
+                && !string.IsNullOrEmpty(Credential?.UserName))
             {
                 var policy = Policy.Handle<Exception>()
                 .WaitAndRetry(2, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)), (ex, time) =>
@@ -160,10 +162,40 @@ namespace Juice.Storage.Local
             {
                 using var ostream = File.OpenWrite(fullPath);
                 ostream.Seek(0L, SeekOrigin.End);
-
-                await stream.CopyToAsync(ostream, token);
-                await ostream.FlushAsync();
-                ostream.Close();
+                try
+                {
+                    if (options.BufferSize.HasValue)
+                    {
+                        await stream.CopyToAsync(ostream, options.BufferSize.Value, token);
+                    }
+                    else
+                    {
+                        await stream.CopyToAsync(ostream, token);
+                    }
+                }
+                catch (IOException)
+                {
+                    if (!token.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+                    else
+                    {
+                        throw new OperationCanceledException(token);
+                    }
+                }
+                finally
+                {
+                    try
+                    {
+                        await ostream.FlushAsync();
+                        ostream.Close();
+                    }
+                    catch (Exception)
+                    {
+                        // ignored
+                    }
+                }
             });
         }
 

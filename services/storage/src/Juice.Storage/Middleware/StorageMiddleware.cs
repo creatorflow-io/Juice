@@ -1,7 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 using Juice.Storage.Abstractions;
 using Juice.Storage.Dto;
-using Juice.Storage.Services;
 using Juice.Storage.Utilities;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -10,15 +9,16 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Net.Http.Headers;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Juice.Storage.Middleware
 {
-    public class StorageMiddleware
+    public partial class StorageMiddleware
     {
         private RequestDelegate _next;
         private StorageMiddlewareOptions _options;
 
-        public string Endpoint => _options?.Endpoint ?? "/storage";
+        private IStorageResolver? _resolver;
         public StorageMiddleware(RequestDelegate next,
             StorageMiddlewareOptions options)
         {
@@ -26,44 +26,56 @@ namespace Juice.Storage.Middleware
             _options = options;
         }
 
+        //this feature is available in .net 7
+        //[GeneratedRegex("^(?<identity>\\/[\\w]+)(?<action>\\/[\\w]+)")]
+        //private static partial Regex StorageMatcher();
         public async Task InvokeAsync(HttpContext context)
         {
 
             var path = context.Request.Path.ToString().ToLower();
-            if (path.StartsWith(Endpoint))
+            if (_options.Endpoints.Any(e => path.StartsWith(e)))
             {
-                var match = Regex.Match(path, @"^" + Endpoint + @"(?<action>\/[\w]+)");
+                var match = Regex.Match(path, "^(?<identity>\\/[\\w]+)(?<action>\\/[\\w]+)");
                 if (match.Success)
                 {
-                    var endpointAccessor = context.RequestServices.GetRequiredService<RequestEndpointAccessor>();
-                    endpointAccessor.SetEndpoint(Endpoint);
-
-
-                    var action = match.Groups["action"].ToString();
-
-                    switch (action)
+                    _resolver = context.RequestServices.GetRequiredService<IStorageResolver>();
+                    using (_resolver)
                     {
-                        case "/exists":
-                            await InvokeExistsAsync(context);
-                            break;
-                        case "/init":
-                            await InvokeInitAsync(context);
-                            break;
-                        case "/upload":
-                            await InvokeUploadAsync(context);
-                            break;
-                        case "/complete":
-                            await InvokeCompleteAsync(context);
-                            break;
-                        case "/failure":
-                            await InvokeFailureAsync(context);
-                            break;
-                        case "/file":
-                            await InvokeDownloadAsync(context);
-                            break;
-                        default:
+                        var identity = match.Groups["identity"].ToString();
+                        var action = match.Groups["action"].ToString();
+
+                        await _resolver.TryResolveAsync(identity);
+                        if (_resolver.IsResolved)
+                        {
+                            switch (action)
+                            {
+                                case "/exists":
+                                    await InvokeExistsAsync(context);
+                                    break;
+                                case "/init":
+                                    await InvokeInitAsync(context);
+                                    break;
+                                case "/upload":
+                                    await InvokeUploadAsync(context);
+                                    break;
+                                case "/complete":
+                                    await InvokeCompleteAsync(context);
+                                    break;
+                                case "/failure":
+                                    await InvokeFailureAsync(context);
+                                    break;
+                                case "/file":
+                                    await InvokeDownloadAsync(context);
+                                    break;
+                                default:
+                                    await _next(context);
+                                    break;
+                            }
+                        }
+                        else
+                        {
                             await _next(context);
-                            break;
+                        }
                     }
                 }
                 else
@@ -73,6 +85,10 @@ namespace Juice.Storage.Middleware
             }
             else
             {
+                if (path.StartsWith("/testthrow"))
+                {
+                    var storage = context.RequestServices.GetRequiredService<IStorage>();
+                }
                 await _next(context);
             }
         }
@@ -80,7 +96,7 @@ namespace Juice.Storage.Middleware
         #region Check file exists
         private string GetFilePathFromForm(HttpContext context)
         {
-            var filePath = context.Request.Form["filePath"];
+            var filePath = context.Request.Form["filePath"].ToString();
             if (string.IsNullOrWhiteSpace(filePath))
             {
                 throw new ArgumentException("filePath is missing in form");
@@ -124,7 +140,7 @@ namespace Juice.Storage.Middleware
         private InitialFileInfo GetInitialFileInfoFromForm(HttpContext context)
         {
 
-            var filePath = context.Request.Form["filePath"];
+            var filePath = context.Request.Form["filePath"].ToString();
             if (string.IsNullOrWhiteSpace(filePath))
             {
                 throw new ArgumentException("filePath is missing in form");
@@ -143,13 +159,35 @@ namespace Juice.Storage.Middleware
                 throw new ArgumentException("fileExistsBehavior is missing in form");
             }
 
+            var contentType = context.Request.Form.ContainsKey("contentType") ?
+                context.Request.Form["contentType"].ToString() : null;
+
+            var correlationId = context.Request.Form.ContainsKey("correlationId") ?
+                context.Request.Form["correlationId"].ToString() : null;
+            var metadata = context.Request.Form.ContainsKey("metadata") ?
+                context.Request.Form["metadata"].ToString() : null;
+
+            JObject? metadataObj;
+            try
+            {
+                metadataObj = !string.IsNullOrEmpty(metadata)
+                   ? JsonConvert.DeserializeObject<JObject>(metadata)
+                   : null;
+            }
+            catch (Exception ex)
+            {
+                throw new ArgumentException("metadata is not valid json", ex);
+            }
+
             var uploadIdStr = context.Request.Form["uploadId"];
             if (!string.IsNullOrWhiteSpace(fileSizeStr) && Guid.TryParse(uploadIdStr, out var uploadId))
             {
-                return new InitialFileInfo(filePath, fileSize, fileExistsBehavior, uploadId);
+                return new InitialFileInfo(filePath, fileSize, contentType, correlationId,
+                    metadataObj, fileExistsBehavior, uploadId);
             }
 
-            return new InitialFileInfo(filePath, fileSize, fileExistsBehavior);
+            return new InitialFileInfo(filePath, fileSize, contentType, correlationId,
+                    metadataObj, fileExistsBehavior);
 
         }
 
@@ -165,6 +203,14 @@ namespace Juice.Storage.Middleware
                 var uploadManager = context.RequestServices.GetRequiredService<IUploadManager>();
 
                 var fileInfo = GetInitialFileInfoFromForm(context);
+
+                var logger = context.RequestServices.GetRequiredService<ILogger<StorageMiddleware>>();
+                if (logger.IsEnabled(LogLevel.Debug))
+                {
+                    logger.LogDebug("Init upload {filePath} {fileSize} {contentType} {correlationId} {metadata} {fileExistsBehavior} {uploadId}",
+                                               fileInfo.Name, fileInfo.FileSize, fileInfo.ContentType, fileInfo.CorrelationId,
+                                                                      fileInfo.Metadata, fileInfo.FileExistsBehavior, fileInfo.UploadId);
+                }
 
                 var configuration = await uploadManager.InitAsync(fileInfo, context.RequestAborted);
 
@@ -209,7 +255,7 @@ namespace Juice.Storage.Middleware
 
         private async Task InvokeUploadAsync(HttpContext context)
         {
-            var logger = context.RequestServices.GetService<ILogger<StorageMiddleware>>();
+            var logger = context.RequestServices.GetRequiredService<ILogger<StorageMiddleware>>();
             var request = context.Request;
 
             var boundary = MultipartRequestHelper.GetBoundary(request);
@@ -258,11 +304,13 @@ namespace Juice.Storage.Middleware
                 await context.Response.WriteAsync("Failed to write file to storage");
                 logger.LogError(ex, ex.Message);
             }
-            catch (TaskCanceledException ex)
+            catch (OperationCanceledException ex)
             {
-                context.Response.StatusCode = StatusCodes.Status400BadRequest;
-                await context.Response.WriteAsync("Client aborted upload");
-                logger.LogError(ex, ex.Message);
+                logger.LogInformation("Client aborted upload");
+                if (logger.IsEnabled(LogLevel.Trace))
+                {
+                    logger.LogTrace(ex, ex.Message);
+                }
             }
             catch (Exception ex)
             {
@@ -348,10 +396,16 @@ namespace Juice.Storage.Middleware
                     await context.Response.WriteAsync("This storage supports writing only!");
                     return;
                 }
-                var path = Endpoint + "/file";
+                if (_resolver == null || !_resolver.IsResolved)
+                {
+                    context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                    await context.Response.WriteAsync("Storage is not resolved");
+                    return;
+                }
+                var path = _resolver.Identity + "/file";
                 var filePath = context.Request.Path.ToString().Substring(path.Length)
                     .TrimStart('/');
-                var storage = context.RequestServices.GetRequiredService<IStorage>();
+                var storage = _resolver.Storage;
 
                 filePath ??= context.Request.Query
                     .Where(q => q.Key.Equals("fileName", StringComparison.OrdinalIgnoreCase))
@@ -386,6 +440,7 @@ namespace Juice.Storage.Middleware
                 await context.Response.WriteAsync(ex.Message);
             }
         }
+
         #endregion
     }
 

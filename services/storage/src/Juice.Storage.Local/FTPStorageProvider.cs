@@ -15,9 +15,13 @@ namespace Juice.Storage.Local
 
         public override Protocol[] Protocols => new Protocol[] { Protocol.Ftp };
 
-        public override IStorageProvider Configure(StorageEndpoint endpoint)
+        public override IStorageProvider Configure(StorageEndpoint endpoint, int? priority = default)
         {
             StorageEndpoint = endpoint;
+            if (priority.HasValue)
+            {
+                Priority = priority.Value;
+            }
 
             Init();
 
@@ -160,17 +164,64 @@ namespace Juice.Storage.Local
                 }
 
                 using var ostream = await _client.OpenAppendAsync(filePath);
-
-                await stream.CopyToAsync(ostream);
-
+                try
+                {
+                    if (options.BufferSize.HasValue)
+                    {
+                        await stream.CopyToAsync(ostream, options.BufferSize.Value, token);
+                    }
+                    else
+                    {
+                        await stream.CopyToAsync(ostream, token);
+                    }
+                }
+                finally
+                {
+                    try
+                    {
+                        await ostream.FlushAsync();
+                        ostream.Close();
+                    }
+                    catch (Exception)
+                    {
+                        // ignored
+                    }
+                }
             }
             else
             {
                 using var ostream = await _client.OpenWriteAsync(filePath);
 
-                await stream.CopyToAsync(ostream);
+                try
+                {
+                    if (options.BufferSize.HasValue)
+                    {
+                        await stream.CopyToAsync(ostream, options.BufferSize.Value, token);
+                    }
+                    else
+                    {
+                        await stream.CopyToAsync(ostream, token);
+                    }
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+                finally
+                {
+                    try
+                    {
+                        await ostream.FlushAsync();
+                        ostream.Close();
+                    }
+                    catch (Exception)
+                    {
+                        // ignored
+                    }
+                }
 
             }
+
 
         }
 

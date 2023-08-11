@@ -8,6 +8,7 @@ namespace Juice.Storage.Abstractions
         protected string _copyNumberPattern = @"(?<n>[^\n]+)\((?<cn>[0-9]+)\)[\s]*\.[\S]+$";
         public NetworkCredential? Credential { get; protected set; }
         public StorageEndpoint? StorageEndpoint { get; protected set; }
+        public virtual int Priority { get; protected set; }
 
         public abstract Protocol[] Protocols { get; }
 
@@ -24,9 +25,16 @@ namespace Juice.Storage.Abstractions
             Credential = credential;
             return this;
         }
-        public virtual IStorageProvider Configure(StorageEndpoint endpoint)
+
+        public virtual IStorageProvider Configure(StorageEndpoint endpoint, int? priority = default)
         {
             StorageEndpoint = endpoint;
+
+            if (priority.HasValue)
+            {
+                Priority = priority.Value;
+            }
+
             if (!string.IsNullOrWhiteSpace(endpoint.Identity))
             {
                 return this.WithCredential(new NetworkCredential(endpoint.Identity, endpoint.Password));

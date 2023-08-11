@@ -1,15 +1,23 @@
 ﻿using Juice.Storage.Local;
 using Juice.Storage.Middleware;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
 
+builder.Services.AddStorage();
 builder.Services.AddInMemoryUploadManager(builder.Configuration.GetSection("Juice:Storage"));
 builder.Services.AddLocalStorageProviders();
 
 builder.Services.AddCors();
+
+// If using Kestrel
+builder.Services.Configure<KestrelServerOptions>(options =>
+{
+    options.Limits.MaxRequestBodySize = 209715200;
+});
 
 var app = builder.Build();
 
@@ -37,7 +45,10 @@ app.UseAuthorization();
 
 app.MapRazorPages();
 
-app.UseStorage(options => options.Endpoint = "/storage");
-app.UseStorage(options => { options.Endpoint = "/storage1"; options.WriteOnly = true; });
+app.UseStorage(options =>
+{
+    options.Endpoints = new string[] { "/storage", "/storage1" };
+    options.WriteOnly = true;
+});
 
 app.Run();
