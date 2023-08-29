@@ -13,7 +13,7 @@ namespace Juice.Storage.Extensions
         /// <param name="filePath"></param>
         /// <param name="token"></param>
         /// <returns></returns>
-        public static async Task<string> GetMD5Async(this IStorageProvider storage, string filePath, CancellationToken token)
+        public static async Task<string> GetMD5Async(this IStorage storage, string filePath, CancellationToken token)
         {
             using var md5 = MD5.Create();
             using var stream = await storage.ReadAsync(filePath, default);

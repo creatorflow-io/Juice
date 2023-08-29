@@ -7,6 +7,12 @@ namespace Juice.Storage.InMemory
     {
         private readonly ConcurrentDictionary<Guid, UploadFileInfo> _uploads
             = new ConcurrentDictionary<Guid, UploadFileInfo>();
+
+        public Task AbortAsync(Guid uploadId, bool fileDeleted)
+        {
+            return Task.CompletedTask;
+        }
+
         public Task AddAsync(UploadFileInfo item)
         {
             _uploads.TryAdd(item.Id, item);

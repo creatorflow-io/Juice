@@ -112,8 +112,10 @@ namespace Juice.Storage.Tests
 
                 var generator = new Services.DefaultStringIdGenerator();
                 var fileName = @"Test\" + generator.GenerateRandomId(26) + ".zzz";
+                string? contentType = default;
+                string? correlationId = default;
 
-                var fileInfo = new InitialFileInfo(fileName, file.Length, FileExistsBehavior.AscendedCopyNumber);
+                var fileInfo = new InitialFileInfo(fileName, file.Length, contentType, fileName, DateTimeOffset.Now, correlationId, default, FileExistsBehavior.AscendedCopyNumber);
 
                 var operationResult = await uploadManager.InitAsync(fileInfo, default);
 
@@ -148,14 +150,14 @@ namespace Juice.Storage.Tests
                 {
                     using var src = File.OpenRead(file.FullName);
                     var srcHash = ToHex(await md5.ComputeHashAsync(src));
-                    var destHash = await uploadManager.StorageProvider.GetMD5Async(createdFileName, default);
+                    var destHash = await uploadManager.Storage.GetMD5Async(createdFileName, default);
 
                     testOutput.WriteLine("Original file hash {0}", srcHash);
                     testOutput.WriteLine("Uploaded file hash {0}", destHash);
                     Assert.Equal(srcHash, destHash);
                 }
 
-                await uploadManager.StorageProvider.DeleteAsync(createdFileName, default);
+                await uploadManager.Storage.DeleteAsync(createdFileName, default);
             }
         }
 

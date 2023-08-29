@@ -83,7 +83,7 @@ namespace Juice.Storage.Tests
             var generator = new Services.DefaultStringIdGenerator();
             var file = @"Test\" + generator.GenerateRandomId(26) + ".txt";
             var storage = _serviceProvider.GetRequiredService<IStorageProvider>()
-                .Configure(new StorageEndpoint(@"\\172.16.201.171\Demo\XUnit", @"\\172.16.201.171", "demonas", "demonas"));
+                .Configure(new StorageEndpoint(@"\\172.16.201.171\Demo\XUnit", @"\\172.16.201.171", "demonas", "demonas", Protocol.Smb));
             var createdFile = await storage.CreateAsync(file, new CreateFileOptions { FileExistsBehavior = FileExistsBehavior.RaiseError }, default);
 
             Assert.True(storage.ExistsAsync(createdFile, default).GetAwaiter().GetResult());
@@ -107,7 +107,7 @@ namespace Juice.Storage.Tests
             });
 
             var storage1 = _serviceProvider.GetRequiredService<IStorageProvider>()
-                .Configure(new StorageEndpoint(@"\\172.16.201.171\Demo\Xunit", @"\\172.16.201.171", "demonas", "demonas1"));
+                .Configure(new StorageEndpoint(@"\\172.16.201.171\Demo\Xunit", @"\\172.16.201.171", "demonas", "demonas1", Protocol.Smb));
             await Assert.ThrowsAsync<System.ComponentModel.Win32Exception>(async () =>
             {
                 var createdFile = await storage1.CreateAsync(file, new CreateFileOptions { FileExistsBehavior = FileExistsBehavior.RaiseError }, default);

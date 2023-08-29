@@ -13,7 +13,7 @@ namespace Juice.Storage.Local
 
         private readonly int _maxRetryCount = 3;
 
-        public override Protocol[] Protocols => new Protocol[] { Protocol.Unc, Protocol.LocalDisk, Protocol.VirtualDirectory };
+        public override Protocol[] Protocols => new Protocol[] { Protocol.Smb, Protocol.LocalDisk, Protocol.VirtualDirectory };
 
         public LocalStorageProvider(ILogger<LocalStorageProvider> logger)
         {
@@ -100,10 +100,19 @@ namespace Juice.Storage.Local
         public override Task DeleteAsync(string filePath, CancellationToken token)
         {
             EnsureConnected();
+            var policy = Policy.Handle<IOException>()
+                .WaitAndRetry(_maxRetryCount, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)), (ex, time) =>
+                {
+                    _logger.LogError(ex, "[Policy] Retrying delete file: {filePath} after {Timeout}s ({ExceptionMessage})", filePath, $"{time.TotalSeconds:n1}", ex.Message);
+                });
 
-            var fullPath = Path.Combine(StorageEndpoint.Uri, filePath);
-            File.Delete(fullPath);
-            return Task.CompletedTask;
+            return policy.Execute(() =>
+            {
+                var fullPath = Path.Combine(StorageEndpoint.Uri, filePath);
+                File.Delete(fullPath);
+                return Task.CompletedTask;
+            });
+
         }
         public override Task<bool> ExistsAsync(string filePath, CancellationToken token)
         {

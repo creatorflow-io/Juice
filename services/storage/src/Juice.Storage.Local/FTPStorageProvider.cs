@@ -80,11 +80,14 @@ namespace Juice.Storage.Local
                 await _client.ConnectAsync(token);
 
             }
-            if (!await _client.DirectoryExistsAsync(_workingDirectory, token))
+            if (!string.IsNullOrEmpty(_workingDirectory))
             {
-                await _client.CreateDirectoryAsync(_workingDirectory, token);
+                if (!await _client.DirectoryExistsAsync(_workingDirectory, token))
+                {
+                    await _client.CreateDirectoryAsync(_workingDirectory, token);
+                }
+                await _client.SetWorkingDirectoryAsync(_workingDirectory, token);
             }
-            await _client.SetWorkingDirectoryAsync(_workingDirectory, token);
         }
 
         public override async Task<string> CreateAsync(string filePath, CreateFileOptions options, CancellationToken token)

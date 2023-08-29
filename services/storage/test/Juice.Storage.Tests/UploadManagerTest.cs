@@ -3,9 +3,11 @@ using System.Threading.Tasks;
 using Juice.Extensions.DependencyInjection;
 using Juice.Storage.Abstractions;
 using Juice.Storage.InMemory;
+using Juice.Storage.Local;
 using Juice.XUnit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace Juice.Storage.Tests
@@ -43,23 +45,43 @@ namespace Juice.Storage.Tests
                         .AddConfiguration(configuration.GetSection("Logging"));
                 });
 
-                services.AddScoped(sp =>
-                    new Local.LocalStorageProvider(sp.GetRequiredService<ILogger<Local.LocalStorageProvider>>())
-                    .Configure(new StorageEndpoint(@"C:\Workspace\Storage", default))
-                    );
+                services.AddStorage();
+                services.AddLocalStorageProviders();
 
                 services.AddInMemoryUploadManager(configuration.GetSection("Storage"));
 
                 services.PostConfigure<InMemoryStorageOptions>(options =>
                 {
-                    options.StorageProvider = nameof(Local.LocalStorageProvider);
+                    options.Storages = new InMemory.Storage[]
+                    {
+                        new InMemory.Storage
+                        {
+                            WebBasePath = "/storage1",
+                            Endpoints = new Endpoint[]
+                            {
+                                new Endpoint
+                                {
+                                    Protocol = Protocol.LocalDisk,
+                                    BasePath = @"C:\Workspace\Storage",
+                                    Uri = @"C:\Workspace\Storage"
+                                }
+                            }
+                        }
+                    };
                 });
-
             });
 
-            var mananger = resolver.ServiceProvider.GetRequiredService<IUploadManager>();
+            var storageResolver = resolver.ServiceProvider.GetRequiredService<IStorageResolver>();
+            using (storageResolver)
+            {
+                await storageResolver.TryResolveAsync("/storage1");
 
-            await SharedTests.File_upload_Async(mananger, _output);
+                Assert.True(storageResolver.IsResolved);
+
+                var mananger = resolver.ServiceProvider.GetRequiredService<IUploadManager>();
+
+                await SharedTests.File_upload_Async(mananger, _output);
+            }
         }
 
 
@@ -87,23 +109,45 @@ namespace Juice.Storage.Tests
                         .AddConfiguration(configuration.GetSection("Logging"));
                 });
 
-                services.AddScoped(sp =>
-                    new Local.LocalStorageProvider(sp.GetRequiredService<ILogger<Local.LocalStorageProvider>>())
-                    .Configure(new StorageEndpoint(@"\\172.16.201.171\Demo\XUnit", @"\\172.16.201.171", "demonas", "demonas"))
-                    );
-
+                services.AddStorage();
                 services.AddInMemoryUploadManager(configuration.GetSection("Storage"));
 
                 services.PostConfigure<InMemoryStorageOptions>(options =>
                 {
-                    options.StorageProvider = nameof(Local.LocalStorageProvider);
+                    options.Storages = new InMemory.Storage[]
+                    {
+                        new InMemory.Storage
+                        {
+                            WebBasePath = "/storage1",
+                            Endpoints = new Endpoint[]
+                            {
+                                new Endpoint
+                                {
+                                    Protocol = Protocol.Smb,
+                                    BasePath = @"\\172.16.201.171",
+                                    Uri = @"\\172.16.201.171\Demo\XUnit",
+                                    Identity = "demonas",
+                                    Password = "demonas"
+                                }
+                            }
+                        }
+                    };
                 });
 
             });
 
-            var mananger = resolver.ServiceProvider.GetRequiredService<IUploadManager>();
 
-            await SharedTests.File_upload_Async(mananger, _output);
+            var storageResolver = resolver.ServiceProvider.GetRequiredService<IStorageResolver>();
+            using (storageResolver)
+            {
+                await storageResolver.TryResolveAsync("/storage1");
+
+                Assert.True(storageResolver.IsResolved);
+
+                var mananger = resolver.ServiceProvider.GetRequiredService<IUploadManager>();
+
+                await SharedTests.File_upload_Async(mananger, _output);
+            }
         }
 
         [IgnoreOnCIFact(DisplayName = "InMemory - ftp storage")]
@@ -130,23 +174,44 @@ namespace Juice.Storage.Tests
                         .AddConfiguration(configuration.GetSection("Logging"));
                 });
 
-                services.AddScoped(sp =>
-                    new Local.FTPStorageProvider()
-                    .Configure(new StorageEndpoint(@"127.0.0.1/Working", default, "demo", "demo"))
-                    );
-
+                services.AddStorage();
                 services.AddInMemoryUploadManager(configuration.GetSection("Storage"));
 
                 services.PostConfigure<InMemoryStorageOptions>(options =>
                 {
-                    options.StorageProvider = nameof(Local.FTPStorageProvider);
+                    options.Storages = new InMemory.Storage[]
+                    {
+                        new InMemory.Storage
+                        {
+                            WebBasePath = "/storage1",
+                            Endpoints = new Endpoint[]
+                            {
+                                new Endpoint
+                                {
+                                    Protocol = Protocol.Ftp,
+                                    BasePath = @"127.0.0.1/Working",
+                                    Uri = @"127.0.0.1/Working",
+                                    Identity = "demo",
+                                    Password = "demo"
+                                }
+                            }
+                        }
+                    };
                 });
 
             });
 
-            var mananger = resolver.ServiceProvider.GetRequiredService<IUploadManager>();
+            var storageResolver = resolver.ServiceProvider.GetRequiredService<IStorageResolver>();
+            using (storageResolver)
+            {
+                await storageResolver.TryResolveAsync("/storage1");
 
-            await SharedTests.File_upload_Async(mananger, _output);
+                Assert.True(storageResolver.IsResolved);
+
+                var mananger = resolver.ServiceProvider.GetRequiredService<IUploadManager>();
+
+                await SharedTests.File_upload_Async(mananger, _output);
+            }
         }
     }
 }

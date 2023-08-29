@@ -48,7 +48,7 @@ namespace Juice.Storage.Tests
         public async Task File_should_create_Async()
         {
             var storage = _serviceProvider.GetRequiredService<IStorageProvider>()
-                .Configure(new StorageEndpoint(@"127.0.0.1/Working", default, "demo", "demo"));
+                .Configure(new StorageEndpoint(@"127.0.0.1/Working", default, "demo", "demo", Protocol.Ftp));
 
             await SharedTests.File_should_create_Async(storage);
         }
@@ -57,7 +57,7 @@ namespace Juice.Storage.Tests
         public async Task File_create_should_error_Async()
         {
             var storage = _serviceProvider.GetRequiredService<IStorageProvider>()
-                .Configure(new StorageEndpoint(@"127.0.0.1", default, "demo", "demo"));
+                .Configure(new StorageEndpoint(@"127.0.0.1", default, "demo", "demo", Protocol.Ftp));
 
             await SharedTests.File_create_should_error_Async(storage);
         }
@@ -66,7 +66,7 @@ namespace Juice.Storage.Tests
         public async Task File_create_should_add_copy_number_Async()
         {
             var storage = _serviceProvider.GetRequiredService<IStorageProvider>()
-                .Configure(new StorageEndpoint(@"127.0.0.1", default, "demo", "demo"));
+                .Configure(new StorageEndpoint(@"127.0.0.1", default, "demo", "demo", Protocol.Ftp));
 
             await SharedTests.File_create_should_add_copy_number_Async(storage);
         }

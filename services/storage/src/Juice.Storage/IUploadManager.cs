@@ -1,9 +1,11 @@
-﻿using Juice.Storage.Dto;
+﻿using Juice.Storage.Abstractions;
+using Juice.Storage.Dto;
 
 namespace Juice.Storage
 {
     public interface IUploadManager
     {
+        IStorage Storage { get; }
         Task<bool> ExistsAsync(string filePath, CancellationToken token);
         Task<UploadConfiguration> InitAsync(InitialFileInfo fileInfo, CancellationToken token);
         Task<long> UploadAsync(Guid uploadId, Stream stream, long offset, CancellationToken token);
