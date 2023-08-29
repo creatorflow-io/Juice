@@ -1,6 +1,4 @@
-﻿using Juice.Storage.Abstractions;
-
-namespace Juice.Storage
+﻿namespace Juice.Storage
 {
     public interface IUploadRepository<T>
         where T : class, IFile, new()
@@ -9,5 +7,6 @@ namespace Juice.Storage
         Task<T> GetAsync(Guid uploadId, CancellationToken token);
         Task RemoveAsync(Guid uploadId, CancellationToken token);
         Task AddAsync(T item);
+        Task AbortAsync(Guid uploadId, bool fileDeleted);
     }
 }

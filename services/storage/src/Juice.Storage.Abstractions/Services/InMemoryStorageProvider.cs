@@ -7,7 +7,7 @@
     {
         public override int Priority => 99;
         private readonly Dictionary<string, byte[]> _storage = new Dictionary<string, byte[]>();
-        public override Protocol[] Protocols => new Protocol[] { Protocol.Unc, Protocol.LocalDisk, Protocol.VirtualDirectory, Protocol.Ftp };
+        public override Protocol[] Protocols => new Protocol[] { Protocol.Smb, Protocol.LocalDisk, Protocol.VirtualDirectory, Protocol.Ftp };
 
         public override Task<string> CreateAsync(string filePath, CreateFileOptions options, CancellationToken token)
         {

@@ -1,7 +1,9 @@
 ﻿using System.Text.RegularExpressions;
 using Juice.Storage.Abstractions;
+using Juice.Storage.Authorization;
 using Juice.Storage.Dto;
 using Juice.Storage.Utilities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.WebUtilities;
@@ -238,6 +240,11 @@ namespace Juice.Storage.Middleware
                 context.Response.StatusCode = StatusCodes.Status400BadRequest;
                 await context.Response.WriteAsync(ex.Message);
             }
+            catch (UnauthorizedAccessException ex)
+            {
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                await context.Response.WriteAsync(ex.Message);
+            }
             catch (Exception ex)
             {
                 context.Response.StatusCode = StatusCodes.Status500InternalServerError;
@@ -405,12 +412,15 @@ namespace Juice.Storage.Middleware
             }
             try
             {
-                if (_options.WriteOnly)
+                // Consider using an asset management service to manage the assets and access control
+                if (!_options.SupportDownloadByPath)
                 {
                     context.Response.StatusCode = StatusCodes.Status403Forbidden;
-                    await context.Response.WriteAsync("This storage supports writing only!");
+                    await context.Response.WriteAsync("This storage does not support download file by its path!");
                     return;
                 }
+
+
                 if (_resolver == null || !_resolver.IsResolved)
                 {
                     context.Response.StatusCode = StatusCodes.Status400BadRequest;
@@ -430,6 +440,18 @@ namespace Juice.Storage.Middleware
                 {
                     context.Response.StatusCode = StatusCodes.Status400BadRequest;
                     return;
+                }
+
+                var authorizationService = context.RequestServices.GetService<IAuthorizationService>();
+                if (authorizationService != null)
+                {
+                    var authorizationResult = await authorizationService.AuthorizeAsync(context.User, filePath, StoragePolicies.DownloadFile);
+                    if (!authorizationResult.Succeeded)
+                    {
+                        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                        await context.Response.WriteAsync("You are unauthorized to download this file.");
+                        return;
+                    }
                 }
 
                 var exists = await storage.ExistsAsync(filePath, context.RequestAborted);

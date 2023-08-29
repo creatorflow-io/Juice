@@ -1,4 +1,5 @@
-﻿using Juice.Storage.Local;
+﻿using Juice.Storage.Authorization;
+using Juice.Storage.Local;
 using Juice.Storage.Middleware;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 
@@ -11,7 +12,10 @@ builder.Services.AddStorage();
 builder.Services.AddInMemoryUploadManager(builder.Configuration.GetSection("Juice:Storage"));
 builder.Services.AddLocalStorageProviders();
 
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddCors();
+
+ConfigureAuthorization(builder);
 
 // If using Kestrel
 builder.Services.Configure<KestrelServerOptions>(options =>
@@ -48,7 +52,24 @@ app.MapRazorPages();
 app.UseStorage(options =>
 {
     options.Endpoints = new string[] { "/storage", "/storage1" };
-    options.WriteOnly = true;
+    options.SupportDownloadByPath = true;
 });
 
 app.Run();
+
+static void ConfigureAuthorization(WebApplicationBuilder builder)
+{
+    builder.Services.AddAuthorization(options =>
+    {
+        options.AddPolicy(StoragePolicies.CreateFile, policy =>
+        {
+            policy.RequireAssertion(_ => true);
+            //policy.AddRequirements(StorageOperations.Write);
+            //policy.RequireAuthenticatedUser()
+        });
+        options.AddPolicy(StoragePolicies.DownloadFile, policy =>
+        {
+            policy.RequireAssertion(_ => true);
+        });
+    });
+}

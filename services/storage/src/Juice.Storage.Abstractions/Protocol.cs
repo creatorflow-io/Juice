@@ -2,7 +2,7 @@
 {
     public enum Protocol
     {
-        Unc = 0,
+        Smb = 0,
         VirtualDirectory = 1,
         LocalDisk = 2,
         Ftp = 3,

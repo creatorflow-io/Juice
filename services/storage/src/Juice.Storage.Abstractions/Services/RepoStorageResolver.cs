@@ -16,7 +16,7 @@ namespace Juice.Storage.Abstractions.Services
             _serviceProvider = serviceProvider;
         }
         public int Priority { get; } = 0;
-        public string? Identity { get; private set; }
+        public string Identity { get; private set; } = string.Empty;
 
         public bool IsResolved { get; private set; }
 

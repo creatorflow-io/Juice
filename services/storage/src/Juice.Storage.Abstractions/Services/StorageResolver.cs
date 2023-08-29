@@ -4,7 +4,15 @@ namespace Juice.Storage.Abstractions.Services
 {
     internal class StorageResolver : IStorageResolver
     {
-        public string? Identity { get; private set; }
+        public string Identity
+        {
+            get
+            {
+                return IsResolved ? _identity! : throw new InvalidOperationException("Storage is not resolved");
+            }
+        }
+
+        private string? _identity = null;
 
         public bool IsResolved { get; private set; }
 
@@ -33,7 +41,7 @@ namespace Juice.Storage.Abstractions.Services
                     {
                         _endpoints = resolver.Endpoints;
                         Storage = resolver.Storage;
-                        Identity = resolver.Identity;
+                        _identity = resolver.Identity;
                         IsResolved = resolver.IsResolved;
                         return true;
                     }
