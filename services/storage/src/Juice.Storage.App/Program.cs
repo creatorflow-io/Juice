@@ -65,7 +65,7 @@ static void ConfigureAuthorization(WebApplicationBuilder builder)
         {
             policy.RequireAssertion(_ => true);
             //policy.AddRequirements(StorageOperations.Write);
-            //policy.RequireAuthenticatedUser()
+            policy.RequireAuthenticatedUser();
         });
         options.AddPolicy(StoragePolicies.DownloadFile, policy =>
         {
