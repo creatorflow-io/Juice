@@ -46,7 +46,19 @@ JUpload.prototype.upload = function (file, options) {
             _startTrackingProgress.call(that, result.PackageSize - result.Offset);
 
             return that._initializedUpload;
-        }, (response) => { _retry.call(that, "Failed to init: " + response.responseText); })
+        }, (response) => { 
+            switch(response.status){
+                case 500:
+                    _error.call(that, "Failed to init: " + response.responseText);
+                    break;
+                case 401:
+                case 403:
+                    _error.call(that, response.responseText);
+                    break;
+                default:
+                    _retry.call(that, "Failed to init: " + response.responseText); 
+            }
+        })
         .then((result) => {
             if (result) {
                 if (typeof that.onupload === "function") {
@@ -245,8 +257,9 @@ var resumeUpload = function (isManual) {
     that._abort = false;
 
     let file = that._file;
-
-    initUpload.call(that, file, { fileExistsBehavior: FileExistsBehavior.Resume })
+    let initOptions = typeof this.uploadId !=="undefined" && this.uploadId 
+        ? { fileExistsBehavior: FileExistsBehavior.Resume }: {};
+    initUpload.call(that, file, initOptions)
         .then((result) => {
             that._initializedUpload = JSON.parse(result);
             if (isManual) {
@@ -286,17 +299,19 @@ var _error = function (error) {
     _stopTrackingProgress.call(that);
 
     console.error("Upload error", error);
-    try {
-        $.ajax({
-            type: "PUT",
-            url: `${this.endpoint}/failure`,
-            crossDomain: true,
-            data: {
-                uploadId: that.uploadId
-            }
-        });
-    } catch (e) {
-        console.warn("Failed to report error to server");
+    if(typeof that.uploadId !== "undefined" && that.uploadId){
+        try {
+            $.ajax({
+                type: "PUT",
+                url: `${this.endpoint}/failure`,
+                crossDomain: true,
+                data: {
+                    uploadId: that.uploadId
+                }
+            });
+        } catch (e) {
+            console.warn("Failed to report error to server");
+        }
     }
     if (typeof that.onerror === "function") {
         that.onerror(that._initializedUpload, error);
