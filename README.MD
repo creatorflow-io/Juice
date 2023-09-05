@@ -63,14 +63,14 @@ Version 6.0
     - [x] Transfer large file size by multiple request
     - [x] Resumable with asset store (currently InMemory store)
     - [x] Write file to FTP, UNC path
-    - [ ] Extended file's metadata
+    - [x] Extended file's metadata
     - [ ] EF store 
 - [x] Workflow
     - [x] [Bpmn](https://bpmn.io/toolkit/bpmn-js/) compatible
     - [x] Yaml support
     - [x] Sub-workflow
     - [ ] Workload/ lightweigh workflow engine
-    - [ ] gRPC/ Web API
+    - [x] gRPC/ Web API
 - [ ] App templates
     - [ ] MVC target
     - [ ] API target
