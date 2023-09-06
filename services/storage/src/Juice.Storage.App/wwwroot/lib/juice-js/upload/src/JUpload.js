@@ -233,19 +233,21 @@ var doUpload = function (file, offset, sectionSize) {
             console.debug(xhr, statusText);
             if (statusText === "abort") {
                 _abort.call(that);
-            } else if (xhr.status === 204) {
-                that._triedCount = 0; // reset tried count
-
-                console.debug("received offset from header", xhr.getResponseHeader("x-offset"));
-                let offset = parseInt(xhr.getResponseHeader("x-offset"));
-                doUpload.call(that, file, offset, sectionSize);
-            }else if (xhr.status === 200) {
-                that._triedCount = 0; // reset tried count
-
-                console.debug("received offset from content", xhr.responseText);
-                let offset = parseInt(xhr.responseText);
-                doUpload.call(that, file, offset, sectionSize);
-            } else {
+            }
+            else if(xhr.status === 200 || xhr.status === 204){
+                console.debug("Upload section completed", xhr.status, xhr.responseText, xhr.getResponseHeader("x-completed"), xhr.getAllResponseHeaders());
+                let completed = xhr.getResponseHeader("x-completed")!=null && JSON.parse(xhr.getResponseHeader("x-completed").toLowerCase());
+                if (completed) {
+                    // server has completed the upload, so the client can stop uploading and no need to report success.
+                    _successWithoutReport.call(that);
+                }else{
+                    let offset = xhr.status === 204 
+                        ? parseInt(xhr.getResponseHeader("x-offset"))
+                        : parseInt(xhr.responseText);
+                    that._triedCount = 0; // reset tried count
+                    doUpload.call(that, file, offset, sectionSize);
+                } 
+            }else {
                 _retry.call(that, xhr.responseText);
             }
         }
@@ -279,6 +281,15 @@ var resumeUpload = function (isManual) {
             console.debug("catch", error);
             _retry.call(that, error);
         });
+}
+
+var _successWithoutReport = function () {
+    let that = this;
+    _stopTrackingProgress.call(that);
+    if (typeof that.onsuccess === "function") {
+        let overallProgress = _calcOverallProgress.call(that);
+        that.onsuccess(that._initializedUpload, overallProgress);
+    }
 }
 
 var _success = function (uploadId) {
