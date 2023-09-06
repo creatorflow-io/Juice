@@ -12,6 +12,7 @@ namespace Juice.Storage.Local
         private NetworkConnection? _connection;
 
         private readonly int _maxRetryCount = 3;
+        private bool _bypassProvidedCredentials = false;
 
         public override Protocol[] Protocols => new Protocol[] { Protocol.Smb, Protocol.LocalDisk, Protocol.VirtualDirectory };
 
@@ -39,21 +40,30 @@ namespace Juice.Storage.Local
         private void EnsureConnected()
         {
             CheckEndpoint();
-
-            if (_connection == null
-                && !string.IsNullOrWhiteSpace(StorageEndpoint?.BasePath)
-                && !string.IsNullOrEmpty(Credential?.UserName))
+            try
             {
-                var policy = Policy.Handle<Exception>()
-                .WaitAndRetry(2, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)), (ex, time) =>
+                if (_connection == null
+                    && !string.IsNullOrWhiteSpace(StorageEndpoint?.BasePath)
+                    && !string.IsNullOrEmpty(Credential?.UserName)
+                    && !_bypassProvidedCredentials)
                 {
-                    _logger.LogError(ex, "[Policy] Retrying init network connection to {Path} after {Timeout}s ({ExceptionMessage})", StorageEndpoint?.BasePath ?? "", $"{time.TotalSeconds:n1}", ex.Message);
-                });
+                    var policy = Policy.Handle<Exception>()
+                    .WaitAndRetry(2, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)), (ex, time) =>
+                    {
+                        _logger.LogError(ex, "[Policy] Retrying init network connection to {Path} after {Timeout}s ({ExceptionMessage})", StorageEndpoint?.BasePath ?? "", $"{time.TotalSeconds:n1}", ex.Message);
+                    });
 
-                policy.Execute(() =>
-                {
-                    _connection = new NetworkConnection(StorageEndpoint.BasePath, Credential);
-                });
+                    policy.Execute(() =>
+                    {
+                        _connection = new NetworkConnection(StorageEndpoint.BasePath, Credential);
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                // we only try to connect with provided credentials once
+                _bypassProvidedCredentials = true;
+                _logger.LogWarning(ex, "Error connecting to {Path} with provided credentials. Try default access with machine's credentials.", StorageEndpoint?.BasePath ?? "");
             }
         }
 

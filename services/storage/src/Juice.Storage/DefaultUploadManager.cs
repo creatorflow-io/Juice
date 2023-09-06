@@ -1,6 +1,9 @@
-﻿using Juice.Storage.Abstractions;
+﻿using System.Security.Claims;
+using Juice.Storage.Abstractions;
 using Juice.Storage.Authorization;
 using Juice.Storage.Dto;
+using Juice.Storage.Events;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,13 +24,16 @@ namespace Juice.Storage
         private readonly IHttpContextAccessor? _httpContextAccessor;
 
         private readonly IOptionsSnapshot<UploadOptions> _options;
+
+        private readonly IMediator? _mediator;
         public DefaultUploadManager(
             IStorageResolver storageResolver,
             IStorage storage,
             IUploadRepository<T> uploadRepository,
             IOptionsSnapshot<UploadOptions> options,
             IHttpContextAccessor? httpContextAccessor = null,
-            IFileRepository<T>? fileRepository = null)
+            IFileRepository<T>? fileRepository = null,
+            IMediator? mediator = default)
         {
             _storageResolver = storageResolver;
             _storage = storage;
@@ -36,30 +42,53 @@ namespace Juice.Storage
             _fileRepository = fileRepository;
             _authorizationService = httpContextAccessor?.HttpContext?.RequestServices?.GetService<IAuthorizationService>();
             _httpContextAccessor = httpContextAccessor;
+            _mediator = mediator;
         }
 
         public async Task CompleteAsync(Guid uploadId, CancellationToken token)
         {
-            if (await _uploadRepository.ExistsAsync(uploadId, token))
+            if (await _uploadRepository.ExistsAsync(_storageResolver.Identity, uploadId, token))
             {
+                var file = await _uploadRepository.GetAsync(_storageResolver.Identity, uploadId, token);
+
                 if (_fileRepository != null)
                 {
-                    var file = await _uploadRepository.GetAsync(uploadId, token);
                     await _fileRepository.AddAsync(file, _storageResolver.Identity, token);
                 }
-                await _uploadRepository.RemoveAsync(uploadId, token);
+                if (_mediator != null)
+                {
+                    var username = _httpContextAccessor?.HttpContext?.User?.FindFirst(ClaimTypes.Name)?.Value;
+                    await _mediator.Publish(new FileUploadedEvent(file.Id, file.Name, file.ContentType, file.PackageSize, file.CorrelationId, file.Metadata, username), token);
+                }
+                await _uploadRepository.RemoveAsync(_storageResolver.Identity, uploadId, token);
             }
         }
 
         public async Task FailureAsync(Guid uploadId, CancellationToken token)
         {
-            if (await _uploadRepository.ExistsAsync(uploadId, token))
+            if (await _uploadRepository.ExistsAsync(_storageResolver.Identity, uploadId, token))
             {
-                var file = await _uploadRepository.GetAsync(uploadId, token);
+                var file = await _uploadRepository.GetAsync(_storageResolver.Identity, uploadId, token);
 
                 await _storage.DeleteAsync(file.Name, token);
 
-                await _uploadRepository.RemoveAsync(uploadId, token);
+                await _uploadRepository.RemoveAsync(_storageResolver.Identity, uploadId, token);
+
+                if (_mediator != null)
+                {
+                    var username = _httpContextAccessor?.HttpContext?.User?.FindFirst(ClaimTypes.Name)?.Value;
+                    await _mediator.Publish(new FileUploadFailedEvent(file.Name, file.CorrelationId, username), token);
+                }
+            }
+        }
+
+        public async Task TimedoutAsync(Guid uploadId, CancellationToken token)
+        {
+            if (await _uploadRepository.ExistsAsync(_storageResolver.Identity, uploadId, token))
+            {
+                var file = await _uploadRepository.GetAsync(_storageResolver.Identity, uploadId, token);
+                await _storage.DeleteAsync(file.Name, token);
+                await _uploadRepository.RemoveAsync(_storageResolver.Identity, uploadId, token);
             }
         }
 
@@ -76,18 +105,24 @@ namespace Juice.Storage
                 {
                     throw new ArgumentException("UploadId must has value to resume upload process.");
                 }
-                if (!await _uploadRepository.ExistsAsync(fileInfo.UploadId.Value, token))
+                if (!await _uploadRepository.ExistsAsync(_storageResolver.Identity, fileInfo.UploadId.Value, token))
                 {
                     throw new ArgumentException("UploadId could not be found.");
                 }
 
-                var file = await _uploadRepository.GetAsync(fileInfo.UploadId.Value, token);
+                var file = await _uploadRepository.GetAsync(_storageResolver.Identity, fileInfo.UploadId.Value, token);
                 var fileName = file.Name;
 
                 var exists = await _storage.ExistsAsync(fileName, token);
                 if (!exists)
                 {
                     throw new ArgumentException($"Uploading file {fileName} no longer exists.");
+                }
+
+                if (_mediator != null)
+                {
+                    var username = _httpContextAccessor?.HttpContext?.User?.FindFirst(ClaimTypes.Name)?.Value;
+                    await _mediator.Publish(new FileUploadResumedEvent(file.Id, fileName, file.CorrelationId, username), token);
                 }
 
                 var size = await _storage.FileSizeAsync(fileName, token);
@@ -123,7 +158,13 @@ namespace Juice.Storage
                     createdFileName = await _storage.CreateAsync(fileInfo.Name, new CreateFileOptions { FileExistsBehavior = fileInfo.FileExistsBehavior }, token);
 
                     file.Name = createdFileName;
-                    await _uploadRepository.AddAsync(file);
+                    await _uploadRepository.AddAsync(_storageResolver.Identity, file);
+
+                    if (_mediator != null)
+                    {
+                        var username = _httpContextAccessor?.HttpContext?.User?.FindFirst(ClaimTypes.Name)?.Value;
+                        await _mediator.Publish(new FileUploadStartedEvent(file.Id, file.Name, file.ContentType, file.PackageSize, file.CorrelationId, file.Metadata, username), token);
+                    }
 
                     return new UploadConfiguration(id, createdFileName, _options.Value.SectionSize, false, fileInfo.FileSize, 0);
                 }
@@ -138,14 +179,14 @@ namespace Juice.Storage
             }
         }
 
-        public async Task<long> UploadAsync(Guid uploadId, Stream stream, long offset, CancellationToken token)
+        public async Task<(bool Completed, long Size)> UploadAsync(Guid uploadId, Stream stream, long offset, CancellationToken token)
         {
-            if (!await _uploadRepository.ExistsAsync(uploadId, token))
+            if (!await _uploadRepository.ExistsAsync(_storageResolver.Identity, uploadId, token))
             {
                 throw new ArgumentException("UploadId could not be found.");
             }
 
-            var file = await _uploadRepository.GetAsync(uploadId, token);
+            var file = await _uploadRepository.GetAsync(_storageResolver.Identity, uploadId, token);
             var fileName = file.Name;
 
             try
@@ -158,10 +199,16 @@ namespace Juice.Storage
                 {
                     await _storage.DeleteAsync(fileName, default); // token is already cancelled
                 }
-                await _uploadRepository.AbortAsync(uploadId, _options.Value.DeleteOnAbort);
+                await _uploadRepository.AbortAsync(_storageResolver.Identity, uploadId, _options.Value.DeleteOnAbort);
                 throw;
             }
-            return await _storage.FileSizeAsync(fileName, token);
+            var fileSize = await _storage.FileSizeAsync(fileName, token);
+            if (fileSize == file.PackageSize)
+            {
+                await CompleteAsync(uploadId, token);
+                return (true, fileSize);
+            }
+            return (false, fileSize);
         }
     }
 

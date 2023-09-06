@@ -309,9 +309,10 @@ namespace Juice.Storage.Middleware
                     !string.IsNullOrEmpty(contentDisposition.FileName.Value))
                     {
                         using var stream = section.Body;
-                        var size = await uploadManager.UploadAsync(uploadId, stream, offset, context.RequestAborted);
+                        var (completed, size) = await uploadManager.UploadAsync(uploadId, stream, offset, context.RequestAborted);
                         context.Response.StatusCode = StatusCodes.Status200OK;
                         context.Response.Headers.Add("x-offset", size.ToString());
+                        context.Response.Headers.Add("x-completed", completed.ToString());
                         await context.Response.WriteAsync(size.ToString());
                         return;
                     }

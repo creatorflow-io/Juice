@@ -10,6 +10,13 @@ builder.Services.AddRazorPages();
 
 builder.Services.AddStorage();
 builder.Services.AddInMemoryUploadManager(builder.Configuration.GetSection("Juice:Storage"));
+builder.Services.AddInMemoryStorageMaintainServices(builder.Configuration.GetSection("Juice:Storage"),
+    new string[] { "/storage", "/storage1" },
+    options =>
+    {
+        options.CleanupAfter = TimeSpan.FromMinutes(5);
+        options.Interval = TimeSpan.FromMinutes(1);
+    });
 builder.Services.AddLocalStorageProviders();
 
 builder.Services.AddHttpContextAccessor();
@@ -65,7 +72,7 @@ static void ConfigureAuthorization(WebApplicationBuilder builder)
         {
             policy.RequireAssertion(_ => true);
             //policy.AddRequirements(StorageOperations.Write);
-            policy.RequireAuthenticatedUser();
+            //policy.RequireAuthenticatedUser();
         });
         options.AddPolicy(StoragePolicies.DownloadFile, policy =>
         {
