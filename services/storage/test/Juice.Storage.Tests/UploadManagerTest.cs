@@ -5,6 +5,7 @@ using Juice.Storage.Abstractions;
 using Juice.Storage.InMemory;
 using Juice.Storage.Local;
 using Juice.XUnit;
+using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit;
@@ -111,6 +112,7 @@ namespace Juice.Storage.Tests
 
                 services.AddStorage();
                 services.AddInMemoryUploadManager(configuration.GetSection("Storage"));
+                services.AddLocalStorageProviders();
 
                 services.PostConfigure<InMemoryStorageOptions>(options =>
                 {
@@ -133,6 +135,8 @@ namespace Juice.Storage.Tests
                         }
                     };
                 });
+
+                services.AddMediatR(typeof(SharedTests).Assembly);
 
             });
 
@@ -176,6 +180,7 @@ namespace Juice.Storage.Tests
 
                 services.AddStorage();
                 services.AddInMemoryUploadManager(configuration.GetSection("Storage"));
+                services.AddLocalStorageProviders();
 
                 services.PostConfigure<InMemoryStorageOptions>(options =>
                 {

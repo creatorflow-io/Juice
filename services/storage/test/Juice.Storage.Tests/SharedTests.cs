@@ -159,6 +159,10 @@ namespace Juice.Storage.Tests
 
                 await uploadManager.Storage.DeleteAsync(createdFileName, default);
             }
+            else
+            {
+                testOutput.WriteLine("File not found {0}", file.FullName);
+            }
         }
 
         private static string ToHex(byte[] bytes, bool upperCase = false)

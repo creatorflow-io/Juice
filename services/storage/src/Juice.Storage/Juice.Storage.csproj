@@ -17,5 +17,6 @@
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="*" />
+    <PackageReference Include="MediatR" Version="$(MediatRVersion)" />
   </ItemGroup>
 </Project>
