@@ -47,7 +47,8 @@ app.UseCors(builder =>
 {
     builder.AllowAnyHeader()
     .AllowAnyMethod()
-    .AllowAnyOrigin();
+    .AllowAnyOrigin()
+    .WithExposedHeaders("x-offset", "x-completed");
 });
 
 app.UseRouting();

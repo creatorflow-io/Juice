@@ -484,6 +484,12 @@ namespace Juice.Storage.Middleware
 
     public static class StorageMiddlewareExtensions
     {
+        /// <summary>
+        /// You may need to add the .WithExposedHeaders("x-offset", "x-completed") to the CORS policy
+        /// </summary>
+        /// <param name="app"></param>
+        /// <param name="configure"></param>
+        /// <returns></returns>
         public static IApplicationBuilder UseStorage(
             this IApplicationBuilder builder, Action<StorageMiddlewareOptions>? configure = default)
         {
@@ -492,6 +498,12 @@ namespace Juice.Storage.Middleware
             return builder.UseMiddleware<StorageMiddleware>(options);
         }
 
+        /// <summary>
+        /// You may need to add the .WithExposedHeaders("x-offset", "x-completed") to the CORS policy
+        /// </summary>
+        /// <param name="app"></param>
+        /// <param name="configure"></param>
+        /// <returns></returns>
         public static WebApplication UseStorage(
             this WebApplication app, Action<StorageMiddlewareOptions>? configure = default)
         {
