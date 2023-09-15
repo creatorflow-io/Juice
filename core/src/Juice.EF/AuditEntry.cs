@@ -2,6 +2,9 @@
 
 namespace Juice.EF
 {
+    /// <summary>
+    /// Temporary store for audit entries
+    /// </summary>
     public class AuditEntry
     {
         public AuditEntry(EntityEntry entry)

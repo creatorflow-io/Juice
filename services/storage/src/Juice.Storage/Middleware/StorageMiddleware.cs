@@ -4,7 +4,6 @@ using Juice.Storage.Authorization;
 using Juice.Storage.Dto;
 using Juice.Storage.Utilities;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
@@ -482,35 +481,4 @@ namespace Juice.Storage.Middleware
         #endregion
     }
 
-    public static class StorageMiddlewareExtensions
-    {
-        /// <summary>
-        /// You may need to add the .WithExposedHeaders("x-offset", "x-completed") to the CORS policy
-        /// </summary>
-        /// <param name="app"></param>
-        /// <param name="configure"></param>
-        /// <returns></returns>
-        public static IApplicationBuilder UseStorage(
-            this IApplicationBuilder builder, Action<StorageMiddlewareOptions>? configure = default)
-        {
-            var options = new StorageMiddlewareOptions();
-            configure?.Invoke(options);
-            return builder.UseMiddleware<StorageMiddleware>(options);
-        }
-
-        /// <summary>
-        /// You may need to add the .WithExposedHeaders("x-offset", "x-completed") to the CORS policy
-        /// </summary>
-        /// <param name="app"></param>
-        /// <param name="configure"></param>
-        /// <returns></returns>
-        public static WebApplication UseStorage(
-            this WebApplication app, Action<StorageMiddlewareOptions>? configure = default)
-        {
-            var options = new StorageMiddlewareOptions();
-            configure?.Invoke(options);
-            app.UseMiddleware<StorageMiddleware>(options);
-            return app;
-        }
-    }
 }

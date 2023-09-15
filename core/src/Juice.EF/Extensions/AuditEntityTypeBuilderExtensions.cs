@@ -1,4 +1,5 @@
 ﻿using Juice.Domain;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -61,6 +62,26 @@ namespace Juice.EF.Extensions
             }
 
             return builder;
+        }
+
+
+        /// <summary>
+        /// Mark all entities that implemented IAuditable interface IsAuditable 
+        /// </summary>
+        /// <param name="modelBuilder"></param>
+        /// <returns></returns>
+        public static ModelBuilder ConfigureAuditableEntities(this ModelBuilder modelBuilder)
+        {
+            // Call IsAuditable() to configure the types marked with the AuditAnnotation
+            foreach (var clrType in modelBuilder.Model.GetEntityTypes()
+                                                 .Where(et => et.ClrType.IsAssignableTo(typeof(IAuditable)))
+                                                 .Select(et => et.ClrType))
+            {
+                modelBuilder.Entity(clrType)
+                            .IsAuditable();
+            }
+
+            return modelBuilder;
         }
     }
 }
