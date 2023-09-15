@@ -1,79 +1,63 @@
-﻿using Juice.EF;
+﻿using Juice.Audit.EF.EntityTypeConfiguration;
+using Juice.EF;
 using Juice.Extensions.DependencyInjection;
-using Juice.Timers.Domain.AggregratesModel.TimerAggregrate;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Juice.Timers.EF
+namespace Juice.Audit.EF
 {
-    public class TimerDbContext : DbContextBase
+    public class AuditDbContext : DbContextBase
     {
-        public DbSet<TimerRequest> TimerRequests { get; set; }
-
-        public TimerDbContext(DbContextOptions<TimerDbContext> options) : base(options)
+        public DbSet<Domain.DataAuditAggregate.DataAudit> AuditEntries { get; set; }
+        public DbSet<Domain.AccessLogAggregate.AccessLog> AccessLogs { get; set; }
+        public AuditDbContext(DbContextOptions options) : base(options)
         {
         }
 
         protected override void ConfigureModel(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<TimerRequest>(entity =>
-            {
-                entity.ToTable(nameof(TimerRequest), Schema);
-
-                entity.Property(e => e.Issuer)
-                    .IsRequired()
-                    .HasMaxLength(Constants.IdentityLength);
-
-                entity.Property(e => e.CorrelationId)
-                    .IsRequired()
-                    .HasMaxLength(Constants.IdentityLength);
-
-                entity.HasIndex(e => e.Issuer);
-                entity.HasIndex(e => e.CorrelationId);
-                entity.HasIndex(e => new { e.AbsoluteExpired, e.IsCompleted });
-            });
+            modelBuilder.ApplyConfiguration(new AuditEntryConfiguration(Schema));
+            modelBuilder.ApplyConfiguration(new AccessLogConfiguration(this));
         }
-
     }
 
-    public class TimerDbContextFactory : IDesignTimeDbContextFactory<TimerDbContext>
+    public class AuditDbContextFactory : IDesignTimeDbContextFactory<AuditDbContext>
     {
-        public TimerDbContext CreateDbContext(string[] args)
+        public AuditDbContext CreateDbContext(string[] args)
         {
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
             var resolver = new DependencyResolver
             {
                 CurrentDirectory = AppContext.BaseDirectory
             };
-
             resolver.ConfigureServices(services =>
             {
-
                 // Register DbContext class
                 var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
 
                 var configuration = configService.GetConfiguration(args);
 
                 var provider = configuration.GetSection("Provider").Get<string>() ?? "SqlServer";
+
                 var connectionName =
                     provider switch
                     {
                         "PostgreSQL" => "PostgreConnection",
                         "SqlServer" => "SqlServerConnection",
                         _ => throw new NotSupportedException($"Unsupported provider: {provider}")
-                    }
-                ;
+                    };
+
                 var connectionString = configuration.GetConnectionString(connectionName);
 
                 services.AddScoped(p =>
                 {
-                    var options = new DbOptions<TimerDbContext> { Schema = "App" };
+                    var options = new DbOptions<AuditDbContext> { Schema = "App" };
                     return options;
                 });
 
-                services.AddDbContext<TimerDbContext>(options =>
+                services.AddDbContext<AuditDbContext>(options =>
                 {
                     switch (provider)
                     {
@@ -81,10 +65,10 @@ namespace Juice.Timers.EF
                             AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
                             options.UseNpgsql(
-                               connectionString,
+                                connectionString,
                                 x =>
                                 {
-                                    x.MigrationsAssembly("Juice.Timers.EF.PostgreSQL");
+                                    x.MigrationsAssembly("Juice.Audit.EF.PostgreSQL");
                                 });
                             break;
 
@@ -94,36 +78,34 @@ namespace Juice.Timers.EF
                                 connectionString,
                                 x =>
                                 {
-                                    x.MigrationsAssembly("Juice.Timers.EF.SqlServer");
+                                    x.MigrationsAssembly("Juice.Audit.EF.SqlServer");
                                 });
                             break;
                         default:
                             throw new NotSupportedException($"Unsupported provider: {provider}");
                     }
-
                 });
-
             });
 
-            return resolver.ServiceProvider.GetRequiredService<TimerDbContext>();
+            return resolver.ServiceProvider.GetRequiredService<AuditDbContext>();
         }
     }
 
-    public class TimerDbContextScopedFactory : IDbContextFactory<TimerDbContext>
+    public class AuditDbContextScopedFactory : IDbContextFactory<AuditDbContext>
     {
 
-        private readonly IDbContextFactory<TimerDbContext> _pooledFactory;
+        private readonly IDbContextFactory<AuditDbContext> _pooledFactory;
         private readonly IServiceProvider _serviceProvider;
 
-        public TimerDbContextScopedFactory(
-            IDbContextFactory<TimerDbContext> pooledFactory,
+        public AuditDbContextScopedFactory(
+            IDbContextFactory<AuditDbContext> pooledFactory,
             IServiceProvider serviceProvider)
         {
             _pooledFactory = pooledFactory;
             _serviceProvider = serviceProvider;
         }
 
-        public TimerDbContext CreateDbContext()
+        public AuditDbContext CreateDbContext()
         {
             var context = _pooledFactory.CreateDbContext();
             context.ConfigureServices(_serviceProvider);

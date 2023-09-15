@@ -79,7 +79,7 @@ namespace Juice.EF.Extensions
         /// <returns></returns>
         public static ModelBuilder ConfigureDynamicExpandableEntities(this ModelBuilder modelBuilder, DbContext context)
         {
-            // Call IsMultiTenant() to configure the types marked with the MultiTenant Data Attribute
+            // Call IsDynamicExpandable() to configure the types marked with the DynamicExpandableAnnotation
             foreach (var clrType in modelBuilder.Model.GetEntityTypes()
                                                  .Where(et => et.ClrType.IsAssignableTo(typeof(IDynamic)))
                                                  .Select(et => et.ClrType))

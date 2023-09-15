@@ -1,6 +1,6 @@
 ﻿using Juice.Storage.Authorization;
+using Juice.Storage.Extensions;
 using Juice.Storage.Local;
-using Juice.Storage.Middleware;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 
 var builder = WebApplication.CreateBuilder(args);
