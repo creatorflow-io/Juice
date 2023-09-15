@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Juice.Extensions.DependencyInjection;
-using Juice.Locks.Redis.DependencyInjection;
+using Juice.Locks.Redis;
 using Juice.XUnit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -49,7 +49,8 @@ namespace Juice.Locks.Tests
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
 
-                services.AddRedLock(options => options.ConnectionString = configuration.GetConnectionString("Redis"));
+                services.AddRedLock(options => options.ConnectionString = configuration.GetConnectionString("Redis")
+                    ?? throw new ArgumentNullException("Redis connection string"));
             });
 
             var locker = resolver.ServiceProvider.GetRequiredService<IDistributedLock>();
