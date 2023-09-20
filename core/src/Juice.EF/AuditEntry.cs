@@ -16,7 +16,7 @@ namespace Juice.EF
         public string? User { get; set; }
         public string? Database { get; set; }
         public string? Schema { get; set; }
-        public string? Table { get; set; }
+        public string Table { get; set; }
         public Dictionary<string, object?> KeyValues { get; } = new Dictionary<string, object?>();
         public Dictionary<string, object?> OriginalValues { get; } = new Dictionary<string, object?>();
         public Dictionary<string, object?> CurrentValues { get; } = new Dictionary<string, object?>();

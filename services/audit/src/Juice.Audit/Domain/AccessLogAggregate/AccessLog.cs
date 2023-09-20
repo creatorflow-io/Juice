@@ -1,6 +1,7 @@
-﻿using Juice.Domain;
+﻿using System.ComponentModel.DataAnnotations.Schema;
+using Juice.Domain;
 using MediatR;
-using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Juice.Audit.Domain.AccessLogAggregate
 {
@@ -12,7 +13,7 @@ namespace Juice.Audit.Domain.AccessLogAggregate
             Action = action;
             User = user;
             DateTime = DateTimeOffset.UtcNow;
-            ResponseInfo = new ResponseInfo();
+            Response = new ResponseInfo();
         }
         public Guid Id { get; set; }
         public DateTimeOffset DateTime { get; init; }
@@ -21,33 +22,40 @@ namespace Juice.Audit.Domain.AccessLogAggregate
 
         public string Action { get; private set; }
 
-        public string ExtraMetadata { get; private set; } = "{}";
+        [NotMapped]
+        public string? TraceId => Request?.TraceId;
 
-        public RequestInfo? RequestInfo { get; private set; }
-        public ServerInfo? ServerInfo { get; private set; }
-        public ResponseInfo? ResponseInfo { get; private set; }
+        public JObject Metadata { get; private set; } = new JObject();
+
+        public RequestInfo? Request { get; private set; }
+        public ServerInfo? Server { get; private set; }
+        public ResponseInfo? Response { get; private set; }
 
         public void SetRequestInfo(RequestInfo requestInfo)
-            => RequestInfo = requestInfo;
+        {
+            Request = requestInfo;
+        }
 
         public void SetServerInfo(ServerInfo serverInfo)
-            => ServerInfo = serverInfo;
+            => Server = serverInfo;
 
         public void UpdateResponseInfo(Action<ResponseInfo> update)
         {
-            if (ResponseInfo is null)
+            if (Response is null)
             {
-                ResponseInfo = new ResponseInfo();
+                Response = new ResponseInfo();
             }
-            update.Invoke(ResponseInfo);
+            update.Invoke(Response);
         }
 
-        public void SetExtraMetadata(string key, string value)
+        public void SetMetadata(string key, string value)
         {
-            var metadata = JsonConvert.DeserializeObject<Dictionary<string, string>>(ExtraMetadata)
-                ?? new Dictionary<string, string>();
-            metadata[key] = value;
-            ExtraMetadata = JsonConvert.SerializeObject(metadata);
+            Metadata[key] = value;
+        }
+
+        public void SetMetadataJson(string json)
+        {
+            Metadata = JObject.Parse(json);
         }
 
         public void SetAction(string action)

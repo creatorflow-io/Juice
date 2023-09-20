@@ -90,7 +90,7 @@ namespace Juice.EF.Extensions
 
                     var auditEntry = new AuditEntry(entry)
                     {
-                        Table = entry.Metadata?.GetTableName(),
+                        Table = entry.Metadata?.GetTableName() ?? entry.Entity.GetType().Name,
                         Database = context.Database.GetDbConnection().Database,
                         Schema = entry.Metadata?.GetSchema(),
                         User = user,

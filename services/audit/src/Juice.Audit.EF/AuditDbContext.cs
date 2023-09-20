@@ -18,7 +18,7 @@ namespace Juice.Audit.EF
 
         protected override void ConfigureModel(ModelBuilder modelBuilder)
         {
-            modelBuilder.ApplyConfiguration(new AuditEntryConfiguration(Schema));
+            modelBuilder.ApplyConfiguration(new AuditEntryConfiguration(this));
             modelBuilder.ApplyConfiguration(new AccessLogConfiguration(this));
         }
     }

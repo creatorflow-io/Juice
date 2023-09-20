@@ -1,28 +1,37 @@
 ﻿using Juice.Audit;
 using Juice.Audit.AspNetCore.Extensions;
-using Juice.Audit.Domain.AccessLogAggregate;
-using Juice.Audit.Domain.DataAuditAggregate;
 using Juice.Audit.EF;
-using Juice.Audit.Tests.Host.Mockservices;
+using Juice.EF;
 using Juice.EF.Extensions;
 using MediatR;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddAuditServices();
 
-builder.Services.AddAuditDbContext(builder.Configuration, options =>
+//builder.Services.ConfigureAuditDefault(builder.Configuration, options =>
+//{
+//    //options.DatabaseProvider = "PostgreSQL";
+//});
+
+
+builder.Services.AddMediatR(typeof(Program));
+
+builder.Services.ConfigureAuditGrpcClient(options =>
 {
-    options.DatabaseProvider = "PostgreSQL";
+    options.Address = new Uri("https://localhost:7285");
+    options.ChannelOptionsActions.Add(o =>
+    {
+        o.HttpHandler = new SocketsHttpHandler
+        {
+            PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
+            KeepAlivePingDelay = TimeSpan.FromSeconds(60),
+            KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
+            EnableMultipleHttp2Connections = true
+        };
+    });
 });
 
-builder.Services.AddEFAuditRepos();
-
-builder.Services.AddMediatR(typeof(AccessLogCreatedDomainEventHandler));
-
 builder.Services.AddRazorPages();
-
-//AddMockservies(builder.Services);
 
 var app = builder.Build();
 
@@ -30,8 +39,8 @@ app.UseStaticFiles();
 
 app.UseAudit("XUnitTest", options =>
 {
-    options.AddFilter("*", "GET");
-    options.AddFilter("/Index", "POST");
+    options.Include("", "GET");
+    options.Exclude("/Index");
 });
 
 app.MapRazorPages();
@@ -39,19 +48,58 @@ app.MapRazorPages();
 app.MapGet("/", async (ctx) =>
 {
     var auditContext = ctx.RequestServices.GetRequiredService<IAuditContextAccessor>().AuditContext;
-    await ctx.Response.WriteAsync(auditContext?.AccessRecord?.ServerInfo?.AppName ?? "");
+    await ctx.Response.WriteAsync(auditContext?.AccessRecord?.Server?.App ?? "");
 });
 
-await MigrateAsync(app);
+app.MapGet("/audit", async (ctx) =>
+{
+    var mediator = ctx.RequestServices.GetRequiredService<IMediator>();
+    await mediator.Publish(new DataEvent("Inserted")
+        .SetAuditRecord(new AuditRecord
+        {
+            User = "test",
+            Database = "test",
+            Schema = "test",
+            Table = "test",
+            KeyValues = new Dictionary<string, object?>
+            {
+                { "Id", Guid.NewGuid() }
+            },
+            CurrentValues = new Dictionary<string, object?>
+            {
+                { "Name", "test" }
+            },
+            OriginalValues = new Dictionary<string, object?>
+            {
+            }
+        }));
+
+    await mediator.Publish(new DataEvent("Inserted")
+            .SetAuditRecord(new AuditRecord
+            {
+                User = "test",
+                Database = "test",
+                Schema = "test",
+                Table = "test1",
+                KeyValues = new Dictionary<string, object?>
+                {
+                { "Id", Guid.NewGuid() }
+                },
+                CurrentValues = new Dictionary<string, object?>
+                {
+                { "Name", "test1" }
+                },
+                OriginalValues = new Dictionary<string, object?>
+                {
+                }
+            }));
+});
+
+
+// Use with ConfigureAuditDefault together
+//await MigrateAsync(app);
 
 app.Run();
-
-
-void AddMockservies(IServiceCollection services)
-{
-    services.AddScoped<IAccessLogRepository, AccessLogRepository>();
-    services.AddScoped<IDataAuditRepository, DataAuditRepository>();
-}
 
 async Task MigrateAsync(WebApplication app)
 {

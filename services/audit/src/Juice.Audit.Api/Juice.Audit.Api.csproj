@@ -11,6 +11,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Juice.Audit\Juice.Audit.csproj" />
+    <ProjectReference Include="..\Juice.Audit.Api.Contracts\Juice.Audit.Api.Contracts.csproj" />
+    <ProjectReference Include="..\Juice.Audit.EF\Juice.Audit.EF.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Grpc.AspNetCore.Server" Version="$(GrpcVersion)" />
   </ItemGroup>
 </Project>
