@@ -8,11 +8,14 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\core\src\Juice\Juice.csproj" />
+    <ProjectReference Include="..\Juice.Audit.Api.Contracts\Juice.Audit.Api.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="MediatR" Version="$(MediatRVersion)" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="$(MicrosoftExtensionsVersion)" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"
+                      Version="$(MicrosoftExtensionsVersion)" />
+    <PackageReference Include="Grpc.Net.ClientFactory" Version="$(GrpcVersion)" />
   </ItemGroup>
 
 </Project>

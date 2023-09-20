@@ -13,11 +13,13 @@ namespace Juice.Audit.AspNetCore.Middleware
     {
         private RequestDelegate _next;
         private string _appName;
+        private AuditFilterOptions _filter;
 
-        public AuditMiddleware(RequestDelegate next, string appName)
+        public AuditMiddleware(RequestDelegate next, string appName, AuditFilterOptions options)
         {
             _next = next;
             _appName = appName;
+            _filter = options;
         }
 
         public async Task InvokeAsync(HttpContext context)
@@ -72,6 +74,7 @@ namespace Juice.Audit.AspNetCore.Middleware
             {
                 logger.LogWarning(ex, "Error while collecting the server information");
             }
+
             try
             {
                 await _next(context);
@@ -122,9 +125,10 @@ namespace Juice.Audit.AspNetCore.Middleware
                         logger.LogDebug("AuditMiddleware.InvokeAsync: Get IAuditService {0}", timeTracker.ElapsedMilliseconds);
                         timeTracker.Restart();
                     }
-                    if (auditService != null)
+                    if (auditService != null && auditContextAccessor.AuditContext?.AccessRecord != null)
                     {
-                        await auditService.CommitAuditInformationAsync(default);
+                        await auditService.PersistAuditInformationAsync(auditContextAccessor.AuditContext.AccessRecord,
+                            auditContextAccessor.AuditContext.AuditEntries.ToArray(), default);
                     }
                     if (dbg)
                     {
@@ -156,31 +160,32 @@ namespace Juice.Audit.AspNetCore.Middleware
         private void CollectRequestInfo(IAuditContextAccessor auditContextAccessor,
             HttpContext context)
         {
-            var requestInfo = new RequestInfo
-            {
-                RequestId = context.TraceIdentifier,
-                Method = context.Request.Method,
-                Path = context.Request.Path,
-                Host = context.Request.Host.HasValue ? context.Request.Host.Value : default,
-                Data = context.Request.HasFormContentType ? JsonConvert.SerializeObject(context.Request.Form) : default,
-                Headers = JsonConvert.SerializeObject(context.Request.Headers),
-                QueryString = context.Request.QueryString.HasValue ? context.Request.QueryString.Value : default,
-                Schema = context.Request.Scheme,
-                RemoteIpAddress = context.Connection.RemoteIpAddress?.ToString(),
-            };
+            var requestInfo = new RequestInfo(
+                context.Request.Method,
+                context.Request.Path,
+                context.Request.HasFormContentType ? JsonConvert.SerializeObject(context.Request.Form) : default,
+                context.Request.QueryString.HasValue ? context.Request.QueryString.Value : default,
+                JsonConvert.SerializeObject(context.Request.Headers
+                    .Where(h => _filter.IsReqHeaderMatch(h.Key))
+                    .ToDictionary(x => x.Key, x => x.Value)),
+                context.Request.Scheme,
+                context.Connection.RemoteIpAddress?.ToString(),
+                context.TraceIdentifier,
+                context.Request.Host.HasValue ? context.Request.Host.Value : default
+                )
+           ;
             auditContextAccessor.AuditContext?.SetRequestInfo(requestInfo);
         }
 
         private void CollectServerInfo(IAuditContextAccessor auditContextAccessor)
         {
-            var serverInfo = new ServerInfo
-            {
-                MachineName = Environment.MachineName,
-                OSVersion = Environment.OSVersion.ToString(),
-                SoftwareVersion = Assembly.GetEntryAssembly()?.GetName()
+            var serverInfo = new ServerInfo(
+                Environment.MachineName,
+                Environment.OSVersion.ToString(),
+                Assembly.GetEntryAssembly()?.GetName()
                     ?.Version?.ToString(),
-                AppName = _appName,
-            };
+                _appName
+                );
             auditContextAccessor.AuditContext?.SetServerInfo(serverInfo);
         }
 
@@ -194,7 +199,11 @@ namespace Juice.Audit.AspNetCore.Middleware
                     responseInfo.TrySetMessage(ex.Message);
                     responseInfo.TrySetError(ex.StackTrace ?? ex.ToString());
                 }
-                responseInfo.SetResponseInfo(context.Response.StatusCode, JsonConvert.SerializeObject(context.Response.Headers), elapsed);
+                responseInfo.SetResponseInfo(context.Response.StatusCode,
+                    JsonConvert.SerializeObject(context.Response.Headers
+                        .Where(h => _filter.IsResHeaderMatch(h.Key))
+                        .ToDictionary(x => x.Key, x => x.Value)),
+                    elapsed);
             });
         }
 

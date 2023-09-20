@@ -1,7 +1,12 @@
-﻿namespace Juice.Domain
+﻿using System.ComponentModel.DataAnnotations.Schema;
+
+namespace Juice.Domain
 {
-    public abstract class ValueObject
+    public abstract class ValueObject : IValidatable
     {
+        [NotMapped]
+        public IList<string> ValidationErrors => new List<string>();
+
         protected static bool EqualOperator(ValueObject left, ValueObject right)
         {
             if (ReferenceEquals(left, null) ^ ReferenceEquals(right, null))

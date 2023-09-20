@@ -3,48 +3,51 @@ using System;
 using Juice.Audit.EF;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Juice.Audit.EF.PostgreSQL.Migrations
+namespace Juice.Audit.EF.SqlServer.Migrations
 {
     [DbContext(typeof(AuditDbContext))]
-    partial class AuditDbContextModelSnapshot : ModelSnapshot
+    [Migration("20230918042741_InitAuditLog")]
+    partial class InitAuditLog
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("ProductVersion", "7.0.3")
-                .HasAnnotation("Relational:MaxIdentifierLength", 63);
+                .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
-            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
             modelBuilder.Entity("Juice.Audit.Domain.AccessLogAggregate.AccessLog", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Action")
                         .IsRequired()
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<DateTimeOffset>("DateTime")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<string>("Metadata")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("jsonb")
+                        .HasColumnType("nvarchar(max)")
                         .HasDefaultValueSql("'{}'");
 
                     b.Property<string>("User")
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
+                        .HasColumnType("nvarchar(256)");
 
                     b.HasKey("Id");
 
@@ -59,49 +62,49 @@ namespace Juice.Audit.EF.PostgreSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Action")
                         .IsRequired()
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("Changes")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("jsonb")
+                        .HasColumnType("nvarchar(max)")
                         .HasDefaultValueSql("'{}'");
 
                     b.Property<DateTimeOffset>("DateTime")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<string>("Db")
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("Kvps")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(256)
-                        .HasColumnType("jsonb")
+                        .HasColumnType("nvarchar(256)")
                         .HasDefaultValueSql("'{}'");
 
                     b.Property<string>("Schema")
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("Tbl")
                         .IsRequired()
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("TraceId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("User")
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
+                        .HasColumnType("nvarchar(256)");
 
                     b.HasKey("Id");
 
@@ -121,58 +124,58 @@ namespace Juice.Audit.EF.PostgreSQL.Migrations
                     b.OwnsOne("Juice.Audit.Domain.AccessLogAggregate.RequestInfo", "Request", b1 =>
                         {
                             b1.Property<Guid>("AccessLogId")
-                                .HasColumnType("uuid");
+                                .HasColumnType("uniqueidentifier");
 
                             b1.Property<string>("Data")
-                                .HasColumnType("text")
+                                .HasColumnType("nvarchar(max)")
                                 .HasColumnName("Req_Data");
 
                             b1.Property<string>("Headers")
                                 .HasMaxLength(2048)
-                                .HasColumnType("character varying(2048)")
+                                .HasColumnType("nvarchar(2048)")
                                 .HasColumnName("Req_Headers");
 
                             b1.Property<string>("Host")
                                 .HasMaxLength(256)
-                                .HasColumnType("character varying(256)")
+                                .HasColumnType("nvarchar(256)")
                                 .HasColumnName("Req_Host");
 
                             b1.Property<string>("Method")
                                 .IsRequired()
                                 .HasMaxLength(64)
-                                .HasColumnType("character varying(64)")
+                                .HasColumnType("nvarchar(64)")
                                 .HasColumnName("Req_Method");
 
                             b1.Property<string>("Path")
                                 .IsRequired()
                                 .HasMaxLength(256)
-                                .HasColumnType("character varying(256)")
+                                .HasColumnType("nvarchar(256)")
                                 .HasColumnName("Req_Path");
 
                             b1.Property<string>("Query")
                                 .HasMaxLength(2048)
-                                .HasColumnType("character varying(2048)")
+                                .HasColumnType("nvarchar(2048)")
                                 .HasColumnName("Req_Query");
 
                             b1.Property<string>("RIPA")
                                 .HasMaxLength(64)
-                                .HasColumnType("character varying(64)")
+                                .HasColumnType("nvarchar(64)")
                                 .HasColumnName("Req_RIPA");
 
                             b1.Property<string>("Scheme")
                                 .HasMaxLength(64)
-                                .HasColumnType("character varying(64)")
+                                .HasColumnType("nvarchar(64)")
                                 .HasColumnName("Req_Scheme");
 
                             b1.Property<string>("TraceId")
                                 .IsRequired()
                                 .HasMaxLength(64)
-                                .HasColumnType("character varying(64)")
+                                .HasColumnType("nvarchar(64)")
                                 .HasColumnName("Req_TraceId");
 
                             b1.Property<string>("Zone")
                                 .HasMaxLength(256)
-                                .HasColumnType("character varying(256)")
+                                .HasColumnType("nvarchar(256)")
                                 .HasColumnName("Req_Zone");
 
                             b1.HasKey("AccessLogId");
@@ -188,10 +191,10 @@ namespace Juice.Audit.EF.PostgreSQL.Migrations
                     b.OwnsOne("Juice.Audit.Domain.AccessLogAggregate.ResponseInfo", "Response", b1 =>
                         {
                             b1.Property<Guid>("AccessLogId")
-                                .HasColumnType("uuid");
+                                .HasColumnType("uniqueidentifier");
 
                             b1.Property<string>("Data")
-                                .HasColumnType("text")
+                                .HasColumnType("nvarchar(max)")
                                 .HasColumnName("Res_Data");
 
                             b1.Property<long?>("ElapsedMs")
@@ -199,21 +202,21 @@ namespace Juice.Audit.EF.PostgreSQL.Migrations
                                 .HasColumnName("Res_ElapsedMs");
 
                             b1.Property<string>("Err")
-                                .HasColumnType("text")
+                                .HasColumnType("nvarchar(max)")
                                 .HasColumnName("Res_Err");
 
                             b1.Property<string>("Headers")
                                 .HasMaxLength(2048)
-                                .HasColumnType("character varying(2048)")
+                                .HasColumnType("nvarchar(2048)")
                                 .HasColumnName("Res_Headers");
 
                             b1.Property<string>("Msg")
                                 .HasMaxLength(2048)
-                                .HasColumnType("character varying(2048)")
+                                .HasColumnType("nvarchar(2048)")
                                 .HasColumnName("Res_Msg");
 
                             b1.Property<int>("Status")
-                                .HasColumnType("integer")
+                                .HasColumnType("int")
                                 .HasColumnName("Res_Status");
 
                             b1.HasKey("AccessLogId");
@@ -227,29 +230,29 @@ namespace Juice.Audit.EF.PostgreSQL.Migrations
                     b.OwnsOne("Juice.Audit.Domain.AccessLogAggregate.ServerInfo", "Server", b1 =>
                         {
                             b1.Property<Guid>("AccessLogId")
-                                .HasColumnType("uuid");
+                                .HasColumnType("uniqueidentifier");
 
                             b1.Property<string>("App")
                                 .IsRequired()
                                 .HasMaxLength(256)
-                                .HasColumnType("character varying(256)")
+                                .HasColumnType("nvarchar(256)")
                                 .HasColumnName("Srv_App");
 
                             b1.Property<string>("AppVer")
                                 .HasMaxLength(256)
-                                .HasColumnType("character varying(256)")
+                                .HasColumnType("nvarchar(256)")
                                 .HasColumnName("Srv_AppVer");
 
                             b1.Property<string>("Machine")
                                 .IsRequired()
                                 .HasMaxLength(256)
-                                .HasColumnType("character varying(256)")
+                                .HasColumnType("nvarchar(256)")
                                 .HasColumnName("Srv_Machine");
 
                             b1.Property<string>("OS")
                                 .IsRequired()
                                 .HasMaxLength(256)
-                                .HasColumnType("character varying(256)")
+                                .HasColumnType("nvarchar(256)")
                                 .HasColumnName("Srv_OS");
 
                             b1.HasKey("AccessLogId");

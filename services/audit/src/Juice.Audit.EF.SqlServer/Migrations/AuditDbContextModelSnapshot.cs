@@ -36,7 +36,7 @@ namespace Juice.Audit.EF.SqlServer.Migrations
                     b.Property<DateTimeOffset>("DateTime")
                         .HasColumnType("datetimeoffset");
 
-                    b.Property<string>("ExtraMetadata")
+                    b.Property<string>("Metadata")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasColumnType("nvarchar(max)")
@@ -61,32 +61,43 @@ namespace Juice.Audit.EF.SqlServer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid?>("AccessId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<string>("Action")
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
-                    b.Property<string>("DataChanges")
+                    b.Property<string>("Changes")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Database")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("nvarchar(max)")
+                        .HasDefaultValueSql("'{}'");
 
                     b.Property<DateTimeOffset>("DateTime")
                         .HasColumnType("datetimeoffset");
 
-                    b.Property<string>("Schema")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<string>("Db")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
 
-                    b.Property<string>("Table")
+                    b.Property<string>("Kvps")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)")
+                        .HasDefaultValueSql("'{}'");
+
+                    b.Property<string>("Schema")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("Tbl")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("TraceId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("User")
                         .HasMaxLength(256)
@@ -94,57 +105,79 @@ namespace Juice.Audit.EF.SqlServer.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AccessId");
-
                     b.HasIndex("DateTime");
+
+                    b.HasIndex("TraceId");
 
                     b.HasIndex("User", "Action");
 
-                    b.HasIndex("Database", "Schema", "Table");
+                    b.HasIndex("Db", "Schema", "Tbl");
 
                     b.ToTable("DataAudit", (string)null);
                 });
 
             modelBuilder.Entity("Juice.Audit.Domain.AccessLogAggregate.AccessLog", b =>
                 {
-                    b.OwnsOne("Juice.Audit.Domain.AccessLogAggregate.RequestInfo", "RequestInfo", b1 =>
+                    b.OwnsOne("Juice.Audit.Domain.AccessLogAggregate.RequestInfo", "Request", b1 =>
                         {
                             b1.Property<Guid>("AccessLogId")
                                 .HasColumnType("uniqueidentifier");
 
-                            b1.Property<string>("AccessZone")
-                                .HasColumnType("nvarchar(max)");
-
                             b1.Property<string>("Data")
-                                .HasColumnType("nvarchar(max)");
+                                .HasColumnType("nvarchar(max)")
+                                .HasColumnName("Req_Data");
 
                             b1.Property<string>("Headers")
-                                .HasColumnType("nvarchar(max)");
+                                .HasMaxLength(2048)
+                                .HasColumnType("nvarchar(2048)")
+                                .HasColumnName("Req_Headers");
 
                             b1.Property<string>("Host")
-                                .HasColumnType("nvarchar(max)");
+                                .HasMaxLength(256)
+                                .HasColumnType("nvarchar(256)")
+                                .HasColumnName("Req_Host");
 
                             b1.Property<string>("Method")
                                 .IsRequired()
-                                .HasColumnType("nvarchar(max)");
+                                .HasMaxLength(64)
+                                .HasColumnType("nvarchar(64)")
+                                .HasColumnName("Req_Method");
 
                             b1.Property<string>("Path")
                                 .IsRequired()
-                                .HasColumnType("nvarchar(max)");
+                                .HasMaxLength(256)
+                                .HasColumnType("nvarchar(256)")
+                                .HasColumnName("Req_Path");
 
-                            b1.Property<string>("QueryString")
-                                .HasColumnType("nvarchar(max)");
+                            b1.Property<string>("Query")
+                                .HasMaxLength(2048)
+                                .HasColumnType("nvarchar(2048)")
+                                .HasColumnName("Req_Query");
 
-                            b1.Property<string>("RemoteIpAddress")
-                                .HasColumnType("nvarchar(max)");
+                            b1.Property<string>("RIPA")
+                                .HasMaxLength(64)
+                                .HasColumnType("nvarchar(64)")
+                                .HasColumnName("Req_RIPA");
 
-                            b1.Property<string>("RequestId")
-                                .HasColumnType("nvarchar(max)");
+                            b1.Property<string>("Scheme")
+                                .HasMaxLength(64)
+                                .HasColumnType("nvarchar(64)")
+                                .HasColumnName("Req_Scheme");
 
-                            b1.Property<string>("Schema")
-                                .HasColumnType("nvarchar(max)");
+                            b1.Property<string>("TraceId")
+                                .IsRequired()
+                                .HasMaxLength(64)
+                                .HasColumnType("nvarchar(64)")
+                                .HasColumnName("Req_TraceId");
+
+                            b1.Property<string>("Zone")
+                                .HasMaxLength(256)
+                                .HasColumnType("nvarchar(256)")
+                                .HasColumnName("Req_Zone");
 
                             b1.HasKey("AccessLogId");
+
+                            b1.HasIndex("TraceId");
 
                             b1.ToTable("AccessLog");
 
@@ -152,28 +185,36 @@ namespace Juice.Audit.EF.SqlServer.Migrations
                                 .HasForeignKey("AccessLogId");
                         });
 
-                    b.OwnsOne("Juice.Audit.Domain.AccessLogAggregate.ResponseInfo", "ResponseInfo", b1 =>
+                    b.OwnsOne("Juice.Audit.Domain.AccessLogAggregate.ResponseInfo", "Response", b1 =>
                         {
                             b1.Property<Guid>("AccessLogId")
                                 .HasColumnType("uniqueidentifier");
 
                             b1.Property<string>("Data")
-                                .HasColumnType("nvarchar(max)");
+                                .HasColumnType("nvarchar(max)")
+                                .HasColumnName("Res_Data");
 
-                            b1.Property<long?>("ElapsedMilliseconds")
-                                .HasColumnType("bigint");
+                            b1.Property<long?>("ElapsedMs")
+                                .HasColumnType("bigint")
+                                .HasColumnName("Res_ElapsedMs");
 
-                            b1.Property<string>("Error")
-                                .HasColumnType("nvarchar(max)");
+                            b1.Property<string>("Err")
+                                .HasColumnType("nvarchar(max)")
+                                .HasColumnName("Res_Err");
 
                             b1.Property<string>("Headers")
-                                .HasColumnType("nvarchar(max)");
+                                .HasMaxLength(2048)
+                                .HasColumnType("nvarchar(2048)")
+                                .HasColumnName("Res_Headers");
 
-                            b1.Property<string>("Message")
-                                .HasColumnType("nvarchar(max)");
+                            b1.Property<string>("Msg")
+                                .HasMaxLength(2048)
+                                .HasColumnType("nvarchar(2048)")
+                                .HasColumnName("Res_Msg");
 
-                            b1.Property<int>("StatusCode")
-                                .HasColumnType("int");
+                            b1.Property<int>("Status")
+                                .HasColumnType("int")
+                                .HasColumnName("Res_Status");
 
                             b1.HasKey("AccessLogId");
 
@@ -183,25 +224,33 @@ namespace Juice.Audit.EF.SqlServer.Migrations
                                 .HasForeignKey("AccessLogId");
                         });
 
-                    b.OwnsOne("Juice.Audit.Domain.AccessLogAggregate.ServerInfo", "ServerInfo", b1 =>
+                    b.OwnsOne("Juice.Audit.Domain.AccessLogAggregate.ServerInfo", "Server", b1 =>
                         {
                             b1.Property<Guid>("AccessLogId")
                                 .HasColumnType("uniqueidentifier");
 
-                            b1.Property<string>("AppName")
+                            b1.Property<string>("App")
                                 .IsRequired()
-                                .HasColumnType("nvarchar(max)");
+                                .HasMaxLength(256)
+                                .HasColumnType("nvarchar(256)")
+                                .HasColumnName("Srv_App");
 
-                            b1.Property<string>("MachineName")
+                            b1.Property<string>("AppVer")
+                                .HasMaxLength(256)
+                                .HasColumnType("nvarchar(256)")
+                                .HasColumnName("Srv_AppVer");
+
+                            b1.Property<string>("Machine")
                                 .IsRequired()
-                                .HasColumnType("nvarchar(max)");
+                                .HasMaxLength(256)
+                                .HasColumnType("nvarchar(256)")
+                                .HasColumnName("Srv_Machine");
 
-                            b1.Property<string>("OSVersion")
+                            b1.Property<string>("OS")
                                 .IsRequired()
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("SoftwareVersion")
-                                .HasColumnType("nvarchar(max)");
+                                .HasMaxLength(256)
+                                .HasColumnType("nvarchar(256)")
+                                .HasColumnName("Srv_OS");
 
                             b1.HasKey("AccessLogId");
 
@@ -211,11 +260,11 @@ namespace Juice.Audit.EF.SqlServer.Migrations
                                 .HasForeignKey("AccessLogId");
                         });
 
-                    b.Navigation("RequestInfo");
+                    b.Navigation("Request");
 
-                    b.Navigation("ResponseInfo");
+                    b.Navigation("Response");
 
-                    b.Navigation("ServerInfo");
+                    b.Navigation("Server");
                 });
 #pragma warning restore 612, 618
         }

@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Protos\audit.proto" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\core\src\Juice\Juice.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Label="gRPC">
+    <Protobuf Include="Protos\audit.proto" />
+    <PackageReference Include="Google.Protobuf" Version="3.18.1" />
+    <PackageReference Include="Grpc.Tools" Version="$(GrpcVersion)" PrivateAssets="All" />
+    <PackageReference Include="Grpc.Core.Api" Version="$(GrpcVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Protos\" />
+  </ItemGroup>
+</Project>

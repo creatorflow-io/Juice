@@ -1,5 +1,7 @@
-﻿using Juice.Audit.AspNetCore.Middleware;
+﻿using Juice.Audit.Api.Grpc.Services;
+using Juice.Audit.AspNetCore.Middleware;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 
 namespace Juice.Audit.AspNetCore.Extensions
 {
@@ -49,7 +51,7 @@ namespace Juice.Audit.AspNetCore.Extensions
 
             if (options.Filters.Length == 0)
             {
-                app.UseMiddleware<AuditMiddleware>();
+                app.UseMiddleware<AuditMiddleware>(appName, options);
             }
             else
             {
@@ -57,10 +59,22 @@ namespace Juice.Audit.AspNetCore.Extensions
                         options.IsMatch(
                             context.Request.Path, context.Request.Method
                             ),
-                            appBuilder => appBuilder.UseMiddleware<AuditMiddleware>(appName)
+                            appBuilder => appBuilder.UseMiddleware<AuditMiddleware>(appName, options)
                 );
             }
             return app;
         }
+
+        /// <summary>
+        /// Map the gRPC Audit server to handle audit messages from clients
+        /// </summary>
+        /// <param name="app"></param>
+        /// <returns></returns>
+        public static IEndpointRouteBuilder MapAuditGrpcServer(this IEndpointRouteBuilder app)
+        {
+            app.MapGrpcService<AuditGrpcServer>();
+            return app;
+        }
+
     }
 }

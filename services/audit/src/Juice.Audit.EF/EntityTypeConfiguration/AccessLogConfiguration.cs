@@ -1,5 +1,5 @@
 ﻿using Juice.Audit.Domain.AccessLogAggregate;
-using Juice.EF;
+using Juice.EF.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -21,27 +21,42 @@ namespace Juice.Audit.EF.EntityTypeConfiguration
             builder.ToTable(nameof(AccessLog), _schema);
             builder.HasKey(x => x.Id);
             builder.Property(x => x.Id).ValueGeneratedOnAdd();
-            builder.Property(x => x.User).HasMaxLength(Constants.NameLength);
-            builder.Property(x => x.Action).HasMaxLength(Constants.NameLength);
+            builder.Property(x => x.User).HasMaxLength(LengthConstants.NameLength);
+            builder.Property(x => x.Action).HasMaxLength(LengthConstants.NameLength);
 
-            builder.Property(x => x.ExtraMetadata)
-                .IsRequired();
-            if (_dbContext.Database.ProviderName == "Npgsql.EntityFrameworkCore.PostgreSQL")
-            {
-                builder.Property(x => x.ExtraMetadata)
-                    .HasColumnType("jsonb")
-                    .HasDefaultValue("{}");
-            }
-            else
-            {
-                builder.Property(x => x.ExtraMetadata)
-                    .HasColumnType("nvarchar(max)")
-                    .HasDefaultValueSql("'{}'");
-            }
+            builder.Property(x => x.Metadata)
+                .HasJsonConversion(_dbContext.Database.ProviderName);
 
-            builder.OwnsOne(x => x.RequestInfo);
-            builder.OwnsOne(x => x.ServerInfo);
-            builder.OwnsOne(x => x.ResponseInfo);
+            builder.OwnsOne(x => x.Request, i =>
+            {
+                i.HasColumnPrefix("Req_");
+
+                i.Property(x => x.Method).HasMaxLength(LengthConstants.IdentityLength);
+                i.Property(x => x.TraceId).HasMaxLength(LengthConstants.IdentityLength);
+                i.Property(x => x.Host).HasMaxLength(LengthConstants.NameLength);
+                i.Property(x => x.Path).HasMaxLength(LengthConstants.NameLength);
+                i.Property(x => x.Query).HasMaxLength(LengthConstants.ShortDescriptionLength);
+                i.Property(x => x.Headers).HasMaxLength(LengthConstants.ShortDescriptionLength);
+                i.Property(x => x.Scheme).HasMaxLength(LengthConstants.IdentityLength);
+                i.Property(x => x.RIPA).HasMaxLength(LengthConstants.IdentityLength);
+                i.Property(x => x.Zone).HasMaxLength(LengthConstants.NameLength);
+
+                i.HasIndex(x => x.TraceId);
+            });
+            builder.OwnsOne(x => x.Server, i =>
+            {
+                i.HasColumnPrefix("Srv_");
+                i.Property(x => x.Machine).HasMaxLength(LengthConstants.NameLength);
+                i.Property(x => x.OS).HasMaxLength(LengthConstants.NameLength);
+                i.Property(x => x.AppVer).HasMaxLength(LengthConstants.NameLength);
+                i.Property(x => x.App).HasMaxLength(LengthConstants.NameLength);
+            });
+            builder.OwnsOne(x => x.Response, i =>
+            {
+                i.HasColumnPrefix("Res_");
+                i.Property(x => x.Msg).HasMaxLength(LengthConstants.ShortDescriptionLength);
+                i.Property(x => x.Headers).HasMaxLength(LengthConstants.ShortDescriptionLength);
+            });
 
             builder.HasIndex(x => new { x.User, x.Action });
             builder.HasIndex(x => x.DateTime);

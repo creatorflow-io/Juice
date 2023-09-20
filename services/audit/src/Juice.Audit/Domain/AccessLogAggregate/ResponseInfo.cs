@@ -1,8 +1,10 @@
-﻿namespace Juice.Audit.Domain.AccessLogAggregate
+﻿using Juice.Domain;
+
+namespace Juice.Audit.Domain.AccessLogAggregate
 {
     public class ResponseInfo
     {
-        public int StatusCode { get; private set; }
+        public int Status { get; private set; }
         /// <summary>
         /// Intended to be used for storing the response data and will fullfilled by custom middleware.
         /// </summary>
@@ -10,14 +12,14 @@
         /// <summary>
         /// Intended to be used for storing the response message and will fullfilled by custom middleware.
         /// </summary>
-        public string? Message { get; private set; }
+        public string? Msg { get; private set; }
         /// <summary>
         /// Intended to be used for storing the response error and will fullfilled by custom middleware.
         /// </summary>
-        public string? Error { get; private set; }
+        public string? Err { get; private set; }
         public string? Headers { get; private set; }
 
-        public long? ElapsedMilliseconds { get; private set; }
+        public long? ElapsedMs { get; private set; }
 
         /// <summary>
         /// Intended to be used for storing the response data and will fullfilled by custom middleware.
@@ -33,7 +35,7 @@
         /// <param name="message"></param>
         public void TrySetMessage(string message)
         {
-            Message ??= message;
+            Msg ??= ValidatableExtensions.TrimExceededLength(message, LengthConstants.ShortDescriptionLength);
         }
         /// <summary>
         /// Intended to be used for storing the response error and will fullfilled by custom middleware.
@@ -41,14 +43,14 @@
         /// <param name="error"></param>
         public void TrySetError(string error)
         {
-            Error ??= error;
+            Err ??= error;
         }
 
         public void SetResponseInfo(int statusCode, string headers, long elapsedMilliseconds)
         {
-            StatusCode = statusCode;
-            Headers = headers;
-            ElapsedMilliseconds = elapsedMilliseconds;
+            Status = statusCode;
+            Headers = ValidatableExtensions.TrimExceededLength(headers, LengthConstants.ShortDescriptionLength);
+            ElapsedMs = elapsedMilliseconds;
         }
     }
 }
