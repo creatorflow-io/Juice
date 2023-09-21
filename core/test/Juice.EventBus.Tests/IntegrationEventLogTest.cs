@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Juice.EF;
 using Juice.EF.Tests.Domain;
 using Juice.EF.Tests.Infrastructure;
 using Juice.EventBus.IntegrationEventLog.EF;
