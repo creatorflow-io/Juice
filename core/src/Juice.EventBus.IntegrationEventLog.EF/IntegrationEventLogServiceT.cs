@@ -37,7 +37,7 @@ namespace Juice.EventBus.IntegrationEventLog.EF
             _integrationEventLogService = new IntegrationEventLogService(_factory(tContext), _eventTypes);
         }
 
-        void IDisposable.Dispose() => _integrationEventLogService.Dispose();
+
         Task IIntegrationEventLogService.MarkEventAsFailedAsync(Guid eventId)
             => _integrationEventLogService.MarkEventAsFailedAsync(eventId);
         Task IIntegrationEventLogService.MarkEventAsInProgressAsync(Guid eventId)
@@ -48,5 +48,37 @@ namespace Juice.EventBus.IntegrationEventLog.EF
             => _integrationEventLogService.RetrieveEventLogsPendingToPublishAsync(transactionId);
         Task IIntegrationEventLogService.SaveEventAsync(IntegrationEvent @event, IDbContextTransaction transaction)
             => _integrationEventLogService.SaveEventAsync(@event, transaction);
+
+
+        #region IDisposable Support
+        private bool _disposedValue;
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposedValue)
+            {
+                if (disposing)
+                {
+                    // dispose managed state (managed objects)
+                    _integrationEventLogService.Dispose();
+                    _integrationEventLogService = null!;
+                }
+
+                // TODO: free unmanaged resources (unmanaged objects) and override finalizer
+                // set large fields to null
+                _context = null!;
+                _eventTypes = null!;
+                _factory = null!;
+                _disposedValue = true;
+            }
+        }
+
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
+        #endregion
     }
 }

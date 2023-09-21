@@ -228,18 +228,6 @@ namespace Juice.Storage.Local
 
         }
 
-        protected override void Cleanup()
-        {
-            if (_client != null)
-            {
-                if (_client.IsConnected)
-                {
-                    _client.Disconnect();
-                }
-                _client.Dispose();
-            }
-        }
-
         protected override async Task<IList<string>> FindFileVersionsAsync(string filePath, CancellationToken token)
         {
             await Task.Yield();
@@ -256,6 +244,22 @@ namespace Juice.Storage.Local
             return files
                 .Where(f => Path.GetFileNameWithoutExtension(f).StartsWith(fileNameWithoutExtension, StringComparison.OrdinalIgnoreCase)
                     && Path.GetExtension(f).Equals(extension, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                if (_client != null)
+                {
+                    if (_client.IsConnected)
+                    {
+                        _client.Disconnect();
+                    }
+                    _client.Dispose();
+                }
+            }
+            base.Dispose(disposing);
         }
     }
 }

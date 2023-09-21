@@ -19,11 +19,8 @@
             {
                 if (disposing)
                 {
-                    if (AuditContext != null)
-                    {
-                        AuditContext.Dispose();
-                        AuditContext = null;
-                    }
+                    AuditContext?.Dispose();
+                    AuditContext = null;
                 }
 
                 _disposed = true;

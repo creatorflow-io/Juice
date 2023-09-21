@@ -1,5 +1,4 @@
 ﻿using Juice.MediatR;
-using Juice.Timers.Domain.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -146,13 +145,6 @@ namespace Juice.Timers
                 Interlocked.Decrement(ref globalCounter);
                 disposedValue = true;
             }
-        }
-
-        //  override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
-        ~Timer()
-        {
-            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            Dispose(false);
         }
 
         // This code added to correctly implement the disposable pattern.

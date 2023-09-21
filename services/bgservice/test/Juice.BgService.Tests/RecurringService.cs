@@ -52,9 +52,5 @@ namespace Juice.BgService.Tests
             return (true, default);
         }
 
-        protected override void Cleanup()
-        {
-            Console.WriteLine("Cleanup");
-        }
     }
 }

@@ -100,17 +100,21 @@ namespace Juice.BgService.Extensions.Logging
             return _fileLoggers[serviceId];
         }
 
-        protected override void Cleanup()
+        protected override void Dispose(bool disposing)
         {
-            var tasks = new List<Task>();
-            foreach (var logger in _fileLoggers.Values)
+            if (disposing)
             {
-                tasks.Add(logger.StopAsync(default));
+                var tasks = new List<Task>();
+                foreach (var logger in _fileLoggers.Values)
+                {
+                    tasks.Add(logger.StopAsync(default));
+                }
+                if (tasks.Any())
+                {
+                    Task.WaitAll(tasks.ToArray());
+                }
             }
-            if (tasks.Any())
-            {
-                Task.WaitAll(tasks.ToArray());
-            }
+            base.Dispose(disposing);
         }
     }
 }

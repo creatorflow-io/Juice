@@ -29,9 +29,5 @@ namespace Juice.BgService.Tests
             Console.WriteLine("File renamed {0}", e.FullPath);
         }
 
-        protected override void Cleanup()
-        {
-            Console.WriteLine("Cleanup");
-        }
     }
 }

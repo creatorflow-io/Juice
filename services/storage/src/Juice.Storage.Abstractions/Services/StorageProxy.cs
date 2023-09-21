@@ -18,26 +18,6 @@ namespace Juice.Storage.Abstractions.Services
 
         #region IDisposable Support
 
-        protected virtual void Cleanup()
-        {
-            foreach (var provider in _providers)
-            {
-                try
-                {
-                    provider.Dispose();
-                }
-                catch (Exception ex)
-                {
-                    if (_logger.IsEnabled(LogLevel.Debug))
-                    {
-                        _logger.LogDebug(ex, "Error disposing provider {provider}", provider.GetType().FullName);
-                    }
-                }
-            }
-
-            _providers = Array.Empty<IStorageProvider>();
-        }
-
         private bool disposedValue = false; // To detect redundant calls
 
         protected virtual void Dispose(bool disposing)
@@ -47,22 +27,25 @@ namespace Juice.Storage.Abstractions.Services
                 if (disposing)
                 {
                     //  dispose managed state (managed objects).
-
-                    try
+                    foreach (var provider in _providers)
                     {
-                        Cleanup();
+                        try
+                        {
+                            provider.Dispose();
+                        }
+                        catch (Exception ex)
+                        {
+                            if (_logger.IsEnabled(LogLevel.Debug))
+                            {
+                                _logger.LogDebug(ex, "Error disposing provider {provider}", provider.GetType().FullName);
+                            }
+                        }
                     }
-                    catch (NotImplementedException) { }
+
+                    _providers = Array.Empty<IStorageProvider>();
                 }
                 disposedValue = true;
             }
-        }
-
-        //  override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
-        ~StorageProxy()
-        {
-            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            Dispose(false);
         }
 
         // This code added to correctly implement the disposable pattern.
