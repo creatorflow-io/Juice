@@ -218,14 +218,6 @@ namespace Juice.Storage.Local
             });
         }
 
-        protected override void Cleanup()
-        {
-            if (_connection != null)
-            {
-                _connection.Dispose();
-            }
-        }
-
         protected override async Task<IList<string>> FindFileVersionsAsync(string filePath, CancellationToken token)
         {
             await Task.Yield();
@@ -238,6 +230,16 @@ namespace Juice.Storage.Local
 
             return Directory.GetFiles(directory, searchPattern)
                 .Where(f => Path.GetExtension(f).Equals(extension, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _connection?.Dispose();
+                _connection = null;
+            }
+            base.Dispose(disposing);
         }
     }
 }

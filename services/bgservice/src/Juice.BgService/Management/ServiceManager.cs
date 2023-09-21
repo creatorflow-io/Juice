@@ -261,7 +261,7 @@ namespace Juice.BgService.Management
             }
         }
 
-        protected override void Cleanup()
+        protected void Cleanup()
         {
             CleanupManagedServices();
             try
@@ -277,6 +277,15 @@ namespace Juice.BgService.Management
         public void Configure(IServiceModel model)
         {
             Description = model.Name;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                Cleanup();
+            }
+            base.Dispose(disposing);
         }
     }
 }

@@ -17,14 +17,14 @@ namespace Juice.EventBus.RabbitMQ
     {
         public string BROKER_NAME = "juice_event_bus";
 
-        private readonly IRabbitMQPersistentConnection _persistentConnection;
+        private IRabbitMQPersistentConnection _persistentConnection;
 
         private IModel _consumerChannel;
         private string _queueName;
         private string _type;
         private readonly int _retryCount;
 
-        private readonly IServiceScopeFactory _scopeFactory;
+        private IServiceScopeFactory _scopeFactory;
 
 
         public RabbitMQEventBus(IEventBusSubscriptionsManager subscriptionsManager,
@@ -295,16 +295,40 @@ namespace Juice.EventBus.RabbitMQ
                 });
             }
         }
+
         #endregion
+
+        #region Dispose
+        private bool _disposedValue;
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposedValue)
+            {
+                if (disposing)
+                {
+                    // dispose managed state (managed objects)
+                    _consumerChannel?.Dispose();
+                    _consumerChannel = null!;
+                    _persistentConnection?.Dispose();
+                    _persistentConnection = null!;
+                    SubsManager?.Clear();
+                    _scopeFactory = null!;
+                }
+
+                // free unmanaged resources (unmanaged objects) and override finalizer
+                // set large fields to null
+
+                _disposedValue = true;
+            }
+        }
 
         public void Dispose()
         {
-            if (_consumerChannel != null)
-            {
-                _consumerChannel.Dispose();
-            }
-
-            SubsManager.Clear();
+            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
+        #endregion
     }
 }

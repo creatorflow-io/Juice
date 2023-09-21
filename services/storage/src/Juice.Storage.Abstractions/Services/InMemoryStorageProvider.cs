@@ -51,8 +51,6 @@
             _storage[filePath] = ostream.ToArray();
         }
 
-        protected override void Cleanup() { }
-
         protected override async Task<IList<string>> FindFileVersionsAsync(string filePath, CancellationToken token)
         {
             var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(filePath);

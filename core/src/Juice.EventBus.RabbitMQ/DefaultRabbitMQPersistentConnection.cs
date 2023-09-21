@@ -6,14 +6,15 @@ using Polly.Retry;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using RabbitMQ.Client.Exceptions;
+using IConnectionFactory = RabbitMQ.Client.IConnectionFactory;
 
 namespace Juice.EventBus.RabbitMQ
 {
     public class DefaultRabbitMQPersistentConnection
            : IRabbitMQPersistentConnection
     {
-        private readonly IConnectionFactory _connectionFactory;
-        private readonly ILogger<DefaultRabbitMQPersistentConnection> _logger;
+        private IConnectionFactory _connectionFactory;
+        private ILogger<DefaultRabbitMQPersistentConnection> _logger;
         private readonly int _retryCount;
         private IConnection _connection;
         private bool _disposed;
@@ -68,22 +69,36 @@ namespace Juice.EventBus.RabbitMQ
 
             return _connection.CreateModel();
         }
+        #region Disposable
 
+        // Public implementation of Dispose pattern callable by consumers.
         public void Dispose()
         {
-            if (_disposed) { return; }
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
 
-            _disposed = true;
+        // Protected implementation of Dispose pattern.
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                if (disposing)
+                {
+                    // dispose managed state (managed objects)
+                    _connection?.Dispose();
+                    _connection = null!;
+                    _logger = null!;
+                    _connectionFactory = null!;
+                }
 
-            try
-            {
-                _connection.Dispose();
-            }
-            catch (IOException ex)
-            {
-                _logger.LogCritical(ex.ToString());
+                // free unmanaged resources (unmanaged objects) and override finalizer
+                // set large fields to null
+
+                _disposed = true;
             }
         }
+        #endregion
 
         public bool TryConnect()
         {

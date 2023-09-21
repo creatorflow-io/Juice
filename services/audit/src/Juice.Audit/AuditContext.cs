@@ -42,10 +42,10 @@ namespace Juice.Audit
             {
                 if (disposing)
                 {
+                    // dispose managed state (managed objects).
                     AccessRecord = null;
                     AuditEntries = null!;
                 }
-
                 _disposed = true;
             }
         }

@@ -203,11 +203,6 @@ namespace Juice.BgService
                  && (e.State == ServiceState.Stopped || e.State == ServiceState.StoppedUnexpectedly)
             )
             {
-                try
-                {
-                    Cleanup();
-                }
-                catch (NotImplementedException) { }
                 if (managedService.NeedStart)
                 {
                     Task.Delay(500).Wait();
@@ -234,8 +229,6 @@ namespace Juice.BgService
 
         #region IDisposable Support
 
-        protected abstract void Cleanup();
-
         private bool disposedValue = false; // To detect redundant calls
 
         protected virtual void Dispose(bool disposing)
@@ -254,22 +247,10 @@ namespace Juice.BgService
                         OnChanged -= OnChanged;
                     }
                     catch { }
-                    try
-                    {
-                        Cleanup();
-                    }
-                    catch (NotImplementedException) { }
                 }
                 Interlocked.Decrement(ref globalCounter);
                 disposedValue = true;
             }
-        }
-
-        //  override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
-        ~BackgroundService()
-        {
-            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            Dispose(false);
         }
 
         // This code added to correctly implement the disposable pattern.

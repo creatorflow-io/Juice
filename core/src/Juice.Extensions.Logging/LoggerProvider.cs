@@ -6,7 +6,7 @@ namespace Juice.Extensions.Logging
 {
     public abstract class LoggerProvider : IDisposable, ILoggerProvider, ISupportExternalScope
     {
-        private readonly ConcurrentDictionary<string, Logger> _loggers
+        private ConcurrentDictionary<string, Logger> _loggers
             = new(StringComparer.OrdinalIgnoreCase);
         public ILogger CreateLogger(string categoryName)
             => _loggers.GetOrAdd(categoryName, name => new Logger(this, categoryName));
@@ -35,8 +35,6 @@ namespace Juice.Extensions.Logging
 
         #region IDisposable Support
 
-        protected abstract void Cleanup();
-
         private bool disposedValue = false; // To detect redundant calls
 
         protected virtual void Dispose(bool disposing)
@@ -49,23 +47,12 @@ namespace Juice.Extensions.Logging
                     try
                     {
                         _loggers.Clear();
+                        _loggers = null!;
                     }
                     catch { }
-                    try
-                    {
-                        Cleanup();
-                    }
-                    catch (NotImplementedException) { }
                 }
                 disposedValue = true;
             }
-        }
-
-        //  override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
-        ~LoggerProvider()
-        {
-            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            Dispose(false);
         }
 
         // This code added to correctly implement the disposable pattern.

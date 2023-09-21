@@ -52,11 +52,6 @@ namespace Juice.Storage.Abstractions.Services
         }
 
         #region IDisposable Support
-        protected virtual void Cleanup()
-        {
-            Storage = null;
-            _endpoints = Enumerable.Empty<StorageEndpoint>();
-        }
 
         private bool disposedValue = false; // To detect redundant calls
 
@@ -67,22 +62,11 @@ namespace Juice.Storage.Abstractions.Services
                 if (disposing)
                 {
                     //  dispose managed state (managed objects).
-
-                    try
-                    {
-                        Cleanup();
-                    }
-                    catch (NotImplementedException) { }
+                    Storage = null;
+                    _endpoints = Enumerable.Empty<StorageEndpoint>();
                 }
                 disposedValue = true;
             }
-        }
-
-        //  override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
-        ~RepoStorageResolver()
-        {
-            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            Dispose(false);
         }
 
         // This code added to correctly implement the disposable pattern.

@@ -143,9 +143,10 @@ namespace Juice.BgService.Scheduled
 
         public abstract Task<(bool Succeeded, string? Message)> InvokeAsync();
 
-        protected override void Cleanup()
+        protected override void Dispose(bool disposing)
         {
             _waitCancel?.Dispose();
+            base.Dispose(disposing);
         }
     }
 

@@ -137,8 +137,6 @@ namespace Juice.Storage.Abstractions
 
         #region IDisposable Support
 
-        protected abstract void Cleanup();
-
         private bool disposedValue = false; // To detect redundant calls
 
         protected virtual void Dispose(bool disposing)
@@ -149,21 +147,9 @@ namespace Juice.Storage.Abstractions
                 {
                     //  dispose managed state (managed objects).
 
-                    try
-                    {
-                        Cleanup();
-                    }
-                    catch (NotImplementedException) { }
                 }
                 disposedValue = true;
             }
-        }
-
-        //  override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
-        ~StorageProviderBase()
-        {
-            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            Dispose(false);
         }
 
         // This code added to correctly implement the disposable pattern.

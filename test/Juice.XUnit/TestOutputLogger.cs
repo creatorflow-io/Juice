@@ -33,7 +33,6 @@ namespace Microsoft.Extensions.Logging
             _output.WriteLine($"[{entry.LogLevel}]  {scope}   {entry.Category} - {formattedMessage}");
         }
 
-        protected override void Cleanup() { }
     }
 
     public static class TestOutputLoggerExtensions

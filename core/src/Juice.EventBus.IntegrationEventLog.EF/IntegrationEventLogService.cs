@@ -7,9 +7,8 @@ namespace Juice.EventBus.IntegrationEventLog.EF
     internal class IntegrationEventLogService : IIntegrationEventLogService, IDisposable
     {
         public IntegrationEventLogContext LogContext => _integrationEventLogContext;
-        private readonly IntegrationEventLogContext _integrationEventLogContext;
-        private volatile bool disposedValue;
-        private readonly IntegrationEventTypes _eventTypes;
+        private IntegrationEventLogContext _integrationEventLogContext;
+        private IntegrationEventTypes _eventTypes;
 
         public IntegrationEventLogService(IntegrationEventLogContext integrationEventLogContext, IntegrationEventTypes eventTypes)
         {
@@ -90,6 +89,9 @@ namespace Juice.EventBus.IntegrationEventLog.EF
             return _integrationEventLogContext.SaveChangesAsync();
         }
 
+        #region IDisposable Support
+        private volatile bool disposedValue;
+
         protected virtual void Dispose(bool disposing)
         {
             if (!disposedValue)
@@ -97,8 +99,9 @@ namespace Juice.EventBus.IntegrationEventLog.EF
                 if (disposing)
                 {
                     _integrationEventLogContext?.Dispose();
+                    _integrationEventLogContext = null!;
                 }
-
+                _eventTypes = null!;
 
                 disposedValue = true;
             }
@@ -109,5 +112,6 @@ namespace Juice.EventBus.IntegrationEventLog.EF
             Dispose(disposing: true);
             GC.SuppressFinalize(this);
         }
+        #endregion
     }
 }
