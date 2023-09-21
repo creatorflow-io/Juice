@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Juice.EF;
 using Juice.EF.Extensions;
 using Juice.EF.Tests.Domain;
 using Juice.EF.Tests.Infrastructure;
