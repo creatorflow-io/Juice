@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Juice.EF.Extensions;
-using Juice.EF.Tests.EventHandlers;
 using Juice.EventBus.IntegrationEventLog.EF;
 using Juice.EventBus.RabbitMQ;
 using Juice.Extensions.DependencyInjection;
@@ -79,7 +78,7 @@ namespace Juice.MultiTenant.Tests
                     .AddTestOutputLogger()
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
-                services.AddMediatR(typeof(DataEventHandler));
+                services.AddMediatR(GetType());
                 services.AddTenantDbContext(configuration, options =>
                 {
                     options.Schema = "App";
@@ -147,7 +146,7 @@ namespace Juice.MultiTenant.Tests
                     .AddTestOutputLogger()
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
-                services.AddMediatR(typeof(DataEventHandler));
+                services.AddMediatR(typeof(TenantCommandsTests));
                 services.AddTenantDbContext(configuration, options =>
                 {
                     options.Schema = "App";

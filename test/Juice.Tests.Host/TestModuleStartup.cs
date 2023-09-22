@@ -1,11 +1,7 @@
-﻿using Finbuckle.MultiTenant;
-using Finbuckle.MultiTenant.Stores;
-using Juice.EventBus;
+﻿using Juice.EventBus;
 using Juice.EventBus.RabbitMQ;
 using Juice.Extensions.Options;
 using Juice.Modular;
-using Juice.MultiTenant.Domain.AggregatesModel.TenantAggregate;
-using Juice.MultiTenant.Grpc;
 using Juice.Tests.Host.IntegrationEvents;
 using Microsoft.AspNetCore.DataProtection;
 using StackExchange.Redis;
@@ -21,34 +17,6 @@ namespace Juice.Tests.Host
 
 
             services.AddMemoryCache();
-
-            // Add MultiTenant
-            services
-                .AddMultiTenant<Tenant>(options =>
-                {
-                    options.IgnoredIdentifiers = new List<string> { "asset" };
-                    options.Events.OnTenantResolved = async (context) =>
-                    {
-                        if (context.StoreType == typeof(InMemoryStore<Tenant>))
-                        {
-                            return;
-                        }
-                        if (context.Context is HttpContext httpContent
-                        && context.TenantInfo is Tenant tenant)
-                        {
-                            var inMemoryStore = httpContent.RequestServices
-                                .GetServices<IMultiTenantStore<Tenant>>()
-                                .FirstOrDefault(s => s.GetType() == typeof(InMemoryStore<Tenant>));
-                            if (inMemoryStore != null)
-                            {
-                                await inMemoryStore.TryAddAsync(tenant);
-                            }
-                        }
-                    };
-                })
-                .WithBasePathStrategy(options => options.RebaseAspNetCorePathBase = true)
-                .ConfigureTenantClient(configuration, env.EnvironmentName)
-                ;
 
             services.AddDataProtection()
                 .PersistKeysToStackExchangeRedis(() =>

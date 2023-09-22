@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Juice.Extensions.Configuration;
 using Juice.Extensions.Options;
 using Juice.MultiTenant;
-using Juice.MultiTenant.Shared.Enums;
 using Juice.XUnit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -134,8 +133,6 @@ namespace Juice.Core.Tests
         public Dictionary<string, object> OriginalPropertyValues => throw new NotImplementedException();
 
         public Dictionary<string, object> CurrentPropertyValues => throw new NotImplementedException();
-
-        public TenantStatus Status => throw new NotImplementedException();
 
         public string? OwnerUser => throw new NotImplementedException();
 

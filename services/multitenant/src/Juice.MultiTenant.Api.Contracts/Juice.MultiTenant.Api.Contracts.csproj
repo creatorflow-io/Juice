@@ -7,12 +7,15 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Juice.EventBus\Juice.EventBus.csproj" />
-    <ProjectReference Include="..\Juice.MultiTenant.Shared\Juice.MultiTenant.Shared.csproj" />
-    <ProjectReference Include="..\Juice\Juice.csproj" />
+  <ItemGroup Label="refs">
+    <ProjectReference Include="..\..\..\..\core\src\Juice.EventBus\Juice.EventBus.csproj" />
+    <ProjectReference Include="..\..\..\..\core\src\Juice\Juice.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Juice.MultiTenant.Shared\Juice.MultiTenant.Shared.csproj" />
+  </ItemGroup>
+  
   <ItemGroup Label="gRPC">
     <Protobuf Include="Protos\tenant.proto" />
     <Protobuf Include="Protos\tenantsettings.proto" />

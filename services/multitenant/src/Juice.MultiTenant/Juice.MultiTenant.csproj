@@ -7,13 +7,15 @@
     <Description></Description>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Juice.Extensions.Configuration\Juice.Extensions.Configuration.csproj" />
-    <ProjectReference Include="..\Juice.Extensions.Options\Juice.Extensions.Options.csproj" />
-    <ProjectReference Include="..\Juice.MultiTenant.Shared\Juice.MultiTenant.Shared.csproj" />
-    <ProjectReference Include="..\Juice\Juice.csproj" />
+  <ItemGroup Label="Refs">
+    <ProjectReference Include="..\..\..\..\core\src\Juice.Extensions.Configuration\Juice.Extensions.Configuration.csproj" />
+    <ProjectReference Include="..\..\..\..\core\src\Juice.Extensions.Options\Juice.Extensions.Options.csproj" />
+    <ProjectReference Include="..\..\..\..\core\src\Juice\Juice.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Juice.MultiTenant.Shared\Juice.MultiTenant.Shared.csproj" />
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="MediatR" Version="$(MediatRVersion)" />
     <PackageReference Include="Finbuckle.MultiTenant" Version="$(FinbuckleVersion)" />

@@ -1,85 +1,17 @@
-﻿using Finbuckle.MultiTenant;
-using Juice.EventBus;
-using Juice.EventBus.RabbitMQ;
-using Juice.Extensions.Options;
+﻿using Juice.EventBus;
 using Juice.Modular;
-using Juice.MultiTenant.Domain.AggregatesModel.TenantAggregate;
-using Juice.Tests.Host;
-using Juice.Tests.Host.IntegrationEvents;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Caching.Distributed;
-using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddDiscoveredModules();
 
-//builder.Services.AddMemoryCache();
-
-// Add MultiTenant
-//builder.Services
-//    .AddMultiTenant<Tenant>(options =>
-//    {
-//        options.IgnoredIdentifiers = new List<string> { "asset" };
-//        options.Events.OnTenantResolved = async (context) =>
-//        {
-//            if (context.StoreType == typeof(InMemoryStore<Tenant>))
-//            {
-//                return;
-//            }
-//            if (context.Context is Microsoft.AspNetCore.Http.HttpContext httpContent
-//            && context.TenantInfo is Tenant tenant)
-//            {
-//                var inMemoryStore = httpContent.RequestServices
-//                    .GetServices<IMultiTenantStore<Tenant>>()
-//                    .FirstOrDefault(s => s.GetType() == typeof(InMemoryStore<Tenant>));
-//                if (inMemoryStore != null)
-//                {
-//                    await inMemoryStore.TryAddAsync(tenant);
-//                }
-//            }
-//        };
-//    })
-//    .WithBasePathStrategy(options => options.RebaseAspNetCorePathBase = true)
-//    .ConfigureTenantClient(builder.Configuration, builder.Environment.EnvironmentName)
-//    ;
-
-//ConfigureTenantOptions(builder.Services, builder.Configuration);
-
-//ConfigureDataProtection(builder.Services, builder.Configuration.GetSection("Redis:ConfigurationOptions"));
-
-//ConfigureDistributedCache(builder.Services, builder.Configuration);
-
-//ConfigureEvents(builder);
-
 var app = builder.Build();
-
-//RegisterEvents(app);
-
-app.UseMultiTenant();
 
 app.UseRouting();
 
 app.ConfigureDiscoverdModules(app.Environment);
-
-app.MapGet("/", async (context) =>
-{
-    var tenant = context.GetMultiTenantContext<Tenant>()?.TenantInfo;
-
-    var tenant1 = context.RequestServices.GetRequiredService<IMultiTenantContextAccessor<Tenant>>().MultiTenantContext?.TenantInfo!;
-    var tenant2 = context.RequestServices.GetService<global::Juice.MultiTenant.Domain.AggregatesModel.TenantAggregate.Tenant>();
-    var tenant3 = context.RequestServices.GetService<ITenantInfo>();
-    if (tenant == null)
-    {
-        await
-       context.Response.WriteAsync("No tenant found. Try /acme, /initech, /megacorp with Juice.MultiTenant.Host is running");
-        return;
-    }
-    var options = context.RequestServices.GetRequiredService<ITenantsOptions<Options>>();
-
-    await
-       context.Response.WriteAsync("Hello " + (tenant?.Name ?? "Host") + ". Your options name is " + (options.Value?.Name ?? "") + " ");
-});
 
 app.MapGet("/protect", async (context) =>
 {
@@ -116,81 +48,6 @@ app.MapGet("/readcache", async (context) =>
 
 app.Run();
 
-
-static void ConfigureTenantOptions(IServiceCollection services, IConfiguration configuration)
-{
-    //services.AddTenantsConfiguration()
-    //    .AddTenantsJsonFile("appsettings.Development.json")
-    //    //.AddTenantsEntityConfiguration(configuration, options =>
-    //    //{
-    //    //    options.DatabaseProvider = "PostgreSQL";
-    //    //})
-    //    .AddTenantsGrpcConfiguration("https://localhost:7045");
-
-    services.ConfigureTenantsOptions<Options>("Options");
-}
-
-static void ConfigureDataProtection(IServiceCollection services, IConfiguration configuration)
-{
-    //var redis = ConnectionMultiplexer.Connect(new ConfigurationOptions
-    //{
-    //    EndPoints = { "redis-17796.c1.ap-southeast-1-1.ec2.cloud.redislabs.com:17796" },
-    //    Password = "<password>",
-    //    User = "default"
-    //});
-
-    //var db = redis.GetDatabase();
-    //var pong = db.Ping();
-    //Console.WriteLine(pong);
-
-    services.AddDataProtection()
-        .PersistKeysToStackExchangeRedis(() =>
-        {
-            var options = new ConfigurationOptions();
-            configuration.Bind(options);
-            foreach (var endpoint in configuration.GetSection("EndPoints").Get<string[]>())
-            {
-                options.EndPoints.Add(endpoint);
-            }
-            var redis = ConnectionMultiplexer.Connect(options);
-
-            return redis.GetDatabase();
-
-        }, "DataProtection-Keys");
-}
-
-static void ConfigureDistributedCache(IServiceCollection services, IConfiguration configuration)
-{
-    services.AddStackExchangeRedisCache(options =>
-    {
-        options.Configuration = configuration.GetConnectionString("Redis");
-        options.InstanceName = "SampleInstance";
-    });
-}
-
-static void ConfigureEvents(WebApplicationBuilder builder)
-{
-    builder.Services.AddTransient<TenantActivatedIntegrationEventHandler>();
-    builder.Services.AddTransient<TenantSettingsChangedIntegrationEventHandler>();
-    builder.Services.AddTransient<LogEventHandler>();
-
-    builder.Services.RegisterRabbitMQEventBus(builder.Configuration.GetSection("RabbitMQ"),
-         options =>
-         {
-             options.BrokerName = "topic.juice_bus";
-             options.SubscriptionClientName = "juice_test_host_events";
-             options.ExchangeType = "topic";
-         });
-}
-
-static void RegisterEvents(WebApplication app)
-{
-    var eventBus = app.Services.GetRequiredService<IEventBus>();
-
-    eventBus.Subscribe<TenantActivatedIntegrationEvent, TenantActivatedIntegrationEventHandler>();
-    eventBus.Subscribe<TenantSettingsChangedIntegrationEvent, TenantSettingsChangedIntegrationEventHandler>();
-    eventBus.Subscribe<LogEvent, LogEventHandler>("kernel.*");
-}
 
 public record LogEvent : IntegrationEvent
 {
