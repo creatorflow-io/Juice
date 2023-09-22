@@ -25,7 +25,6 @@
     <ProjectReference Include="..\..\src\Juice.AspNetCore\Juice.AspNetCore.csproj" />
     <ProjectReference Include="..\..\src\Juice.Extensions.Configuration\Juice.Extensions.Configuration.csproj" />
     <ProjectReference Include="..\..\src\Juice.Extensions.Logging\Juice.Extensions.Logging.csproj" />
-    <ProjectReference Include="..\..\src\Juice.MultiTenant.Shared\Juice.MultiTenant.Shared.csproj" />
     <ProjectReference Include="..\..\src\Juice\Juice.csproj" />
   </ItemGroup>
 

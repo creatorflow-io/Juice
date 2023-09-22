@@ -17,11 +17,14 @@
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Versioning" Version="5.1.0" />
   </ItemGroup>
 
+  <ItemGroup Label="Refs">
+    <ProjectReference Include="..\..\..\..\core\src\Juice.AspNetCore\Juice.AspNetCore.csproj" />
+    <ProjectReference Include="..\..\..\..\core\src\Juice.Integrations\Juice.Integrations.csproj" />
+    <ProjectReference Include="..\..\..\..\core\src\Juice.MediatR.RequestManager.EF\Juice.MediatR.RequestManager.EF.csproj" />
+  </ItemGroup>
+
   <ItemGroup>
-    <ProjectReference Include="..\Juice.AspNetCore\Juice.AspNetCore.csproj" />
-    <ProjectReference Include="..\Juice.Integrations\Juice.Integrations.csproj" />
-    <ProjectReference Include="..\Juice.MediatR.RequestManager.EF\Juice.MediatR.RequestManager.EF.csproj" />
-    <ProjectReference Include="..\Juice.MultiTenant.Api.Contracts\Juice.MultiTenant.Api.Contracts.csproj" />
     <ProjectReference Include="..\Juice.MultiTenant.EF\Juice.MultiTenant.EF.csproj" />
+    <ProjectReference Include="..\Juice.MultiTenant.Api.Contracts\Juice.MultiTenant.Api.Contracts.csproj" />
   </ItemGroup>
 </Project>

@@ -7,12 +7,16 @@
     <Description>Package allows microservices access Tenant/TenantSettings EF store directly.</Description>
   </PropertyGroup>
 
+  <ItemGroup Label="refs">
+    <ProjectReference Include="..\..\..\..\core\src\Juice.EF\Juice.EF.csproj" />
+    <ProjectReference Include="..\..\..\..\core\src\Juice.Extensions.Configuration\Juice.Extensions.Configuration.csproj" />
+    <ProjectReference Include="..\..\..\..\core\src\Juice.Extensions.Options\Juice.Extensions.Options.csproj" />
+  </ItemGroup>
+
   <ItemGroup>
-    <ProjectReference Include="..\Juice.EF\Juice.EF.csproj" />
-    <ProjectReference Include="..\Juice.Extensions.Configuration\Juice.Extensions.Configuration.csproj" />
-    <ProjectReference Include="..\Juice.Extensions.Options\Juice.Extensions.Options.csproj" />
     <ProjectReference Include="..\Juice.MultiTenant\Juice.MultiTenant.csproj" />
   </ItemGroup>
+  
   <ItemGroup>
     <PackageReference Include="Finbuckle.MultiTenant.EntityFrameworkCore" Version="6.*" />
   </ItemGroup>

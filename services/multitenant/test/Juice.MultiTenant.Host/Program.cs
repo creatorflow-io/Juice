@@ -78,6 +78,7 @@ static void ConfigureMultiTenant(WebApplicationBuilder builder)
         options.ConnectionName = "PostgreConnection";
         options.Schema = "App";
     }).WithBasePathStrategy(options => options.RebaseAspNetCorePathBase = true)
+    .WithHeaderStrategy()
     .WithRouteStrategy()
     ;
 

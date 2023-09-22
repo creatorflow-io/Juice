@@ -28,9 +28,6 @@
     <ProjectReference Include="..\..\core\src\Juice.EventBus.RabbitMQ\Juice.EventBus.RabbitMQ.csproj" />
     <ProjectReference Include="..\..\core\src\Juice.MediatR.RequestManager.EF.PostgreSQL\Juice.MediatR.RequestManager.EF.PostgreSQL.csproj" />
     <ProjectReference Include="..\..\core\src\Juice.MediatR.RequestManager.EF.SqlServer\Juice.MediatR.RequestManager.EF.SqlServer.csproj" />
-    <ProjectReference Include="..\..\core\src\Juice.MultiTenant.EF.PostgreSQL\Juice.MultiTenant.EF.PostgreSQL.csproj" />
-    <ProjectReference Include="..\..\core\src\Juice.MultiTenant.Grpc\Juice.MultiTenant.Grpc.csproj" />
-    <ProjectReference Include="..\..\core\src\Juice.MultiTenant\Juice.MultiTenant.csproj" />
   </ItemGroup>
 
   <ItemGroup Label="Migrations">
@@ -45,7 +42,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Finbuckle.MultiTenant.AspNetCore" Version="6.*" />
     <PackageReference Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" Version="6.0.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="6.0.0" />
   </ItemGroup>
