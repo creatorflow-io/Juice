@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(AppTargetFramework)</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Description>
+      Define common services (dependent library for plugins or application). These services maybe used in both your application or plugins with different versions.
+    </Description>
+  </PropertyGroup>
+
+</Project>
