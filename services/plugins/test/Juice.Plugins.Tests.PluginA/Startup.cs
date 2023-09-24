@@ -10,11 +10,13 @@ namespace Juice.Plugins.Tests.PluginA
     {
         public void ConfigureServices(IServiceCollection services, IConfiguration configuration)
         {
+
             services.AddLogging(builder =>
             {
                 builder.AddConsole();
                 builder.AddConfiguration(configuration.GetSection("Logging"));
             });
+
             services.AddScoped<MessageService>();
             services.AddScoped<ICommand, HelloCommand>();
         }

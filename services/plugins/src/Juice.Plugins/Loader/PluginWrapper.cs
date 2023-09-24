@@ -87,7 +87,7 @@ namespace Juice.Plugins.Loader
                 }
                 catch (Exception ex)
                 {
-                    Error = ex.Message;
+                    Error = ex.InnerException?.Message ?? ex.Message;
                 }
             }
         }
@@ -104,10 +104,14 @@ namespace Juice.Plugins.Loader
             {
                 return null;
             }
+            var names = typeAssemblyQualifiedName.Split(',');
+            var typeName = names[0].Trim();
+            var assemblyName = names.Length > 1 ? string.Join(',', names.Skip(1)).Trim() : null;
             foreach (var assembly in Context?.Assemblies ?? Array.Empty<Assembly>())
             {
-                var type = assembly.GetType(typeAssemblyQualifiedName);
-                if (type != null)
+                var type = assembly.GetType(typeName);
+                if (type != null && (string.IsNullOrEmpty(assemblyName)
+                    || AssemblyName.ReferenceMatchesDefinition(new AssemblyName(assemblyName), assembly.GetName())))
                 {
                     return type;
                 }

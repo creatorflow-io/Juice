@@ -337,6 +337,81 @@ namespace Juice.Plugins.Tests.XUnit
             commands.Count().Should().Be(2);
         }
 
+        [IgnoreOnCIFact(DisplayName = "Plugin should own type"), TestPriority(999)]
+        public void Plugin_should_own_type()
+        {
+            var resolver = new DependencyResolver
+            {
+                CurrentDirectory = AppContext.BaseDirectory
+            };
+            var pluginPaths = new string[]
+            {
+                GetPluginPath("pluginA"),
+                GetPluginPath("pluginB"),
+                GetPluginPath("pluginC") // this one is not a plugin
+            };
+            resolver.ConfigureServices(services =>
+            {
+                var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
+                var configuration = configService.GetConfiguration();
+                services.AddSingleton(provider => _output);
+                services.AddLogging(builder =>
+                {
+                    builder.ClearProviders()
+                    .AddTestOutputLogger()
+                    .AddConfiguration(configuration.GetSection("Logging"));
+                });
+                services.AddSingleton<SharedService>();
+                services.AddPlugins(options =>
+                {
+                    options.AbsolutePaths = pluginPaths;
+                    options.ConfigureSharedServices = (services, sp) =>
+                    {
+                        services.AddScoped(sp1 =>
+                        {
+                            var s = sp.GetRequiredService<SharedService>();
+                            var l = sp.GetRequiredService<ILoggerFactory>().CreateLogger("shared");
+                            l.LogInformation("Shared service created {0}", s.Id);
+                            return s;
+                        });
+                    };
+                    options.PluginLoaded = (_, args) =>
+                    {
+                        _output.WriteLine("Plugin {0} loaded", args.Plugin.Name);
+                    };
+                    options.PluginUnloading = (_, args) =>
+                    {
+                        _output.WriteLine("Plugin {0} unloading", args.Plugin.Name);
+                    };
+                });
+            });
+            var serviceProvider = resolver.ServiceProvider;
+            var pluginsManager = serviceProvider.GetRequiredService<IPluginsManager>();
+            var plugins = pluginsManager.Plugins;
+            foreach (var plugin in plugins)
+            {
+                if (plugin.Error != null)
+                {
+                    _output.WriteLine(plugin.Error.ToString());
+                }
+            }
+            plugins.Count().Should().Be(3);
+            plugins.Count(p => p.IsInitialized).Should().Be(2);
+
+            var pluginA = plugins.First(p => p.Name == "pluginA");
+            pluginA.GetType("Juice.Plugins.Tests.Common.MessageService, Juice.Plugins.Tests.Common, Version=7.0.0.0").Should().NotBeNull();
+
+            pluginA.GetType("Juice.Plugins.Tests.Common.MessageService, Juice.Plugins.Tests.Common").Should().NotBeNull();
+
+            pluginA.GetType("Juice.Plugins.Tests.Common.MessageService").Should().NotBeNull();
+
+            pluginA.GetType("Juice.Plugins.Tests.Common.MessageService, Juice.Plugins.Tests.Common, Version=8.0.0.0").Should().NotBeNull();
+
+            var type = pluginA.GetType("Juice.Plugins.Tests.Common.MessageService, Juice.Plugins.Tests.Common, Version=7.0.0.0");
+            pluginA.IsOwned(type!).Should().BeTrue();
+
+        }
+
         static string GetPluginPath(string pluginName)
         {
 

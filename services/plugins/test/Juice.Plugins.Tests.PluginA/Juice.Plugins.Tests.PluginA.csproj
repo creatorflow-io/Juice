@@ -13,23 +13,13 @@
 
   
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\core\src\Juice\Juice.csproj" >
-      <ExcludeAssets>runtime</ExcludeAssets>
-      <!-- This element is important -->
-    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\core\src\Juice\Juice.csproj" />
     <ProjectReference Include="..\Juice.Plugins.Tests.Common\Juice.Plugins.Tests.Common.csproj" />
 
     <ProjectReference Include="..\Juice.Plugins.Tests.PluginBase\Juice.Plugins.Tests.PluginBase.csproj">
       <Private>false</Private> <!-- This element is important -->
       <ExcludeAssets>runtime</ExcludeAssets> <!-- This element is important -->
     </ProjectReference>
-  </ItemGroup>
-
-  <ItemGroup>
-    
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="$(MicrosoftExtensionsVersion)">
-      <ExcludeAssets>runtime</ExcludeAssets> <!-- This element is important -->
-    </PackageReference>
   </ItemGroup>
 
 </Project>
