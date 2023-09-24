@@ -13,15 +13,15 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice", "..\..\core\src\Jui
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{74275C15-7F77-4AFF-8AAA-79BF4B297271}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.Plugins.Tests.PluginBase", "test\Juice.Plugins.Tests.PluginBase\Juice.Plugins.Tests.PluginBase.csproj", "{5E6815F5-D20E-4E1D-A445-D10F8CD80DB8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Plugins.Tests.PluginBase", "test\Juice.Plugins.Tests.PluginBase\Juice.Plugins.Tests.PluginBase.csproj", "{5E6815F5-D20E-4E1D-A445-D10F8CD80DB8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.Plugins.Tests.PluginA", "test\Juice.Plugins.Tests.PluginA\Juice.Plugins.Tests.PluginA.csproj", "{F1C17A4F-3916-4134-9045-6F2E6ECE3AB1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Plugins.Tests.PluginA", "test\Juice.Plugins.Tests.PluginA\Juice.Plugins.Tests.PluginA.csproj", "{F1C17A4F-3916-4134-9045-6F2E6ECE3AB1}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Plugins.Tests.Common", "test\Juice.Plugins.Tests.Common\Juice.Plugins.Tests.Common.csproj", "{0D2F1714-18F6-477C-A953-5E45B82D5BDD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.Plugins.Tests.PluginB", "test\Juice.Plugins.Tests.PluginB\Juice.Plugins.Tests.PluginB.csproj", "{DC5C49DE-C718-465A-AA4C-24B7AD3ABF26}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Plugins.Tests.PluginB", "test\Juice.Plugins.Tests.PluginB\Juice.Plugins.Tests.PluginB.csproj", "{DC5C49DE-C718-465A-AA4C-24B7AD3ABF26}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.Plugins.Tests.XUnit", "test\Juice.Plugins.Tests.XUnit\Juice.Plugins.Tests.XUnit.csproj", "{925B8F2E-6260-4940-BDF4-A3B49CE5731C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Plugins.Tests.XUnit", "test\Juice.Plugins.Tests.XUnit\Juice.Plugins.Tests.XUnit.csproj", "{925B8F2E-6260-4940-BDF4-A3B49CE5731C}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Extensions.Configuration", "..\..\core\src\Juice.Extensions.Configuration\Juice.Extensions.Configuration.csproj", "{F03A0346-4A04-41A1-B927-4FB3218F9ED4}"
 EndProject
