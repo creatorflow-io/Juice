@@ -2,6 +2,8 @@
 {
     public interface IServiceFactory
     {
-        IManagedService? CreateService(Type type);
+        //IManagedService? CreateService(Type type);
+        IManagedService? CreateService(string typeAssemblyQualifiedName);
+        bool IsServiceExists(string typeAssemblyQualifiedName);
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using Juice.BgService.Api;
 using Juice.BgService.Extensions.Logging;
 using Juice.BgService.FileWatcher;
@@ -28,6 +29,19 @@ builder.Services.AddControllers();
 
 builder.Services.AddSwaggerWithDefaultConfigs()
     .ConfigureBgServiceSwaggerGen();
+
+var pluginPaths = new string[]
+{
+    GetPluginPath("Recurring")
+};
+
+builder.Services.AddPlugins(options =>
+{
+    options.AbsolutePaths = pluginPaths;
+    options.ConfigureSharedServices = (services, sp) =>
+    {
+    };
+});
 
 
 builder.Host.UseConsoleLifetime();
@@ -70,3 +84,10 @@ app.Lifetime.ApplicationStopping.Register(async () =>
 });
 
 app.Run();
+
+
+static string GetPluginPath(string pluginName)
+{
+
+    return Path.GetFullPath(Path.Combine("..\\..\\test", "plugins", pluginName.ToLower(), $"Juice.BgService.Tests.{pluginName}.dll"));
+}

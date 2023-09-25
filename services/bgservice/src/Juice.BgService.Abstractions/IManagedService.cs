@@ -1,8 +1,6 @@
-﻿using Microsoft.Extensions.Hosting;
-
-namespace Juice.BgService
+﻿namespace Juice.BgService
 {
-    public interface IManagedService : IDisposable, IHostedService
+    public interface IManagedService : IDisposable
     {
         Guid Id { get; }
         string Description { get; }
@@ -16,6 +14,10 @@ namespace Juice.BgService
         void SetState(ServiceState state, string? message, string? data = default);
 
         void SetDescription(string description);
+
+        Task StartAsync(CancellationToken cancellationToken);
+
+        Task StopAsync(CancellationToken cancellationToken);
 
         Task RequestStopAsync(CancellationToken cancellationToken);
 
