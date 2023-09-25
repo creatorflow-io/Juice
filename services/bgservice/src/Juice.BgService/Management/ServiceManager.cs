@@ -1,11 +1,11 @@
-﻿using Juice.BgService.Extensions;
-using Juice.Extensions;
+﻿using Juice.Extensions;
 using Juice.Extensions.Options;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace Juice.BgService.Management
 {
-    public class ServiceManager : BackgroundService, IManagedService<IServiceModel>
+    public class ServiceManager : ManagedService, IManagedService<IServiceModel>, IHostedService
     {
         private readonly IServiceStore _serviceStore;
         private readonly IServiceFactory _serviceFactory;
@@ -15,15 +15,18 @@ namespace Juice.BgService.Management
 
         private readonly IOptionsMutable<ServiceManagerOptions> _options;
 
+        private ILogger _logger;
+
         public override Guid Id => _options.Value.Id;
 
         public ServiceManager(
             IOptionsMutable<ServiceManagerOptions> options,
             ILogger<ServiceManager> logger,
             IServiceFactory serviceFactory,
-            IServiceStore serviceStore) : base(logger)
+            IServiceStore serviceStore) : base()
         {
             _options = options;
+            _logger = logger;
             _serviceStore = serviceStore;
             _serviceStore.OnChanged += ServiceStore_OnChanged;
             _serviceFactory = serviceFactory;
@@ -54,6 +57,15 @@ namespace Juice.BgService.Management
         {
             State = ServiceState.Running;
             var startOfRun = true;
+
+            if (_shutdown == null)
+            {
+                _shutdown = new CancellationTokenSource();
+            }
+            if (_stopRequest == null)
+            {
+                _stopRequest = new CancellationTokenSource();
+            }
 
             while (!_shutdown.IsCancellationRequested)
             {
@@ -109,7 +121,7 @@ namespace Juice.BgService.Management
                 }
                 catch (Exception ex)
                 {
-                    _logger.FailedToInvoke(ex.Message, ex);
+                    _logger.LogError(ex, ex.Message);
                 }
             }
             if (_stopRequest.IsCancellationRequested
@@ -158,30 +170,23 @@ namespace Juice.BgService.Management
                     Configure(service);
                 }
 
+                var pendingTasks = new List<Task>();
                 foreach (var service in services.Where(s => !s.Id.HasValue || s.Id.Value != Id))
                 {
                     var threads = service.Options?.GetOption<int>("Threads");
                     var startType = service.Options?.GetOption<StartupType>("StartupType") ?? StartupType.Auto;
                     threads = Math.Max(1, Math.Min(threads ?? 0, 10));
-                    Type? serviceType = default;
-                    try
-                    {
-                        serviceType = Type.GetType(service.AssemblyQualifiedName);
-                    }
-                    catch (Exception ex)
-                    {
-                        Logging($"Failed to load type {service.AssemblyQualifiedName}. {ex.Message}", LogLevel.Error);
-                    }
-                    if (serviceType == null)
+
+                    if (!_serviceFactory.IsServiceExists(service.AssemblyQualifiedName))
                     {
                         Logging($"Type {service.AssemblyQualifiedName} not found", LogLevel.Error);
                         continue;
                     }
                     for (var i = 0; i < threads; i++)
                     {
-                        var bgService = _serviceFactory.CreateService(serviceType);
+                        var bgService = _serviceFactory.CreateService(service.AssemblyQualifiedName);
 
-                        if (bgService != null && bgService is IManagedService managedService)
+                        if (bgService != null)
                         {
                             #region Configure
                             if (bgService is IManagedService<IServiceModel> configurableService)
@@ -193,36 +198,37 @@ namespace Juice.BgService.Management
                             #region Description
                             if (threads > 1)
                             {
-                                managedService.SetDescription(service.Name + " " + i.ToString());
+                                bgService.SetDescription(service.Name + " " + i.ToString());
                             }
                             else
                             {
-                                managedService.SetDescription(service.Name);
+                                bgService.SetDescription(service.Name);
                             }
                             #endregion
 
-                            _services.Add(managedService);
+                            _services.Add(bgService);
 
                             #region Startup
                             if (startType == StartupType.Auto)
                             {
-                                await managedService.StartAsync(default);
-                                Logging($"Service <a data-type='service' data-id='{managedService.Id}' href='#'>{managedService.Description}</a> started.");
+                                await bgService.StartAsync(default);
+                                Logging($"Service <a data-type='service' data-id='{bgService.Id}' href='#'>{bgService.Description}</a> started.");
                             }
                             else
                             {
                                 if (startType == StartupType.Delayed)
                                 {
-                                    Task.Run(async () =>
+                                    var task = Task.Run(async () =>
                                     {
                                         await Task.Delay(5000);
-                                        await managedService.StartAsync(default(CancellationToken));
-                                        Logging($"Service <a data-type='service' data-id='{managedService.Id}' href='#'>{managedService.Description}</a> started after 5s.");
+                                        await bgService.StartAsync(default(CancellationToken));
+                                        Logging($"Service <a data-type='service' data-id='{bgService.Id}' href='#'>{bgService.Description}</a> started after 5s.");
                                     });
+                                    pendingTasks.Add(task);
                                 }
                                 else
                                 {
-                                    Logging($"Service <a data-type='service' data-id='{managedService.Id}' href='#'>{managedService.Description}</a> is not started");
+                                    Logging($"Service <a data-type='service' data-id='{bgService.Id}' href='#'>{bgService.Description}</a> is not started");
                                 }
                             }
                             #endregion
@@ -233,6 +239,8 @@ namespace Juice.BgService.Management
                         }
                     }
                 }
+
+                Task.WaitAll(pendingTasks.ToArray());
             }
         }
 
@@ -287,5 +295,8 @@ namespace Juice.BgService.Management
             }
             base.Dispose(disposing);
         }
+
+        public void Logging(string message, LogLevel level = LogLevel.Information) { }
+
     }
 }

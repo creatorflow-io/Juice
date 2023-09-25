@@ -1,10 +1,7 @@
-﻿using Juice.BgService.Extensions;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-
-namespace Juice.BgService
+﻿namespace Juice.BgService
 {
-    public abstract class BackgroundService : IHostedService, IManagedService
+    public abstract class ManagedService :
+        IManagedService
     {
         public virtual Guid Id { get; protected set; } = Guid.NewGuid();
 
@@ -16,10 +13,8 @@ namespace Juice.BgService
 
         protected static int globalCounter = 0;
 
-        protected ILogger _logger;
-        private IDisposable _logScope;
-        protected CancellationTokenSource _stopRequest;
-        protected CancellationTokenSource _shutdown;
+        protected CancellationTokenSource? _stopRequest;
+        protected CancellationTokenSource? _shutdown;
         protected Task? _backgroundTask;
 
         protected readonly object _stateLock = new();
@@ -49,10 +44,8 @@ namespace Juice.BgService
 
         public bool NeedStart => _restartFlag;
 
-        public BackgroundService(ILogger logger)
+        public ManagedService()
         {
-            _logger = logger;
-            OnChanged += BackgroundService_OnChanged;
             Interlocked.Increment(ref globalCounter);
         }
 
@@ -92,7 +85,6 @@ namespace Juice.BgService
         public virtual void SetDescription(string description)
         {
             Description = description;
-            InitLogScope();
         }
 
         public virtual Task StartAsync(CancellationToken cancellationToken)
@@ -132,10 +124,13 @@ namespace Juice.BgService
 
             State = ServiceState.Stopping;
 
-            _shutdown.Cancel();
+            _shutdown?.Cancel();
 
-            await Task.WhenAny(_backgroundTask,
-                Task.Delay(Timeout.Infinite, cancellationToken));
+            if (_backgroundTask != null)
+            {
+                await Task.WhenAny(_backgroundTask,
+                    Task.Delay(Timeout.Infinite, cancellationToken));
+            }
 
         }
 
@@ -158,7 +153,7 @@ namespace Juice.BgService
 
             State = ServiceState.Stopping;
 
-            _stopRequest.Cancel();
+            _stopRequest?.Cancel();
             return Task.CompletedTask;
         }
 
@@ -166,57 +161,14 @@ namespace Juice.BgService
 
         public abstract Task<(bool Healthy, string Message)> HealthCheckAsync();
 
-        #region Logging
-
-        protected virtual List<KeyValuePair<string, object>> CreateLogScope()
-        {
-            return new List<KeyValuePair<string, object>>
-            {
-                new KeyValuePair<string, object>("ServiceId", Id),
-                new KeyValuePair<string, object>("ServiceType", GetType()?.FullName ?? ""),
-                new KeyValuePair<string, object>("ServiceDescription", Description)
-            };
-        }
-
-        internal void InitLogScope()
-        {
-            _logScope?.Dispose();
-            _logScope = _logger.BeginScope(CreateLogScope());
-        }
-
-        public virtual void Logging(string message, LogLevel level = LogLevel.Information)
-        {
-            if (_logger.IsEnabled(level))
-            {
-                _logger.Log(level, message);
-            }
-        }
-        #endregion
 
         #region Events
 
         public event EventHandler<ServiceEventArgs>? OnChanged;
 
-        private void BackgroundService_OnChanged(object? sender, ServiceEventArgs e)
-        {
-            if (sender is IManagedService managedService && e.EventName == "State"
-                 && (e.State == ServiceState.Stopped || e.State == ServiceState.StoppedUnexpectedly)
-            )
-            {
-                if (managedService.NeedStart)
-                {
-                    Task.Delay(500).Wait();
-                    managedService.StartAsync(default).Wait();
-                }
-            }
-        }
-
-
         protected virtual void TriggerChanged(string eventName)
         {
             var evt = new ServiceEventArgs(eventName, Id, Description, State, Message, Data);
-
-            _logger.ServiceChanged(evt);
 
             var handler = OnChanged;
             if (handler != null)
@@ -243,7 +195,6 @@ namespace Juice.BgService
                         _stopRequest?.Dispose();
                         _shutdown?.Dispose();
                         _backgroundTask?.Dispose();
-                        _logScope?.Dispose();
                         OnChanged -= OnChanged;
                     }
                     catch { }
@@ -263,5 +214,4 @@ namespace Juice.BgService
 
         #endregion
     }
-
 }

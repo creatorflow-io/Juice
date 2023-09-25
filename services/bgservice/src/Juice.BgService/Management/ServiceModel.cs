@@ -4,7 +4,7 @@
     {
         public Guid? Id { get; set; }
         public string Name { get; set; }
-        public Dictionary<string, object> Options { get; set; }
+        public Dictionary<string, object?> Options { get; set; }
         public string AssemblyQualifiedName { get; set; }
     }
 }

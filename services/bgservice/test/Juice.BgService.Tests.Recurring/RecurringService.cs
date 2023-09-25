@@ -1,15 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Threading.Tasks;
+﻿using System.Diagnostics;
 using Juice.BgService.Scheduled;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Juice.BgService.Tests
 {
     public class RecurringService : ScheduledService
     {
-        public RecurringService(ILogger<RecurringService> logger) : base(logger)
+        public RecurringService(IServiceProvider serviceProvider) : base(serviceProvider.GetRequiredService<ILogger<RecurringService>>())
         {
             ScheduleOptions.OccursInterval(TimeSpan.FromSeconds(3));
         }
