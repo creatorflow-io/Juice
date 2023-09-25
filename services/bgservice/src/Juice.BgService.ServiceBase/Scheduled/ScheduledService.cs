@@ -13,7 +13,7 @@ namespace Juice.BgService.Scheduled
         private CancellationTokenSource _waitCancel;
 
 
-        private ScheduledServiceOptions _scheduleOptions = new ScheduledServiceOptions();
+        protected ScheduledServiceOptions _scheduleOptions = new ScheduledServiceOptions();
         public virtual ScheduledServiceOptions ScheduleOptions => _scheduleOptions;
 
         public ScheduledService(ILogger logger) : base(logger)
