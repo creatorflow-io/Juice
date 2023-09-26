@@ -2,7 +2,7 @@
 
 namespace Juice.BgService.Management.File
 {
-    public class FileStore : IServiceStore
+    public class FileStore : IServiceRepository
     {
 
         private IOptionsMonitor<FileStoreOptions> _optionsMonitor;
