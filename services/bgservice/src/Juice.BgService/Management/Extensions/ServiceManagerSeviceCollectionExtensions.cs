@@ -33,7 +33,7 @@ namespace Juice.BgService.Management
                         options.Services = cfg.Services;
                     }
                 });
-            services.AddSingleton<IServiceStore, FileStore>();
+            services.AddSingleton<IServiceRepository, FileStore>();
 
             return services;
         }

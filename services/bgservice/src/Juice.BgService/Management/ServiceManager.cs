@@ -7,7 +7,7 @@ namespace Juice.BgService.Management
 {
     public class ServiceManager : ManagedService, IManagedService<IServiceModel>, IHostedService
     {
-        private readonly IServiceStore _serviceStore;
+        private readonly IServiceRepository _serviceStore;
         private readonly IServiceFactory _serviceFactory;
 
         public List<IManagedService> ManagedServices => _services;
@@ -23,7 +23,7 @@ namespace Juice.BgService.Management
             IOptionsMutable<ServiceManagerOptions> options,
             ILogger<ServiceManager> logger,
             IServiceFactory serviceFactory,
-            IServiceStore serviceStore) : base()
+            IServiceRepository serviceStore) : base()
         {
             _options = options;
             _logger = logger;

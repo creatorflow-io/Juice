@@ -66,9 +66,9 @@
 
     public enum SpecialDay
     {
-        day = 0,
-        weekDay = 1,
-        weekendDay = 2
+        Day = 0,
+        Weekday = 1,
+        Weekend = 2
     }
 
     public enum DaySequence
@@ -84,7 +84,7 @@
     {
         public int RecursEvery { get; set; } // day(s)/week(s)/month(s)
         public TimeSpan? OccursOnceAt { get; set; }
-        public TimeSpan? OccursEvery { get; set; } // milliseconds
+        public TimeSpan? OccursEvery { get; set; } // seconds
         public TimeSpan? StartingAt { get; set; }
         public TimeSpan? Duration { get; set; }
     }
@@ -105,6 +105,7 @@
 
     public static class FrequencyExtensions
     {
+
         public static DateTimeOffset? NextOccursAt(this IEnumerable<Frequency> frequencies, DateTimeOffset? lastProcessed, bool isStartup = false)
         {
             return frequencies.Select(f => (f.Occurs != OccursType.Once || !f.IsOccurred) ? f.NextOccursAt(lastProcessed, isStartup) : default)
@@ -127,525 +128,427 @@
             {
                 return null;
             }
-            var Now = DateTimeOffset.Now;
-            var recurs = daily.RecursEvery < 1 ? 1 : daily.RecursEvery; // recurs every x day(s)/week(s)/month(s)
 
             if (frequency.Occurs == OccursType.Daily)
             {
-                if (daily.OccursOnceAt.HasValue)
-                {
-                    var time = daily.OccursOnceAt.Value;
-                    var last = lastProcessed?.AddDays(recurs) ?? DateTimeOffset.Now;
-                    if (last < DateTimeOffset.Now && (DateTimeOffset.Now - last).TotalDays > 30)
-                    {
-                        last = DateTimeOffset.Now;
-                    }
-                    var next = new DateTimeOffset(last.Year, last.Month, last.Day, time.Hours, time.Minutes, time.Seconds, last.Offset);
-                    while (next < DateTimeOffset.Now)
-                    {
-                        last = next;
-                        next = new DateTimeOffset(last.Year, last.Month, last.Day + recurs, time.Hours, time.Minutes, time.Seconds, last.Offset);
-                    }
-                    return next;
-                }
-                else
-                {
-
-                    var occursEvery = daily.OccursEvery ?? new TimeSpan(0, 0, 30); // milliseconds
-                    var last = lastProcessed ?? Now;
-                    if (last < Now && (Now - last).TotalDays > 10) // max 10 day(s) from last to now
-                    {
-                        last = Now;
-                    }
-
-                    var startingAt = daily.StartingAt ?? new TimeSpan(0, 0, 0);
-                    var duration = daily.Duration ?? new TimeSpan(23, 59, 59);
-                    if (duration > new TimeSpan(23, 59, 59))
-                    {
-                        duration = new TimeSpan(23, 59, 59);
-                    }
-
-                    var starting = new DateTimeOffset(last.Year, last.Month, last.Day, startingAt.Hours, startingAt.Minutes, startingAt.Seconds, last.Offset);
-
-                    if (last < starting)
-                    {
-                        starting = starting.AddDays(-1);
-                    }
-                    var ending = starting.Add(duration);
-
-                    // > ending time on @date
-                    while (Now > ending)
-                    {
-                        starting = starting.AddDays(recurs);
-                        ending = starting.Add(duration);
-                    }
-
-                    var next = last.Add(occursEvery);
-                    while (next < Now)
-                    {
-                        next = next.Add(occursEvery);
-                    }
-
-                    if (next < starting) // if next occurs < starting time of date, return starting time of date
-                    {
-                        return starting;
-                    }
-
-                    if (next > ending) // if next occurs > ending time of date, return starting time of next recurs date
-                    {
-                        return starting.AddDays(recurs);
-                    }
-                    return next;
-                }
+                return frequency.Daily.NextOccursAt(lastProcessed);
             }
             else if (frequency.Occurs == OccursType.Weekly)
             {
-                recurs = recurs * 7;
-                if (daily.OccursOnceAt.HasValue)
-                {
-                    var time = daily.OccursOnceAt.Value;
-                    if (frequency.Weekly.OnDays?.Any() ?? false)
-                    {
-                        var last = lastProcessed ?? DateTimeOffset.Now;
-
-                        var startOfWeek = last.StartOfWeek(frequency.Weekly.StartOfWeek);
-                        var endOfWeek = last.EndOfWeek(frequency.Weekly.StartOfWeek);
-
-                        while (Now > endOfWeek) // while Now is later ending of range, calc next range
-                        {
-                            startOfWeek = startOfWeek.AddDays(recurs);
-                            endOfWeek = endOfWeek.AddDays(recurs);
-                        }
-
-                        if (last < startOfWeek)
-                        {
-                            return new DateTimeOffset(startOfWeek, last.Offset).Add(time);
-                        }
-
-                        var daysOccurs = new DateTimeOffset(startOfWeek, last.Offset).DaysOccursOfWeek(frequency.Weekly.OnDays); // each day occurs in week
-                        foreach (var day in daysOccurs)
-                        {
-                            var next = new DateTimeOffset(day.Date, day.Offset).Add(time);
-                            if (next > last)
-                            {
-                                return new DateTimeOffset(day.Date, day.Offset).Add(time);
-                            }
-                        }
-                        while (true)
-                        {
-                            startOfWeek = startOfWeek.AddDays(recurs);
-                            daysOccurs = new DateTimeOffset(startOfWeek, last.Offset).DaysOccursOfWeek(frequency.Weekly.OnDays); // each day occurs in week
-                            foreach (var day in daysOccurs)
-                            {
-                                var next = new DateTimeOffset(day.Date, day.Offset).Add(time);
-                                if (next > last)
-                                {
-                                    return new DateTimeOffset(day.Date, day.Offset).Add(time);
-                                }
-                            }
-                        }
-                    }
-                    else
-                    {
-                        var last = lastProcessed?.AddDays(recurs) ?? DateTimeOffset.Now;
-                        if (last < DateTimeOffset.Now && (DateTimeOffset.Now - last).TotalDays > 30)
-                        {
-                            last = DateTimeOffset.Now;
-                        }
-                        var next = new DateTimeOffset(last.Date, last.Offset).Add(time);
-                        while (next < DateTimeOffset.Now)
-                        {
-                            last = next;
-                            next = last.AddDays(recurs);
-                        }
-                        return next;
-                    }
-
-                }
-                else
-                {
-                    var occursEvery = daily.OccursEvery ?? new TimeSpan(0, 0, 30); // milliseconds
-                    var last = lastProcessed ?? Now;
-                    if (last < Now && (Now - last).TotalDays > 10) // max 10 day(s) from last to now
-                    {
-                        last = Now;
-                    }
-
-                    var startingAt = daily.StartingAt ?? new TimeSpan(0, 0, 0);
-                    var duration = daily.Duration ?? new TimeSpan(23, 59, 59);
-                    if (duration > new TimeSpan(23, 59, 59))
-                    {
-                        duration = new TimeSpan(23, 59, 59);
-                    }
-
-                    var next = last.Add(occursEvery);
-
-
-                    if (frequency.Weekly.OnDays?.Any() ?? false)
-                    {
-                        // finding time range from Now
-                        var startingOfWeek = last.StartingOfWeek(frequency.Weekly.OnDays, startingAt);
-                        var endingOfWeek = startingOfWeek.EndingOfWeekByStarting(frequency.Weekly.OnDays, startingAt, duration);
-
-                        while (Now > endingOfWeek) // while Now is later ending of range, calc next range
-                        {
-                            startingOfWeek = startingOfWeek.AddDays(recurs);
-                            endingOfWeek = endingOfWeek.AddDays(recurs);
-                        }
-
-                        while (next < Now)
-                        {
-                            next = next.Add(occursEvery);
-                        }
-
-                        while (next > endingOfWeek) // while next > ending of range, calc next range
-                        {
-                            startingOfWeek = startingOfWeek.AddDays(recurs);
-                            endingOfWeek = endingOfWeek.AddDays(recurs);
-                        }
-
-                        if (next < startingOfWeek) // if next < starting of range, return starting
-                        {
-                            return startingOfWeek;
-                        }
-
-                        var daysOccurs = startingOfWeek.DaysOccursOfWeek(frequency.Weekly.OnDays); // each day occurs in week
-                        foreach (var day in daysOccurs)
-                        {
-                            // calc time range in day
-                            var starting = new DateTimeOffset(day.Year, day.Month, day.Day, startingAt.Hours, startingAt.Minutes, startingAt.Seconds, last.Offset);
-
-                            var ending = starting.Add(duration);
-                            if (next >= starting && next <= ending)
-                            {
-                                break;
-                            }
-
-                            if (next <= starting)
-                            {
-                                return starting;
-                            }
-                            else if (next <= ending)
-                            {
-                                return next;
-                            }
-                        }
-
-                    }
-
-                    else
-                    {
-                        var starting = new DateTimeOffset(last.Year, last.Month, last.Day, startingAt.Hours, startingAt.Minutes, startingAt.Seconds, last.Offset);
-
-                        if (last < starting)
-                        {
-                            starting = starting.AddDays(-1);
-                        }
-
-                        var ending = starting.Add(duration);
-
-                        // > ending time on @date
-                        while (Now > ending)
-                        {
-                            starting = starting.AddDays(recurs);
-                            ending = starting.Add(duration);
-                        }
-
-                        while (next < Now)
-                        {
-                            next = next.Add(occursEvery);
-                        }
-
-                        if (next < starting) // if next occurs < starting time of date, return starting time of date
-                        {
-                            return starting;
-                        }
-
-                        if (next > ending) // if next occurs > ending time of date, return starting time of next recurs date
-                        {
-                            return starting.AddDays(recurs);
-                        }
-                    }
-
-                    return next;
-                }
+                return frequency.Weekly.NextOccursAt(lastProcessed);
             }
             else if (frequency.Occurs == OccursType.Monthly)
             {
-                if (daily.OccursOnceAt.HasValue)
-                {
-                    var time = daily.OccursOnceAt.Value;
-                    if (frequency.Monthly.On.HasValue && (frequency.Monthly.SpecialDay.HasValue || frequency.Monthly.DayOfWeek.HasValue))
-                    {
-                        var last = lastProcessed ?? DateTimeOffset.Now;
-
-                        var next = last.SpecialDayOfMonth(frequency.Monthly.On.Value, frequency.Monthly.SpecialDay, frequency.Monthly.DayOfWeek).Add(time);
-
-                        while (next < DateTimeOffset.Now || next <= last)
-                        {
-                            next = next.AddMonths(recurs).SpecialDayOfMonth(frequency.Monthly.On.Value, frequency.Monthly.SpecialDay, frequency.Monthly.DayOfWeek).Add(time);
-                        }
-                        return next;
-                    }
-                    else
-                    {
-                        var onDay = frequency.Monthly.OnDay ?? 1;
-                        var last = lastProcessed ?? DateTimeOffset.Now;
-
-                        var next = new DateTimeOffset(last.Year, last.Month, onDay, time.Hours, time.Minutes, time.Seconds, last.Offset);
-                        if (next.Month == last.Month)
-                        {
-                            return next > last ? next : next.AddMonths(1);
-                        }
-                        while (next < DateTimeOffset.Now || next <= last)
-                        {
-                            next = next.AddMonths(recurs);
-                        }
-                        return next;
-                    }
-
-                }
-                else
-                {
-                    var occursEvery = daily.OccursEvery ?? new TimeSpan(0, 0, 30); // milliseconds
-                    var last = lastProcessed ?? Now;
-
-                    var startingAt = daily.StartingAt ?? new TimeSpan(0, 0, 0);
-                    var duration = daily.Duration ?? new TimeSpan(23, 59, 59);
-                    if (duration > new TimeSpan(23, 59, 59))
-                    {
-                        duration = new TimeSpan(23, 59, 59);
-                    }
-
-                    var next = last.Add(occursEvery);
-
-
-                    if (frequency.Monthly.On.HasValue && (frequency.Monthly.SpecialDay.HasValue || frequency.Monthly.DayOfWeek.HasValue))
-                    {
-                        // finding time range from Now
-
-                        var day = last.SpecialDayOfMonth(frequency.Monthly.On.Value, frequency.Monthly.SpecialDay, frequency.Monthly.DayOfWeek);
-
-                        var starting = day.Add(startingAt);
-
-                        var ending = starting.Add(duration);
-
-                        while (Now > ending || next > ending)
-                        {
-                            starting = starting.AddMonths(recurs)
-                                .SpecialDayOfMonth(frequency.Monthly.On.Value, frequency.Monthly.SpecialDay, frequency.Monthly.DayOfWeek)
-                                .Add(startingAt);
-                            ending = starting.Add(duration);
-                        }
-
-                        while (next < Now)
-                        {
-                            next = next.Add(occursEvery);
-                        }
-
-                        if (next <= starting)
-                        {
-                            return starting;
-                        }
-                        else if (next <= ending)
-                        {
-                            return next;
-                        }
-
-                    }
-
-                    else
-                    {
-                        var onDay = frequency.Monthly.OnDay ?? 1;
-
-                        var starting = new DateTimeOffset(last.Year, last.Month, onDay, startingAt.Hours, startingAt.Minutes, startingAt.Milliseconds, last.Offset);
-
-                        var ending = starting.Add(duration);
-
-
-                        // > ending time on @date
-
-                        while (Now > ending || next > ending)
-                        {
-                            starting = starting.AddMonths(recurs);
-                            ending = starting.Add(duration);
-                        }
-                        if (next < starting && Now < starting) // if next occurs < starting time of date, return starting time of date
-                        {
-                            return starting;
-                        }
-                        while (next < Now)
-                        {
-                            next = next.Add(occursEvery);
-                        }
-
-                        if (next < starting) // if next occurs < starting time of date, return starting time of date
-                        {
-                            return starting;
-                        }
-
-                    }
-
-                    return next;
-                }
+                return frequency.Monthly.NextOccursAt(lastProcessed);
             }
             return null;
         }
+        #region Daily
 
-        public static DateTime StartOfWeek(this DateTimeOffset dt, DayOfWeek startOfWeek)
+        /// <summary>
+        /// Get next occurs time of DailyFrequency
+        /// </summary>
+        /// <param name="daily"></param>
+        /// <param name="lastProcessed"></param>
+        /// <returns></returns>
+        public static DateTimeOffset NextOccursAt(this DailyFrequency daily, DateTimeOffset? lastProcessed)
+        {
+            var last = lastProcessed ?? DateTimeOffset.Now;
+            var recurs = daily.RecursEvery < 1 ? 1 : daily.RecursEvery;
+
+            if (daily.OccursOnceAt.HasValue)
+            {
+                return daily.GetDailyOccursOnceAt(last.Date, last.Offset);
+            }
+            else
+            {
+                var occursEvery = daily.OccursEvery ?? new TimeSpan(0, 0, 30); // seconds
+
+                var (start, end) = daily.GetDailyOccursRange(last.Date, last.Offset);
+
+                // slide start and end to next recurs date
+                if (end < last)
+                {
+                    start = start.AddDays(recurs);
+                    end = end.AddDays(recurs);
+                }
+
+                if (last < start)
+                {
+                    return start;
+                }
+
+                var next = last > start ? last : start;
+                while (next <= last)
+                {
+                    next = next.Add(occursEvery);
+                }
+
+                if (next > end) // if next occurs > ending time of date, return starting time of next recurs date
+                {
+                    return start.AddDays(recurs);
+                }
+                return next;
+            }
+        }
+
+        /// <summary>
+        /// Get time range of daily occurs on date
+        /// </summary>
+        /// <param name="daily"></param>
+        /// <param name="dt"></param>
+        /// <returns></returns>
+        public static (DateTimeOffset Start, DateTimeOffset End) GetDailyOccursRange(this DailyFrequency daily, DateTime dt, TimeSpan offset)
+        {
+            var startingAt = daily.StartingAt ?? new TimeSpan(0, 0, 0);
+            var duration = daily.Duration ?? new TimeSpan(23, 59, 59);
+            var start = new DateTimeOffset(dt, offset).Add(startingAt);
+            var end = start + duration;
+            var endOfDay = new DateTimeOffset(dt, offset).AddDays(1).AddTicks(-1);
+            if (end > endOfDay)
+            {
+                end = endOfDay;
+            }
+            return (start, end);
+        }
+
+        /// <summary>
+        /// Get nearest occurs time of daily on today or next day when it occurs once at
+        /// </summary>
+        /// <param name="offset"></param>
+        /// <returns></returns>
+        public static DateTimeOffset GetDailyOccursOnceAt(this DailyFrequency daily, DateTime lastOccuredDate, TimeSpan offset)
+        {
+            var time = daily.OccursOnceAt!.Value;
+            var nextDate = lastOccuredDate.AddDays(1);
+
+            return new DateTimeOffset(nextDate.Add(time), offset);
+        }
+        #endregion
+
+        #region Weekly
+        /// <summary>
+        /// Get next occurs time of WeeklyFrequency
+        /// </summary>
+        /// <param name="lastProcessed"></param>
+        /// <returns></returns>
+        public static DateTimeOffset NextOccursAt(this WeeklyFrequency weekly, DateTimeOffset? lastProcessed)
+        {
+            var now = DateTimeOffset.Now;
+            var today = now.Date;
+            var nextDate =
+                lastProcessed.HasValue ? weekly.NextOccursDate(lastProcessed.Value.Date)
+                : weekly.IsOccursOn(today) ? today
+                : weekly.NextOccursDate(today);
+
+            if (weekly.OccursOnceAt.HasValue)
+            {
+                var last = lastProcessed ?? now;
+                var time = weekly.OccursOnceAt!.Value;
+                var next = new DateTimeOffset(nextDate, last.Offset).Add(time);
+
+                while (next < last)
+                {
+                    nextDate = weekly.NextOccursDate(nextDate);
+                    next = nextDate.Add(time);
+                }
+                return next;
+            }
+            else
+            {
+                var (start, end) = weekly.GetDailyOccursRange(nextDate, lastProcessed?.Offset ?? now.Offset);
+                while (now > end)
+                {
+                    nextDate = weekly.NextOccursDate(nextDate);
+                    (start, end) = weekly.GetDailyOccursRange(nextDate, lastProcessed?.Offset ?? now.Offset);
+                }
+
+                if (now < start)
+                {
+                    return start;
+                }
+
+                var next = (DateTimeOffset)(lastProcessed.HasValue && lastProcessed > start ? lastProcessed! : start);
+                var occursEvery = weekly.OccursEvery ?? new TimeSpan(0, 0, 30); // seconds
+                while (next < now)
+                {
+                    next = next.Add(occursEvery);
+                }
+
+                if (next > end) // if next occurs > ending time of date, return starting time of next recurs date
+                {
+                    nextDate = weekly.NextOccursDate(nextDate);
+                    (start, end) = weekly.GetDailyOccursRange(nextDate, lastProcessed?.Offset ?? now.Offset);
+                    return start;
+                }
+                return next;
+            }
+
+        }
+
+        /// <summary>
+        /// Get next occurs date of WeeklyFrequency
+        /// </summary>
+        /// <param name="last"></param>
+        /// <returns></returns>
+        public static DateTime NextOccursDate(this WeeklyFrequency weekly, DateTime last)
+        {
+            var recurs = weekly.RecursEvery < 1 ? 1 : weekly.RecursEvery;
+            var onDays = weekly.OnDays ?? Array.Empty<DayOfWeek>();
+            var anyDay = !onDays.Any() || onDays.Intersect(Enum.GetValues<DayOfWeek>()).Count() == Enum.GetValues<DayOfWeek>().Count();
+
+            var endOfLastWeek = last.EndOfWeek(weekly.StartOfWeek);
+
+            var next = anyDay ? last.AddDays(1) : last.NextSequenceDate(onDays);
+
+            if (next > endOfLastWeek)
+            {
+                next = last.StartOfWeek(weekly.StartOfWeek).AddDays(recurs * 7);
+                if (!anyDay && !onDays.Contains(next.DayOfWeek))
+                {
+                    next = next.NextSequenceDate(onDays);
+                }
+            }
+            return next;
+        }
+
+        public static bool IsOccursOn(this WeeklyFrequency weekly, DateTime dt)
+        {
+            var onDays = weekly.OnDays ?? Array.Empty<DayOfWeek>();
+            var anyDay = !onDays.Any() || onDays.Intersect(Enum.GetValues<DayOfWeek>()).Count() == Enum.GetValues<DayOfWeek>().Count();
+            return anyDay || onDays.Contains(dt.DayOfWeek);
+        }
+
+        /// <summary>
+        /// Get next date of sequence days
+        /// </summary>
+        /// <param name="last"></param>
+        /// <param name="onDays"></param>
+        /// <returns></returns>
+        public static DateTime NextSequenceDate(this DateTime last, IEnumerable<DayOfWeek> onDays)
+        {
+            var next = last.AddDays(1);
+            while (!onDays.Contains(next.DayOfWeek))
+            {
+                next = next.AddDays(1);
+            }
+            return next;
+        }
+        #endregion
+
+        #region Monthly
+
+        /// <summary>
+        /// Get next occurs time of MonthlyFrequency
+        /// </summary>
+        /// <param name="monthly"></param>
+        /// <param name="lastProcessed"></param>
+        /// <returns></returns>
+        ///
+        public static DateTimeOffset NextOccursAt(this MonthlyFrequency monthly, DateTimeOffset? lastProcessed)
+        {
+            var now = DateTimeOffset.Now;
+            var today = now.Date;
+
+            var last = lastProcessed ?? now;
+            var nextDate =
+               lastProcessed.HasValue ?
+               (monthly.IsOccursOn(last.Date) ? last.Date
+               : monthly.NextOccursDate(lastProcessed.Value.Date))
+               : (monthly.IsOccursOn(today) ? today
+               : monthly.NextOccursDate(today));
+
+            if (monthly.OccursOnceAt.HasValue)
+            {
+                var time = monthly.OccursOnceAt!.Value;
+
+                var next = new DateTimeOffset(nextDate, last.Offset).Add(time);
+
+                while (next < last)
+                {
+                    nextDate = monthly.NextOccursDate(nextDate);
+                    next = nextDate.Add(time);
+                }
+                return next;
+            }
+            else
+            {
+                var (start, end) = monthly.GetDailyOccursRange(nextDate, last.Offset);
+                while (last > end)
+                {
+                    nextDate = monthly.NextOccursDate(nextDate);
+                    (start, end) = monthly.GetDailyOccursRange(nextDate, last.Offset);
+                }
+                if (last < start)
+                {
+                    return start;
+                }
+                var next = (DateTimeOffset)(lastProcessed.HasValue && lastProcessed > start ? lastProcessed! : start);
+                var occursEvery = monthly.OccursEvery ?? new TimeSpan(0, 0, 30); // seconds
+                while (next <= last)
+                {
+                    next = next.Add(occursEvery);
+                }
+                if (next > end) // if next occurs > ending time of date, return starting time of next recurs date
+                {
+                    nextDate = monthly.NextOccursDate(nextDate);
+                    (start, end) = monthly.GetDailyOccursRange(nextDate, last.Offset);
+                    return start;
+                }
+                return next;
+            }
+        }
+
+        /// <summary>
+        /// Get next occurs date of MonthlyFrequency
+        /// </summary>
+        /// <param name="last"></param>
+        /// <returns></returns>
+        public static DateTime NextOccursDate(this MonthlyFrequency monthly, DateTime last)
+        {
+            var recurs = monthly.RecursEvery < 1 ? 1 : monthly.RecursEvery;
+
+            if (monthly.OnDay.HasValue)
+            {
+                var onDay = monthly.OnDay.Value;
+
+                var next = new DateTime(last.Year, last.Month, onDay);
+                if (last < next)
+                {
+                    return next;
+                }
+                return next.AddMonths(recurs);
+            }
+            else if (monthly.On.HasValue && (monthly.SpecialDay.HasValue || monthly.DayOfWeek.HasValue))
+            {
+                var next = monthly.SpecialDay.HasValue
+                    ? last.SpecialDayOfMonth(monthly.On.Value, monthly.SpecialDay.Value)
+                    : last.SpecifiedWeekdayOfMonth(monthly.On.Value, monthly.DayOfWeek!.Value);
+                if (last < next)
+                {
+                    return next;
+                }
+                next = new DateTime(next.Year, next.Month, 1).AddMonths(recurs);
+                return monthly.SpecialDay.HasValue
+                    ? next.SpecialDayOfMonth(monthly.On.Value, monthly.SpecialDay.Value)
+                    : next.SpecifiedWeekdayOfMonth(monthly.On.Value, monthly.DayOfWeek!.Value);
+            }
+            throw new InvalidOperationException("Invalid monthly frequency");
+        }
+
+        public static DateTime SpecialDayOfMonth(this DateTime dt, DaySequence on, SpecialDay specialDay)
+        {
+            if (specialDay == SpecialDay.Weekday)
+            {
+                if (on == DaySequence.Last)
+                {
+                    var lastDay = DateTime.DaysInMonth(dt.Year, dt.Month);
+                    var lastWeekday = new DateTime(dt.Year, dt.Month, lastDay);
+                    while (!lastWeekday.IsWeekday())
+                    {
+                        lastWeekday = lastWeekday.AddDays(-1);
+                    }
+                    return lastWeekday;
+                }
+                else
+                {
+                    var firstDay = new DateTime(dt.Year, dt.Month, 1);
+                    return firstDay.AddDays((int)on - 1);
+                }
+            }
+            else if (specialDay == SpecialDay.Weekend)
+            {
+                if (on == DaySequence.Last)
+                {
+                    var lastDay = DateTime.DaysInMonth(dt.Year, dt.Month);
+                    var lastWeekend = new DateTime(dt.Year, dt.Month, lastDay);
+                    while (lastWeekend.IsWeekday())
+                    {
+                        lastWeekend = lastWeekend.AddDays(-1);
+                    }
+                    return lastWeekend;
+                }
+                else
+                {
+                    var firstWeekend = new DateTime(dt.Year, dt.Month, 1);
+                    while (firstWeekend.IsWeekday())
+                    {
+                        firstWeekend = firstWeekend.AddDays(1);
+                    }
+                    return firstWeekend.AddDays(((int)on - 1) * 7);
+                }
+            }
+
+            // default to day of month
+            if (on == DaySequence.Last)
+            {
+                return new DateTime(dt.Year, dt.Month, DateTime.DaysInMonth(dt.Year, dt.Month));
+            }
+            else
+            {
+                return new DateTime(dt.Year, dt.Month, (int)on);
+            }
+        }
+
+        public static DateTime SpecifiedWeekdayOfMonth(this DateTime dt, DaySequence on, DayOfWeek day)
+        {
+            if (on == DaySequence.Last)
+            {
+                var lastDay = DateTime.DaysInMonth(dt.Year, dt.Month);
+                var lastWeekday = new DateTime(dt.Year, dt.Month, lastDay);
+                while (lastWeekday.DayOfWeek < day)
+                {
+                    lastWeekday = lastWeekday.AddDays(-1);
+                }
+                return lastWeekday;
+            }
+            else
+            {
+                var firstDay = new DateTime(dt.Year, dt.Month, 1);
+                while (firstDay.DayOfWeek < day)
+                {
+                    firstDay = firstDay.AddDays(1);
+                }
+                return firstDay.AddDays(((int)on - 1) * 7);
+            }
+        }
+
+        public static bool IsOccursOn(this MonthlyFrequency monthly, DateTime dt)
+        {
+            if (monthly.OnDay.HasValue)
+            {
+                return dt.Day == monthly.OnDay.Value;
+            }
+            else if (monthly.On.HasValue && (monthly.SpecialDay.HasValue || monthly.DayOfWeek.HasValue))
+            {
+                if (monthly.SpecialDay.HasValue)
+                {
+                    return dt.SpecialDayOfMonth(monthly.On.Value, monthly.SpecialDay.Value) == dt;
+                }
+                else
+                {
+                    return dt.SpecifiedWeekdayOfMonth(monthly.On.Value, monthly.DayOfWeek!.Value) == dt;
+                }
+            }
+            throw new InvalidOperationException("Invalid monthly frequency");
+        }
+        #endregion
+
+        public static bool IsWeekday(this DateTime dt)
+        {
+            return dt.DayOfWeek != DayOfWeek.Saturday && dt.DayOfWeek != DayOfWeek.Sunday;
+        }
+
+        public static DateTime StartOfWeek(this DateTime dt, DayOfWeek startOfWeek)
         {
             int diff = (7 + (dt.DayOfWeek - startOfWeek)) % 7;
             return dt.AddDays(-1 * diff).Date;
         }
 
-        public static DateTime EndOfWeek(this DateTimeOffset dt, DayOfWeek startOfWeek)
+        public static DateTime EndOfWeek(this DateTime dt, DayOfWeek startOfWeek)
         {
             return dt.StartOfWeek(startOfWeek).AddDays(7);
         }
 
-        public static DateTimeOffset StartingOfWeek(this DateTimeOffset dt, IEnumerable<DayOfWeek> daysOfWeek, TimeSpan startingAt)
-        {
-            var startDayOfWeek = daysOfWeek.OrderBy(d => (int)d).First();
-            var startOfWeek = dt.StartOfWeek(startDayOfWeek);
-            return new DateTimeOffset(startOfWeek.Year, startOfWeek.Month, startOfWeek.Day, startingAt.Hours, startingAt.Minutes, startingAt.Seconds, dt.Offset);
-        }
-
-        public static DateTimeOffset EndingOfWeekByStarting(this DateTimeOffset dt, IEnumerable<DayOfWeek> daysOfWeek, TimeSpan startingAt, TimeSpan duration)
-        {
-            var endDayOfWeek = daysOfWeek.OrderByDescending(d => (int)d).First();
-            var endOfWeek = dt.StartOfWeek(endDayOfWeek);
-            var end = new DateTimeOffset(endOfWeek.Year, endOfWeek.Month, endOfWeek.Day, startingAt.Hours, startingAt.Minutes, startingAt.Seconds, dt.Offset).Add(duration);
-            return end > dt ? end : end.AddDays(7);
-        }
-
-        public static DateTimeOffset EndingOfWeek(this DateTimeOffset dt, IEnumerable<DayOfWeek> daysOfWeek, TimeSpan startingAt, TimeSpan duration)
-        {
-            return dt.StartingOfWeek(daysOfWeek, startingAt).EndingOfWeekByStarting(daysOfWeek, startingAt, duration);
-        }
-
-        public static IEnumerable<DateTimeOffset> DaysOccursOfWeek(this DateTimeOffset dt, IEnumerable<DayOfWeek> daysOfWeek, DayOfWeek startDayOfWeek = DayOfWeek.Sunday)
-        {
-            //var startDayOfWeek = daysOfWeek.OrderBy(d => d.IntValue()).First();
-            var startOfWeek = dt.StartOfWeek(startDayOfWeek);
-            return daysOfWeek.Select(d => { var day = new DateTimeOffset(dt.StartOfWeek(d), dt.Offset); return day >= startOfWeek ? day : day.AddDays(7); });
-        }
-
-        public static DateTimeOffset SpecialDayOfMonth(this DateTimeOffset dt, DaySequence on, SpecialDay? specialDay, DayOfWeek? dayOfWeek)
-        {
-
-            if (specialDay.HasValue)
-            {
-                if (specialDay == SpecialDay.day)
-                {
-                    var day = (int)on;
-
-                    if (day > 0)
-                    {
-                        return new DateTimeOffset(dt.Year, dt.Month, day, 0, 0, 0, dt.Offset);
-                    }
-                    else
-                    {
-                        return new DateTimeOffset(dt.Year, dt.Month, 1, 0, 0, 0, dt.Offset).AddMonths(1).AddDays(-1);
-                    }
-                }
-                else if (specialDay == SpecialDay.weekDay)
-                {
-                    var day = (int)on;
-
-                    if (day > 0)
-                    {
-                        var firstOfMonth = new DateTimeOffset(dt.Year, dt.Month, 1, 0, 0, 0, dt.Offset);
-                        while (!firstOfMonth.IsWeekDay())
-                        {
-                            firstOfMonth = firstOfMonth.AddDays(1);
-                        }
-                        if (day > 1)
-                        {
-                            firstOfMonth = firstOfMonth.AddDays(day - 1);
-                            while (!firstOfMonth.IsWeekDay())
-                            {
-                                firstOfMonth = firstOfMonth.AddDays(1);
-                            }
-                        }
-                        return firstOfMonth;
-                    }
-                    else
-                    {
-                        var lastOfMonth = new DateTimeOffset(dt.Year, dt.Month, 1, 0, 0, 0, dt.Offset).AddMonths(1).AddDays(-1);
-                        while (!lastOfMonth.IsWeekDay())
-                        {
-                            lastOfMonth = lastOfMonth.AddDays(-1);
-                        }
-                        return lastOfMonth;
-                    }
-                }
-                else
-                //if(specialDay == SpecialDay.weekendDay)
-                {
-                    var week = (int)on;
-
-                    if (week > 0)
-                    {
-                        var firstOfMonth = new DateTimeOffset(dt.Year, dt.Month, 1, 0, 0, 0, dt.Offset);
-                        while (!firstOfMonth.IsWeekendDay())
-                        {
-                            firstOfMonth = firstOfMonth.AddDays(1);
-                        }
-                        if (week > 1)
-                        {
-                            firstOfMonth = firstOfMonth.AddDays((week - 1) * 7);
-                        }
-                        return firstOfMonth;
-                    }
-                    else
-                    {
-                        var lastOfMonth = new DateTimeOffset(dt.Year, dt.Month, 1, 0, 0, 0, dt.Offset).AddMonths(1).AddDays(-1);
-                        while (!lastOfMonth.IsWeekendDay())
-                        {
-                            lastOfMonth = lastOfMonth.AddDays(-1);
-                        }
-                        return lastOfMonth;
-                    }
-                }
-            }
-            else
-            {
-                dayOfWeek = dayOfWeek ?? DayOfWeek.Monday;
-                var week = (int)on;
-
-                if (week > 0)
-                {
-                    var firstOfMonth = new DateTimeOffset(dt.Year, dt.Month, 1, 0, 0, 0, dt.Offset);
-                    while (firstOfMonth.DayOfWeek != dayOfWeek)
-                    {
-                        firstOfMonth = firstOfMonth.AddDays(1);
-                    }
-                    if (week > 1)
-                    {
-                        firstOfMonth = firstOfMonth.AddDays((week - 1) * 7);
-                    }
-                    return firstOfMonth;
-                }
-                else
-                {
-                    var lastOfMonth = new DateTimeOffset(dt.Year, dt.Month, 1, 0, 0, 0, dt.Offset).AddMonths(1).AddDays(-1);
-                    while (lastOfMonth.DayOfWeek != dayOfWeek)
-                    {
-                        lastOfMonth = lastOfMonth.AddDays(-1);
-                    }
-                    return lastOfMonth;
-                }
-            }
-        }
-
-        public static bool IsWeekDay(this DateTimeOffset dt)
-        {
-            return dt.DayOfWeek != DayOfWeek.Saturday && dt.DayOfWeek != DayOfWeek.Sunday;
-        }
-
-        public static bool IsWeekendDay(this DateTimeOffset dt)
-        {
-            return !dt.IsWeekDay();
-        }
     }
 }

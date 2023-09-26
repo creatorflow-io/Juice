@@ -35,6 +35,7 @@
   <ItemGroup Label="refs">
     <ProjectReference Include="..\..\..\..\core\src\Juice\Juice.csproj" />
     <ProjectReference Include="..\..\..\..\test\Juice.XUnit\Juice.XUnit.csproj" />
+    <ProjectReference Include="..\..\src\Juice.BgService.ServiceBase\Juice.BgService.ServiceBase.csproj" />
   </ItemGroup>
 
   <ItemGroup>
