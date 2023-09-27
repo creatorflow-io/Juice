@@ -128,7 +128,7 @@ namespace Juice.Workflows
 
                 var executor = _serviceProvider.GetRequiredService<WorkflowExecutor>();
 
-                var rs = await executor.ExecuteAsync(ExecutedContext, nodeId, token);
+                var rs = await executor.ExecuteAsync(ExecutedContext!, nodeId, token);
 
                 var state = rs.Context.State;
 

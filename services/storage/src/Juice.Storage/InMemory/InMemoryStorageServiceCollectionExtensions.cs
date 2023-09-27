@@ -10,12 +10,34 @@ namespace Microsoft.Extensions.DependencyInjection
 {
     public static class InMemoryStorageServiceCollectionExtensions
     {
-        public static IServiceCollection AddInMemoryUploadManager(this IServiceCollection services, IConfiguration configuration)
+        public static IServiceCollection AddDefaultUploadManager<T>(this IServiceCollection services, Action<UploadOptions> configure)
+           where T : class, IFile, new()
+        {
+            services.Configure(configure);
+            services.AddScoped<IUploadManager, DefaultUploadManager<T>>();
+            return services;
+        }
+
+        public static IServiceCollection AddDefaultUploadManager<T>(this IServiceCollection services, IConfiguration configuration)
+            where T : class, IFile, new()
+        {
+            services.Configure<UploadOptions>(configuration);
+            services.AddScoped<IUploadManager, DefaultUploadManager<T>>();
+            return services;
+        }
+
+        public static IServiceCollection AddInMemoryUploadManager(this IServiceCollection services, IConfiguration configuration, Action<UploadOptions>? configure = default)
         {
             services.Configure<InMemoryStorageOptions>(configuration);
-            services.Configure<UploadOptions>(configuration);
             services.AddScoped<IStorageRepository, InMemoryStorageRepository>();
-            services.AddScoped<IUploadManager, DefaultUploadManager<UploadFileInfo>>();
+            if (configure != null)
+            {
+                services.AddDefaultUploadManager<UploadFileInfo>(configure);
+            }
+            else
+            {
+                services.AddDefaultUploadManager<UploadFileInfo>(configuration);
+            }
             services.AddSingleton<IUploadRepository<UploadFileInfo>, InMemoryUploadRepository>();
 
             return services;

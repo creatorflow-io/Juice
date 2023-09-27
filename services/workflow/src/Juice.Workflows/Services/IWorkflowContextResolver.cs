@@ -14,7 +14,7 @@
         /// <summary>
         /// Resolve workflow context and restored state data
         /// </summary>
-        /// <param name="workflowId"></param>
+        /// <param name="instanceId"></param>
         /// <param name="token"></param>
         /// <returns></returns>
         Task<WorkflowContext?> StateResolveAsync(
