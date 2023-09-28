@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Text.Json;
+using System.Text.RegularExpressions;
 using Juice.Storage.Abstractions;
 using Juice.Storage.Authorization;
 using Juice.Storage.Dto;
@@ -8,6 +9,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.Net.Http.Headers;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -231,7 +233,10 @@ namespace Juice.Storage.Middleware
                 var configuration = await uploadManager.InitAsync(fileInfo, context.RequestAborted);
 
                 context.Response.StatusCode = StatusCodes.Status201Created;
-                await context.Response.WriteAsync(JsonConvert.SerializeObject(configuration));
+                await context.Response.WriteAsJsonAsync(configuration, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true,
+                });
 
             }
             catch (ArgumentException ex)
@@ -254,13 +259,12 @@ namespace Juice.Storage.Middleware
 
         #region Upload
 
-        private (Guid uploadId, long offset) GetUploadInfoFromHeaders(HttpContext context)
+        private (Guid? uploadId, long offset) GetUploadInfoFromHeaders(HttpContext context)
         {
             var uploadIdStr = context.Request.Headers["x-uploadid"];
-            if (string.IsNullOrWhiteSpace(uploadIdStr) || !Guid.TryParse(uploadIdStr, out var uploadId))
-            {
-                throw new ArgumentException("x-uploadid is missing in the header");
-            }
+            var uploadId =
+                string.IsNullOrWhiteSpace(uploadIdStr) || !Guid.TryParse(uploadIdStr, out var guid)
+                ? (Guid?)null : guid;
 
             var offsetStr = context.Request.Headers["x-offset"];
             if (string.IsNullOrEmpty(offsetStr))
@@ -272,6 +276,67 @@ namespace Juice.Storage.Middleware
                 throw new ArgumentException("x-offset header is invalid");
             }
             return (uploadId, offset);
+        }
+        private InitialFileInfo GetInitialFileInfoFromFormData(Dictionary<string, string> form)
+        {
+
+            var filePath = form["filePath"].ToString();
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                throw new ArgumentException("filePath is missing in form");
+            }
+
+            var originalFilePath = form["originalFilePath"].ToString();
+
+            var fileSizeStr = form["fileSize"];
+            if (string.IsNullOrWhiteSpace(fileSizeStr) || !long.TryParse(fileSizeStr, out var fileSize))
+            {
+                throw new ArgumentException("fileSize is missing in form");
+            }
+
+            var fileExistsBehaviorStr = form["fileExistsBehavior"];
+            if (string.IsNullOrWhiteSpace(fileExistsBehaviorStr)
+                || !Enum.TryParse<FileExistsBehavior>(fileExistsBehaviorStr, out var fileExistsBehavior))
+            {
+                throw new ArgumentException("fileExistsBehavior is missing in form");
+            }
+
+            DateTimeOffset? lastModified = null;
+            var lastModifiedDate = form["lastModifiedDate"].ToString();
+            if (!string.IsNullOrWhiteSpace(lastModifiedDate))
+            {
+                if (DateTimeOffset.TryParse(lastModifiedDate, out var tmp))
+                {
+                    lastModified = tmp;
+                }
+                else
+                {
+                    throw new ArgumentException("lastModifiedDate is invalid format. Try to convert to ISO format like this '2021-01-18T17:08:50.327+07:00'.");
+                }
+            }
+
+            var contentType = form.ContainsKey("contentType") ?
+                form["contentType"].ToString() : null;
+
+            var correlationId = form.ContainsKey("correlationId") ?
+                form["correlationId"].ToString() : null;
+            var metadata = form.ContainsKey("metadata") ?
+                form["metadata"].ToString() : null;
+
+            JObject? metadataObj;
+            try
+            {
+                metadataObj = !string.IsNullOrEmpty(metadata)
+                   ? JsonConvert.DeserializeObject<JObject>(metadata)
+                   : null;
+            }
+            catch (Exception ex)
+            {
+                throw new ArgumentException("metadata is not valid json", ex);
+            }
+
+            return new InitialFileInfo(filePath, fileSize, contentType, originalFilePath, lastModified, correlationId,
+                    metadataObj, fileExistsBehavior);
         }
 
         private async Task InvokeUploadAsync(HttpContext context)
@@ -291,29 +356,70 @@ namespace Juice.Storage.Middleware
                 await context.Response.WriteAsync("No files data in the request");
             }
 
-            var reader = new MultipartReader(boundary, context.Request.Body, 1024 * 1024)
-            ;
-            var section = await reader.ReadNextSectionAsync();
-
             try
             {
-                var (uploadId, offset) = GetUploadInfoFromHeaders(context);
-                logger?.LogInformation("Upload file {uploadId} from offset {offset}", uploadId, offset);
                 var uploadManager = context.RequestServices.GetRequiredService<IUploadManager>();
+
+                var (uploadId, offset) = GetUploadInfoFromHeaders(context);
+                if (uploadId.HasValue)
+                {
+                    logger?.LogInformation("Upload file {uploadId} from offset {offset}", uploadId, offset);
+                }
+                else
+                {
+                    logger?.LogInformation("Upload new file from offset {offset}", offset);
+                }
+                var sectionSize = context.RequestServices.GetRequiredService<IOptionsSnapshot<UploadOptions>>().Value.SectionSize;
+
+                var reader = new MultipartReader(boundary, context.Request.Body, 1024 * 1024)
+                ;
+                var section = await reader.ReadNextSectionAsync();
+
+                var multipartFormData = new Dictionary<string, string>();
+                Stream? stream = null;
 
                 while (section != null)
                 {
                     if (ContentDispositionHeaderValue.TryParse(section.ContentDisposition,
-                    out var contentDisposition) && contentDisposition.DispositionType.Equals("form-data") &&
-                    !string.IsNullOrEmpty(contentDisposition.FileName.Value))
+                    out var contentDisposition) && contentDisposition.DispositionType.Equals("form-data")
+                    && !string.IsNullOrEmpty(contentDisposition.FileName.Value)
+                    )
                     {
-                        using var stream = section.Body;
-                        var (completed, size) = await uploadManager.UploadAsync(uploadId, stream, offset, context.RequestAborted);
+                        UploadConfiguration? configuration = null;
+
+                        if (!uploadId.HasValue)
+                        {
+                            var fileInfo = GetInitialFileInfoFromFormData(multipartFormData);
+                            if (logger?.IsEnabled(LogLevel.Debug) ?? false)
+                            {
+                                logger.LogDebug("Init upload {filePath} {fileSize} {contentType} {originalFilePath} {lastModified} {correlationId} {metadata} {fileExistsBehavior}",
+                                                           fileInfo.Name, fileInfo.FileSize, fileInfo.ContentType, fileInfo.OriginalName, fileInfo.LastModified, fileInfo.CorrelationId, fileInfo.Metadata, fileInfo.FileExistsBehavior);
+                            }
+                            configuration = await uploadManager.InitAsync(fileInfo, context.RequestAborted);
+                            uploadId = configuration.UploadId;
+                        }
+
+                        stream = section.Body;
+                        var (completed, size) = await uploadManager.UploadAsync(uploadId.Value, stream, offset, context.RequestAborted);
                         context.Response.StatusCode = StatusCodes.Status200OK;
                         context.Response.Headers.Add("x-offset", size.ToString());
                         context.Response.Headers.Add("x-completed", completed.ToString());
-                        await context.Response.WriteAsync(size.ToString());
+                        if (configuration != null)
+                        {
+                            await context.Response.WriteAsJsonAsync(configuration, new JsonSerializerOptions
+                            {
+                                PropertyNameCaseInsensitive = true,
+                            });
+                        }
                         return;
+                    }
+                    else
+                    {
+                        var x = section.AsFormDataSection();
+                        if (x != null)
+                        {
+                            multipartFormData.Add(x.Name, await x.GetValueAsync());
+                        }
                     }
                     section = await reader.ReadNextSectionAsync();
                 }
