@@ -60,6 +60,8 @@ uploader.onprogress = function (progress) {
     console.log("progress", progress.message);
 }
 
+// NOTE: onupload event will only be called on the large file, after the first part is uploaded.
+// The smaller file will be completed in single request so it only fires onsuccess/onerror event
 uploader.onupload = function (upload) {
     //upload: UploadConfiguration
     console.log("start", upload.Name, upload.UploadId);
@@ -72,6 +74,7 @@ uploader.onabort = function (upload) {
 }
 
 // Handle file input event to upload or resume
+// The sectionSize option will be used only for first request, after that it will be replaced by the sectionSize in the response headers
 document.getElementById("file").onchange = function (event) {
     if (this.files[0]) {
         let uploadId = document.getElementById("uploadId").value;
@@ -85,7 +88,8 @@ document.getElementById("file").onchange = function (event) {
                 //    metadata: {
                 //        "key1": "value1",
                 //        "key2": "value2"
-                //    }
+                //    },
+                //    sectionSize: 5000000
                 //  } // option
             );
         }

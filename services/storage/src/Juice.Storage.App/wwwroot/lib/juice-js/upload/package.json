@@ -1,6 +1,6 @@
 {
   "name": "@juice-js/upload",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Upload library for Juice Storage",
   "main": "src/JUpload.js",
   "scripts": {

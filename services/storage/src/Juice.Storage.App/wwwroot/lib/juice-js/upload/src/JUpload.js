@@ -28,6 +28,7 @@ JUpload.prototype.upload = function (file, options) {
     options = $.extend({
         "metadata": {},
         "fileExistsBehavior": FileExistsBehavior.AscendedCopyNumber,
+        "sectionSize": 5000000 // default to chunked upload
     }, options || {});
 
     if(typeof options.metadata === "object") {
@@ -38,43 +39,39 @@ JUpload.prototype.upload = function (file, options) {
 
     that._file = file;
 
-    initUpload.call(that, file, options)
-        .then((result) => {
-            that._initializedUpload = JSON.parse(result);
+    
+    firstUpload.call(that, file, options)
+    .then((completed, offset, result) => {
+        that._initializedUpload = result;
 
-            console.log("File initialized", that._initializedUpload);
-            _startTrackingProgress.call(that, result.PackageSize - result.Offset);
-
-            return that._initializedUpload;
-        }, (response) => { 
-            switch(response.status){
-                case 500:
-                    _error.call(that, "Failed to init: " + response.responseText);
-                    break;
-                case 401:
-                case 403:
-                    _error.call(that, response.responseText);
-                    break;
-                default:
-                    _retry.call(that, "Failed to init: " + response.responseText); 
-            }
-        })
-        .then((result) => {
-            if (result) {
-                if (typeof that.onupload === "function") {
-                    try {
-                        that.onupload(result);
-                    } catch (e) {
-                        console.error("Failed to process onupload event", e);
-                    }
+        console.log("File initialized", that._initializedUpload);
+        if(completed){
+            _successWithoutReport.call(that);
+        }else{
+            if (typeof that.onupload === "function") {
+                try {
+                    that.onupload(result);
+                } catch (e) {
+                    console.error("Failed to process onupload event", e);
                 }
-                doUpload.call(that, file, result.Offset, result.SectionSize);
             }
-        }, (response) => { _retry.call(that, "Failed to upload: " + response.responseText); })
-        .catch(function (error) {
-            console.debug("catch", error);
-            _retry.call(that, error);
-        });
+            _startTrackingProgress.call(that, result.PackageSize - offset);
+
+            doUpload.call(that, file, offset, result.SectionSize);
+        }
+    }, (response) => { 
+        switch(response.status){
+            case 500:
+                _error.call(that, "Failed to upload: " + response.responseText);
+                break;
+            case 401:
+            case 403:
+                _error.call(that, response.responseText);
+                break;
+            default:
+                _retry.call(that, "Failed to upload: " + response.responseText); 
+        }
+    });
 }
 
 JUpload.prototype.exists = function (filePath) {
@@ -119,6 +116,7 @@ JUpload.prototype.abort = function () {
         that._xhr.abort();
     }
 }
+
 function toIsoString(date) {
     var tzo = -date.getTimezoneOffset(),
         dif = tzo >= 0 ? '+' : '-',
@@ -136,6 +134,7 @@ function toIsoString(date) {
         dif + pad(Math.floor(Math.abs(tzo) / 60)) +
         ':' + pad(Math.abs(tzo) % 60);
 }
+
 var initUpload = function (file, options) {
 
     if (typeof this.endpoint === "undefined" || !this.endpoint) {
@@ -163,6 +162,92 @@ var initUpload = function (file, options) {
             uploadId: this.uploadId
         }
     });
+}
+
+var firstUpload = function (file, options) {
+
+    if (typeof this.endpoint === "undefined" || !this.endpoint) {
+        throw "The endpoint must be configured.";
+    }
+    let that = this;
+    let relativePath = file.webkitRelativePath || file.name;
+    let filePath = options.filePath || relativePath;
+    let fileExistsBehavior = typeof options.fileExistsBehavior === "undefined" ?
+        FileExistsBehavior.AscendedCopyNumber
+        : options.fileExistsBehavior;
+    let sectionSize = typeof options.sectionSize === "undefined" ?
+        5000000: options.sectionSize;
+
+    let data = new FormData();
+
+    let end = Math.min(sectionSize, file.size);
+    let section = file.size <= sectionSize ? file: file.slice(0, end);
+
+    data.append("filePath", filePath);
+    data.append("contentType", file.type);
+    data.append("correlationId", options.correlationId);
+    data.append("metadata", options.metadata);
+    data.append("fileExistsBehavior", fileExistsBehavior);
+    data.append("fileSize", file.size);
+    data.append("originalFilePath", relativePath);
+    data.append("lastModifiedDate", toIsoString(file.lastModifiedDate));
+
+    data.append("file", section);
+
+    console.debug("Upload section", file.size, sectionSize);
+    var defer = $.Deferred();
+    // store request to abort after
+    that._xhr = $.ajax({
+        type: "POST",
+        url: `${that.endpoint}/upload`,
+        crossDomain: true,
+        cache: false,
+        contentType: false,
+        processData: false,
+        data: data,
+        xhr: function () {
+            var xhr = new XMLHttpRequest();
+            if (xhr.upload && typeof that.onprogress === "function") {
+                xhr.upload.onprogress = function (evt) {
+                    that._sectionLoaded = evt.position || evt.loaded;
+                    let progress = _calcProgress.call(that);
+                    if (typeof that.onprogress === "function") {
+                        try { that.onprogress(progress); } catch (e) { console.error("Failed to process onprogress event"); }
+                    }
+                };
+            }
+            return xhr;
+        },
+        beforeSend: function (xhr) {
+            try {
+                xhr.setRequestHeader("x-offset", 0);
+            }
+            catch (e) {
+                console.log("Failed to set headers before send");
+                console.error(e);
+                _error.call(that, e);
+            }
+        },
+        complete: function (xhr, statusText) {
+            console.debug(xhr, statusText);
+            if (statusText === "abort") {
+                _abort.call(that);
+            }
+            else if(xhr.status === 200 || xhr.status === 204){
+                console.debug("Upload section completed", xhr.status, xhr.responseText, xhr.getResponseHeader("x-completed"), xhr.getAllResponseHeaders());
+                let completed = xhr.getResponseHeader("x-completed")!=null && JSON.parse(xhr.getResponseHeader("x-completed").toLowerCase());
+                let offset = xhr.getResponseHeader("x-offset")!=null ? parseInt(xhr.getResponseHeader("x-offset")): null;
+                let configuration = xhr.responseText ? JSON.parse(xhr.responseText): null;
+                defer.resolve(completed, offset, configuration);
+            }else {
+                defer.reject(xhr);
+            }
+        },
+        error: function(xhr, statusText, error){
+            defer.reject(xhr);
+        }
+    });
+    return defer;
 }
 
 var doUpload = function (file, offset, sectionSize) {
@@ -241,9 +326,7 @@ var doUpload = function (file, offset, sectionSize) {
                     // server has completed the upload, so the client can stop uploading and no need to report success.
                     _successWithoutReport.call(that);
                 }else{
-                    let offset = xhr.status === 204 
-                        ? parseInt(xhr.getResponseHeader("x-offset"))
-                        : parseInt(xhr.responseText);
+                    let offset = xhr.getResponseHeader("x-offset");
                     that._triedCount = 0; // reset tried count
                     doUpload.call(that, file, offset, sectionSize);
                 } 
@@ -263,24 +346,17 @@ var resumeUpload = function (isManual) {
         ? { fileExistsBehavior: FileExistsBehavior.Resume }: {};
     initUpload.call(that, file, initOptions)
         .then((result) => {
-            that._initializedUpload = JSON.parse(result);
+            that._initializedUpload = result;
             if (isManual) {
                 // update start upload time and total transfer size if manual resume.
                 _startTrackingProgress.call(that, result.PackageSize - result.Offset);
             }
 
             console.log("File resume initialized", that._initializedUpload);
-            return that._initializedUpload;
-        }, (response) => { _retry.call(that, "Failed to init resume: " + response.responseText); })
-        .then((result) => {
             if (result) {
                 doUpload.call(that, file, result.Offset, result.SectionSize);
             }
-        }, (response) => { _retry.call(that, "Failed to upload: " + response.responseText); })
-        .catch(function (error) {
-            console.debug("catch", error);
-            _retry.call(that, error);
-        });
+        }, (response) => { _retry.call(that, "Failed to init resume: " + response.responseText); });
 }
 
 var _successWithoutReport = function () {
