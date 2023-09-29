@@ -43,7 +43,10 @@ namespace Juice.MediatR.Tests
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
 
-                services.AddMediatR(typeof(ConcurrentTest));
+                services.AddMediatR(options =>
+                {
+                    options.RegisterServicesFromAssemblyContaining(typeof(ConcurrentTest));
+                });
             });
 
             var logger = resolver.ServiceProvider.GetRequiredService<ILogger<ConcurrentTest>>();

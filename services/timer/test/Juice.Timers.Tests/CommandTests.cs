@@ -99,7 +99,7 @@ namespace Juice.Timers.Tests
                     options.DatabaseProvider = provider;
                 }).AddEFTimerRepo();
 
-                services.AddMediatR(typeof(TimerExpiredIntegrationEventHandler), typeof(TimerExpiredDomainEvent));
+                services.AddMediatR(options => { options.RegisterServicesFromAssemblyContaining<TimerExpiredIntegrationEventHandler>(); options.RegisterServicesFromAssemblyContaining<TimerExpiredDomainEvent>(); });
                 services.AddOperationExceptionBehavior();
                 services.AddMediatRTimerBehaviors();
 
@@ -175,7 +175,7 @@ namespace Juice.Timers.Tests
                     options.DatabaseProvider = provider;
                 }).AddEFTimerRepo();
 
-                services.AddMediatR(typeof(TimerExpiredDomainEvent));
+                services.AddMediatR(options => { options.RegisterServicesFromAssemblyContaining<TimerExpiredDomainEvent>(); });
                 services.AddOperationExceptionBehavior();
 
             });
@@ -290,7 +290,8 @@ namespace Juice.Timers.Tests
 
                 services.AddSingleton<SharedToken>();
 
-                services.AddMediatR(typeof(SelfTimerExipredDomainEventHandler), typeof(TimerExpiredDomainEvent));
+                services.AddMediatR(options => { options.RegisterServicesFromAssemblyContaining<SelfTimerExipredDomainEventHandler>(); options.RegisterServicesFromAssemblyContaining<TimerExpiredDomainEvent>(); });
+                ;
                 services.AddOperationExceptionBehavior();
                 services.AddMediatRTimerManagerBehavior();
 
@@ -352,7 +353,11 @@ namespace Juice.Timers.Tests
                     options.DatabaseProvider = provider;
                 }).AddEFTimerRepo();
 
-                services.AddMediatR(typeof(TimerExpiredIntegrationEventHandler), typeof(TimerExpiredDomainEvent));
+                services.AddMediatR(options =>
+                {
+                    options.RegisterServicesFromAssemblyContaining<TimerExpiredIntegrationEventHandler>();
+                    options.RegisterServicesFromAssemblyContaining<TimerExpiredDomainEvent>();
+                });
                 services.AddOperationExceptionBehavior();
                 services.AddMediatRTimerBehaviors();
 
@@ -425,8 +430,13 @@ namespace Juice.Timers.Tests
                 }).AddEFTimerRepo();
                 services.AddTimerService(configuration.GetSection("Timer"));
 
-                services.AddMediatR(typeof(TimerExpiredDomainEventHandler), typeof(TimerExpiredDomainEvent),
-                    typeof(SelfTimerExipredDomainEventHandler));
+                services.AddMediatR(options =>
+                {
+                    options.RegisterServicesFromAssemblyContaining<TimerExpiredDomainEventHandler>();
+                    options.RegisterServicesFromAssemblyContaining<TimerExpiredDomainEvent>();
+                    options.RegisterServicesFromAssemblyContaining<SelfTimerExipredDomainEventHandler>();
+                });
+
                 services.AddOperationExceptionBehavior();
                 services.AddMediatRTimerBehaviors();
 

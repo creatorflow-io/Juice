@@ -10,7 +10,4 @@
     <ProjectReference Include="..\..\src\Juice.Audit.Api\Juice.Audit.Api.csproj" />
   </ItemGroup>
   
-  <ItemGroup>
-    <PackageReference Include="MediatR.Extensions.Microsoft.DependencyInjection" Version="$(MediatRVersion)" />
-  </ItemGroup>
 </Project>

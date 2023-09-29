@@ -52,7 +52,11 @@ namespace Juice.Workflows.Tests
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
 
-                services.AddMediatR(typeof(StartEvent), typeof(TimerEventStartDomainEventHandler));
+                services.AddMediatR(options =>
+                {
+                    options.RegisterServicesFromAssemblyContaining<StartEvent>();
+                    options.RegisterServicesFromAssemblyContaining<TimerEventStartDomainEventHandler>();
+                });
                 services.AddSingleton<EventQueue>();
 
                 services.AddWorkflowServices()

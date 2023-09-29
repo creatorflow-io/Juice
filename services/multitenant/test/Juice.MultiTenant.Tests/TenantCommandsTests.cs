@@ -78,7 +78,10 @@ namespace Juice.MultiTenant.Tests
                     .AddTestOutputLogger()
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
-                services.AddMediatR(GetType());
+                services.AddMediatR(options =>
+                {
+                    options.RegisterServicesFromAssemblyContaining(GetType());
+                });
                 services.AddTenantDbContext(configuration, options =>
                 {
                     options.Schema = "App";
@@ -146,7 +149,14 @@ namespace Juice.MultiTenant.Tests
                     .AddTestOutputLogger()
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
-                services.AddMediatR(typeof(TenantCommandsTests));
+
+                services.AddMediatR(options =>
+                {
+                    options.RegisterServicesFromAssemblyContaining<TenantCommandsTests>();
+                    options.RegisterServicesFromAssemblyContaining<CreateTenantCommand>();
+                    options.RegisterServicesFromAssemblyContaining<AssemblySelector>();
+                });
+
                 services.AddTenantDbContext(configuration, options =>
                 {
                     options.Schema = "App";
@@ -155,8 +165,6 @@ namespace Juice.MultiTenant.Tests
                 });
 
                 services.AddTenantOwnerResolverDefault();
-
-                services.AddMediatR(typeof(CreateTenantCommand).Assembly, typeof(AssemblySelector).Assembly);
 
                 services.AddOperationExceptionBehavior();
                 services.AddMediatRTenantBehaviors();

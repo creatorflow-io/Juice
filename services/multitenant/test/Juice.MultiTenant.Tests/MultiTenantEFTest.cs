@@ -12,7 +12,6 @@ using Juice.MultiTenant.EF;
 using Juice.MultiTenant.EF.Migrations;
 using Juice.Services;
 using Juice.XUnit;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -61,7 +60,11 @@ namespace Juice.MultiTenant.Tests
                     .AddTestOutputLogger()
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
-                services.AddMediatR(GetType());
+
+                services.AddMediatR(options =>
+                {
+                    options.RegisterServicesFromAssemblyContaining(GetType());
+                });
                 services.AddTenantDbContext(configuration, options =>
                 {
                     options.Schema = "App";
@@ -143,7 +146,7 @@ namespace Juice.MultiTenant.Tests
                     services.AddScoped<ITenantInfo>(sp => sp.GetRequiredService<Tenant>());
 
                     // Do not registering tenant domain events and its handlers.
-                    services.AddMediatR(typeof(MultiTenantEFTest));
+                    services.AddMediatR(options => { options.RegisterServicesFromAssemblyContaining<MultiTenantEFTest>(); });
 
                     services.AddTenantsConfiguration()
                         .AddTenantsJsonFile("appsettings.Development.json")

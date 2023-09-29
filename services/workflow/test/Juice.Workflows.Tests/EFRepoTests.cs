@@ -111,7 +111,12 @@ namespace Juice.Workflows.Tests
 
                 services.RegisterBpmnWorkflows();
 
-                services.AddMediatR(typeof(StartEvent), typeof(TimerEventStartDomainEventHandler), typeof(StartUserTaskCommandHandler));
+                services.AddMediatR(options =>
+                {
+                    options.RegisterServicesFromAssemblyContaining<StartEvent>();
+                    options.RegisterServicesFromAssemblyContaining<TimerEventStartDomainEventHandler>();
+                    options.RegisterServicesFromAssemblyContaining<StartUserTaskCommandHandler>();
+                });
 
             });
 
@@ -174,7 +179,12 @@ namespace Juice.Workflows.Tests
 
                 services.RegisterDbWorkflows();
 
-                services.AddMediatR(typeof(StartEvent), typeof(TimerEventStartDomainEventHandler), typeof(StartUserTaskCommandHandler));
+                services.AddMediatR(options =>
+                {
+                    options.RegisterServicesFromAssemblyContaining<StartEvent>();
+                    options.RegisterServicesFromAssemblyContaining<TimerEventStartDomainEventHandler>();
+                    options.RegisterServicesFromAssemblyContaining<StartUserTaskCommandHandler>();
+                });
 
                 services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"),
                     options =>
@@ -259,7 +269,12 @@ namespace Juice.Workflows.Tests
 
                 services.RegisterDbWorkflows();
 
-                services.AddMediatR(typeof(StartEvent), typeof(TimerEventStartDomainEventHandler), typeof(StartUserTaskCommandHandler));
+                services.AddMediatR(options =>
+                {
+                    options.RegisterServicesFromAssemblyContaining<StartEvent>();
+                    options.RegisterServicesFromAssemblyContaining<TimerEventStartDomainEventHandler>();
+                    options.RegisterServicesFromAssemblyContaining<StartUserTaskCommandHandler>();
+                });
 
                 services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"),
                     options =>

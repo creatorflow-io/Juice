@@ -38,7 +38,7 @@
                 services.AddWorkflowServices()
                     .AddInMemoryReposistories();
 
-                services.AddMediatR(typeof(StartEvent));
+                services.AddMediatR(options => { options.RegisterServicesFromAssemblyContaining<StartEvent>(); });
 
             });
 

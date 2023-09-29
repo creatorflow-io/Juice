@@ -60,7 +60,11 @@ namespace Juice.Workflows.Tests
                     .AddInMemoryReposistories();
                 services.RegisterNodes(typeof(OutcomeBranchUserTask));
 
-                services.AddMediatR(typeof(StartEvent), typeof(TimerEventStartDomainEventHandler));
+                services.AddMediatR(options =>
+                {
+                    options.RegisterServicesFromAssemblyContaining<StartEvent>();
+                    options.RegisterServicesFromAssemblyContaining<TimerEventStartDomainEventHandler>();
+                });
                 services.AddSingleton<EventQueue>();
 
                 services.RegisterWorkflow(workflowId, builder =>
@@ -120,7 +124,11 @@ namespace Juice.Workflows.Tests
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
 
-                services.AddMediatR(typeof(StartEvent), typeof(TimerEventStartDomainEventHandler));
+                services.AddMediatR(options =>
+                {
+                    options.RegisterServicesFromAssemblyContaining<StartEvent>();
+                    options.RegisterServicesFromAssemblyContaining<TimerEventStartDomainEventHandler>();
+                });
                 services.AddSingleton<EventQueue>();
 
                 services.AddWorkflowServices()
@@ -190,7 +198,11 @@ namespace Juice.Workflows.Tests
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
 
-                services.AddMediatR(typeof(StartEvent), typeof(TimerEventStartDomainEventHandler));
+                services.AddMediatR(options =>
+                {
+                    options.RegisterServicesFromAssemblyContaining<StartEvent>();
+                    options.RegisterServicesFromAssemblyContaining<TimerEventStartDomainEventHandler>();
+                });
                 services.AddSingleton<EventQueue>();
 
                 services.AddWorkflowServices()
@@ -259,7 +271,11 @@ namespace Juice.Workflows.Tests
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
 
-                services.AddMediatR(typeof(StartEvent), typeof(TimerEventStartDomainEventHandler));
+                services.AddMediatR(options =>
+                {
+                    options.RegisterServicesFromAssemblyContaining<StartEvent>();
+                    options.RegisterServicesFromAssemblyContaining<TimerEventStartDomainEventHandler>();
+                });
                 services.AddSingleton<EventQueue>();
 
                 services.AddWorkflowServices()
@@ -328,7 +344,11 @@ namespace Juice.Workflows.Tests
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
 
-                services.AddMediatR(typeof(StartEvent), typeof(TimerEventStartDomainEventHandler));
+                services.AddMediatR(options =>
+                {
+                    options.RegisterServicesFromAssemblyContaining<StartEvent>();
+                    options.RegisterServicesFromAssemblyContaining<TimerEventStartDomainEventHandler>();
+                });
                 services.AddSingleton<EventQueue>();
 
                 services.AddWorkflowServices()
@@ -398,7 +418,11 @@ namespace Juice.Workflows.Tests
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
 
-                services.AddMediatR(typeof(StartEvent), typeof(TimerEventStartDomainEventHandler));
+                services.AddMediatR(options =>
+                {
+                    options.RegisterServicesFromAssemblyContaining<StartEvent>();
+                    options.RegisterServicesFromAssemblyContaining<TimerEventStartDomainEventHandler>();
+                });
                 services.AddSingleton<EventQueue>();
 
                 services.AddWorkflowServices()

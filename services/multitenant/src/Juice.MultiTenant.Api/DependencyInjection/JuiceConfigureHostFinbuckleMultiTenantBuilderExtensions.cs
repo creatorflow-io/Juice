@@ -32,7 +32,11 @@ namespace Juice.MultiTenant.Api
                     .WithEFStore(configuration, configureTenantDb);
 
             builder.Services.AddDefaultStringIdGenerator();
-            builder.Services.AddMediatR(typeof(CreateTenantCommand).Assembly, typeof(AssemblySelector).Assembly);
+            builder.Services.AddMediatR(options =>
+            {
+                options.RegisterServicesFromAssemblyContaining<CreateTenantCommand>();
+                options.RegisterServicesFromAssemblyContaining<AssemblySelector>();
+            });
 
             builder.Services
                 .AddOperationExceptionBehavior()
