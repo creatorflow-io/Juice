@@ -117,7 +117,11 @@ static void ConfigureWorkflow(IServiceCollection services, IConfiguration config
 
 static void ConfigureMediator(IServiceCollection services)
 {
-    services.AddMediatR(typeof(StartEvent), typeof(TimerEventStartDomainEventHandler));
+    services.AddMediatR(options =>
+    {
+        options.RegisterServicesFromAssemblyContaining<StartEvent>();
+        options.RegisterServicesFromAssemblyContaining<TimerEventStartDomainEventHandler>();
+    });
     services.AddOperationExceptionBehavior();
     services.AddWorkflowStateTransactionBehavior();
 }

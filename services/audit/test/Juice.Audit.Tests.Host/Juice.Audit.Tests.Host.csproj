@@ -13,10 +13,6 @@
     <ProjectReference Include="..\..\src\Juice.Audit.EF\Juice.Audit.EF.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="MediatR.Extensions.Microsoft.DependencyInjection" Version="$(MediatRVersion)" />
-  </ItemGroup>
-
   <ItemGroup Label="Migrations">
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="$(EFVersion)">
       <PrivateAssets>all</PrivateAssets>

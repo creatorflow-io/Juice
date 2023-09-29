@@ -8,7 +8,6 @@ using Juice.EF.Tests.Migrations;
 using Juice.Extensions.DependencyInjection;
 using Juice.Services;
 using Juice.XUnit;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -51,7 +50,10 @@ namespace Juice.EF.Tests
                     return new TestContext(provider, builder.Options);
                 });
 
-                services.AddMediatR(typeof(DataEventHandler));
+                services.AddMediatR(options =>
+                {
+                    options.RegisterServicesFromAssemblyContaining<DataEventHandler>();
+                });
 
                 services.AddDefaultStringIdGenerator();
 

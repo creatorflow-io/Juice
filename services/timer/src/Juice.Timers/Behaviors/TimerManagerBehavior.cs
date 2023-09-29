@@ -12,7 +12,7 @@
             _timer = timer;
             _logger = logger;
         }
-        public async Task<R?> Handle(T request, CancellationToken cancellationToken, RequestHandlerDelegate<R?> next)
+        public async Task<R?> Handle(T request, RequestHandlerDelegate<R?> next, CancellationToken cancellationToken)
         {
             if (_logger.IsEnabled(LogLevel.Debug))
             {

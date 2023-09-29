@@ -13,7 +13,7 @@ namespace Juice.Integrations.MediatR.Behaviors
         {
             _logger = logger;
         }
-        public async Task<TResponse?> Handle(TRequest request, CancellationToken cancellationToken, RequestHandlerDelegate<TResponse> next)
+        public async Task<TResponse?> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
         {
             var typeName = request.GetGenericTypeName();
             try
@@ -45,5 +45,6 @@ namespace Juice.Integrations.MediatR.Behaviors
                 return OperationResult.Failed(ex, $"Failed to handle command {typeName}. {ex.Message}") is TResponse response ? response : default;
             }
         }
+
     }
 }

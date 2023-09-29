@@ -12,7 +12,6 @@ using Juice.Timers.Api.IntegrationEvents.Handlers;
 using Juice.Timers.BackgroundTasks;
 using Juice.Timers.Domain.Events;
 using Juice.Timers.EF;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -55,7 +54,11 @@ static void ConfigureTimer(IServiceCollection services, string provider, IConfig
     services.AddTimerService(configuration.GetSection("Timer"));
     services.AddTimerBackgroundTasks(configuration.GetSection("Timer"));
 
-    services.AddMediatR(typeof(TimerExpiredDomainEventHandler), typeof(TimerExpiredDomainEvent));
+    services.AddMediatR(options =>
+    {
+        options.RegisterServicesFromAssemblyContaining<TimerExpiredDomainEventHandler>();
+        options.RegisterServicesFromAssemblyContaining<TimerExpiredDomainEvent>();
+    });
     services.AddOperationExceptionBehavior();
     services.AddMediatRTimerBehaviors();
 

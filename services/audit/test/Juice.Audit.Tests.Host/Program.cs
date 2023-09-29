@@ -14,7 +14,7 @@ var builder = WebApplication.CreateBuilder(args);
 //});
 
 
-builder.Services.AddMediatR(typeof(Program));
+builder.Services.AddMediatR(options => { options.RegisterServicesFromAssemblyContaining<Program>(); });
 
 builder.Services.ConfigureAuditGrpcClient(options =>
 {

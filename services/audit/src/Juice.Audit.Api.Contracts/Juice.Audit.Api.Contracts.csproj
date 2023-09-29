@@ -16,7 +16,7 @@
 
   <ItemGroup Label="gRPC">
     <Protobuf Include="Protos\audit.proto" />
-    <PackageReference Include="Google.Protobuf" Version="3.18.1" />
+    <PackageReference Include="Google.Protobuf" Version="$(ProtobufVersion)" />
     <PackageReference Include="Grpc.Tools" Version="$(GrpcVersion)" PrivateAssets="All" />
     <PackageReference Include="Grpc.Core.Api" Version="$(GrpcVersion)" />
   </ItemGroup>
