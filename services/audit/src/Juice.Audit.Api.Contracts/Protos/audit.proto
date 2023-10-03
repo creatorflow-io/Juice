@@ -45,6 +45,8 @@ message AccessLogMessage{
   google.protobuf.StringValue srvOS = 22;
   google.protobuf.StringValue srvAppVer = 23;
   google.protobuf.StringValue srvApp = 24;
+
+  bool restricted = 25;
 }
 
 message AuditRequest{

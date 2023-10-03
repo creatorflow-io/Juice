@@ -42,6 +42,8 @@ namespace Juice.Audit.EF.EntityTypeConfiguration
                 i.Property(x => x.Zone).HasMaxLength(LengthConstants.NameLength);
 
                 i.HasIndex(x => x.TraceId);
+                i.HasIndex(x => x.RIPA);
+                i.HasIndex(x => x.Path);
             });
             builder.OwnsOne(x => x.Server, i =>
             {
@@ -56,10 +58,12 @@ namespace Juice.Audit.EF.EntityTypeConfiguration
                 i.HasColumnPrefix("Res_");
                 i.Property(x => x.Msg).HasMaxLength(LengthConstants.ShortDescriptionLength);
                 i.Property(x => x.Headers).HasMaxLength(LengthConstants.ShortDescriptionLength);
+                i.HasIndex(x => x.Status);
             });
 
             builder.HasIndex(x => new { x.User, x.Action });
             builder.HasIndex(x => x.DateTime);
+            builder.HasIndex(x => x.IsRestricted);
         }
     }
 }

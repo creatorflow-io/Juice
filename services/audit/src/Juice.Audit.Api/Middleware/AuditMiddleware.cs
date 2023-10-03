@@ -78,6 +78,7 @@ namespace Juice.Audit.AspNetCore.Middleware
             try
             {
                 await _next(context);
+
                 if (dbg)
                 {
                     logger.LogDebug("AuditMiddleware.InvokeAsync: _next {0}", timeTracker.ElapsedMilliseconds);
@@ -154,7 +155,7 @@ namespace Juice.Audit.AspNetCore.Middleware
                 : "Unknown";
 
             auditContextAccessor.Init(action, user);
-
+            context.Response.Headers.TryAdd("X-Trace-Id", context.TraceIdentifier);
         }
 
         private void CollectRequestInfo(IAuditContextAccessor auditContextAccessor,
@@ -204,7 +205,13 @@ namespace Juice.Audit.AspNetCore.Middleware
                         .Where(h => _filter.IsResHeaderMatch(h.Key))
                         .ToDictionary(x => x.Key, x => x.Value)),
                     elapsed);
+
             });
+            if (context.Response.StatusCode == StatusCodes.Status401Unauthorized
+                || context.Response.StatusCode == StatusCodes.Status403Forbidden)
+            {
+                auditContextAccessor.AuditContext?.AccessRecord?.Restricted();
+            }
         }
 
     }
