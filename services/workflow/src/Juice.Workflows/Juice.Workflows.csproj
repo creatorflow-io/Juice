@@ -4,6 +4,7 @@
     <TargetFrameworks>$(AppTargetFramework)</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Description>Workflow service</Description>
   </PropertyGroup>
 
   <ItemGroup>

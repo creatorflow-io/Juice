@@ -4,6 +4,7 @@
     <TargetFrameworks>$(AppTargetFramework)</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Description>Package contains interfaces and abstractions of distributed lock</Description>
   </PropertyGroup>
 
   <ItemGroup>

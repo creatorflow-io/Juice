@@ -10,8 +10,7 @@ namespace Juice.Modular
         /// <summary>
         /// Use this method to quick register MVC services with default options then register discovered modules.
         /// </summary>
-        /// <param name="services"></param>
-        /// <param name="configuration"></param>
+        /// <param name="app"></param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
         public static IMvcBuilder AddDiscoveredModules(this WebApplicationBuilder app)

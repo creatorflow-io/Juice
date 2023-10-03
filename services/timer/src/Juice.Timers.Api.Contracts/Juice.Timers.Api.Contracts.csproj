@@ -5,6 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RootNamespace>Juice.Timers.Api</RootNamespace>
+    <Description>Contracts for timer API</Description>
   </PropertyGroup>
 
   <ItemGroup>

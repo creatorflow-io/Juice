@@ -4,6 +4,7 @@
     <TargetFrameworks>$(AppTargetFramework)</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Description>Options-mutable and tenant-options extensions</Description>
   </PropertyGroup>
 
   <ItemGroup>
