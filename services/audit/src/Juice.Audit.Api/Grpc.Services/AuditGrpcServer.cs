@@ -24,6 +24,11 @@ namespace Juice.Audit.Api.Grpc.Services
                     ral.ReqHeaders.ToStringUtf8(), ral.ReqScheme, ral.ReqRemoteIp, ral.ReqId, ral.ReqHost
                     ));
 
+                if (ral.Restricted)
+                {
+                    accessLog.Restricted();
+                }
+
                 var metadata = ral.Metadata.ToStringUtf8();
                 if (!string.IsNullOrEmpty(metadata))
                 {

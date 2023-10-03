@@ -22,6 +22,8 @@ namespace Juice.Audit.Domain.AccessLogAggregate
 
         public string Action { get; private set; }
 
+        public bool IsRestricted { get; private set; }
+
         [NotMapped]
         public string? TraceId => Request?.TraceId;
 
@@ -34,6 +36,11 @@ namespace Juice.Audit.Domain.AccessLogAggregate
         public void SetRequestInfo(RequestInfo requestInfo)
         {
             Request = requestInfo;
+        }
+
+        public void SetAccessZone(string zone)
+        {
+            Request?.SetAccessZone(zone);
         }
 
         public void SetServerInfo(ServerInfo serverInfo)
@@ -60,5 +67,10 @@ namespace Juice.Audit.Domain.AccessLogAggregate
 
         public void SetAction(string action)
             => Action = action;
+
+        public void Restricted()
+        {
+            IsRestricted = true;
+        }
     }
 }

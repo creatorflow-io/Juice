@@ -36,6 +36,7 @@ namespace Juice.Audit.EF.EntityTypeConfiguration
             builder.HasIndex(x => x.TraceId);
             builder.HasIndex(x => new { x.User, x.Action });
             builder.HasIndex(x => x.DateTime);
+            builder.HasIndex(x => x.Kvps);
         }
     }
 }

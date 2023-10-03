@@ -17,7 +17,7 @@ namespace Juice.Audit.EF.SqlServer.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "7.0.3")
+                .HasAnnotation("ProductVersion", "7.0.11")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -36,6 +36,9 @@ namespace Juice.Audit.EF.SqlServer.Migrations
                     b.Property<DateTimeOffset>("DateTime")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<bool>("IsRestricted")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Metadata")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -49,6 +52,8 @@ namespace Juice.Audit.EF.SqlServer.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("DateTime");
+
+                    b.HasIndex("IsRestricted");
 
                     b.HasIndex("User", "Action");
 
@@ -106,6 +111,8 @@ namespace Juice.Audit.EF.SqlServer.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("DateTime");
+
+                    b.HasIndex("Kvps");
 
                     b.HasIndex("TraceId");
 
@@ -177,6 +184,10 @@ namespace Juice.Audit.EF.SqlServer.Migrations
 
                             b1.HasKey("AccessLogId");
 
+                            b1.HasIndex("Path");
+
+                            b1.HasIndex("RIPA");
+
                             b1.HasIndex("TraceId");
 
                             b1.ToTable("AccessLog");
@@ -217,6 +228,8 @@ namespace Juice.Audit.EF.SqlServer.Migrations
                                 .HasColumnName("Res_Status");
 
                             b1.HasKey("AccessLogId");
+
+                            b1.HasIndex("Status");
 
                             b1.ToTable("AccessLog");
 

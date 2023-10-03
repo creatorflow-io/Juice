@@ -8,28 +8,28 @@ using MediatR;
 var builder = WebApplication.CreateBuilder(args);
 
 
-//builder.Services.ConfigureAuditDefault(builder.Configuration, options =>
-//{
-//    //options.DatabaseProvider = "PostgreSQL";
-//});
+builder.Services.ConfigureAuditDefault(builder.Configuration, options =>
+{
+    //options.DatabaseProvider = "PostgreSQL";
+});
 
 
 builder.Services.AddMediatR(options => { options.RegisterServicesFromAssemblyContaining<Program>(); });
 
-builder.Services.ConfigureAuditGrpcClient(options =>
-{
-    options.Address = new Uri("https://localhost:7285");
-    options.ChannelOptionsActions.Add(o =>
-    {
-        o.HttpHandler = new SocketsHttpHandler
-        {
-            PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
-            KeepAlivePingDelay = TimeSpan.FromSeconds(60),
-            KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
-            EnableMultipleHttp2Connections = true
-        };
-    });
-});
+//builder.Services.ConfigureAuditGrpcClient(options =>
+//{
+//    options.Address = new Uri("https://localhost:7285");
+//    options.ChannelOptionsActions.Add(o =>
+//    {
+//        o.HttpHandler = new SocketsHttpHandler
+//        {
+//            PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
+//            KeepAlivePingDelay = TimeSpan.FromSeconds(60),
+//            KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
+//            EnableMultipleHttp2Connections = true
+//        };
+//    });
+//});
 
 builder.Services.AddRazorPages();
 
@@ -97,7 +97,7 @@ app.MapGet("/audit", async (ctx) =>
 
 
 // Use with ConfigureAuditDefault together
-//await MigrateAsync(app);
+await MigrateAsync(app);
 
 app.Run();
 

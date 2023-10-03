@@ -40,6 +40,7 @@ namespace Juice.Audit.Api.Grpc.Services
                     Action = accessLog.Action,
                     Datetime = accessLog.DateTime.ToTimestamp(),
                     Metadata = ByteString.FromStream(metadata),
+                    Restricted = accessLog.IsRestricted,
                     ReqId = accessLog.Request?.TraceId,
                     ReqMethod = accessLog.Request?.Method,
                     ReqPath = accessLog.Request?.Path,
