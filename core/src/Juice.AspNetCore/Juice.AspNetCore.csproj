@@ -8,6 +8,7 @@
     <GraphQLServer>5.2.2</GraphQLServer>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <OpenApiGenerateDocuments>false</OpenApiGenerateDocuments>
+    <NoWarn>$(NoWarn);1591</NoWarn>
   </PropertyGroup>
 
   <ItemGroup Label="AspNetCore">

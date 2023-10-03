@@ -4,6 +4,7 @@
     <TargetFrameworks>$(AppTargetFramework)</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Description>Default implementation for FTP, SMB, LocalDisk protocol on backend</Description>
   </PropertyGroup>
 
   <ItemGroup>

@@ -4,6 +4,7 @@
     <TargetFrameworks>$(AppTargetFramework)</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Description>RabbitMQ implementation for EventBus</Description>
   </PropertyGroup>
 
   <ItemGroup>

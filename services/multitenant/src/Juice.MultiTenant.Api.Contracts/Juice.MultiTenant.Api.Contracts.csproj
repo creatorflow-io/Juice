@@ -5,6 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Description>Contracts for multi-tenant API</Description>
   </PropertyGroup>
 
   <ItemGroup Label="refs">

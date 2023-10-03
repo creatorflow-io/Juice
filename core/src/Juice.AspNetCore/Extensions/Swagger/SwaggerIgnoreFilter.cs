@@ -1,4 +1,5 @@
-﻿using Juice.CompnentModel;
+﻿using System.Text.Json.Serialization;
+using Juice.CompnentModel;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 

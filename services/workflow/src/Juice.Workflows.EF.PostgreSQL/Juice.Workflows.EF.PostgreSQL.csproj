@@ -4,6 +4,7 @@
     <TargetFrameworks>$(AppTargetFramework)</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Description>PostgreSQL migrations assembly</Description>
   </PropertyGroup>
 
   <ItemGroup>

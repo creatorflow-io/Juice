@@ -5,6 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RootNamespace>Juice.BgService</RootNamespace>
+    <Description>Background service abstractions for ServiceManager and Plugins</Description>
   </PropertyGroup>
 
 </Project>
