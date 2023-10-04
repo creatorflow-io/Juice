@@ -15,7 +15,7 @@ namespace Juice.Audit.Tests
         }
 
 
-        [Fact]
+        [Fact(DisplayName = "Path should match")]
         public void Path_should_match()
         {
             var pattern = "kernel/*";
@@ -66,9 +66,15 @@ namespace Juice.Audit.Tests
             _output.WriteLine(pattern);
             StringUtils.IsPathMatch("x", pattern).Should().BeTrue();
             StringUtils.IsPathMatch("x/y", pattern).Should().BeFalse();
+
+            pattern = "/#/negotiate";
+            _output.WriteLine(pattern);
+            StringUtils.IsPathMatch("/negotiate", pattern).Should().BeTrue();
+            StringUtils.IsPathMatch("/negotiate/x", pattern).Should().BeFalse();
+            StringUtils.IsPathMatch("/signalrhub/negotiate", pattern).Should().BeTrue();
         }
 
-        [Fact]
+        [Fact(DisplayName = "Filter should match without status")]
         public void Filter_should_match()
         {
             var filter = new AuditFilterOptions();
@@ -77,6 +83,7 @@ namespace Juice.Audit.Tests
             filter.Exclude("kernel/*/*", "POST");
             filter.Include("*/kernel/*", "GET");
             filter.Include("kernel/*/index");
+            filter.Exclude("/#/negotiate");
 
             string? rule = default;
             filter.IsMatch("kernel/info", "GET", out rule).Should().BeFalse();
@@ -118,9 +125,36 @@ namespace Juice.Audit.Tests
             filter.IsMatch("ker/kernel/index", "GET", out rule).Should().BeTrue();
             rule.Should().BeSameAs("*/kernel/*");
             _output.WriteLine($"ker/kernel/index matched. {rule ?? "none"}");
+
+            filter.IsMatch("/signalrhub/negotiate", "POST").Should().BeFalse();
         }
 
-        [Fact]
+        [Fact(DisplayName = "Filter should match with status code")]
+        public void Filter_should_match_code()
+        {
+            var filter = new AuditFilterOptions();
+            filter.Include("", "POST", "PUT");
+            filter.Exclude("/#/negotiate");
+            filter.Include("", new int[] { 403 });
+
+            string? rule = default;
+            filter.IsMatch("kernel/info", "GET", out rule).Should().BeTrue();
+            rule.Should().BeSameAs(null);
+
+            filter.IsMatch("kernel/info", "POST", out rule).Should().BeTrue();
+            rule.Should().BeSameAs(null);
+
+            filter.IsMatch("kernel/info", "POST", 403, out rule).Should().BeTrue();
+            rule.Should().BeSameAs("");
+
+            filter.IsMatch("kernel/info", "POST", 404, out rule).Should().BeTrue();
+            rule.Should().BeSameAs("");
+
+            filter.IsMatch("kernel/info", "GET", 404, out rule).Should().BeFalse();
+            rule.Should().BeSameAs(null);
+        }
+
+        [Fact(DisplayName = "Header should match")]
         public void Header_should_match()
         {
             StringUtils.IsHeaderMatch(":authority:", ":authority:").Should().BeTrue();

@@ -39,8 +39,10 @@ app.UseStaticFiles();
 
 app.UseAudit("XUnitTest", options =>
 {
-    options.Include("", "GET");
+    options.Include("", "POST");
+    options.Include("/audit", "GET");
     options.Exclude("/Index");
+    options.Include("", new int[] { 403 });
 });
 
 app.MapRazorPages();
@@ -95,6 +97,11 @@ app.MapGet("/audit", async (ctx) =>
             }));
 });
 
+app.MapGet("/err/403", async (ctx) =>
+{
+    ctx.Response.StatusCode = 403;
+    await ctx.Response.WriteAsync("403");
+});
 
 // Use with ConfigureAuditDefault together
 await MigrateAsync(app);

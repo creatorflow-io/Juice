@@ -25,6 +25,22 @@
             return this;
         }
 
+        public AuditFilterOptions Include(string path, int[] statusCodes, params string[] methods)
+        {
+            var newFilters = new List<PathFilterEntry>(Filters)
+            {
+                new PathFilterEntry
+                {
+                    Path = path,
+                    Methods = methods,
+                    StatusCodes = statusCodes,
+                    Priority = Filters.Length
+                }
+            };
+            Filters = newFilters.ToArray();
+            return this;
+        }
+
         public AuditFilterOptions Exclude(string path, params string[] methods)
         {
             var newFilters = new List<PathFilterEntry>(Filters)
@@ -41,11 +57,28 @@
             return this;
         }
 
+        public AuditFilterOptions Exclude(string path, int[] statusCodes, params string[] methods)
+        {
+            var newFilters = new List<PathFilterEntry>(Filters)
+            {
+                new PathFilterEntry
+                {
+                    Path = path,
+                    Methods = methods,
+                    StatusCodes = statusCodes,
+                    Priority = Filters.Length,
+                    IsExcluded = true
+                }
+            };
+            Filters = newFilters.ToArray();
+            return this;
+        }
+
         public bool IsMatch(string path, string method)
             => IsMatch(path, method, out var _);
         public bool IsMatch(string path, string method, out string? rule)
         {
-            if (Filters.Length == 0)
+            if (Filters.Length == 0 || Filters.Any(f => f.StatusCodes.Any()))
             {
                 rule = null;
                 return true;
@@ -54,6 +87,28 @@
             foreach (var filter in Filters.OrderByDescending(f => f.Priority))
             {
                 if (filter.IsMatch(path, method))
+                {
+                    rule = filter.Path;
+                    return !filter.IsExcluded;
+                }
+            }
+            rule = null;
+            return false;
+        }
+
+        public bool IsMatch(string path, string method, int statusCode)
+            => IsMatch(path, method, statusCode, out var _);
+
+        public bool IsMatch(string path, string method, int statusCode, out string? rule)
+        {
+            if (Filters.Length == 0)
+            {
+                rule = null;
+                return true;
+            }
+            foreach (var filter in Filters.OrderByDescending(f => f.Priority))
+            {
+                if (filter.IsMatch(path, method, statusCode))
                 {
                     rule = filter.Path;
                     return !filter.IsExcluded;
@@ -126,6 +181,7 @@
         public bool IsExcluded { get; set; } = false;
         public string Path { get; set; } = string.Empty;
         public string[] Methods { get; set; } = Array.Empty<string>();
+        public int[] StatusCodes { get; set; } = Array.Empty<int>();
         public bool IsGlobal => Path == string.Empty;
         public bool IsMatch(string path, string method)
         {
@@ -133,6 +189,11 @@
                 && (Methods.Length == 0 || Methods.Contains(method, new StringComparer()));
         }
 
+        public bool IsMatch(string path, string method, int statusCode)
+        {
+            return IsMatch(path, method)
+                && (StatusCodes.Length == 0 || StatusCodes.Contains(statusCode));
+        }
     }
 
     internal class StringComparer : IEqualityComparer<string>
