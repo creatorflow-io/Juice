@@ -194,11 +194,12 @@ namespace Juice.Audit.AspNetCore.Middleware
 
         private void CollectServerInfo(IAuditContextAccessor auditContextAccessor)
         {
+            var assembly = Assembly.GetEntryAssembly();
+            FileVersionInfo? fvi = assembly != null ? FileVersionInfo.GetVersionInfo(assembly.Location) : default;
             var serverInfo = new ServerInfo(
                 Environment.MachineName,
                 Environment.OSVersion.ToString(),
-                Assembly.GetEntryAssembly()?.GetName()
-                    ?.Version?.ToString(),
+                fvi?.ProductVersion ?? assembly?.GetName()?.Version?.ToString(),
                 _appName
                 );
             auditContextAccessor.AuditContext?.SetServerInfo(serverInfo);
