@@ -74,33 +74,44 @@ namespace Juice.Audit.AspNetCore.Middleware
             {
                 logger.LogWarning(ex, "Error while collecting the server information");
             }
-
+            bool isMatch = false;
             try
             {
                 await _next(context);
-
                 if (dbg)
                 {
                     logger.LogDebug("AuditMiddleware.InvokeAsync: _next {0}", timeTracker.ElapsedMilliseconds);
                     timeTracker.Restart();
                 }
 
-                try
+                isMatch = _filter.IsMatch(context.Request.Path, context.Request.Method, context.Response.StatusCode);
+                if (isMatch)
                 {
-                    CollectResponseInfo(auditContextAccessor, context, totalTimeTracker.ElapsedMilliseconds);
-                    if (dbg)
+                    try
                     {
-                        logger.LogDebug("AuditMiddleware.InvokeAsync: CollectResponseInfo {0}", timeTracker.ElapsedMilliseconds);
-                        timeTracker.Restart();
+                        CollectResponseInfo(auditContextAccessor, context, totalTimeTracker.ElapsedMilliseconds);
+                        if (dbg)
+                        {
+                            logger.LogDebug("AuditMiddleware.InvokeAsync: CollectResponseInfo {0}", timeTracker.ElapsedMilliseconds);
+                            timeTracker.Restart();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning(ex, "Error while collecting the response information");
                     }
                 }
-                catch (Exception ex)
+                else
                 {
-                    logger.LogWarning(ex, "Error while collecting the response information");
+                    if (dbg)
+                    {
+                        logger.LogDebug("AuditMiddleware.InvokeAsync: Skip CollectResponseInfo because response status does not match");
+                    }
                 }
             }
             catch (Exception ex)
             {
+                isMatch = true;
                 try
                 {
                     CollectResponseInfo(auditContextAccessor, context, totalTimeTracker.ElapsedMilliseconds, ex);
@@ -118,27 +129,30 @@ namespace Juice.Audit.AspNetCore.Middleware
             }
             finally
             {
-                try
+                if (isMatch)
                 {
-                    var auditService = context.RequestServices.GetService<IAuditService>();
-                    if (dbg)
+                    try
                     {
-                        logger.LogDebug("AuditMiddleware.InvokeAsync: Get IAuditService {0}", timeTracker.ElapsedMilliseconds);
-                        timeTracker.Restart();
+                        var auditService = context.RequestServices.GetService<IAuditService>();
+                        if (dbg)
+                        {
+                            logger.LogDebug("AuditMiddleware.InvokeAsync: Get IAuditService {0}", timeTracker.ElapsedMilliseconds);
+                            timeTracker.Restart();
+                        }
+                        if (auditService != null && auditContextAccessor.AuditContext?.AccessRecord != null)
+                        {
+                            await auditService.PersistAuditInformationAsync(auditContextAccessor.AuditContext.AccessRecord,
+                                auditContextAccessor.AuditContext.AuditEntries.ToArray(), default);
+                        }
+                        if (dbg)
+                        {
+                            logger.LogDebug("AuditMiddleware.InvokeAsync: CommitAuditInformationAsync {0}", timeTracker.ElapsedMilliseconds);
+                        }
                     }
-                    if (auditService != null && auditContextAccessor.AuditContext?.AccessRecord != null)
+                    catch (Exception ex)
                     {
-                        await auditService.PersistAuditInformationAsync(auditContextAccessor.AuditContext.AccessRecord,
-                            auditContextAccessor.AuditContext.AuditEntries.ToArray(), default);
+                        logger.LogWarning(ex, $"Error while committing audit information");
                     }
-                    if (dbg)
-                    {
-                        logger.LogDebug("AuditMiddleware.InvokeAsync: CommitAuditInformationAsync {0}", timeTracker.ElapsedMilliseconds);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    logger.LogWarning(ex, $"Error while committing audit information");
                 }
                 timeTracker.Stop();
                 totalTimeTracker.Stop();
