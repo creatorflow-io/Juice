@@ -15,17 +15,18 @@ namespace Juice.Storage
         where T : class, IFile, new()
     {
         public IStorage Storage => _storage;
-        private readonly IStorageResolver _storageResolver;
-        private readonly IStorage _storage;
-        private readonly IUploadRepository<T> _uploadRepository;
-        private readonly IFileRepository<T>? _fileRepository;
+        private IStorageResolver _storageResolver;
+        private IStorage _storage;
+        private IUploadRepository<T> _uploadRepository;
+        private IFileRepository<T>? _fileRepository;
+        private IFileNameGenerator<T>? _fileNameGenerator;
 
-        private readonly IAuthorizationService? _authorizationService;
-        private readonly IHttpContextAccessor? _httpContextAccessor;
+        private IAuthorizationService? _authorizationService;
+        private IHttpContextAccessor? _httpContextAccessor;
 
-        private readonly IOptionsSnapshot<UploadOptions> _options;
+        private IOptionsSnapshot<UploadOptions> _options;
 
-        private readonly IMediator? _mediator;
+        private IMediator? _mediator;
         public DefaultUploadManager(
             IStorageResolver storageResolver,
             IStorage storage,
@@ -33,6 +34,7 @@ namespace Juice.Storage
             IOptionsSnapshot<UploadOptions> options,
             IHttpContextAccessor? httpContextAccessor = null,
             IFileRepository<T>? fileRepository = null,
+            IFileNameGenerator<T>? fileNameGenerator = null,
             IMediator? mediator = default)
         {
             _storageResolver = storageResolver;
@@ -40,6 +42,7 @@ namespace Juice.Storage
             _uploadRepository = uploadRepository;
             _options = options;
             _fileRepository = fileRepository;
+            _fileNameGenerator = fileNameGenerator;
             _authorizationService = httpContextAccessor?.HttpContext?.RequestServices?.GetService<IAuthorizationService>();
             _httpContextAccessor = httpContextAccessor;
             _mediator = mediator;
@@ -143,6 +146,10 @@ namespace Juice.Storage
                     LastModified = fileInfo.LastModified
                 };
 
+                if (_fileNameGenerator != null)
+                {
+                    file.Name = await _fileNameGenerator.GenerateAsync(file, token);
+                }
 
                 if (_httpContextAccessor?.HttpContext != null && _authorizationService != null)
                 {
