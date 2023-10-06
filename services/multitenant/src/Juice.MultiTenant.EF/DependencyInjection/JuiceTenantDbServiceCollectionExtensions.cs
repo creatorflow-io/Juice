@@ -103,6 +103,10 @@ namespace Juice.MultiTenant.EF
         /// <exception cref="NotSupportedException"></exception>
         public static IServiceCollection AddTenantSettingsDbContext(this IServiceCollection services, IConfiguration configuration, Juice.EF.DbOptions dbOptions)
         {
+            if (services.Any(s => s.ImplementationType?.IsAssignableTo(typeof(TenantSettingsDbContext)) ?? false))
+            {
+                return services;
+            }
             services.AddScoped(sp =>
                 new Juice.EF.DbOptions<TenantSettingsDbContext> { Schema = dbOptions.Schema, ConnectionName = dbOptions.ConnectionName, DatabaseProvider = dbOptions.DatabaseProvider });
 

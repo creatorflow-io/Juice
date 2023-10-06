@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace Juice.EF.MultiTenant.Extensions
+namespace Juice.MultiTenant.EF.Extensions
 {
 
     public static class CrossTenantEntityTypeBuilderExtensions
@@ -38,7 +38,7 @@ namespace Juice.EF.MultiTenant.Extensions
             {
                 builder.Property<string>("TenantId")
                        //.IsRequired()
-                       .HasMaxLength(Juice.MultiTenant.Constants.TenantIdMaxLength);
+                       .HasMaxLength(Constants.TenantIdMaxLength);
                 //                       .HasValueGenerator<TenantIdGenerator>();
             }
             catch (Exception ex)

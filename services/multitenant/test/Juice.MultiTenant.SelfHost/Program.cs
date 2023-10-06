@@ -3,7 +3,6 @@ using Juice.AspNetCore;
 using Juice.MultiTenant;
 using Juice.MultiTenant.AspNetCore;
 using Juice.MultiTenant.EF;
-using Juice.MultiTenant.Shared.Authorization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
@@ -14,7 +13,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
 
-ConfigureSecurity(builder);
+//ConfigureSecurity(builder);
 
 ConfigureMultiTenant(builder);
 
@@ -25,19 +24,20 @@ var app = builder.Build();
 app.UseRouting();
 app.UseMultiTenant();
 
-app.UseAuthentication();
-app.UseAuthorization();
+//app.UseAuthentication();
+//app.UseAuthorization();
 
-app.MapControllerRoute("default", "{__tenant__=}/{controller=Home}/{action=Index}")
-    ;
+//app.MapControllerRoute("default", "{__tenant__=}/{controller=Home}/{action=Index}")
+//    ;
 
-//app.MapGet("/", async (context) =>
-//{
-//    var s = context.RequestServices.GetService<ITenant>();
-//    var roles = context.User.Claims.Where(c => c.Type == "role").Select(c => c.Value);
-//    var message = $"Hello {s?.Identifier ?? "root"}! {string.Join(',', roles)}";
-//    await context.Response.WriteAsync(message);
-//}).RequireAuthorization(builder =>
+app.MapGet("/", async (context) =>
+{
+    var s = context.RequestServices.GetService<ITenant>();
+    var roles = context.User.Claims.Where(c => c.Type == "role").Select(c => c.Value);
+    var message = $"Hello {s?.Identifier ?? "root"}! {string.Join(',', roles)}";
+    await context.Response.WriteAsync(message);
+});
+//.RequireAuthorization(builder =>
 //{
 //    builder.RequireAuthenticatedUser();
 //});

@@ -2,6 +2,7 @@
 using System.Security.Claims;
 using Finbuckle.MultiTenant;
 using Finbuckle.MultiTenant.EntityFrameworkCore;
+using Juice.EF;
 using Juice.EF.Extensions;
 using MediatR;
 using Microsoft.AspNetCore.Http;
@@ -11,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace Juice.EF.MultiTenant
+namespace Juice.MultiTenant.EF
 {
     public abstract class MultiTenantDbContext : DbContext,
         ISchemaDbContext, IAuditableDbContext, IUnitOfWork, IMultiTenantDbContext

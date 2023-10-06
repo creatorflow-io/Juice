@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup Label="refs">
-    <ProjectReference Include="..\..\..\..\core\src\Juice.EF\Juice.EF.csproj" />
+    <ProjectReference Include="..\..\..\..\core\src\Juice.EF.MultiTenant\Juice.EF.MultiTenant.csproj" />
     <ProjectReference Include="..\..\..\..\core\src\Juice.Extensions.Configuration\Juice.Extensions.Configuration.csproj" />
     <ProjectReference Include="..\..\..\..\core\src\Juice.Extensions.Options\Juice.Extensions.Options.csproj" />
   </ItemGroup>
@@ -16,11 +16,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Juice.MultiTenant\Juice.MultiTenant.csproj" />
   </ItemGroup>
-  
-  <ItemGroup>
-    <PackageReference Include="Finbuckle.MultiTenant.EntityFrameworkCore" Version="6.*" />
-  </ItemGroup>
-
 
   <ItemGroup Label="Migrations">
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="$(EFVersion)">

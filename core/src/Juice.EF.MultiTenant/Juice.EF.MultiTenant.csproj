@@ -1,18 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>$(AppTargetFramework)</TargetFramework>
+    <TargetFrameworks>$(AppTargetFramework)</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Juice.EF\Juice.EF.csproj" />
-    <ProjectReference Include="..\Juice.MultiTenant\Juice.MultiTenant.csproj" />
+    <PackageReference Include="Finbuckle.MultiTenant.EntityFrameworkCore" Version="$(FinbuckleVersion)" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Finbuckle.MultiTenant.EntityFrameworkCore" Version="$(FinbuckleVersion)" />
+    <ProjectReference Include="..\Juice.EF\Juice.EF.csproj" />
   </ItemGroup>
 
 </Project>

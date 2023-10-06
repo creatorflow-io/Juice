@@ -18,6 +18,9 @@ namespace Juice.MultiTenant.EF
         public static IServiceCollection AddTenantsEntityConfiguration(this IServiceCollection services, IConfiguration configuration, Action<Juice.EF.DbOptions> configureOptions)
         {
             services.AddTenantSettingsDbContext(configuration, configureOptions);
+
+            services.TryAddScoped<ITenantSettingsRepository, TenantSettingsRepository>();
+
             return services.AddScoped<ITenantsConfigurationSource, EntityConfigurationSource>();
         }
 

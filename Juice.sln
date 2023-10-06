@@ -193,6 +193,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "plugins", "plugins", "{1D49
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.Plugins", "services\plugins\src\Juice.Plugins\Juice.Plugins.csproj", "{95D0507F-2543-436E-8CA8-8429C956BB67}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Juice.EF.MultiTenant", "core\src\Juice.EF.MultiTenant\Juice.EF.MultiTenant.csproj", "{D06FF6F9-38EC-447F-9CEF-025D7F8F6CCE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -499,6 +501,10 @@ Global
 		{95D0507F-2543-436E-8CA8-8429C956BB67}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{95D0507F-2543-436E-8CA8-8429C956BB67}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{95D0507F-2543-436E-8CA8-8429C956BB67}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D06FF6F9-38EC-447F-9CEF-025D7F8F6CCE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D06FF6F9-38EC-447F-9CEF-025D7F8F6CCE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D06FF6F9-38EC-447F-9CEF-025D7F8F6CCE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D06FF6F9-38EC-447F-9CEF-025D7F8F6CCE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -588,6 +594,7 @@ Global
 		{F79E8B08-1EDA-46D9-BC92-B035348460F1} = {6CED53D8-B5A2-41DD-A6F7-7ACEC0192BA0}
 		{1D497611-90BD-4CEE-8F64-B19201722A4E} = {EBC37EAD-B924-450D-8AE3-4184706E137A}
 		{95D0507F-2543-436E-8CA8-8429C956BB67} = {1D497611-90BD-4CEE-8F64-B19201722A4E}
+		{D06FF6F9-38EC-447F-9CEF-025D7F8F6CCE} = {9E4FFBBB-2E8E-4463-B502-260D502D43E1}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DD654E02-538D-4E29-A098-413DEBAE4D98}
