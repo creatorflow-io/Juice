@@ -178,7 +178,7 @@ namespace Juice.Audit.AspNetCore.Middleware
             var requestInfo = new RequestInfo(
                 context.Request.Method,
                 context.Request.Path,
-                context.Request.HasFormContentType ? JsonConvert.SerializeObject(context.Request.Form) : default,
+                context.Request.HasFormContentType ? JsonConvert.SerializeObject(context.Request.Form.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)) : default,
                 context.Request.QueryString.HasValue ? context.Request.QueryString.Value : default,
                 JsonConvert.SerializeObject(context.Request.Headers
                     .Where(h => _filter.IsReqHeaderMatch(h.Key))
