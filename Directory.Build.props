@@ -10,7 +10,7 @@
     <PackageIconUrl>https://avatars.githubusercontent.com/u/107674950</PackageIconUrl>
     <RepositoryUrl>https://github.com/creatorflow-io/Juice</RepositoryUrl>
 
-    <VersionPrefix>7.0.0</VersionPrefix>
+    <VersionPrefix>7.0.3</VersionPrefix>
     <VersionSuffix>local.$([System.DateTime]::Now.ToString(`yyyyMMdd`)).1</VersionSuffix>
   </PropertyGroup>
 
@@ -26,7 +26,7 @@
     <ProtobufVersion>3.24.3</ProtobufVersion>
     <MediatRVersion>12.1.1</MediatRVersion>
     <RedisVersion>2.6.122</RedisVersion>
-    <JuiceRefVersion Condition="$(JuiceRefVersion)==''">7.0.0-alpha.*</JuiceRefVersion>
+    <JuiceRefVersion Condition="$(JuiceRefVersion)==''">7.0.3</JuiceRefVersion>
     <FinbuckleVersion>6.12.0</FinbuckleVersion>
     <SwashbuckleVersion>6.5.0</SwashbuckleVersion>
   </PropertyGroup>
