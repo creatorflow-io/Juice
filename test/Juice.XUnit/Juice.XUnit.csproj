@@ -5,6 +5,8 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <Description>XUnit utilities</Description>
+        <IsTestProject>false</IsTestProject>
+        <IsPackable>true</IsPackable>
     </PropertyGroup>
 
 
