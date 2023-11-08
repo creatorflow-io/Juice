@@ -21,15 +21,34 @@ namespace Juice.Extensions.Logging
             Category = category;
         }
 
-        public IDisposable BeginScope<TState>(TState state) =>
-            Provider.ScopeProvider.Push(state);
+        private IExternalScopeProvider? _scopeProvider;
+        public IExternalScopeProvider ScopeProvider
+        {
+            get
+            {
+                if (_scopeProvider == null)
+                {
+                    _scopeProvider = new LoggerExternalScopeProvider();
+                }
+                return _scopeProvider;
+            }
+        }
+
+        public IDisposable BeginScope<TState>(TState state)
+        {
+            if (Provider is ScopedLoggerProvider supportExternalScope)
+            {
+                return supportExternalScope.ScopeProvider.Push(state);
+            }
+            return ScopeProvider.Push(state);
+        }
 
         public bool IsEnabled(LogLevel logLevel) => true;
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
         {
             var logEntry = new LogEntry<TState>(logLevel, Category, eventId, state, exception, formatter);
-            Provider.WriteLog(logEntry, formatter(state, exception));
+            Provider.WriteLog(logEntry, formatter(state, exception), _scopeProvider);
         }
     }
 }
