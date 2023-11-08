@@ -12,7 +12,7 @@ namespace Microsoft.Extensions.Logging
     {
     }
 
-    public sealed class TestOutputLoggerProvider : LoggerProvider
+    public sealed class TestOutputLoggerProvider : ScopedLoggerProvider
     {
         private readonly ITestOutputHelper _output;
         public TestOutputLoggerProvider(
@@ -21,10 +21,10 @@ namespace Microsoft.Extensions.Logging
             _output = testOutput;
         }
 
-        public override void WriteLog<TState>(LogEntry<TState> entry, string formattedMessage)
+        public override void WriteLog<TState>(LogEntry<TState> entry, string formattedMessage, IExternalScopeProvider? scopeProvider)
         {
             var scopes = new List<object?>();
-            ScopeProvider.ForEachScope((value, loggingProps) =>
+            ScopeProvider?.ForEachScope((value, loggingProps) =>
             {
                 scopes.Add(value);
             },

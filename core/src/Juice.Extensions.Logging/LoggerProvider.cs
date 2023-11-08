@@ -4,34 +4,17 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Juice.Extensions.Logging
 {
-    public abstract class LoggerProvider : IDisposable, ILoggerProvider, ISupportExternalScope
+    public abstract class LoggerProvider : IDisposable, ILoggerProvider
     {
         private ConcurrentDictionary<string, Logger> _loggers
             = new(StringComparer.OrdinalIgnoreCase);
         public ILogger CreateLogger(string categoryName)
             => _loggers.GetOrAdd(categoryName, name => new Logger(this, categoryName));
 
-
-        IExternalScopeProvider _scopeProvider;
-        public void SetScopeProvider(IExternalScopeProvider scopeProvider)
-        {
-            _scopeProvider = scopeProvider;
-        }
-        public IExternalScopeProvider ScopeProvider
-        {
-            get
-            {
-                if (_scopeProvider == null)
-                    _scopeProvider = new LoggerExternalScopeProvider();
-                return _scopeProvider;
-            }
-        }
-
         /// <summary>
         /// Writes the specified log information to a log file.
         /// </summary>
-        public abstract void WriteLog<TState>(LogEntry<TState> entry, string formattedMessage);
-
+        public abstract void WriteLog<TState>(LogEntry<TState> entry, string formattedMessage, IExternalScopeProvider? scopeProvider);
 
         #region IDisposable Support
 
@@ -65,4 +48,25 @@ namespace Juice.Extensions.Logging
 
         #endregion
     }
+
+    public abstract class ScopedLoggerProvider : LoggerProvider, ISupportExternalScope
+    {
+
+        private IExternalScopeProvider? _scopeProvider;
+        /// <inheritdoc/>
+        public void SetScopeProvider(IExternalScopeProvider scopeProvider)
+        {
+            _scopeProvider = scopeProvider;
+        }
+        public IExternalScopeProvider ScopeProvider
+        {
+            get
+            {
+                if (_scopeProvider == null)
+                    _scopeProvider = new LoggerExternalScopeProvider();
+                return _scopeProvider;
+            }
+        }
+    }
+
 }
