@@ -67,6 +67,13 @@ namespace Juice.Extensions.Logging
                 return _scopeProvider;
             }
         }
+
+        protected override void Dispose(bool disposing)
+        {
+            _scopeProvider = null!;
+
+            base.Dispose(disposing);
+        }
     }
 
 }

@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Juice.Extensions.Logging
 {
-    internal class Logger : ILogger
+    internal class Logger : ILogger, IDisposable
     {
         /* properties */
         /// <summary>
@@ -22,6 +22,8 @@ namespace Juice.Extensions.Logging
         }
 
         private IExternalScopeProvider? _scopeProvider;
+        private bool _disposedValue;
+
         public IExternalScopeProvider ScopeProvider
         {
             get
@@ -50,5 +52,27 @@ namespace Juice.Extensions.Logging
             var logEntry = new LogEntry<TState>(logLevel, Category, eventId, state, exception, formatter);
             Provider.WriteLog(logEntry, formatter(state, exception), _scopeProvider);
         }
+
+        #region IDisposable Support
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposedValue)
+            {
+                if (disposing)
+                {
+                    // TODO: dispose managed state (managed objects)
+                }
+                _scopeProvider = null;
+                _disposedValue = true;
+            }
+        }
+
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
+        #endregion
     }
 }
