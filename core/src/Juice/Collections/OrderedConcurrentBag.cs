@@ -100,7 +100,7 @@ namespace Juice.Collections
         }
 
         /// <summary>
-        /// Peek the first item and keep it in the bag.
+        /// Peek the first item but keep it in the bag.
         /// </summary>
         /// <param name="item"></param>
         /// <returns></returns>
@@ -122,7 +122,7 @@ namespace Juice.Collections
         }
 
         /// <summary>
-        /// Update item if it exists.
+        /// Return true if item exist and was updated, otherwise return false.
         /// </summary>
         /// <param name="item"></param>
         /// <returns></returns>
@@ -170,6 +170,9 @@ namespace Juice.Collections
             }
         }
 
+        /// <summary>
+        /// Sort the bag use the configured comparer or default.
+        /// </summary>
         public void Sort()
         {
             lock (_lock)

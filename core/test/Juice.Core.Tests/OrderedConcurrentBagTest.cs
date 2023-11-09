@@ -28,7 +28,12 @@ namespace Juice.Core.Tests
             }
             public int Id { get; }
             public string Name { get; }
-            public DateTime DateTime { get; }
+            public DateTime DateTime { get; private set; }
+
+            public void SetDateTime(DateTime dateTime)
+            {
+                DateTime = dateTime;
+            }
 
             public int CompareTo(TestObject? other)
             {
@@ -171,5 +176,82 @@ namespace Juice.Core.Tests
             }
 
         }
+
+        [Fact]
+        public void Data_should_order_after_update()
+        {
+            var cb = new OrderedConcurrentBag<TestObject>();
+
+            List<Task> bagAddTasks = new List<Task>();
+            for (int i = 0; i < 500; i++)
+            {
+                var item = new TestObject(i, $"TestObject {i}", DateTime.Now.AddSeconds(Random.Shared.NextInt64(60)));
+                bagAddTasks.Add(Task.Run(() =>
+                {
+                    if (!cb.TryAdd(item, false))
+                    {
+                        _output.WriteLine("Failed to add item {0}", item.Id);
+                    }
+                }));
+            }
+            var clock = new Stopwatch();
+            clock.Start();
+            // Wait for all tasks to complete
+            Task.WaitAll(bagAddTasks.ToArray());
+
+            cb.Sort();
+
+            _output.WriteLine("Adding items took {0}ms", clock.ElapsedMilliseconds);
+
+            var arr = cb.ToArray();
+            for (int i = 0; i < arr.Length - 1; i++)
+            {
+                Assert.True(TestObjectComparer.Default.Compare(arr[i], arr[i + 1]) <= 0);
+            }
+
+            for (var i = 0; i < 200; i++)
+            {
+                var item = new TestObject(i, $"Updated TestObject {i}", DateTime.Now.AddMinutes(2));
+                if (!cb.TryUpdate(item))
+                {
+                    _output.WriteLine("Failed to update item {0}. It does not exist.", item.Id);
+                }
+            }
+
+            arr = cb.ToArray();
+            for (int i = 0; i < arr.Length - 1; i++)
+            {
+                Assert.True(TestObjectComparer.Default.Compare(arr[i], arr[i + 1]) <= 0);
+            }
+
+            // Consume the items in the bag
+            List<Task> bagConsumeTasks = new List<Task>();
+            int itemsInBag = 0;
+            while (!cb.IsEmpty)
+            {
+                bagConsumeTasks.Add(Task.Run(() =>
+                {
+                    if (cb.TryTake(out var item))
+                    {
+                        _output.WriteLine("{0} {1}", item.Name, item.DateTime);
+                        Interlocked.Increment(ref itemsInBag);
+                    }
+                }));
+            }
+            Task.WaitAll(bagConsumeTasks.ToArray());
+            clock.Stop();
+            _output.WriteLine("Total took {0}ms", clock.ElapsedMilliseconds);
+
+            _output.WriteLine($"There were {itemsInBag} items in the bag");
+
+            // Checks the bag for an item
+            // The bag should be empty and this should not print anything
+            if (cb.TryPeek(out var unexpectedItem))
+            {
+                _output.WriteLine("Found an item in the bag when it should be empty");
+            }
+
+        }
+
     }
 }
