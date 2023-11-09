@@ -194,6 +194,36 @@ namespace Juice.Collections
             }
         }
 
+        /// <summary>
+        /// Remove item from the bag if it exists.
+        /// </summary>
+        /// <param name="item"></param>
+        public void Remove(T item)
+        {
+            lock (_lock)
+            {
+                var index = Array.FindIndex(_items, x => x.Equals(item));
+                if (index >= 0)
+                {
+                    var copies = new T[_items.Length - 1];
+                    Array.Copy(_items, 0, copies, 0, index);
+                    Array.Copy(_items, index + 1, copies, index, _items.Length - index - 1);
+                    _items = copies;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Clear the bag.
+        /// </summary>
+        public void Clear()
+        {
+            lock (_lock)
+            {
+                Array.Clear(_items);
+            }
+        }
+
         public bool IsEmpty
         {
             get
