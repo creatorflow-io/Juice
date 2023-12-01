@@ -4,6 +4,10 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Juice.Extensions.Logging
 {
+    /// <summary>
+    /// A logger provider that creates loggers for a specific category.
+    /// <para>Loggers created by this provider will have its own log scope</para>
+    /// </summary>
     public abstract class LoggerProvider : IDisposable, ILoggerProvider
     {
         private ConcurrentDictionary<string, Logger> _loggers
@@ -49,7 +53,10 @@ namespace Juice.Extensions.Logging
         #endregion
     }
 
-    public abstract class ScopedLoggerProvider : LoggerProvider, ISupportExternalScope
+    /// <summary>
+    /// Share scopes between loggers that are created by the same provider.
+    /// </summary>
+    public abstract class ExternalScopeLoggerProvider : LoggerProvider, ISupportExternalScope
     {
 
         private IExternalScopeProvider? _scopeProvider;

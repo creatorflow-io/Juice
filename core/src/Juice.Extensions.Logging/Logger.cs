@@ -38,7 +38,7 @@ namespace Juice.Extensions.Logging
 
         public IDisposable BeginScope<TState>(TState state)
         {
-            if (Provider is ScopedLoggerProvider supportExternalScope)
+            if (Provider is ExternalScopeLoggerProvider supportExternalScope)
             {
                 return supportExternalScope.ScopeProvider.Push(state);
             }

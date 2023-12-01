@@ -12,7 +12,7 @@ namespace Microsoft.Extensions.Logging
     {
     }
 
-    public sealed class TestOutputLoggerProvider : ScopedLoggerProvider
+    public sealed class TestOutputLoggerProvider : ExternalScopeLoggerProvider
     {
         private readonly ITestOutputHelper _output;
         public TestOutputLoggerProvider(
