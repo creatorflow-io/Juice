@@ -9,7 +9,7 @@
     <PackageTags>$(PackageTags); $(Company); $(Product); Media Management</PackageTags>
     <PackageIconUrl>https://avatars.githubusercontent.com/u/107674950</PackageIconUrl>
     <RepositoryUrl>https://github.com/creatorflow-io/Juice</RepositoryUrl>
-
+    
     <VersionPrefix>7.0.3</VersionPrefix>
     <VersionSuffix>local.$([System.DateTime]::Now.ToString(`yyyyMMdd`)).1</VersionSuffix>
   </PropertyGroup>
@@ -39,4 +39,8 @@
     <PackageLocation>$(SolutionDir)build/publish/$(Configuration)/</PackageLocation>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
+  </PropertyGroup>
 </Project>

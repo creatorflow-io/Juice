@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Juice.Collections;
+using Juice.Services;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -253,5 +254,14 @@ namespace Juice.Core.Tests
 
         }
 
+        [Fact]
+        public void GenKeys()
+        {
+            for (var i = 0; i < 3; i++)
+            {
+                var key = new DefaultStringIdGenerator().GenerateRandomId(8);
+                _output.WriteLine(key.ToUpper());
+            }
+        }
     }
 }
