@@ -39,7 +39,7 @@ namespace Juice.Extensions.Logging
         public IDisposable BeginScope<TState>(TState state)
         {
             var scope = BeginScopeInternal(state);
-            return new ScopeWrapper<TState>(scope, state, Provider);
+            return new ScopeWrapper<TState>(scope, state, this);
         }
 
         private IDisposable BeginScopeInternal<TState>(TState state)
@@ -57,6 +57,11 @@ namespace Juice.Extensions.Logging
         {
             var logEntry = new LogEntry<TState>(logLevel, Category, eventId, state, exception, formatter);
             Provider.WriteLog(logEntry, formatter(state, exception), _scopeProvider);
+        }
+
+        public void ScopeDisposed<TState>(TState state)
+        {
+            Provider.ScopeDisposed(state, _scopeProvider);
         }
 
         #region IDisposable Support
@@ -86,14 +91,14 @@ namespace Juice.Extensions.Logging
     {
         private readonly IDisposable _scope;
         private readonly TState _state;
-        private readonly LoggerProvider _loggerProvider;
+        private readonly Logger _logger;
         private bool _disposedValue;
 
-        public ScopeWrapper(IDisposable scope, TState state, LoggerProvider loggerProvider)
+        public ScopeWrapper(IDisposable scope, TState state, Logger logger)
         {
             _scope = scope;
             _state = state;
-            _loggerProvider = loggerProvider;
+            _logger = logger;
         }
 
         protected virtual void Dispose(bool disposing)
@@ -104,7 +109,7 @@ namespace Juice.Extensions.Logging
                 {
                     // TODO: dispose managed state (managed objects)
                     _scope.Dispose();
-                    _loggerProvider.ScopeDisposed(_state);
+                    _logger.ScopeDisposed(_state);
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override finalizer

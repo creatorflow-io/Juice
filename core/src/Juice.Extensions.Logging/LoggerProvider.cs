@@ -25,7 +25,8 @@ namespace Juice.Extensions.Logging
         /// </summary>
         /// <typeparam name="TState"></typeparam>
         /// <param name="state"></param>
-        public virtual void ScopeDisposed<TState>(TState state)
+        /// <param name="scopeProvider"></param>
+        public virtual void ScopeDisposed<TState>(TState state, IExternalScopeProvider? scopeProvider)
         {
             //  do nothing
         }
@@ -90,7 +91,8 @@ namespace Juice.Extensions.Logging
         /// </summary>
         /// <typeparam name="TState"></typeparam>
         /// <param name="state"></param>
-        public override void ScopeDisposed<TState>(TState state)
+        /// <param name="scopeProvider"></param>
+        public override void ScopeDisposed<TState>(TState state, IExternalScopeProvider? scopeProvider)
         {
 
         }
