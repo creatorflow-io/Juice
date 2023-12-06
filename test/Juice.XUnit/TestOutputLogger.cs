@@ -12,7 +12,7 @@ namespace Microsoft.Extensions.Logging
     {
     }
 
-    public sealed class TestOutputLoggerProvider : ExternalScopeLoggerProvider
+    public sealed class TestOutputLoggerProvider : LoggerProvider
     {
         private readonly ITestOutputHelper _output;
         public TestOutputLoggerProvider(
@@ -24,7 +24,7 @@ namespace Microsoft.Extensions.Logging
         public override void WriteLog<TState>(LogEntry<TState> entry, string formattedMessage, IExternalScopeProvider? scopeProvider)
         {
             var scopes = new List<object?>();
-            ScopeProvider?.ForEachScope((value, loggingProps) =>
+            scopeProvider?.ForEachScope((value, loggingProps) =>
             {
                 scopes.Add(value);
             },
@@ -33,6 +33,10 @@ namespace Microsoft.Extensions.Logging
             _output.WriteLine($"[{entry.LogLevel}]  {scope}   {entry.Category} - {formattedMessage}");
         }
 
+        public override void ScopeDisposed<TState>(TState state)
+        {
+            _output.WriteLine($"ScopeDisposed: {state}");
+        }
     }
 
     public static class TestOutputLoggerExtensions

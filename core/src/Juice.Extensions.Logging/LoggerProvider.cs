@@ -20,6 +20,16 @@ namespace Juice.Extensions.Logging
         /// </summary>
         public abstract void WriteLog<TState>(LogEntry<TState> entry, string formattedMessage, IExternalScopeProvider? scopeProvider);
 
+        /// <summary>
+        /// NOTE: this method is called when the scope is disposed and only if the provider is not an <see cref="ExternalScopeLoggerProvider"/> or <see cref="ISupportExternalScope"/>.
+        /// </summary>
+        /// <typeparam name="TState"></typeparam>
+        /// <param name="state"></param>
+        public virtual void ScopeDisposed<TState>(TState state)
+        {
+            //  do nothing
+        }
+
         #region IDisposable Support
 
         private bool disposedValue = false; // To detect redundant calls
@@ -73,6 +83,16 @@ namespace Juice.Extensions.Logging
                     _scopeProvider = new LoggerExternalScopeProvider();
                 return _scopeProvider;
             }
+        }
+
+        /// <summary>
+        /// NOTE: this method should not be called because this provider uses external scope.
+        /// </summary>
+        /// <typeparam name="TState"></typeparam>
+        /// <param name="state"></param>
+        public override void ScopeDisposed<TState>(TState state)
+        {
+
         }
 
         protected override void Dispose(bool disposing)

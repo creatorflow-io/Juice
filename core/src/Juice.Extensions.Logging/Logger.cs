@@ -38,6 +38,12 @@ namespace Juice.Extensions.Logging
 
         public IDisposable BeginScope<TState>(TState state)
         {
+            var scope = BeginScopeInternal(state);
+            return new ScopeWrapper<TState>(scope, state, Provider);
+        }
+
+        private IDisposable BeginScopeInternal<TState>(TState state)
+        {
             if (Provider is ExternalScopeLoggerProvider supportExternalScope)
             {
                 return supportExternalScope.ScopeProvider.Push(state);
@@ -74,5 +80,44 @@ namespace Juice.Extensions.Logging
             GC.SuppressFinalize(this);
         }
         #endregion
+    }
+
+    internal class ScopeWrapper<TState> : IDisposable
+    {
+        private readonly IDisposable _scope;
+        private readonly TState _state;
+        private readonly LoggerProvider _loggerProvider;
+        private bool _disposedValue;
+
+        public ScopeWrapper(IDisposable scope, TState state, LoggerProvider loggerProvider)
+        {
+            _scope = scope;
+            _state = state;
+            _loggerProvider = loggerProvider;
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposedValue)
+            {
+                if (disposing)
+                {
+                    // TODO: dispose managed state (managed objects)
+                    _scope.Dispose();
+                    _loggerProvider.ScopeDisposed(_state);
+                }
+
+                // TODO: free unmanaged resources (unmanaged objects) and override finalizer
+                // TODO: set large fields to null
+                _disposedValue = true;
+            }
+        }
+
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
     }
 }

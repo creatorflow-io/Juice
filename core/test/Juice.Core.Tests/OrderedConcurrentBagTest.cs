@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Juice.Collections;
 using Juice.Services;
 using Xunit;
@@ -252,6 +253,36 @@ namespace Juice.Core.Tests
                 _output.WriteLine("Found an item in the bag when it should be empty");
             }
 
+        }
+
+        [Fact]
+        public void Item_should_remove()
+        {
+            var cb = new OrderedConcurrentBag<TestObject>();
+
+            List<Task> bagAddTasks = new List<Task>();
+            for (int i = 0; i < 5; i++)
+            {
+                var item = new TestObject(i, $"TestObject {i}", DateTime.Now.AddSeconds(Random.Shared.NextInt64(60)));
+                bagAddTasks.Add(Task.Run(() =>
+                {
+                    if (!cb.TryAdd(item, false))
+                    {
+                        _output.WriteLine("Failed to add item {0}", item.Id);
+                    }
+                }));
+            }
+
+            // Wait for all tasks to complete
+            Task.WaitAll(bagAddTasks.ToArray());
+            cb.Count.Should().Be(5);
+
+            for (var i = 0; i < 5; i++)
+            {
+                var item = new TestObject(i, $"TestObject {i}", DateTime.Now.AddSeconds(Random.Shared.NextInt64(60)));
+                cb.Remove(item);
+                cb.Count.Should().Be(4 - i);
+            }
         }
 
         [Fact]
