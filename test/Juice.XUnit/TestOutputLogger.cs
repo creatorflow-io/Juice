@@ -33,8 +33,12 @@ namespace Microsoft.Extensions.Logging
             _output.WriteLine($"[{entry.LogLevel}]  {scope}   {entry.Category} - {formattedMessage}");
         }
 
-        public override void ScopeDisposed<TState>(TState state)
+        public override void ScopeDisposed<TState>(TState state, IExternalScopeProvider? scopeProvider)
         {
+            scopeProvider?.ForEachScope((value, loggingProps) =>
+            {
+                _output.WriteLine($"Scope: {value}");
+            }, state);
             _output.WriteLine($"ScopeDisposed: {state}");
         }
     }

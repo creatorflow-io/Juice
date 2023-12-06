@@ -97,6 +97,15 @@ namespace Juice.Core.Tests
                     _output.WriteLine(scope);
                     scope.Should().StartWith(JsonConvert.SerializeObject(new string[] { "Scope1" }));
 
+                    using (logger1.BeginScope("Scope inside"))
+                    {
+                        logger1.LogInformation("Messsage inside nested scope");
+                        scope = stringBuilder.ToString().Trim();
+                        stringBuilder.Clear();
+                        _output.WriteLine(scope);
+                        scope.Should().StartWith(JsonConvert.SerializeObject(new string[] { "Scope1", "Scope inside" }));
+                    }
+
                     logger2.LogInformation("Log2");
                     scope = stringBuilder.ToString().Trim();
                     stringBuilder.Clear();
