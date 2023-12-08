@@ -33,13 +33,22 @@ namespace Microsoft.Extensions.Logging
             _output.WriteLine($"[{entry.LogLevel}]  {scope}   {entry.Category} - {formattedMessage}");
         }
 
+        public override void ScopeStarted<TState>(TState state, IExternalScopeProvider? scopeProvider)
+        {
+            scopeProvider?.ForEachScope((value, loggingProps) =>
+            {
+                _output.WriteLine($"Scopes: {JsonConvert.SerializeObject(value)}");
+            }, state);
+            _output.WriteLine($"Scope Started: {JsonConvert.SerializeObject(state)}");
+        }
+
         public override void ScopeDisposed<TState>(TState state, IExternalScopeProvider? scopeProvider)
         {
             scopeProvider?.ForEachScope((value, loggingProps) =>
             {
-                _output.WriteLine($"Scope: {value}");
+                _output.WriteLine($"Scopes: {JsonConvert.SerializeObject(value)}");
             }, state);
-            _output.WriteLine($"ScopeDisposed: {state}");
+            _output.WriteLine($"Scope Disposed: {JsonConvert.SerializeObject(state)}");
         }
     }
 
