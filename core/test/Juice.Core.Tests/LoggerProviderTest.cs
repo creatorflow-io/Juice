@@ -113,6 +113,20 @@ namespace Juice.Core.Tests
                     scope.Should().StartWith(JsonConvert.SerializeObject(new string[] { "Scope2" }));
                 }
             }
+
+            stringBuilder.Clear();
+            using (logger1.BeginScope(new Dictionary<string, object>
+            {
+                ["Scope1"] = "Scope1",
+                ["Scope2"] = "Scope2"
+            }))
+            {
+                logger1.LogInformation("Log1");
+                var scope = stringBuilder.ToString().Trim();
+                stringBuilder.Clear();
+                _output.WriteLine(scope);
+                scope.Should().StartWith(JsonConvert.SerializeObject(new string[] { "Scope1", "Scope2" }));
+            }
         }
     }
 
@@ -129,7 +143,14 @@ namespace Juice.Core.Tests
             var scopes = new List<object?>();
             scopeProvider?.ForEachScope((value, loggingProps) =>
             {
-                scopes.Add(value);
+                if (value is string s)
+                {
+                    scopes.Add(s);
+                }
+                else if (value is IEnumerable<KeyValuePair<string, object>> props)
+                {
+                    scopes.AddRange(props.Select(p => p.Key));
+                }
             },
             entry.State);
             var scope = scopes.Any() ? JsonConvert.SerializeObject(scopes) : "";

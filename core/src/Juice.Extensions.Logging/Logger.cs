@@ -39,6 +39,7 @@ namespace Juice.Extensions.Logging
         public IDisposable BeginScope<TState>(TState state)
         {
             var scope = BeginScopeInternal(state);
+            Provider.ScopeStarted(state, _scopeProvider);
             return new ScopeWrapper<TState>(scope, state, this);
         }
 

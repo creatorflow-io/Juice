@@ -21,6 +21,17 @@ namespace Juice.Extensions.Logging
         public abstract void WriteLog<TState>(LogEntry<TState> entry, string formattedMessage, IExternalScopeProvider? scopeProvider);
 
         /// <summary>
+        /// NOTE: this method is called when the scope is started and only if the provider is not an <see cref="ExternalScopeLoggerProvider"/> or <see cref="ISupportExternalScope"/>.
+        /// </summary>
+        /// <typeparam name="TState"></typeparam>
+        /// <param name="state"></param>
+        /// <param name="scopeProvider"></param>
+        public virtual void ScopeStarted<TState>(TState state, IExternalScopeProvider? scopeProvider)
+        {
+            //  do nothing
+        }
+
+        /// <summary>
         /// NOTE: this method is called when the scope is disposed and only if the provider is not an <see cref="ExternalScopeLoggerProvider"/> or <see cref="ISupportExternalScope"/>.
         /// </summary>
         /// <typeparam name="TState"></typeparam>
@@ -84,6 +95,17 @@ namespace Juice.Extensions.Logging
                     _scopeProvider = new LoggerExternalScopeProvider();
                 return _scopeProvider;
             }
+        }
+
+        /// <summary>
+        /// NOTE: this method should not be called because this provider uses external scope.
+        /// </summary>
+        /// <typeparam name="TState"></typeparam>
+        /// <param name="state"></param>
+        /// <param name="scopeProvider"></param>
+        public override void ScopeStarted<TState>(TState state, IExternalScopeProvider? scopeProvider)
+        {
+
         }
 
         /// <summary>
