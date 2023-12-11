@@ -39,7 +39,7 @@ namespace Juice.Extensions.Logging
         public IDisposable BeginScope<TState>(TState state)
         {
             var scope = BeginScopeInternal(state);
-            Provider.ScopeStarted(state, _scopeProvider);
+            Provider.ScopeStarted(Category, state, _scopeProvider);
             return new ScopeWrapper<TState>(scope, state, this);
         }
 
@@ -62,7 +62,7 @@ namespace Juice.Extensions.Logging
 
         public void ScopeDisposed<TState>(TState state)
         {
-            Provider.ScopeDisposed(state, _scopeProvider);
+            Provider.ScopeDisposed(Category, state, _scopeProvider);
         }
 
         #region IDisposable Support

@@ -33,8 +33,9 @@ namespace Microsoft.Extensions.Logging
             _output.WriteLine($"[{entry.LogLevel}]  {scope}   {entry.Category} - {formattedMessage}");
         }
 
-        public override void ScopeStarted<TState>(TState state, IExternalScopeProvider? scopeProvider)
+        public override void ScopeStarted<TState>(string category, TState state, IExternalScopeProvider? scopeProvider)
         {
+            _output.WriteLine(category);
             scopeProvider?.ForEachScope((value, loggingProps) =>
             {
                 _output.WriteLine($"Scopes: {JsonConvert.SerializeObject(value)}");
@@ -42,8 +43,9 @@ namespace Microsoft.Extensions.Logging
             _output.WriteLine($"Scope Started: {JsonConvert.SerializeObject(state)}");
         }
 
-        public override void ScopeDisposed<TState>(TState state, IExternalScopeProvider? scopeProvider)
+        public override void ScopeDisposed<TState>(string category, TState state, IExternalScopeProvider? scopeProvider)
         {
+            _output.WriteLine(category);
             scopeProvider?.ForEachScope((value, loggingProps) =>
             {
                 _output.WriteLine($"Scopes: {JsonConvert.SerializeObject(value)}");

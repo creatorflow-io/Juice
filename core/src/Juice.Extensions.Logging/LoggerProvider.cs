@@ -24,9 +24,10 @@ namespace Juice.Extensions.Logging
         /// NOTE: this method is called when the scope is started and only if the provider is not an <see cref="ExternalScopeLoggerProvider"/> or <see cref="ISupportExternalScope"/>.
         /// </summary>
         /// <typeparam name="TState"></typeparam>
+        /// <param name="category"></param>
         /// <param name="state"></param>
         /// <param name="scopeProvider"></param>
-        public virtual void ScopeStarted<TState>(TState state, IExternalScopeProvider? scopeProvider)
+        public virtual void ScopeStarted<TState>(string category, TState state, IExternalScopeProvider? scopeProvider)
         {
             //  do nothing
         }
@@ -35,9 +36,10 @@ namespace Juice.Extensions.Logging
         /// NOTE: this method is called when the scope is disposed and only if the provider is not an <see cref="ExternalScopeLoggerProvider"/> or <see cref="ISupportExternalScope"/>.
         /// </summary>
         /// <typeparam name="TState"></typeparam>
+        /// <param name="category"></param>
         /// <param name="state"></param>
         /// <param name="scopeProvider"></param>
-        public virtual void ScopeDisposed<TState>(TState state, IExternalScopeProvider? scopeProvider)
+        public virtual void ScopeDisposed<TState>(string category, TState state, IExternalScopeProvider? scopeProvider)
         {
             //  do nothing
         }
@@ -101,9 +103,10 @@ namespace Juice.Extensions.Logging
         /// NOTE: this method should not be called because this provider uses external scope.
         /// </summary>
         /// <typeparam name="TState"></typeparam>
+        /// <param name="category"></param>
         /// <param name="state"></param>
         /// <param name="scopeProvider"></param>
-        public override void ScopeStarted<TState>(TState state, IExternalScopeProvider? scopeProvider)
+        public override void ScopeStarted<TState>(string category, TState state, IExternalScopeProvider? scopeProvider)
         {
 
         }
@@ -112,9 +115,10 @@ namespace Juice.Extensions.Logging
         /// NOTE: this method should not be called because this provider uses external scope.
         /// </summary>
         /// <typeparam name="TState"></typeparam>
+        /// <param name="category"></param>
         /// <param name="state"></param>
         /// <param name="scopeProvider"></param>
-        public override void ScopeDisposed<TState>(TState state, IExternalScopeProvider? scopeProvider)
+        public override void ScopeDisposed<TState>(string category, TState state, IExternalScopeProvider? scopeProvider)
         {
 
         }
