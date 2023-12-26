@@ -1,4 +1,4 @@
-﻿using Juice.EF;
+﻿using Juice.EF.Extensions;
 using Juice.EventBus;
 using Juice.EventBus.IntegrationEventLog.EF;
 using Microsoft.EntityFrameworkCore;
@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 namespace Juice.Integrations.EventBus
 {
     internal class IntegrationEventService<TContext> : IIntegrationEventService<TContext>
-        where TContext : DbContext, IUnitOfWork
+        where TContext : DbContext
     {
         private IIntegrationEventLogService<TContext> _eventLogService;
         public TContext DomainContext { get; }
@@ -26,21 +26,18 @@ namespace Juice.Integrations.EventBus
             _eventBus = eventBus;
         }
 
-        public async Task AddAndSaveEventAsync(IntegrationEvent evt)
+        public async Task AddAndSaveEventAsync(IntegrationEvent evt, IDbContextTransaction? transaction = default)
         {
             if (_logger.IsEnabled(LogLevel.Debug))
             {
                 _logger.LogDebug("----- Enqueuing integration event {IntegrationEventId} to repository ({@IntegrationEvent})", evt.Id, evt);
             }
-            if (!DomainContext.HasActiveTransaction)
+            transaction = transaction ?? DomainContext.GetCurrentTransaction();
+            if (transaction == null)
             {
                 throw new Exception($"{typeof(TContext).Name} does not have an active transaction");
             }
-            await AddAndSaveEventAsync(evt, DomainContext.GetCurrentTransaction());
-        }
-
-        public async Task AddAndSaveEventAsync(IntegrationEvent evt, IDbContextTransaction transaction)
-        {
+            _eventLogService.EnsureAssociatedConnection(DomainContext);
             await _eventLogService.SaveEventAsync(evt, transaction);
         }
         public async Task PublishEventsThroughEventBusAsync(Guid transactionId)

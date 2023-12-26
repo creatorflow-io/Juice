@@ -6,7 +6,7 @@ namespace Juice.Domain
     /// Default aggregrate root
     /// </summary>
     /// <typeparam name="TNotification"></typeparam>
-    public abstract class AggregrateRoot<TNotification> : IAggregrateRoot<TNotification>,
+    public abstract class AggregateRoot<TNotification> : IAggregateRoot<TNotification>,
         IValidatable
     {
         [NotMapped]
@@ -21,7 +21,7 @@ namespace Juice.Domain
     /// </summary>
     /// <typeparam name="TKey"></typeparam>
     /// <typeparam name="TNotification"></typeparam>
-    public abstract class AuditAggregrateRoot<TKey, TNotification> : AuditEntity<TKey>, IAggregrateRoot<TNotification>, IValidatable
+    public abstract class AuditAggregrateRoot<TKey, TNotification> : AuditEntity<TKey>, IAggregateRoot<TNotification>, IValidatable
         where TKey : IEquatable<TKey>
     {
         [NotMapped]

@@ -1,11 +1,11 @@
-﻿using System.Data;
+﻿using System.Linq.Expressions;
 using System.Security.Claims;
+using Juice.Domain;
 using Juice.EF.Extensions;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
-using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -85,7 +85,7 @@ namespace Juice.EF
         private void ProcessingRefreshEntries(HashSet<EntityEntry>? entities)
         {
             if (entities == null) { return; }
-            if (HasActiveTransaction)
+            if (this.HasActiveTransaction)
             {
                 // Waitting for transaction completed before reload entities
                 foreach (var entity in entities)
@@ -102,7 +102,7 @@ namespace Juice.EF
         {
             if (PendingAuditEntries == null)
             { return; }
-            if (!HasActiveTransaction)
+            if (!this.HasActiveTransaction)
             {
                 _mediator.DispatchDataChangeEventsAsync(this).GetAwaiter().GetResult();
             }
@@ -175,7 +175,6 @@ namespace Juice.EF
             _options = null;
             Schema = null;
             User = null;
-            _currentTransaction = null;
             _commitedTransactionId = null;
             _mediator = null;
             _logger = null;
@@ -185,34 +184,28 @@ namespace Juice.EF
 
         #region UnitOfWork
 
-        private IDbContextTransaction? _currentTransaction;
-        public IDbContextTransaction? GetCurrentTransaction() => _currentTransaction;
-        public bool HasActiveTransaction => _currentTransaction != null;
+        public bool HasActiveTransaction
+            => Database.CurrentTransaction != null
+            && Database.CurrentTransaction.TransactionId != _commitedTransactionId;
+
         private Guid? _commitedTransactionId;
 
-        public async Task<IDbContextTransaction?> BeginTransactionAsync()
+        public async Task<bool> CommitTransactionAsync(Guid transactionId, CancellationToken token = default)
         {
-            if (_currentTransaction != null) { return default; }
-
-            _commitedTransactionId = default;
-            _currentTransaction = await Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
-
-            return _currentTransaction;
-        }
-
-        public async Task CommitTransactionAsync(IDbContextTransaction transaction)
-        {
-            if (transaction == null) { throw new ArgumentNullException(nameof(transaction)); }
-            if (transaction.TransactionId == _commitedTransactionId)
+            if (transactionId == _commitedTransactionId)
             {
-                return;
+                return false;
             }
-            if (transaction.TransactionId != _currentTransaction?.TransactionId) { throw new InvalidOperationException($"Transaction {transaction.TransactionId} is not current"); }
+            var transaction = Database.CurrentTransaction;
+            if (transaction == null) { throw new ArgumentNullException(nameof(transaction)); }
+
+            if (transaction.TransactionId != transactionId) { throw new InvalidOperationException($"Transaction {transaction.TransactionId} is not current"); }
 
             try
             {
-                await SaveChangesAsync();
-                await transaction.CommitAsync();
+                await SaveChangesAsync(token);
+                await transaction.CommitAsync(token);
+                return true;
             }
             catch
             {
@@ -222,11 +215,7 @@ namespace Juice.EF
             finally
             {
                 _commitedTransactionId = transaction.TransactionId;
-                if (_currentTransaction != null)
-                {
-                    _currentTransaction.Dispose();
-                    _currentTransaction = null;
-                }
+
                 if (_pendingRefreshEntities != null)
                 {
                     await _pendingRefreshEntities.RefreshEntriesAsync();
@@ -235,21 +224,91 @@ namespace Juice.EF
             }
         }
 
-        public void RollbackTransaction()
+        private void RollbackTransaction()
         {
             try
             {
-                _currentTransaction?.Rollback();
+                this.GetCurrentTransaction()?.Rollback();
             }
             finally
             {
-                if (_currentTransaction != null)
-                {
-                    _currentTransaction.Dispose();
-                    _currentTransaction = null;
-                }
+
             }
         }
+
+        public virtual async Task<IOperationResult<T>> AddAndSaveAsync<T>(T entity, CancellationToken token = default)
+            where T : class
+        {
+            try
+            {
+                var entry = Set<T>().Add(entity);
+                await SaveChangesAsync(token);
+                return OperationResult.Result(entry.Entity);
+            }
+            catch (Exception ex)
+            {
+                return OperationResult.Failed<T>(ex);
+            }
+        }
+
+        public virtual async Task<IOperationResult> AddAndSaveAsync<T>(IEnumerable<T> entities, CancellationToken token = default)
+            where T : class
+        {
+            try
+            {
+                Set<T>().AddRange(entities);
+                await SaveChangesAsync(token);
+                return OperationResult.Success;
+            }
+            catch (Exception ex)
+            {
+                return OperationResult.Failed(ex);
+            }
+        }
+
+        public virtual async Task<IOperationResult> DeleteAsync<T>(T entity, CancellationToken token = default)
+            where T : class
+        {
+            try
+            {
+                Set<T>().Remove(entity);
+                await SaveChangesAsync(token);
+                return OperationResult.Success;
+            }
+            catch (Exception ex)
+            {
+                return OperationResult.Failed(ex);
+            }
+        }
+
+        public virtual async Task<IOperationResult> UpdateAsync<T>(T entity, CancellationToken token = default)
+            where T : class
+        {
+            try
+            {
+                var tracked = Entry(entity).State != EntityState.Detached;
+                if (!tracked)
+                {
+                    Set<T>().Update(entity);
+                }
+                await SaveChangesAsync(token);
+                return OperationResult.Success;
+            }
+            catch (Exception ex)
+            {
+                return OperationResult.Failed(ex);
+            }
+        }
+
+        public virtual async Task<T?> FindAsync<T>(Expression<Func<T, bool>> predicate, CancellationToken token = default)
+            where T : class
+        {
+            return await Set<T>().FirstOrDefaultAsync(predicate, token);
+        }
+
+        public IQueryable<T> Query<T>()
+            where T : class
+            => Set<T>();
         #endregion
 
     }

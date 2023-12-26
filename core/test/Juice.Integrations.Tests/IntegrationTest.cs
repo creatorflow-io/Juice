@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Juice.Domain;
 using Juice.EF;
 using Juice.EF.Extensions;
 using Juice.EF.Tests.Domain;
@@ -70,6 +71,8 @@ namespace Juice.Integrations.Tests
                     builder.UseSqlServer(connectionString);
                 });
 
+                services.AddUnitOfWork<Content, TestContext>();
+
                 services.AddDefaultStringIdGenerator();
 
                 services
@@ -90,6 +93,7 @@ namespace Juice.Integrations.Tests
 
             using var scope = resolver.ServiceProvider.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<TestContext>();
+            var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork<Content>>();
 
             var logContextFactory = scope.ServiceProvider.GetRequiredService<Func<TestContext, IntegrationEventLogContext>>();
 
@@ -109,29 +113,24 @@ namespace Juice.Integrations.Tests
             var evt = new ContentPublishedIntegrationEvent($"Content {content.Code} was published.");
 
             // See MediatR TransactionBehavior
-            await ResilientTransaction.New(context).ExecuteAsync(async (transaction) =>
+            var transactionId = await ResilientTransaction.New(context, logger).ExecuteAsync(async (transaction) =>
             {
                 // Achieving atomicity between original catalog database operation and the IntegrationEventLog thanks to a local transaction
-                using (logger.BeginScope(transaction.TransactionId))
+                using (logger.BeginScope($"Exec Command: CreateContent"))
                 {
-                    logger.LogInformation("----- Begin transaction {TransactionId} for {CommandName}", transaction.TransactionId,
+                    logger.LogInformation("----- Created transaction {TransactionId} for {CommandName}", transaction.TransactionId,
                         "CreateContent");
 
                     #region business
-                    context.Add(content);
-                    await integrationEventService.AddAndSaveEventAsync(evt);
-                    await context.SaveChangesAsync();
+                    await unitOfWork.AddAndSaveAsync(content);
                     #endregion
-
-                    logger.LogInformation("----- Commit transaction {TransactionId} for {CommandName}", transaction.TransactionId, "CreateContent");
-
+                    await integrationEventService.AddAndSaveEventAsync(evt);
                 }
-                await context.CommitTransactionAsync(transaction);
-                await integrationEventService.PublishEventsThroughEventBusAsync(transaction.TransactionId);
             });
-
+            await integrationEventService.PublishEventsThroughEventBusAsync(transactionId);
             await Task.Delay(3000);
 
         }
+
     }
 }

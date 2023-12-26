@@ -10,7 +10,7 @@ namespace Juice.EF.Extensions
         public static async Task DispatchDomainEventsAsync(this IMediator? mediator, DbContext ctx)
         {
             var domainEntities = ctx.ChangeTracker
-                .Entries<IAggregrateRoot<INotification>>()
+                .Entries<IAggregateRoot<INotification>>()
                 .Where(x => x.Entity.DomainEvents != null && x.Entity.DomainEvents.Any());
 
             var domainEvents = domainEntities
