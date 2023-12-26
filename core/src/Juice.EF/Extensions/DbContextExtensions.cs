@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -363,5 +364,11 @@ namespace Juice.EF.Extensions
                 await context.Database.MigrateAsync();
             }
         }
+
+        #region UnitOfWork
+
+        public static IDbContextTransaction? GetCurrentTransaction(this DbContext context)
+            => context.Database.CurrentTransaction;
+        #endregion
     }
 }

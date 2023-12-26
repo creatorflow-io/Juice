@@ -1,12 +1,11 @@
-﻿using Juice.EF;
-using Juice.EventBus;
+﻿using Juice.EventBus;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Juice.Integrations.EventBus
 {
-    public interface IIntegrationEventService<out TContext> : IIntegrationEventService
-        where TContext : DbContext, IUnitOfWork
+    public interface IIntegrationEventService<out TContext>
+        where TContext : DbContext
     {
         TContext DomainContext { get; }
 
@@ -16,7 +15,14 @@ namespace Juice.Integrations.EventBus
         /// <param name="evt"></param>
         /// <param name="transaction"></param>
         /// <returns></returns>
-        Task AddAndSaveEventAsync(IntegrationEvent evt, IDbContextTransaction transaction);
+        Task AddAndSaveEventAsync(IntegrationEvent evt, IDbContextTransaction? transaction = default);
+        /// <summary>
+        /// Publish events that are pending to be published
+        /// </summary>
+        /// <param name="transactionId"></param>
+        /// <returns></returns>
+        Task PublishEventsThroughEventBusAsync(Guid transactionId);
+
     }
 
 }

@@ -20,10 +20,11 @@ namespace Juice.EventBus.IntegrationEventLog.EF
         }
 
         /// <summary>
-        /// Registering <c>Func<TContext, IntegrationEventLogContext></c> as IntegrationEventLogContext factory
+        /// Registering <c>Func{TContext, IntegrationEventLogContext}</c> as IntegrationEventLogContext factory
         /// to create <see cref="IntegrationEventLogContext"/> from TContext
         /// </summary>
         /// <param name="builder"></param>
+        /// <param name="schema"></param>
         /// <returns></returns>
         public static IIntegrationEventLogBuilder RegisterContext<TContext>(this IIntegrationEventLogBuilder builder,
             string? schema = default)
@@ -35,10 +36,11 @@ namespace Juice.EventBus.IntegrationEventLog.EF
         }
 
         /// <summary>
-        /// Registering <c>Func<TContext, IntegrationEventLogContext></c> as IntegrationEventLogContext factory
+        /// Registering <c>Func{TContext, IntegrationEventLogContext}</c> as IntegrationEventLogContext factory
         /// to create <see cref="IntegrationEventLogContext"/> from TContext
         /// </summary>
-        /// <param name="builder"></param>
+        /// <param name="services"></param>
+        /// <param name="schema"></param>
         /// <returns></returns>
         public static IServiceCollection RegisterContext<TContext>(this IServiceCollection services,
             string? schema = default)
@@ -81,10 +83,13 @@ namespace Juice.EventBus.IntegrationEventLog.EF
 
 
         /// <summary>
-        /// Registering <c>Func<TContext, IntegrationEventLogContext></c> as IntegrationEventLogContext factory
+        /// Registering <c>Func{TContext, IntegrationEventLogContext}</c> as IntegrationEventLogContext factory
         /// to create <see cref="IntegrationEventLogContext"/> from TContext
         /// </summary>
-        /// <param name="builder"></param>
+        /// <param name="services"></param>
+        /// <param name="provider"></param>
+        /// <param name="configuration"></param>
+        /// <param name="schema"></param>
         /// <returns></returns>
         public static IServiceCollection AddTestEventLogContext(this IServiceCollection services, string provider,
             IConfiguration configuration,

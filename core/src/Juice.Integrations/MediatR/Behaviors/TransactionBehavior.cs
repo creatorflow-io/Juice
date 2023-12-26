@@ -1,4 +1,5 @@
-﻿using Juice.EF;
+﻿using Juice.Domain;
+using Juice.EF;
 using Juice.EventBus;
 using Juice.Integrations.EventBus;
 using MediatR;
@@ -14,7 +15,7 @@ namespace Juice.Integrations.MediatR.Behaviors
     {
         private readonly ILogger _logger;
         private readonly TContext _dbContext;
-        private readonly IIntegrationEventService _integrationEventService;
+        private readonly IIntegrationEventService<TContext> _integrationEventService;
 
         public TransactionBehavior(TContext dbContext,
             IIntegrationEventService<TContext> integrationEventService,
@@ -27,7 +28,6 @@ namespace Juice.Integrations.MediatR.Behaviors
 
         public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
         {
-            var response = default(TResponse);
             var typeName = request.GetGenericTypeName();
 
             try
@@ -38,33 +38,22 @@ namespace Juice.Integrations.MediatR.Behaviors
 
                     return await next();
                 }
-                await ResilientTransaction.New(_dbContext).ExecuteAsync(async (transaction) =>
+                TResponse? response = default;
+
+                Guid transactionId = await ResilientTransaction.New(_dbContext, _logger).ExecuteAsync(async (transaction) =>
                 {
-                    // Achieving atomicity between original catalog database operation and the IntegrationEventLog thanks to a local transaction
-                    using (_logger.BeginScope(CreateLogScope(transaction.TransactionId)))
+                    using (_logger.BeginScope($"Exec Command: {typeName}"))
                     {
                         if (_logger.IsEnabled(LogLevel.Debug))
                         {
-                            _logger.LogDebug("----- Begin transaction {TransactionId} for {CommandName} ({@Command})", transaction.TransactionId, typeName, request);
+                            _logger.LogDebug("----- Command data {CommandName} ({@Command})", typeName, request);
                         }
                         response = await next();
-
-                        if (_logger.IsEnabled(LogLevel.Debug))
-                        {
-                            _logger.LogDebug("----- Commit transaction {TransactionId} for {CommandName}", transaction.TransactionId, typeName);
-                        }
-
-                        await _dbContext.CommitTransactionAsync(transaction);
-                        if (_logger.IsEnabled(LogLevel.Debug))
-                        {
-                            _logger.LogDebug("----- Transaction {TransactionId} committed", transaction.TransactionId);
-                        }
                     }
+                }, cancellationToken);
+                await _integrationEventService.PublishEventsThroughEventBusAsync(transactionId);
 
-                    await _integrationEventService.PublishEventsThroughEventBusAsync(transaction.TransactionId);
-                });
-
-                return response;
+                return response!;
             }
             catch (Exception ex)
             {
@@ -72,14 +61,6 @@ namespace Juice.Integrations.MediatR.Behaviors
 
                 throw;
             }
-        }
-
-        protected virtual List<KeyValuePair<string, object>> CreateLogScope(object transactionId)
-        {
-            return new List<KeyValuePair<string, object>>
-            {
-                new KeyValuePair<string, object>("TransactionContext", transactionId)
-            };
         }
 
     }
