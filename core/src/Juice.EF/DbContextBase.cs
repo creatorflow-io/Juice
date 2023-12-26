@@ -1,6 +1,4 @@
-﻿using System.Linq.Expressions;
-using System.Security.Claims;
-using Juice.Domain;
+﻿using System.Security.Claims;
 using Juice.EF.Extensions;
 using MediatR;
 using Microsoft.AspNetCore.Http;
@@ -11,8 +9,8 @@ using Microsoft.Extensions.Logging;
 
 namespace Juice.EF
 {
-    public abstract partial class DbContextBase : DbContext,
-        ISchemaDbContext, IAuditableDbContext, IUnitOfWork
+    public abstract partial class DbContextBase : UnitOfWork,
+        ISchemaDbContext, IAuditableDbContext
     {
         #region Schema context
         public string? Schema { get; protected set; }
@@ -98,6 +96,7 @@ namespace Juice.EF
                 entities.RefreshEntriesAsync().GetAwaiter().GetResult();
             }
         }
+
         private void ProcessingChanges()
         {
             if (PendingAuditEntries == null)
@@ -166,6 +165,17 @@ namespace Juice.EF
             }
         }
 
+        #region UnitOfWork
+        protected override async Task OnTransactionCommittedAsync()
+        {
+            if (_pendingRefreshEntities != null)
+            {
+                await _pendingRefreshEntities.RefreshEntriesAsync();
+            }
+            await _mediator.DispatchDataChangeEventsAsync(this);
+        }
+        #endregion
+
         public override void Dispose()
         {
             base.Dispose();
@@ -175,141 +185,11 @@ namespace Juice.EF
             _options = null;
             Schema = null;
             User = null;
-            _commitedTransactionId = null;
             _mediator = null;
             _logger = null;
             _pendingRefreshEntities.Clear();
             PendingAuditEntries = null;
         }
-
-        #region UnitOfWork
-
-        public bool HasActiveTransaction
-            => Database.CurrentTransaction != null
-            && Database.CurrentTransaction.TransactionId != _commitedTransactionId;
-
-        private Guid? _commitedTransactionId;
-
-        public async Task<bool> CommitTransactionAsync(Guid transactionId, CancellationToken token = default)
-        {
-            if (transactionId == _commitedTransactionId)
-            {
-                return false;
-            }
-            var transaction = Database.CurrentTransaction;
-            if (transaction == null) { throw new ArgumentNullException(nameof(transaction)); }
-
-            if (transaction.TransactionId != transactionId) { throw new InvalidOperationException($"Transaction {transaction.TransactionId} is not current"); }
-
-            try
-            {
-                await SaveChangesAsync(token);
-                await transaction.CommitAsync(token);
-                return true;
-            }
-            catch
-            {
-                RollbackTransaction();
-                throw;
-            }
-            finally
-            {
-                _commitedTransactionId = transaction.TransactionId;
-
-                if (_pendingRefreshEntities != null)
-                {
-                    await _pendingRefreshEntities.RefreshEntriesAsync();
-                }
-                await _mediator.DispatchDataChangeEventsAsync(this);
-            }
-        }
-
-        private void RollbackTransaction()
-        {
-            try
-            {
-                this.GetCurrentTransaction()?.Rollback();
-            }
-            finally
-            {
-
-            }
-        }
-
-        public virtual async Task<IOperationResult<T>> AddAndSaveAsync<T>(T entity, CancellationToken token = default)
-            where T : class
-        {
-            try
-            {
-                var entry = Set<T>().Add(entity);
-                await SaveChangesAsync(token);
-                return OperationResult.Result(entry.Entity);
-            }
-            catch (Exception ex)
-            {
-                return OperationResult.Failed<T>(ex);
-            }
-        }
-
-        public virtual async Task<IOperationResult> AddAndSaveAsync<T>(IEnumerable<T> entities, CancellationToken token = default)
-            where T : class
-        {
-            try
-            {
-                Set<T>().AddRange(entities);
-                await SaveChangesAsync(token);
-                return OperationResult.Success;
-            }
-            catch (Exception ex)
-            {
-                return OperationResult.Failed(ex);
-            }
-        }
-
-        public virtual async Task<IOperationResult> DeleteAsync<T>(T entity, CancellationToken token = default)
-            where T : class
-        {
-            try
-            {
-                Set<T>().Remove(entity);
-                await SaveChangesAsync(token);
-                return OperationResult.Success;
-            }
-            catch (Exception ex)
-            {
-                return OperationResult.Failed(ex);
-            }
-        }
-
-        public virtual async Task<IOperationResult> UpdateAsync<T>(T entity, CancellationToken token = default)
-            where T : class
-        {
-            try
-            {
-                var tracked = Entry(entity).State != EntityState.Detached;
-                if (!tracked)
-                {
-                    Set<T>().Update(entity);
-                }
-                await SaveChangesAsync(token);
-                return OperationResult.Success;
-            }
-            catch (Exception ex)
-            {
-                return OperationResult.Failed(ex);
-            }
-        }
-
-        public virtual async Task<T?> FindAsync<T>(Expression<Func<T, bool>> predicate, CancellationToken token = default)
-            where T : class
-        {
-            return await Set<T>().FirstOrDefaultAsync(predicate, token);
-        }
-
-        public IQueryable<T> Query<T>()
-            where T : class
-            => Set<T>();
-        #endregion
 
     }
 }
