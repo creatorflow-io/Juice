@@ -39,7 +39,7 @@ namespace Juice.EF.Extensions
 
                     if (logger?.IsEnabled(LogLevel.Debug) ?? false)
                     {
-                        logger.LogDebug("Setted audit info for entry " + entry.Property("Id").CurrentValue ?? "");
+                        logger.LogDebug("[Audit] Setted audit info for entry {entryId}", entry.Property("Id").CurrentValue ?? "");
                     }
                 });
 
@@ -59,13 +59,13 @@ namespace Juice.EF.Extensions
                     entry.Property(nameof(IAuditable.ModifiedUser)).CurrentValue = user;
                     if (logger?.IsEnabled(LogLevel.Debug) ?? false)
                     {
-                        logger.LogDebug("Setted audit info for entry " + entry.Property("Id").CurrentValue ?? "");
+                        logger.LogDebug("[Audit] Setted audit info for entry {entryId}", entry.Property("Id").CurrentValue ?? "");
                     }
                 });
             }
             catch (Exception ex)
             {
-                logger?.LogWarning(ex, $"[Audit][SetAuditInformation][Failed] {ex.StackTrace}");
+                logger?.LogWarning(ex, "[Audit] Failed to set audit info {trace}", ex.StackTrace);
             }
         }
 
@@ -185,7 +185,7 @@ namespace Juice.EF.Extensions
                                         }
                                         if (logger?.IsEnabled(LogLevel.Debug) ?? false)
                                         {
-                                            logger?.LogDebug("[DbContextBase][TrackingChanges] found {count} changed dynamic properties", auditEntry.CurrentValues.Count);
+                                            logger?.LogDebug("[TrackingChanges] found {count} changed dynamic properties", auditEntry.CurrentValues.Count);
                                         }
                                         break;
                                     }
@@ -199,13 +199,13 @@ namespace Juice.EF.Extensions
 
                 if (logger?.IsEnabled(LogLevel.Debug) ?? false)
                 {
-                    logger?.LogDebug("[DbContextBase][TrackingChanges] collected {count} audit entries", auditEntries.Count);
+                    logger?.LogDebug("[TrackingChanges] collected {count} audit entries", auditEntries.Count);
                 }
                 return auditEntries;
             }
             catch (Exception ex)
             {
-                logger?.LogError(ex, $"[DbContextBase][TrackingChanges] {ex.Message}");
+                logger?.LogError(ex, $"[TrackingChanges] {ex.Message}");
             }
             return null;
         }

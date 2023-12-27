@@ -129,7 +129,7 @@ namespace Juice.Integrations.Tests
             });
             await integrationEventService.PublishEventsThroughEventBusAsync(transactionId);
             await Task.Delay(3000);
-
+            var query = unitOfWork.Query();
         }
 
     }

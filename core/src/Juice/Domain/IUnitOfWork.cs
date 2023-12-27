@@ -88,4 +88,13 @@ namespace Juice.Domain
     {
 
     }
+
+    public static class UnitOfWorkTExtensions
+    {
+        public static IQueryable<T> Query<T>(this IUnitOfWork<T> unitOfWork)
+            where T : class => unitOfWork.Query<T>();
+
+        public static Task<T?> FindAsync<T>(this IUnitOfWork<T> unitOfWork, Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default)
+            where T : class => unitOfWork.FindAsync(predicate, cancellationToken);
+    }
 }
