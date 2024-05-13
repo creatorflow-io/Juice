@@ -50,10 +50,14 @@ namespace Juice.EF.Extensions
                                 auditEntry.CurrentValues[prop.Metadata.Name] = prop.CurrentValue;
                             }
                         }
-                        if (auditEntry.HasDataEvent && mediator != null && ctx.EventType!=null)
+                        if (auditEntry.HasDataEvent && mediator != null)
                         {
-                            // Save the Audit entry
-                            await mediator.Publish(auditEntry.DataEvent(ctx.EventType)!);
+                            var eventType = ctx.EventType(auditEntry.EventType!);
+                            if (eventType != null)
+                            {
+                                // Save the Audit entry
+                                await mediator.Publish(auditEntry.DataEvent(eventType)!);
+                            }
                         }
                     }
                     ctx.PendingAuditEntries.Clear();

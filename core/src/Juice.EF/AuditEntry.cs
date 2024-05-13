@@ -23,6 +23,7 @@ namespace Juice.EF
         public DataEvent? DataEvent(Type eventType)
             => _dataEvent!=null ? _dataEvent.Create(eventType, Entity?.GetType(), CreateRecord()) : null;
         public bool HasDataEvent => _dataEvent != null;
+        public string? EventType => _dataEvent?.Name;
         public string? User { get; set; }
         public string? Database { get; set; }
         public string? Schema { get; set; }

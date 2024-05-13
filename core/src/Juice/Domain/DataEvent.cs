@@ -26,6 +26,27 @@ namespace Juice.Domain
         }
     }
 
+    public class DataInserted<T> : DataEvent<T>
+    {
+        public DataInserted() : base(nameof(DataEvents.Inserted))
+        {
+        }
+    }
+
+    public class DataModified<T> : DataEvent<T>
+    {
+        public DataModified() : base(nameof(DataEvents.Modified))
+        {
+        }
+    }
+
+    public class DataDeleted<T> : DataEvent<T>
+    {
+        public DataDeleted() : base(nameof(DataEvents.Deleted))
+        {
+        }
+    }
+
     public static class DataEvents
     {
         public static DataEvent Inserted = new(nameof(Inserted));
@@ -42,7 +63,15 @@ namespace Juice.Domain
                 eventType = eventType.MakeGenericType(entityType);
             }
             var constructor = eventType.GetConstructor(new[] { typeof(string) });
-            return ((DataEvent)constructor!.Invoke(new object[] { dataEvent.Name })).SetAuditRecord(record);
+            if (constructor != null)
+            {
+                return ((DataEvent)constructor.Invoke(new object[] { dataEvent.Name })).SetAuditRecord(record);
+            }
+            else
+            {
+                constructor = eventType.GetConstructor(new Type[0]);
+                return ((DataEvent)constructor!.Invoke(new object[0])).SetAuditRecord(record);
+            }
         }
     }
 }

@@ -164,18 +164,19 @@ namespace Juice.EF.Tests
             var editedContent = await dbContext.Contents.FirstOrDefaultAsync(c => c.Code.Equals(code1));
 
             Assert.Equal("New value", addedContent[property]);
+
+            await Task.Delay(1000);
         }
 
         [Fact(DisplayName = "Data event handle"), TestPriority(1)]
         public async Task DataEvent_should_be_handle_Async()
         {
             var mediator = _serviceProvider.GetRequiredService<IMediator>();
-            var dataEvent = DataEvents.Inserted.Create(typeof(DataEvent<>), typeof(Content), new AuditRecord("TestTable"));
+            var dataEvent = DataEvents.Inserted.Create(typeof(DataInserted<>), typeof(Content), new AuditRecord("TestTable"));
 
             await mediator.Publish(dataEvent).ConfigureAwait(false);
             await Task.Delay(1000);
         }
     }
 
-    internal class TestEntity { }
 }

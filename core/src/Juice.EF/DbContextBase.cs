@@ -19,7 +19,16 @@ namespace Juice.EF
         #endregion
 
         #region Auditable context
-        public virtual Type? EventType => typeof(DataEvent<>);
+        public virtual Type? EventType(string name)
+        {
+            return name switch
+            {
+                nameof(DataEvents.Inserted) => typeof(DataInserted<>),
+                nameof(DataEvents.Modified) => typeof(DataModified<>),
+                nameof(DataEvents.Deleted) => typeof(DataDeleted<>),
+                _ => null
+            };
+        }
         public string? User { get; protected set; }
 
         public List<AuditEntry>? PendingAuditEntries { get; protected set; }
@@ -41,10 +50,7 @@ namespace Juice.EF
         public DbContextBase(DbContextOptions options)
             : base(options)
         {
-            if(EventType !=null && !typeof(DataEvent).IsAssignableFrom(EventType))
-            {
-                throw new InvalidOperationException($"The {nameof(EventType)} must be a type of {typeof(DataEvent).FullName}");
-            }
+            
         }
 
         public virtual void ConfigureServices(IServiceProvider serviceProvider)
