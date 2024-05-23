@@ -1,5 +1,5 @@
 ﻿using System.Security.Claims;
-using Juice.Domain;
+using Juice.Domain.Events;
 using Juice.EF.Extensions;
 using MediatR;
 using Microsoft.AspNetCore.Http;
@@ -19,7 +19,9 @@ namespace Juice.EF
         #endregion
 
         #region Auditable context
-        public virtual Type? EventType(string name)
+
+        public virtual Type? AuditEventType => typeof(AuditEvent<>);
+        public virtual Type? DataEventType(string name)
         {
             return name switch
             {
@@ -30,8 +32,8 @@ namespace Juice.EF
             };
         }
         public string? User { get; protected set; }
-
-        public List<AuditEntry>? PendingAuditEntries { get; protected set; }
+        public List<DataEvent> PendingDataEvents { get; set; } = new List<DataEvent>();
+        public List<AuditEntry> PendingAuditEntries { get; set; } = new List<AuditEntry>();
 
         #endregion
 
@@ -111,19 +113,15 @@ namespace Juice.EF
 
         private void ProcessingChanges()
         {
-            if (PendingAuditEntries == null)
-            { return; }
             if (!this.HasActiveTransaction)
             {
-                _mediator.DispatchDataChangeEventsAsync(this).GetAwaiter().GetResult();
+                _mediator.DispatchDataChangeEventsAsync(this, _logger).GetAwaiter().GetResult();
             }
         }
 
         public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default(CancellationToken))
         {
-            //var cts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, cancellationToken);
-            this.SetAuditInformation(_logger);
-            PendingAuditEntries = _mediator != null ? this.TrackingChanges(_logger)?.ToList() : default;
+            this.TrackingChanges(_logger);
 
             try
             {
@@ -151,8 +149,7 @@ namespace Juice.EF
 
         public override int SaveChanges(bool acceptAllChangesOnSuccess)
         {
-            this.SetAuditInformation(_logger);
-            PendingAuditEntries = _mediator != null ? this.TrackingChanges(_logger)?.ToList() : default;
+            this.TrackingChanges(_logger);
             try
             {
                 _mediator.DispatchDomainEventsAsync(this).GetAwaiter().GetResult();
@@ -184,7 +181,7 @@ namespace Juice.EF
             {
                 await _pendingRefreshEntities.RefreshEntriesAsync();
             }
-            await _mediator.DispatchDataChangeEventsAsync(this);
+            await _mediator.DispatchDataChangeEventsAsync(this, _logger);
         }
         #endregion
 

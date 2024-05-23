@@ -1,5 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore.ChangeTracking;
-using Juice.Domain;
+using Juice.Domain.Events;
 
 namespace Juice.EF
 {
@@ -20,8 +20,9 @@ namespace Juice.EF
         /// <summary>
         /// Get data event of the audit entry
         /// </summary>
-        public DataEvent? DataEvent(Type eventType)
-            => _dataEvent!=null ? _dataEvent.Create(eventType, Entity?.GetType(), CreateRecord()) : null;
+        public DataEvent? AuditEvent(Type eventType)
+            => _dataEvent!=null ? _dataEvent.CreateAuditEvent(eventType, Entity?.GetType(), CreateRecord()) : null;
+
         public bool HasDataEvent => _dataEvent != null;
         public string? EventType => _dataEvent?.Name;
         public string? User { get; set; }

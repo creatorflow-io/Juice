@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Juice.Domain;
+using Juice.Domain.Events;
 using Juice.EF.Tests.Domain;
 using Juice.EF.Tests.EventHandlers;
 using Juice.EF.Tests.Infrastructure;
@@ -39,6 +39,8 @@ namespace Juice.EF.Tests
                 var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
                 var configuration = configService.GetConfiguration();
 
+                services.AddSingleton<SharedService>();
+
                 // Register DbContext class
                 services.AddTransient(provider =>
                 {
@@ -54,7 +56,7 @@ namespace Juice.EF.Tests
 
                 services.AddMediatR(options =>
                 {
-                    options.RegisterServicesFromAssemblyContaining(typeof(DataEventHandler<>));
+                    options.RegisterServicesFromAssemblyContaining(typeof(EFTest));
                 });
 
                 services.AddDefaultStringIdGenerator();
@@ -129,6 +131,8 @@ namespace Juice.EF.Tests
         public async Task Dynamic_entity_update_property_Async()
         {
             var dbContext = _serviceProvider.GetRequiredService<TestContext>();
+            var sharedService = _serviceProvider.GetRequiredService<SharedService>();
+            sharedService.Handlers.Clear();
 
             var idGenerator = _serviceProvider.GetRequiredService<IStringIdGenerator>();
 
@@ -148,11 +152,16 @@ namespace Juice.EF.Tests
 
             _logger.LogInformation("Content {code} was added", code1);
 
+            Assert.Contains(typeof(ContentDataEventHandler).Name, sharedService.Handlers);
+            Assert.Contains(typeof(AuditEventHandler<AuditEvent<Content>>).Name, sharedService.Handlers);
+            Assert.Contains(typeof(DataEventHandler<DataInserted<Content>>).Name, sharedService.Handlers);
+
+            sharedService.Handlers.Clear();
             var addedContent = await dbContext.Contents.FirstOrDefaultAsync(c => c.Code.Equals(code1));
 
             Assert.NotNull(addedContent);
 
-            Assert.Equal(initValue, addedContent[property]);
+            Assert.Equal(initValue, addedContent![property]);
 
             _logger.LogInformation("Content {code} was verified", code1);
 
@@ -161,6 +170,9 @@ namespace Juice.EF.Tests
 
             _logger.LogInformation("Content {code} was updated new value for property {property}", code1, property);
 
+            Assert.DoesNotContain(typeof(ContentDataEventHandler).Name, sharedService.Handlers);
+            Assert.Contains(typeof(AuditEventHandler<AuditEvent<Content>>).Name, sharedService.Handlers);
+            Assert.Contains(typeof(DataEventHandler<DataInserted<Content>>).Name, sharedService.Handlers);
             var editedContent = await dbContext.Contents.FirstOrDefaultAsync(c => c.Code.Equals(code1));
 
             Assert.Equal("New value", addedContent[property]);
@@ -172,7 +184,7 @@ namespace Juice.EF.Tests
         public async Task DataEvent_should_be_handle_Async()
         {
             var mediator = _serviceProvider.GetRequiredService<IMediator>();
-            var dataEvent = DataEvents.Inserted.Create(typeof(DataInserted<>), typeof(Content), new AuditRecord("TestTable"));
+            var dataEvent = DataEvents.Inserted.CreateAuditEvent(typeof(DataInserted<>), typeof(Content), new AuditRecord("TestTable"));
 
             await mediator.Publish(dataEvent).ConfigureAwait(false);
             await Task.Delay(1000);

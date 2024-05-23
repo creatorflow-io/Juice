@@ -1,4 +1,4 @@
-﻿using Juice.Domain;
+﻿using Juice.Domain.Events;
 namespace Juice.EF
 {
     public interface IAuditableDbContext
@@ -9,9 +9,13 @@ namespace Juice.EF
         /// <para><see cref="DataEvents.Modified"/></para>
         /// <para><see cref="DataEvents.Deleted"/></para>
         /// </summary>
-        Type? EventType(string name);
+        Type? DataEventType(string name);
 
-        List<AuditEntry>? PendingAuditEntries { get; }
+        List<DataEvent> PendingDataEvents { get; set; }
+
+        Type? AuditEventType { get; }
+
+        List<AuditEntry> PendingAuditEntries { get; set; }
 
         string? User { get; }
     }

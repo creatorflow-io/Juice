@@ -1,4 +1,4 @@
-﻿namespace Juice.Domain
+﻿namespace Juice.Domain.Events
 {
     public record AuditRecord
     {

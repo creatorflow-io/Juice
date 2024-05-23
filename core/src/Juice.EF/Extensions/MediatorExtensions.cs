@@ -36,31 +36,50 @@ namespace Juice.EF.Extensions
             {
                 if (ctx.PendingAuditEntries != null && ctx.PendingAuditEntries.Any())
                 {
-                    foreach (var auditEntry in ctx.PendingAuditEntries)
+                    if (mediator != null)
                     {
-                        // Get the final value of the temporary properties
-                        foreach (var prop in auditEntry.TemporaryProperties)
+                        foreach (var auditEntry in ctx.PendingAuditEntries)
                         {
-                            if (prop.Metadata.IsPrimaryKey())
+                            // Get the final value of the temporary properties
+                            foreach (var prop in auditEntry.TemporaryProperties)
                             {
-                                auditEntry.KeyValues[prop.Metadata.Name] = prop.CurrentValue;
+                                if (prop.Metadata.IsPrimaryKey())
+                                {
+                                    auditEntry.KeyValues[prop.Metadata.Name] = prop.CurrentValue;
+                                }
+                                else
+                                {
+                                    auditEntry.CurrentValues[prop.Metadata.Name] = prop.CurrentValue;
+                                }
                             }
-                            else
+                            if (auditEntry.HasDataEvent && ctx.AuditEventType != null)
                             {
-                                auditEntry.CurrentValues[prop.Metadata.Name] = prop.CurrentValue;
-                            }
-                        }
-                        if (auditEntry.HasDataEvent && mediator != null)
-                        {
-                            var eventType = ctx.EventType(auditEntry.EventType!);
-                            if (eventType != null)
-                            {
-                                // Save the Audit entry
-                                await mediator.Publish(auditEntry.DataEvent(eventType)!);
+                                // Publish the Audit event
+                                var @event = auditEntry.AuditEvent(ctx.AuditEventType);
+                                await mediator.Publish(@event!);
+                                if(logger != null && logger.IsEnabled(LogLevel.Debug))
+                                {
+                                    logger.LogDebug("[DispatchDataChangeEvents] Published an {type}: {name}", @event!.GetType().Name, @event!.Name);
+                                }
                             }
                         }
                     }
                     ctx.PendingAuditEntries.Clear();
+                }
+                if (ctx.PendingDataEvents != null && ctx.PendingDataEvents.Any())
+                {
+                    if (mediator != null)
+                    {
+                        foreach (var dataEvent in ctx.PendingDataEvents)
+                        {
+                            await mediator.Publish(dataEvent);
+                            if(logger != null && logger.IsEnabled(LogLevel.Debug))
+                            {
+                                logger.LogDebug("[DispatchDataChangeEvents] Published an {type}: {name}", dataEvent.GetType().Name, dataEvent.Name);
+                            }
+                        }
+                    }
+                    ctx.PendingDataEvents.Clear();
                 }
             }
             catch (Exception ex)

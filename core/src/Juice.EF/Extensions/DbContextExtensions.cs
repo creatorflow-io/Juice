@@ -1,4 +1,6 @@
 ﻿using Juice.Domain;
+using Juice.Domain.Events;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata;
@@ -11,13 +13,14 @@ namespace Juice.EF.Extensions
 {
     public static class DbContextExtensions
     {
+        [Obsolete("This business has moved to the TrackingChanges method")]
         public static void SetAuditInformation<TContext>(this TContext context, ILogger? logger = default)
             where TContext : DbContext, IAuditableDbContext
         {
+            return;
             try
             {
                 var addedEntities = context.ChangeTracker.Entries()
-                    .Where(entry => entry.Metadata.IsAuditable())
                     .Where(entry => entry.State == EntityState.Added).ToList();
                 var user = context.User;
 
@@ -28,7 +31,7 @@ namespace Juice.EF.Extensions
 
                 addedEntities.ForEach(entry =>
                 {
-                    if(entry.Entity is ICreationInfo)
+                    if (entry.Entity is ICreationInfo)
                     {
                         if (user != null && entry.Property(nameof(ICreationInfo.CreatedUser)).CurrentValue == null)
                         {
@@ -36,7 +39,7 @@ namespace Juice.EF.Extensions
                         }
                         entry.Property(nameof(ICreationInfo.CreatedDate)).CurrentValue = DateTimeOffset.Now;
                     }
-                    if(entry.Entity is IModificationInfo)
+                    if (entry.Entity is IModificationInfo)
                     {
                         entry.Property(nameof(IModificationInfo.ModifiedUser)).CurrentValue = user;
                         entry.Property(nameof(IModificationInfo.ModifiedDate)).CurrentValue = DateTimeOffset.Now;
@@ -50,7 +53,6 @@ namespace Juice.EF.Extensions
 
 
                 var editedEntities = context.ChangeTracker.Entries()
-                    .Where(entry => entry.Metadata.IsAuditable())
                     .Where(entry => entry.State == EntityState.Modified).ToList();
                 if (logger?.IsEnabled(LogLevel.Debug) ?? false)
                 {
@@ -58,12 +60,25 @@ namespace Juice.EF.Extensions
                 }
                 editedEntities.ForEach(entry =>
                 {
-                    if(entry.Entity is IModificationInfo)
+                    if (entry.Entity is IRemovable removeInfo && entry.Property(nameof(IRemovable.IsRemoved)).IsModified)
+                    {
+                        if (removeInfo.IsRemoved)
+                        {
+                            entry.Property(nameof(IRemovable.RemovedUser)).CurrentValue = user;
+                            entry.Property(nameof(IRemovable.RemovedDate)).CurrentValue = DateTimeOffset.Now;
+                        }
+                        else
+                        {
+                            entry.Property(nameof(IRemovable.RestoredUser)).CurrentValue = user;
+                            entry.Property(nameof(IRemovable.RestoredDate)).CurrentValue = DateTimeOffset.Now;
+                        }
+                    }
+                    else if (entry.Entity is IModificationInfo)
                     {
                         entry.Property(nameof(IModificationInfo.ModifiedUser)).CurrentValue = user;
                         entry.Property(nameof(IModificationInfo.ModifiedDate)).CurrentValue = DateTimeOffset.Now;
                     }
-                    if(entry.Entity is ICreationInfo)
+                    if (entry.Entity is ICreationInfo)
                     {
                         entry.Property(nameof(ICreationInfo.CreatedDate)).IsModified = false;
                         entry.Property(nameof(ICreationInfo.CreatedUser)).IsModified = false;
@@ -73,6 +88,7 @@ namespace Juice.EF.Extensions
                         logger.LogDebug("[Audit] Setted audit info for entry {entryId}", entry.Property("Id").CurrentValue ?? "");
                     }
                 });
+
             }
             catch (Exception ex)
             {
@@ -80,21 +96,107 @@ namespace Juice.EF.Extensions
             }
         }
 
-        public static IEnumerable<AuditEntry>? TrackingChanges<TContext>(this TContext context, ILogger? logger = default)
+        public static void TrackingChanges<TContext>(this TContext context, ILogger? logger = default)
             where TContext : DbContext, IAuditableDbContext
         {
             try
             {
-
                 context.ChangeTracker.DetectChanges();
                 var user = context.User;
-                var auditEntries = new List<AuditEntry>();
+
+                var auditEntriesCount = 0;
+                var dataEventsCount = 0;
+
                 foreach (var entry in context.ChangeTracker.Entries())
                 {
                     if (entry.State == EntityState.Detached || entry.State == EntityState.Unchanged)
                     {
                         continue;
                     }
+
+                    #region basic audit info
+
+                    if (entry.State == EntityState.Added)
+                    {
+                        #region set creation info
+                        if (entry.Entity is ICreationInfo)
+                        {
+                            if (user != null && entry.Property(nameof(ICreationInfo.CreatedUser)).CurrentValue == null)
+                            {
+                                entry.Property(nameof(ICreationInfo.CreatedUser)).CurrentValue = user;
+                            }
+                            entry.Property(nameof(ICreationInfo.CreatedDate)).CurrentValue = DateTimeOffset.Now;
+                        }
+                        #endregion
+
+                        #region add data event
+                        if (entry.Metadata.IsNoticeFor(EntityStates.Created)) {
+                            var eventType = context.DataEventType(nameof(DataEvents.Inserted));
+                            if(eventType!= null)
+                            {
+                                context.PendingDataEvents.Add(DataEvents.Inserted.CreateDataEvent(eventType, entry.Entity));
+                                dataEventsCount++;
+                            }
+                        }
+                        #endregion
+                    }
+                    else if(entry.State == EntityState.Modified)
+                    {
+                        #region set modification info
+                        if (entry.Entity is IRemovable removeInfo && entry.Property(nameof(IRemovable.IsRemoved)).IsModified)
+                        {
+                            if (removeInfo.IsRemoved)
+                            {
+                                entry.Property(nameof(IRemovable.RemovedUser)).CurrentValue = user;
+                                entry.Property(nameof(IRemovable.RemovedDate)).CurrentValue = DateTimeOffset.Now;
+                            }
+                            else
+                            {
+                                entry.Property(nameof(IRemovable.RestoredUser)).CurrentValue = user;
+                                entry.Property(nameof(IRemovable.RestoredDate)).CurrentValue = DateTimeOffset.Now;
+                            }
+                        }
+                        else if (entry.Entity is IModificationInfo)
+                        {
+                            entry.Property(nameof(IModificationInfo.ModifiedUser)).CurrentValue = user;
+                            entry.Property(nameof(IModificationInfo.ModifiedDate)).CurrentValue = DateTimeOffset.Now;
+                        }
+                        if (entry.Entity is ICreationInfo)
+                        {
+                            entry.Property(nameof(ICreationInfo.CreatedDate)).IsModified = false;
+                            entry.Property(nameof(ICreationInfo.CreatedUser)).IsModified = false;
+                        }
+                        #endregion
+
+                        #region add data event
+                        if (entry.Metadata.IsNoticeFor(EntityStates.Modified))
+                        {
+                            var eventType = context.DataEventType(nameof(DataEvents.Modified));
+                            if (eventType != null)
+                            {
+                                context.PendingDataEvents.Add(DataEvents.Modified.CreateDataEvent(eventType, entry.Entity));
+                                dataEventsCount++;
+                            }
+                        }
+                        #endregion
+                    }
+                    else if(entry.State == EntityState.Deleted)
+                    {
+                        #region add data event
+                        if (entry.Metadata.IsNoticeFor(EntityStates.Deleted))
+                        {
+                            var eventType = context.DataEventType(nameof(DataEvents.Deleted));
+                            if (eventType != null)
+                            {
+                                context.PendingDataEvents.Add(DataEvents.Modified.CreateDataEvent(eventType, entry.Entity));
+                                dataEventsCount++;
+                            }
+                        }
+                        #endregion
+                    }
+                    #endregion
+
+                    #region advanced audit info
                     if (!entry.Metadata.IsAuditable())
                     {
                         continue;
@@ -111,8 +213,6 @@ namespace Juice.EF.Extensions
                         User = user
                     };
                     if (!auditEntry.HasDataEvent) { continue; }
-
-                    auditEntries.Add(auditEntry);
 
                     var tableIdentifier = entry.Metadata != null ? StoreObjectIdentifier.Create(entry.Metadata, StoreObjectType.Table)
                         : default;
@@ -205,21 +305,23 @@ namespace Juice.EF.Extensions
                                 break;
                         }
                     }
+
+                    context.PendingAuditEntries.Add(auditEntry);
+                    auditEntriesCount++;
+                    #endregion
                 }
 
                 if (logger?.IsEnabled(LogLevel.Debug) ?? false)
                 {
-                    logger?.LogDebug("[TrackingChanges] collected {count} audit entries", auditEntries.Count);
+                    logger?.LogDebug("[TrackingChanges] collected {count} audit entries, {count1} data events", auditEntriesCount, dataEventsCount);
                 }
-                return auditEntries;
+
             }
             catch (Exception ex)
             {
                 logger?.LogError(ex, $"[TrackingChanges] {ex.Message}");
             }
-            return null;
         }
-
 
         public static bool HasUnsavedChanges<TContext>(this TContext context)
             where TContext : DbContext
