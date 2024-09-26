@@ -10,6 +10,7 @@ namespace Juice.EventBus
     {
         private readonly IServiceScopeFactory _scopeFactory;
         private List<Task> _tasks = new List<Task>();
+        private readonly Lock _lock = new();
         private bool _disposedValue;
 
         public InMemoryEventBus(IEventBusSubscriptionsManager subscriptionsManager,

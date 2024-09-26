@@ -20,7 +20,7 @@ namespace Juice.Collections
 
         private IComparer<T>? _comparer;
         private T[] _items = Array.Empty<T>();
-        private object _lock = new();
+        private readonly Lock _lock = new();
 
 
         /// <summary>

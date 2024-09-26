@@ -1,4 +1,5 @@
 ﻿using System.Net.Sockets;
+using System.Threading;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -21,7 +22,7 @@ namespace Juice.EventBus.RabbitMQ
         private bool _disposed;
         private bool _disposing;
 
-        private object sync_root = new object();
+        private Lock sync_root = new();
 
         public DefaultRabbitMQPersistentConnection(IOptions<RabbitMQOptions> optionsAccessor,
             ILogger<DefaultRabbitMQPersistentConnection> logger)
