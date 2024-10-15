@@ -2,7 +2,7 @@ name: Build and Test
 
 on:
   push:
-    branches: [ "dev/**" ]
+    branches: [ "master", "dev/**" ]
     paths-ignore:
       - '*.md'
   workflow_dispatch:
