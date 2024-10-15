@@ -1,4 +1,5 @@
-﻿using Juice.EventBus;
+﻿using Juice;
+using Juice.EventBus;
 using Juice.Modular;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Caching.Distributed;
@@ -46,6 +47,12 @@ app.MapGet("/readcache", async (context) =>
     await context.Response.WriteAsync(value??"(empty)");
 });
 
+app.MapGet("/action", async (context) =>
+{
+    var rs = new TG().Action();
+    await context.Response.WriteAsJsonAsync(rs.Exception!.StackTrace);
+});
+
 app.Run();
 
 
@@ -69,4 +76,20 @@ public class LogEventHandler : IIntegrationEventHandler<LogEvent>
         return Task.CompletedTask;
     }
 }
-
+internal class TR
+{
+    public IOperationResult Action()
+    {
+        return OperationResult.NotImplemented();
+        try { throw new NotImplementedException(); }
+        catch (Exception ex)
+        {
+            return OperationResult.Failed(ex);
+        }
+    }
+}
+internal class TG {
+    public IOperationResult Action() {
+        return new TR().Action();
+    }
+}
