@@ -1,5 +1,7 @@
-﻿using Juice.Operation;
+﻿using System.Runtime.CompilerServices;
+using Juice.Operation;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Juice
 {
@@ -12,6 +14,7 @@ namespace Juice
         [JsonIgnore]
         public Exception? Exception { get; }
         public void ThrowIfNotSucceeded();
+        public string ToString();
     }
 
     public interface IOperationResult<T> : IOperationResult
@@ -82,6 +85,14 @@ namespace Juice
         /// <returns></returns>
         public static bool IsNotImplemented(this IOperationResult operationResult)
             => operationResult.Failure == OperationalFailure.NotImplemented;
+
+        /// <summary>
+        /// Determine if an <see cref="IOperationResult"/> is argument null
+        /// </summary>
+        /// <param name="operationResult"></param>
+        /// <returns></returns>
+        public static bool IsInvalidArgument(this IOperationResult operationResult)
+            => operationResult.Failure == OperationalFailure.InvalidArgument;
     }
 
     public class OperationResult
@@ -109,7 +120,7 @@ namespace Juice
 
         /// <summary>
         /// Create a failed <see cref="IOperationResult"/> with an <see cref="System.Exception"/>
-        /// <para>Consider using <see cref="Unauthorized"/> and <see cref="NotImplemented"/> if possible</para>
+        /// <para>Consider using <see cref="Unauthorized"/>, <see cref="NotImplemented"/>, <see cref="ArgumentNull"/>... if possible</para>
         /// </summary>
         /// <param name="ex"></param>
         /// <returns></returns>
@@ -122,7 +133,7 @@ namespace Juice
 
         /// <summary>
         /// Create a failed <see cref="IOperationResult"/> with an <see cref="System.Exception"/> and message
-        /// <para>Consider using <see cref="Unauthorized"/> and <see cref="NotImplemented"/> if possible</para>
+        /// <para>Consider using <see cref="Unauthorized"/>, <see cref="NotImplemented"/>, <see cref="ArgumentNull"/>... if possible</para>
         /// </summary>
         /// <param name="ex"></param>
         /// <param name="message"></param>
@@ -150,11 +161,12 @@ namespace Juice
         /// <summary>
         /// Create a not found <see cref="IOperationResult"/> with message
         /// </summary>
+        /// <param name="value"></param>
         /// <param name="name"></param>
         /// <param name="message"></param>
         /// <returns></returns>
-        public static IOperationResult NotFound(string name, string? message = null)
-            => new OperationResultInternal(OperationalFailure.NotFound, message ?? $"\"{name}\" could not be found");
+        public static IOperationResult NotFound(object? value, string? message = null, [CallerArgumentExpression(nameof(value))] string? name = null)
+            => new OperationResultInternal(OperationalFailure.NotFound, message ?? $"The {name ?? "value"} could not be found");
 
         /// <summary>
         /// Create a not implemented <see cref="IOperationResult"/>
@@ -188,6 +200,16 @@ namespace Juice
             }
             return new OperationResultInternal(OperationalFailure.Unauthorized, message ?? $"User must be authorized to performs {name ?? "the operation"}");
         }
+
+        /// <summary>
+        /// Create an argument null <see cref="IOperationResult"/>
+        /// </summary>
+        /// <param name="argument"></param>
+        /// <param name="paramName"></param>
+        /// <returns></returns>
+        public static IOperationResult ArgumentNull(object? argument, [CallerArgumentExpression("argument")] string? paramName = null)
+            => new OperationResultInternal(OperationalFailure.InvalidArgument, $"Argument \"{(paramName ?? "argument").Trim('"')}\" cannot be null");
+
         /// <summary>
         /// Create an <see cref="IOperationResult"/> from json
         /// </summary>
@@ -199,7 +221,7 @@ namespace Juice
         #region OperationResult<T>
         /// <summary>
         /// Create a failed <see cref="IOperationResult{T}"/> with an <see cref="System.Exception"/>
-        /// <para>Consider using <see cref="Unauthorized"/> and <see cref="NotImplemented"/> if possible</para>
+        /// <para>Consider using <see cref="Unauthorized"/>, <see cref="NotImplemented"/>, <see cref="ArgumentNull"/>... if possible</para>
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="ex"></param>
@@ -213,7 +235,7 @@ namespace Juice
 
         /// <summary>
         /// Create a failed <see cref="IOperationResult{T}"/> with an <see cref="System.Exception"/> and message
-        /// <para>Consider using <see cref="Unauthorized"/> and <see cref="NotImplemented"/> if possible</para>
+        /// <para>Consider using <see cref="Unauthorized"/>, <see cref="NotImplemented"/>, <see cref="ArgumentNull"/>... if possible</para>
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="ex"></param>
@@ -260,54 +282,29 @@ namespace Juice
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public static IOperationResult<T> NotFound<T>()
-            => new OperationResultInternal<T>(OperationalFailure.NotFound, $"\"{typeof(T).Name}\" could not be found");
-
-        /// <summary>
-        /// Create a not found <see cref="IOperationResult"/> with message
-        /// </summary>
-        /// <param name="name"></param>
-        /// <param name="message"></param>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
-        public static IOperationResult<T> NotFound<T>(string? name, string? message = null)
-            => new OperationResultInternal<T>(OperationalFailure.NotFound, message ?? $"\"{name ?? typeof(T).Name}\" could not be found"
-            );
+        public static IOperationResult<T> NotFound<T>(object? value, string? message = null, [CallerArgumentExpression(nameof(value))] string? name = null)
+            => new OperationResultInternal<T>(OperationalFailure.NotFound, message ?? $"The {name ?? "value"} could not be found");
 
         /// <summary>
         /// Create a not implemented <see cref="IOperationResult"/>
         /// </summary>
+        /// <typeparam name="T"></typeparam>
         /// <param name="name"></param>
         /// <param name="message"></param>
-        /// <typeparam name="T"></typeparam>
         /// <returns></returns>
         public static IOperationResult<T> NotImplemented<T>(string? name = default, string? message = null)
         {
             name ??= (new System.Diagnostics.StackTrace()).GetFrame(1)?.GetMethod()?.Name;
-
             if (name != null)
             {
                 name = $"The \"{name}\" method";
             }
-            return new OperationResultInternal<T>(OperationalFailure.NotImplemented, message ?? $"{name ?? "Method"} was not implemented");
+            return new OperationResultInternal<T>(OperationalFailure.NotImplemented, message ??
+                    $"{name ?? "Method"} was not implemented");
         }
 
-        /// <summary>
-        /// Create an unauthorized <see cref="IOperationResult"/> with message
-        /// </summary>
-        /// <param name="name"></param>
-        /// <param name="message"></param>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
-        public static IOperationResult<T> Unauthorized<T>(string? name = default, string? message = null)
-        {
-            name ??= (new System.Diagnostics.StackTrace()).GetFrame(1)?.GetMethod()?.Name;
-            if (name != null)
-            {
-                name = $"\"{name}\"";
-            }
-            return new OperationResultInternal<T>(OperationalFailure.Unauthorized, message ?? $"User must be authorized to performs {name ?? "the operation"}");
-        }
+        public static IOperationResult<T> ArgumentNull<T>(object? argument, [CallerArgumentExpression("argument")] string? paramName = null)
+            => new OperationResultInternal<T>(OperationalFailure.InvalidArgument, $"Argument \"{(paramName ?? "argument").Trim('"')}\" cannot be null");
 
         /// <summary>
         /// Create an <see cref="IOperationResult{T}"/> from json
