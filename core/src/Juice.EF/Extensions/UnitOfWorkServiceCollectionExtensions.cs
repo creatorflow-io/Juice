@@ -1,8 +1,8 @@
 ﻿using Juice.Domain;
-using Microsoft.Extensions.DependencyInjection;
+using Juice.EF;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace Juice.EF.Extensions
+namespace Microsoft.Extensions.DependencyInjection
 {
     public static class UnitOfWorkServiceCollectionExtensions
     {

@@ -88,14 +88,9 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <returns></returns>
         /// <exception cref="NotSupportedException"></exception>
         public static IServiceCollection AddEFMediatorRequestManager<T>(this IServiceCollection services, IConfiguration configuration,
-            Action<DbOptions>? configureOptions)
+            Action<DbOptions> configureOptions)
         {
-            services.AddScoped(p =>
-            {
-                var options = new DbOptions<ClientRequestContext<T>> { DatabaseProvider = "SqlServer" };
-                configureOptions?.Invoke(options);
-                return options;
-            });
+            services.AddDbOptions<ClientRequestContext<T>>(configureOptions);
 
             var dbOptions = services.BuildServiceProvider().GetRequiredService<DbOptions<ClientRequestContext<T>>>();
             var provider = dbOptions.DatabaseProvider;

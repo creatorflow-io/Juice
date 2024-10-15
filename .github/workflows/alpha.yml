@@ -3,7 +3,6 @@ name: Pack alpha packages
 on:
   push:
     branches:
-      - 'master'
       - 'release/*'
     paths-ignore:
       - '*.md'
