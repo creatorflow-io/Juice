@@ -23,21 +23,21 @@ namespace Juice.Models
 
         public virtual T? GetProperty<T>(Func<T>? defaultValue = null, [CallerMemberName] string? name = null)
         {
-            Validator.NotNullOrWhiteSpace(name, nameof(name));
+            ArgumentException.ThrowIfNullOrWhiteSpace(name);
             var item = Properties[name!];
             return item != null ? item.ToObject<T>() : defaultValue != null ? defaultValue() : default;
         }
 
         public virtual T? GetProperty<T>(Type type, Func<T>? defaultValue = null, [CallerMemberName] string? name = null)
         {
-            Validator.NotNullOrWhiteSpace(name, nameof(name));
+            ArgumentException.ThrowIfNullOrWhiteSpace(name);
             var item = Properties[name!];
             return (T?)item?.ToObject(type) ?? (defaultValue != null ? defaultValue() : default);
         }
 
         public virtual void SetProperty(object? value, [CallerMemberName] string? name = null)
         {
-            Validator.NotNullOrWhiteSpace(name, nameof(name));
+            ArgumentException.ThrowIfNullOrWhiteSpace(name);
             Properties = new JObject(Properties);
 
             OriginalPropertyValues[name!] = Properties[name!];

@@ -5,6 +5,7 @@
         None,
         NotFound,
         Unauthorized,
-        NotImplemented
+        NotImplemented,
+        InvalidArgument
     }
 }
