@@ -98,11 +98,11 @@ namespace Juice.Core.Tests
             rs.Succeeded.Should().BeFalse();
             rs.Failure.Should().Be(OperationalFailure.NotFound);
             _output.WriteLine(rs.ToString());
-
-            var rs1 = OR.NotFound<string>("User");
+            var user = "test";
+            var rs1 = OR.NotFound(user);
             _output.WriteLine(rs1.ToString());
 
-            var rs2 = OR.NotFound<OR>();
+            var rs2 = OR.NotFound<OR>(user);
             _output.WriteLine(rs2.ToString());
 
             var rs3 = rs2.Of<int?>("test. ");
@@ -125,11 +125,11 @@ namespace Juice.Core.Tests
             rs.Succeeded.Should().BeFalse();
             rs.Failure.Should().Be(OperationalFailure.Unauthorized);
             _output.WriteLine(rs.ToString());
-
-            var rs1 = OR.Unauthorized<string>("User");
+            var user = "test";
+            var rs1 = OR.Unauthorized(user);
             _output.WriteLine(rs1.ToString());
 
-            var rs2 = OR.Unauthorized<OR>();
+            var rs2 = OR.Unauthorized();
             _output.WriteLine(rs2.ToString());
 
             var rs3 = rs2.Of<int>();
@@ -147,10 +147,7 @@ namespace Juice.Core.Tests
             rs.Failure.Should().Be(OperationalFailure.NotImplemented);
             _output.WriteLine(rs.ToString());
 
-            var rs1 = OR.NotImplemented<string>("GetUser");
-            _output.WriteLine(rs1.ToString());
-
-            var rs2 = OR.NotImplemented<OR>();
+            var rs2 = OR.NotImplemented<string>();
             _output.WriteLine(rs2.ToString());
             _output.WriteLine("---------------- rs2 ---------------");
             _output.WriteLine(rs2.Exception?.StackTrace ?? "");
@@ -169,6 +166,7 @@ namespace Juice.Core.Tests
 
             var rs4 = new TR().Action();
             rs4.IsNotImplemented().Should().BeTrue();
+            _output.WriteLine(rs4.ToString());
             _output.WriteLine("---------------- rs4 ---------------");
             _output.WriteLine(rs4.Exception?.StackTrace ?? "");
             _output.WriteLine(rs4.StackTrace ?? "");
@@ -182,6 +180,28 @@ namespace Juice.Core.Tests
             {
                 _output.WriteLine(ex.StackTrace);
             }
+        }
+
+        [Fact]
+        public void OR_should_argument_null()
+        {
+            var rs = OR.ArgumentNull("test");
+            rs.Succeeded.Should().BeFalse();
+            rs.Failure.Should().Be(OperationalFailure.InvalidArgument);
+            _output.WriteLine(rs.ToString());
+
+            string? user = null;
+            var rs1 = OR.ArgumentNull<int>(user);
+            _output.WriteLine(rs1.ToString());
+
+            var rs2 = OR.ArgumentNull(rs1);
+            _output.WriteLine(rs2.ToString());
+
+            var rs3 = rs2.Of<int>();
+            _output.WriteLine(rs3.ToString());
+            rs3.Failure.Should().Be(OperationalFailure.InvalidArgument);
+
+            rs3.IsInvalidArgument().Should().BeTrue();
         }
 
         private IOperationResult Action()
