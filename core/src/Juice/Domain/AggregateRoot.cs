@@ -10,10 +10,10 @@ namespace Juice.Domain
         IValidatable
     {
         [NotMapped]
-        public IList<TNotification> DomainEvents { get; } = new List<TNotification>();
+        public IList<TNotification> DomainEvents { get; } = [];
 
         [NotMapped]
-        public IList<string> ValidationErrors { get; } = new List<string>();
+        public IList<string> ValidationErrors { get; } = [];
     }
 
     /// <summary>

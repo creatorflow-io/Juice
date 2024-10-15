@@ -2,22 +2,12 @@
 
 namespace Juice
 {
-    public static class Validator
+    public class Validator : IValidatable
     {
-        public static void NotNullOrWhiteSpace(string? value, [CallerArgumentExpression("value")] string? property = null, int? maxLength = default)
-        {
-            property ??= "value";
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                throw new ArgumentNullException(property);
-            }
-            if (maxLength.HasValue && value.Length > maxLength)
-            {
-                throw new ArgumentOutOfRangeException(property, $"Property {property} can be max {maxLength} characters long.");
-            }
-        }
+        public IList<string> ValidationErrors { get; } = [];
 
-        public static void NotExceededLength(string? value, int maxLength, [CallerArgumentExpression("value")] string? property = null)
+        #region Static Methods
+        public static void ThrowIfNotExceededLength(string? value, int maxLength, [CallerArgumentExpression(nameof(value))] string? property = null)
         {
             if (value?.Length > maxLength)
             {
@@ -25,5 +15,8 @@ namespace Juice
                 throw new ArgumentOutOfRangeException(property, $"Property {property} can be max {maxLength} characters long.");
             }
         }
+        public static Validator New => new();
+        #endregion
     }
+
 }

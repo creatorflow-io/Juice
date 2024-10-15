@@ -26,10 +26,12 @@ namespace Juice.Operation
             init
             {
                 _exception = value;
+                if (_exception == null) { return; }
                 if (Failure == OperationalFailure.None)
                 {
                     Failure = value is UnauthorizedAccessException ? OperationalFailure.Unauthorized
                     : value is NotImplementedException ? OperationalFailure.NotImplemented
+                    : value is ArgumentNullException ? OperationalFailure.InvalidArgument
                     : Failure;
                 }
                 SetTraceInfo();
@@ -80,7 +82,7 @@ namespace Juice.Operation
             _ => "Operation Failed"
         };
 
-        public override string? ToString()
+        public override string ToString()
             => Message ?? (Succeeded ? "Operation Succeeded" : FailureMessage);
 
     }
