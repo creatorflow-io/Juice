@@ -6,7 +6,7 @@ namespace Juice.Domain.Events
     {
         public DataEvent(string name)
         {
-            Validator.NotNullOrWhiteSpace(name, nameof(name));
+            ArgumentException.ThrowIfNullOrWhiteSpace(name, nameof(name));
             Name = name;
         }
         public string Name { get; private set; }

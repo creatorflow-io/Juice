@@ -18,14 +18,14 @@ namespace Juice.Domain
         protected Entity(TKey id, string name)
         {
             Id = id;
-            Validator.NotNullOrWhiteSpace(name, nameof(name));
+            ArgumentException.ThrowIfNullOrWhiteSpace(name);
             Name = name;
             Disabled = false;
         }
 
         public virtual void UpdateName(string name)
         {
-            Validator.NotNullOrWhiteSpace(name, nameof(name));
+            ArgumentException.ThrowIfNullOrWhiteSpace(name);
             Name = name;
         }
 
@@ -76,7 +76,7 @@ namespace Juice.Domain
         protected DynamicEntity(TKey id, string name)
         {
             Id = id;
-            Validator.NotNullOrWhiteSpace(name, nameof(name));
+            ArgumentException.ThrowIfNullOrWhiteSpace(name);
             Name = name;
             Disabled = false;
         }
@@ -93,7 +93,7 @@ namespace Juice.Domain
 
         public virtual void UpdateName(string name)
         {
-            Validator.NotNullOrWhiteSpace(name, nameof(name));
+            ArgumentException.ThrowIfNullOrWhiteSpace(name);
             Name = name;
         }
 
