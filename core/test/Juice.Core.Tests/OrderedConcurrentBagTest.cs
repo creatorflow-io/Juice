@@ -104,7 +104,9 @@ namespace Juice.Core.Tests
                     }
                 }));
             }
-            Task.WaitAll(bagConsumeTasks.ToArray());
+#pragma warning disable xUnit1031 // Do not use blocking task operations in test method
+            Task.WaitAll([.. bagConsumeTasks]);
+#pragma warning restore xUnit1031 // Do not use blocking task operations in test method
             clock.Stop();
             _output.WriteLine("Total took {0}ms", clock.ElapsedMilliseconds);
 
