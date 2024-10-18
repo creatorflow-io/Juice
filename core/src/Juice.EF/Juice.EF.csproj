@@ -12,7 +12,7 @@
         <PackageReference Include="Microsoft.EntityFrameworkCore" Version="$(EFVersion)" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="$(EFVersion)" />
         <PackageReference Label="severity vulnerability fix" Include="Microsoft.Data.SqlClient" Version="5.2.2" />
-        <PackageReference Label="severity vulnerability fix" Include="System.Runtime.Caching" Version="8.0.1" />
+        <PackageReference Label="severity vulnerability fix" Include="Microsoft.Extensions.Caching.Memory" Version="$(MicrosoftExtensionsVersion)" />
         <PackageReference Include="System.Drawing.Common" Version="8.0.10" />
     </ItemGroup>
 
