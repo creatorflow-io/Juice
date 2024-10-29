@@ -1,6 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
 using Juice.Operation;
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
+using System.Text.Json;
 
 namespace Juice
 {
@@ -14,6 +15,8 @@ namespace Juice
         public Exception? Exception { get; }
         public void ThrowIfNotSucceeded();
         public string ToString();
+
+        public virtual OperationModel OperationModel => new OperationModel(Message, StackTrace, Succeeded, Failure);
     }
 
     public interface IOperationResult<T> : IOperationResult
@@ -23,6 +26,8 @@ namespace Juice
         public T DataValue => Data ?? throw new InvalidOperationException("Data is null");
         public bool HasData => Data != null;
         public bool SucceededWithData => Succeeded && HasData;
+
+        public new virtual OperationModel<T> OperationModel => new OperationModel<T>(Message, StackTrace, Succeeded, Failure, DataValue);
     }
 
     public static class OperationResultExtensions
@@ -214,7 +219,7 @@ namespace Juice
         /// </summary>
         /// <param name="json"></param>
         /// <returns></returns>
-        public static IOperationResult? FromJson(string json) => JsonConvert.DeserializeObject<OperationResultInternal>(json);
+        public static IOperationResult? FromJson(string json) => JsonSerializer.Deserialize<OperationResultInternal>(json);
         #endregion
 
         #region OperationResult<T>
@@ -311,7 +316,7 @@ namespace Juice
         /// <typeparam name="T"></typeparam>
         /// <param name="json"></param>
         /// <returns></returns>
-        public static IOperationResult<T>? FromJson<T>(string json) => JsonConvert.DeserializeObject<OperationResultInternal<T>>(json);
+        public static IOperationResult<T>? FromJson<T>(string json) => JsonSerializer.Deserialize<OperationResultInternal<T>>(json);
 
         #endregion
 

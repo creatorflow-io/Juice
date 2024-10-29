@@ -81,11 +81,11 @@ internal class TR
     public IOperationResult Action()
     {
         return OperationResult.NotImplemented();
-        try { throw new NotImplementedException(); }
-        catch (Exception ex)
-        {
-            return OperationResult.Failed(ex);
-        }
+        //try { throw new NotImplementedException(); }
+        //catch (Exception ex)
+        //{
+        //    return OperationResult.Failed(ex);
+        //}
     }
 }
 internal class TG {
