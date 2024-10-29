@@ -1,25 +1,14 @@
 ﻿using System.Dynamic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using Juice.Domain;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-
 namespace Juice.Models
 {
     public class DynamicModel : DynamicObject, IDynamic
     {
         #region Dynamic
 
-        public virtual JObject Properties { get; set; } = new JObject();
-
-        [JsonIgnore]
-        [System.Text.Json.Serialization.JsonIgnore]
-        public virtual Dictionary<string, object?> OriginalPropertyValues { get; set; } = [];
-
-        [JsonIgnore]
-        [System.Text.Json.Serialization.JsonIgnore]
-        public virtual Dictionary<string, object?> CurrentPropertyValues { get; set; } = [];
+        public virtual JObject Properties { get; set; } = [];
 
         public virtual T? GetProperty<T>(Func<T>? defaultValue = null, [CallerMemberName] string? name = null)
         {
@@ -35,17 +24,11 @@ namespace Juice.Models
             return (T?)item?.ToObject(type) ?? (defaultValue != null ? defaultValue() : default);
         }
 
-        public virtual void SetProperty(object? value, [CallerMemberName] string? name = null)
+        public virtual void SetProperty<T>(T? value, [CallerMemberName] string? name = null)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(name);
-            Properties = new JObject(Properties);
-
-            OriginalPropertyValues[name!] = Properties[name!];
-
+            Properties ??= [];
             var val = value != null ? JToken.FromObject(value) : JValue.CreateNull();
-
-            CurrentPropertyValues[name!] = val;
-
             Properties[name!] = val;
         }
 

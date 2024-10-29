@@ -24,7 +24,7 @@ namespace Juice.EF.Tests.Infrastructure
             {
                 entity.ToTable(nameof(Content), SCHEMA);
 
-                //entity.IsDynamicExpandable(this);
+                //entity.IsExpandable(this);
                 //entity.IsAuditable();
 
                 entity.Property(m => m.Code).HasMaxLength(Constants.NameLength);

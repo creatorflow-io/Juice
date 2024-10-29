@@ -111,34 +111,21 @@ namespace Juice.Domain
 
     }
 
-    public abstract class DynamicEntity : DynamicObject, IDynamic
+    public abstract class DynamicEntity : DynamicObject, IExpandable
     {
         #region Dynamic
 
-        [NotMapped]
-        public string SerializedProperties
-        {
-            get
-            {
-                return Properties.ToString(Formatting.None);
-            }
-            set
-            {
-                Properties = JsonConvert.DeserializeObject<JObject>(string.IsNullOrEmpty(value) ? "{}" : value) ?? new JObject();
-            }
-        }
-
-        public virtual JObject Properties { get; set; } = new JObject();
+        public virtual JObject Properties { get; private set; } = new();
 
         [NotMapped]
         [JsonIgnore]
         [System.Text.Json.Serialization.JsonIgnore]
-        public virtual Dictionary<string, object?> OriginalPropertyValues { get; set; } = new Dictionary<string, object?>();
+        public virtual Dictionary<string, JToken?> OriginalPropertyValues { get; private set; } = [];
 
         [NotMapped]
         [JsonIgnore]
         [System.Text.Json.Serialization.JsonIgnore]
-        public virtual Dictionary<string, object?> CurrentPropertyValues { get; set; } = new Dictionary<string, object?>();
+        public virtual Dictionary<string, JToken?> CurrentPropertyValues { get; private set; } = [];
 
         public virtual T? GetProperty<T>(Func<T>? defaultValue = null, [CallerMemberName] string? name = null)
         {
@@ -150,23 +137,13 @@ namespace Juice.Domain
             return item != null ? item.ToObject<T>() : defaultValue != null ? defaultValue() : default;
         }
 
-        public virtual T? GetProperty<T>(Type type, Func<T>? defaultValue = null, [CallerMemberName] string? name = null)
+        public virtual void SetProperty<T>(T? value, [CallerMemberName] string? name = null)
         {
             if (string.IsNullOrWhiteSpace(name))
             {
                 throw new ArgumentNullException(nameof(name));
             }
-            var item = Properties[name];
-            return item != null ? (T?)item?.ToObject(type) : defaultValue != null ? defaultValue() : default;
-        }
-
-        public virtual void SetProperty(object? value, [CallerMemberName] string? name = null)
-        {
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                throw new ArgumentNullException(nameof(name));
-            }
-            Properties = new JObject(Properties) ?? new JObject();
+            Properties = new JObject(Properties);
 
             OriginalPropertyValues[name] = Properties[name];
 
