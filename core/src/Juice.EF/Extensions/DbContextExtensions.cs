@@ -5,14 +5,13 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace Juice.EF.Extensions
 {
     public static class DbContextExtensions
     {
-       
+
         public static void TrackingChanges<TContext>(this TContext context, ILogger? logger = default)
             where TContext : DbContext, IAuditableDbContext
         {
@@ -75,7 +74,7 @@ namespace Juice.EF.Extensions
                                     {
                                         foreach (var kvp in expandable.CurrentPropertyValues)
                                         {
-                                            auditEntry.CurrentValues[kvp.Key] = kvp.Value;
+                                            auditEntry.CurrentValues[kvp.Key] = kvp.Value?.ToString();
                                         }
 
                                         break;
@@ -109,8 +108,8 @@ namespace Juice.EF.Extensions
                                             foreach (var kvp in expandable1.OriginalPropertyValues)
                                             {
                                                 // removed or modified property
-                                                if (!expandable1.CurrentPropertyValues.ContainsKey(kvp.Key) ||
-                                                    expandable1.CurrentPropertyValues[kvp.Key]?.ToString() != kvp.Value?.ToString())
+                                                if (!expandable1.CurrentPropertyValues.ContainsKey(kvp.Key)
+                                                    || expandable1.CurrentPropertyValues[kvp.Key] != kvp.Value)
                                                 {
                                                     auditEntry.OriginalValues[kvp.Key] = kvp.Value;
                                                     auditEntry.CurrentValues[kvp.Key] =
@@ -158,9 +157,10 @@ namespace Juice.EF.Extensions
                         #endregion
 
                         #region add data event
-                        if (entry.Metadata.IsNoticeFor(EntityStates.Created)) {
+                        if (entry.Metadata.IsNoticeFor(EntityStates.Created))
+                        {
                             var eventType = context.DataEventType(nameof(DataEvents.Inserted));
-                            if(eventType!= null)
+                            if (eventType != null)
                             {
                                 context.PendingDataEvents.Add(DataEvents.Inserted.CreateDataEvent(eventType, entry.Entity));
                                 dataEventsCount++;
@@ -168,7 +168,7 @@ namespace Juice.EF.Extensions
                         }
                         #endregion
                     }
-                    else if(entry.State == EntityState.Modified)
+                    else if (entry.State == EntityState.Modified)
                     {
                         #region set modification info
                         if (entry.Entity is IRemovable removeInfo && entry.Property(nameof(IRemovable.IsRemoved)).IsModified)
@@ -208,7 +208,7 @@ namespace Juice.EF.Extensions
                         }
                         #endregion
                     }
-                    else if(entry.State == EntityState.Deleted)
+                    else if (entry.State == EntityState.Deleted)
                     {
                         #region add data event
                         if (entry.Metadata.IsNoticeFor(EntityStates.Deleted))
@@ -229,7 +229,7 @@ namespace Juice.EF.Extensions
                     {
                         continue;
                     }
-                    
+
                     context.PendingAuditEntries.Add(auditEntry);
                     auditEntriesCount++;
                     #endregion
@@ -295,33 +295,31 @@ namespace Juice.EF.Extensions
                     if (property != null)
                     {
                         property.IsModified = false;
-                        _refreshEntries.Add(entry);
-                        var expandable = entry.Entity;
+                    }
+                    _refreshEntries.Add(entry);
+                    var expandable = entry.Entity;
 
-                        // Get Key value
-                        var primaryKey = entry.Metadata.FindPrimaryKey();
-                        var keyProp = primaryKey?.Properties?.Select(p => p.PropertyInfo)?.Single();
-                        var keyColumn = primaryKey?.Properties?.Select(p => p.GetColumnName(tableIdentifier.Value))?.Single();
-                        var key = keyProp?.GetValue(expandable, null);
-                        if (key != null && !string.IsNullOrEmpty(keyColumn))
+                    // Get Key value
+                    var primaryKey = entry.Metadata.FindPrimaryKey();
+                    var keyProp = primaryKey?.Properties?.Select(p => p.PropertyInfo)?.Single();
+                    var keyColumn = primaryKey?.Properties?.Select(p => p.GetColumnName(tableIdentifier.Value))?.Single();
+                    var key = keyProp?.GetValue(expandable, null);
+                    if (key != null && !string.IsNullOrEmpty(keyColumn))
+                    {
+                        foreach (var kvp in expandable.OriginalPropertyValues)
                         {
-                            foreach (var kvp in expandable.OriginalPropertyValues)
+                            var currentValue = expandable.CurrentPropertyValues[kvp.Key];
+                            if (currentValue != kvp.Value)
                             {
-                                var currentValue = expandable.CurrentPropertyValues[kvp.Key];
-                                if (currentValue != kvp.Value)
+                                var (sql, sqlargs) = provider == "Npgsql.EntityFrameworkCore.PostgreSQL" ?
+                                     PostgreSQLJsonModify(entry.Metadata, args.Count, kvp.Key, currentValue, keyColumn, key, propertyColumn)
+                                    : SqlServerJsonModify(entry.Metadata, args.Count, kvp.Key, currentValue, keyColumn, key, propertyColumn);
+
+                                updates.Add(sql);
+                                args.AddRange(sqlargs);
+                                if (logger?.IsEnabled(LogLevel.Debug) ?? false)
                                 {
-                                    var value = JsonConvert.SerializeObject(currentValue);
-
-                                    var (sql, sqlargs) = provider == "Npgsql.EntityFrameworkCore.PostgreSQL" ?
-                                         PostgreSQLJsonModify(entry.Metadata, args.Count, kvp.Key, value, keyColumn, key, propertyColumn)
-                                        : SqlServerJsonModify(entry.Metadata, args.Count, kvp.Key, value, keyColumn, key, propertyColumn);
-
-                                    updates.Add(sql);
-                                    args.AddRange(sqlargs);
-                                    if (logger?.IsEnabled(LogLevel.Debug) ?? false)
-                                    {
-                                        logger?.LogDebug(sql);
-                                    }
+                                    logger?.LogDebug(sql);
                                 }
                             }
                         }
@@ -332,41 +330,38 @@ namespace Juice.EF.Extensions
         }
 
         private static (string SQL, object[] ARGs) SqlServerJsonModify(IEntityType metadata,
-            int argCount, string propertyKey, string propertyValue,
+            int argCount, string propertyKey, JToken? propertyValue,
             string keyColumn, object keyValue, string propertyColumn)
         {
-            var token = JToken.Parse(propertyValue);
-            if (token is JArray || token is JObject)
+            if (propertyValue is JArray || propertyValue is JObject)
             {
-                propertyValue = token.ToString(Formatting.None);
                 var sql = $"Update [{metadata.GetSchema()}].[{metadata.GetTableName()}] set [{propertyColumn}]=JSON_MODIFY([{propertyColumn}], '$.\"{propertyKey}\"', JSON_QUERY  ({{{argCount}}})) where [{keyColumn}] = {{{argCount + 1}}}";
 
-                return (sql, new object[] { propertyValue, keyValue });
+                return (sql, new object[] { propertyValue.ToString(), keyValue });
             }
             else
             {
-                propertyValue = propertyValue.Trim('"');
+                var value = propertyValue?.ToString().Trim('"') ?? "null";
                 var sql = $"Update [{metadata.GetSchema()}].[{metadata.GetTableName()}] set [{propertyColumn}]=JSON_MODIFY([{propertyColumn}], '$.\"{propertyKey}\"', {{{argCount}}}) where [{keyColumn}] = {{{argCount + 1}}}";
 
-                return (sql, new object[] { propertyValue, keyValue });
+                return (sql, new object[] { value, keyValue });
             }
         }
 
         private static (string SQL, object[] ARGs) PostgreSQLJsonModify(IEntityType metadata,
-            int argCount, string propertyKey, string propertyValue,
+            int argCount, string propertyKey, JToken? propertyValue,
             string keyColumn, object keyValue, string propertyColumn)
         {
-            var token = JToken.Parse(propertyValue);
-            propertyValue = token.ToString(Formatting.None);
-            if (token is JObject)
+            var value = propertyValue?.ToString();
+            if (propertyValue is JObject)
             {
-                var sql = $"Update \"{metadata.GetSchema()}\".\"{metadata.GetTableName()}\" set \"{propertyColumn}\"=jsonb_set(\"{propertyColumn}\", '{{{{{propertyKey}}}}}', jsonb '{{{propertyValue}}}', true) where \"{keyColumn}\" = {{{argCount}}}";
+                var sql = $"Update \"{metadata.GetSchema()}\".\"{metadata.GetTableName()}\" set \"{propertyColumn}\"=jsonb_set(\"{propertyColumn}\", '{{{{{propertyKey}}}}}', jsonb '{{{value}}}', true) where \"{keyColumn}\" = {{{argCount}}}";
 
                 return (sql, new object[] { keyValue });
             }
             else
             {
-                var sql = $"Update \"{metadata.GetSchema()}\".\"{metadata.GetTableName()}\" set \"{propertyColumn}\"=jsonb_set(\"{propertyColumn}\", '{{{{{propertyKey}}}}}', jsonb '{propertyValue}', true) where \"{keyColumn}\" = {{{argCount}}}";
+                var sql = $"Update \"{metadata.GetSchema()}\".\"{metadata.GetTableName()}\" set \"{propertyColumn}\"=jsonb_set(\"{propertyColumn}\", '{{{{{propertyKey}}}}}', jsonb '{value}', true) where \"{keyColumn}\" = {{{argCount}}}";
 
                 return (sql, new object[] { keyValue });
             }

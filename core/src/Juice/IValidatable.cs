@@ -2,8 +2,7 @@
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using Juice.Operation;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using System.Text.Json;
 
 namespace Juice
 {
@@ -44,7 +43,7 @@ namespace Juice
         {
             if (value?.Length > maxLength)
             {
-                var (name, kind) = GetPropertyNameAndKind(validatable, property?? nameof(value));
+                var (name, kind) = GetPropertyNameAndKind(validatable, property ?? nameof(value));
 
                 validatable.AddValidationError($"{kind} \"{name}\" can be max {maxLength} characters long.");
             }
@@ -305,7 +304,7 @@ namespace Juice
 
         public static IValidatable ValidateJson(this IValidatable validatable, string? value, [CallerArgumentExpression("value")] string? property = null)
         {
-            var (name, kind) = GetPropertyNameAndKind(validatable, property?? nameof(value));
+            var (name, kind) = GetPropertyNameAndKind(validatable, property ?? nameof(value));
             if (value is null)
             {
                 validatable.AddValidationError($"{kind} \"{name}\" can not be null.");
@@ -314,9 +313,9 @@ namespace Juice
             {
                 try
                 {
-                    JToken.Parse(value);
+                    using var _ = JsonDocument.Parse(value);
                 }
-                catch (JsonReaderException)
+                catch (Exception)
                 {
                     validatable.AddValidationError($"{kind} \"{name}\" is not valid json.");
                 }

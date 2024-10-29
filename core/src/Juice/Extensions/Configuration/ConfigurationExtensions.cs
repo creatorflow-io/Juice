@@ -1,6 +1,6 @@
 ﻿using System.Dynamic;
 using Microsoft.Extensions.Configuration;
-using Newtonsoft.Json;
+using System.Text.Json;
 
 namespace Juice.Extensions.Configuration
 {
@@ -16,8 +16,7 @@ namespace Juice.Extensions.Configuration
         public static T? GetScalaredConfig<T>(this IConfigurationSection configuration)
         {
             ExpandoObject obj = GetExpandoObject(configuration);
-            var json = JsonConvert.SerializeObject(obj);
-            return JsonConvert.DeserializeObject<T>(json);
+            return JsonSerializer.Deserialize<T>(JsonSerializer.SerializeToUtf8Bytes(obj));
         }
 
         private static ExpandoObject GetExpandoObject(IConfigurationSection config, string? settingName = null)

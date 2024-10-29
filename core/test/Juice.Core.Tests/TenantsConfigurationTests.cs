@@ -130,14 +130,10 @@ namespace Juice.Core.Tests
         public string? Name { get; set; }
         public string? Identifier { get; set; }
 
-        public Dictionary<string, object?> OriginalPropertyValues => throw new NotImplementedException();
-
-        public Dictionary<string, object?> CurrentPropertyValues => throw new NotImplementedException();
-
         public string? OwnerUser => throw new NotImplementedException();
 
         public T? GetProperty<T>(Func<T>? defaultValue = null, [CallerMemberName] string? name = null) => throw new NotImplementedException();
-        public void SetProperty(object? value, [CallerMemberName] string? name = null) => throw new NotImplementedException();
+        public void SetProperty<T>(T? value, [CallerMemberName] string? name = null) => throw new NotImplementedException();
         public Task TriggerConfigurationChangedAsync() => Task.CompletedTask;
     }
 }
