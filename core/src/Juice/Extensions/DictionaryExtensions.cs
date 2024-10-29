@@ -1,6 +1,6 @@
 ﻿using System.Collections;
 using System.Text.RegularExpressions;
-using Newtonsoft.Json;
+using System.Text.Json;
 
 namespace Juice.Extensions
 {
@@ -302,11 +302,9 @@ namespace Juice.Extensions
         private static T? JsonConverter<T>(object? value)
         {
             if (value == null) { return default; }
-            var serialized = JsonConvert.SerializeObject(value);
-            if (string.IsNullOrWhiteSpace(serialized)) { return default; }
             try
             {
-                return JsonConvert.DeserializeObject<T?>(serialized);
+                return JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(value));
             }
             catch (Exception)
             {

@@ -87,7 +87,7 @@ namespace Juice.EF
         {
             base.OnModelCreating(modelBuilder);
             ConfigureModel(modelBuilder);
-            modelBuilder.ConfigureDynamicExpandableEntities(this);
+            modelBuilder.ConfigureExpandableEntities(this);
             modelBuilder.ConfigureAuditableEntities();
         }
 
