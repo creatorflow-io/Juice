@@ -34,7 +34,7 @@ namespace Juice.MediatR.Tests
                 services.AddSingleton(provider => _testOutput);
 
                 var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
-                var configuration = configService.GetConfiguration();
+                var configuration = configService.GetConfiguration(GetType().Assembly);
 
                 services.AddLogging(builder =>
                 {

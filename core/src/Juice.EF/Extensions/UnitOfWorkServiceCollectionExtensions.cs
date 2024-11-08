@@ -7,7 +7,8 @@ namespace Microsoft.Extensions.DependencyInjection
     public static class UnitOfWorkServiceCollectionExtensions
     {
         /// <summary>
-        /// Register <see cref="IUnitOfWork{TAggregate}"/> with the specified <see cref="IUnitOfWork"/>
+        /// Register <see cref="IUnitOfWork{TAggregate}"/> with the specified <see cref="IUnitOfWork"/> so you can inject it to your services directly
+        /// <para>It is unecessary if you only use the <see cref="IRepository{T}"/> or get the <c>UnitOfWork</c> form it</para>
         /// </summary>
         /// <typeparam name="TAggregate"></typeparam>
         /// <typeparam name="TUnitOfWork"></typeparam>
@@ -17,21 +18,16 @@ namespace Microsoft.Extensions.DependencyInjection
             where TAggregate : class
             where TUnitOfWork : class, IUnitOfWork
         {
-            services.TryAddScoped<Func<TAggregate?, IUnitOfWork>>(provider
-                => (TAggregate? aggregate) =>
+            services.TryAddScoped<IUnitOfWork<TAggregate>>(provider
+                =>
                 {
-                    var context = provider.GetRequiredService<TUnitOfWork>();
-                    return context;
+                    var uow = provider.GetRequiredService<TUnitOfWork>();
+                    return new UnitOfWorkWrapper<TAggregate>(uow);
                 }
             );
-            return services.AddUnitOfWorkWrapper();
-        }
-
-        private static IServiceCollection AddUnitOfWorkWrapper(this IServiceCollection services)
-        {
-            services.TryAdd(ServiceDescriptor.Scoped(typeof(IUnitOfWork<>), typeof(UnitOfWorkWrapper<>)));
             return services;
         }
+
     }
 
 }

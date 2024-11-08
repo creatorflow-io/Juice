@@ -14,6 +14,11 @@ app.UseRouting();
 
 app.ConfigureDiscoveredModules(app.Environment);
 
+app.MapGet("/health", async (context) =>
+{
+    await context.Response.WriteAsync("Healthy");
+});
+
 app.MapGet("/protect", async (context) =>
 {
     var dataProtector = context.RequestServices.GetRequiredService<IDataProtectionProvider>().CreateProtector("abcxyz");
@@ -55,6 +60,10 @@ app.MapGet("/action", async (context) =>
 
 app.Run();
 
+public partial class  Program
+{
+    
+}
 
 public record LogEvent : IntegrationEvent
 {
@@ -63,7 +72,7 @@ public record LogEvent : IntegrationEvent
 
     public override string GetEventKey() => (Facility + "." + Serverty).ToLower();
 }
-public class LogEventHandler : IIntegrationEventHandler<LogEvent>
+internal class LogEventHandler : IIntegrationEventHandler<LogEvent>
 {
     private ILogger _logger;
     public LogEventHandler(ILogger<LogEventHandler> logger)
