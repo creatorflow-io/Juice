@@ -2,7 +2,7 @@
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using Juice.Operation;
-using System.Text.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Juice
 {
@@ -313,7 +313,7 @@ namespace Juice
             {
                 try
                 {
-                    using var _ = JsonDocument.Parse(value);
+                    var _ = JToken.Parse(value);
                 }
                 catch (Exception)
                 {

@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
-using System.Text.Json.Serialization;
 using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
 
 namespace Juice.Domain
 {
