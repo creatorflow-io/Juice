@@ -7,8 +7,8 @@ namespace Juice.EF
         where TAggregate : class
     {
         private IUnitOfWork _unitOfWork;
-        public UnitOfWorkWrapper(Func<TAggregate?, IUnitOfWork> factory) =>
-            _unitOfWork = factory(default);
+        public UnitOfWorkWrapper(IUnitOfWork uow) =>
+            _unitOfWork = uow;
 
         public bool HasActiveTransaction => _unitOfWork.HasActiveTransaction;
 

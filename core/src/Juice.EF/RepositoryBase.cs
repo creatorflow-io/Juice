@@ -8,9 +8,9 @@ namespace Juice.EF
         where T : class
         where TContext : DbContext, IUnitOfWork
     {
-        public IUnitOfWork UnitOfWork { get; private set; }
+        public IUnitOfWork<T> UnitOfWork { get; private set; }
         protected TContext DbContext => (TContext)UnitOfWork;
-        public RepositoryBase(TContext context) => UnitOfWork = context;
+        public RepositoryBase(TContext context) => UnitOfWork = new UnitOfWorkWrapper<T>(context);
 
         public virtual Task<IOperationResult<T>> AddAsync(T entity, CancellationToken token = default)
             => UnitOfWork.AddAndSaveAsync(entity, token);
