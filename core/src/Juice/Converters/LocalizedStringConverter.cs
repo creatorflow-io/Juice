@@ -1,15 +1,35 @@
 ﻿using Microsoft.Extensions.Localization;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+using Newtonsoft.Json;
+
 
 namespace Juice.Converters
 {
     /// <summary>
     /// Serializes the <see cref="LocalizedString"/> to a simple string using the translated text.
     /// </summary>
-    public class LocalizedStringConverter : JsonConverter<LocalizedString>
+    public class LocalizedStringConverter : JsonConverter
     {
-        public override LocalizedString? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => throw new NotImplementedException();
-        public override void Write(Utf8JsonWriter writer, LocalizedString value, JsonSerializerOptions options) => writer.WriteStringValue(value.Value);
+        public override bool CanConvert(Type objectType)
+        {
+            return objectType == typeof(LocalizedString);
+        }
+
+        public override bool CanRead => false;
+
+        public override object ReadJson(JsonReader reader, Type objectType, object? existingValue, JsonSerializer serializer)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void WriteJson(JsonWriter writer, object? value, JsonSerializer serializer)
+        {
+            if (value == null)
+            {
+                writer.WriteNull();
+                return;
+            }
+            var localizedString = (LocalizedString)value;
+            writer.WriteValue(localizedString.Value);
+        }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
-using System.Text.Json;
 using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;
+using System.Text.Json;
 
 namespace Juice.Utils
 {
@@ -20,7 +21,7 @@ namespace Juice.Utils
                 AllowTrailingCommas = true,
             };
 
-            using (JsonDocument doc = JsonDocument.Parse(JsonSerializer.Serialize(input ?? new { }), jsonDocumentOptions))
+            using (JsonDocument doc = JsonDocument.Parse(JsonConvert.SerializeObject(input ?? new { }), jsonDocumentOptions))
             {
                 if (doc.RootElement.ValueKind != JsonValueKind.Object)
                 {
