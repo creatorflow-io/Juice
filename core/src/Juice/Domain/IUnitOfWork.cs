@@ -83,18 +83,17 @@ namespace Juice.Domain
             where T : class;
     }
 
-    public interface IUnitOfWork<out TAggregate> : IUnitOfWork
+    public interface IUnitOfWork<TAggregate> : IUnitOfWork
         where TAggregate : class
     {
+        /// <summary>
+        /// Get queryable for entity type <typeparamref name="TAggregate"/>
+        /// </summary>
+        /// <returns></returns>
+        IQueryable<TAggregate> Query() => Query<TAggregate>();
 
-    }
+        Task<TAggregate?> FindAsync(Expression<Func<TAggregate, bool>> predicate, CancellationToken cancellationToken = default)
+            => FindAsync<TAggregate>(predicate, cancellationToken);
 
-    public static class UnitOfWorkTExtensions
-    {
-        public static IQueryable<T> Query<T>(this IUnitOfWork<T> unitOfWork)
-            where T : class => unitOfWork.Query<T>();
-
-        public static Task<T?> FindAsync<T>(this IUnitOfWork<T> unitOfWork, Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default)
-            where T : class => unitOfWork.FindAsync(predicate, cancellationToken);
     }
 }
