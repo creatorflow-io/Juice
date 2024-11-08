@@ -1,53 +1,54 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFrameworks>$(AppTargetFramework)</TargetFrameworks>
-    <Nullable>enable</Nullable>
+    <PropertyGroup>
+        <TargetFrameworks>$(AppTargetFramework)</TargetFrameworks>
+        <Nullable>enable</Nullable>
 
-    <IsPackable>false</IsPackable>
-  </PropertyGroup>
+        <IsPackable>false</IsPackable>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdk)" />
-    <PackageReference Include="xunit" Version="$(XUnitVersion)" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.*">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-    <PackageReference Include="coverlet.collector" Version="6.0.2">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-  </ItemGroup>
+        <UserSecretsId>be895864-5a80-43bd-bf26-52f5823e0c0c</UserSecretsId>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdk)" />
+        <PackageReference Include="xunit" Version="$(XUnitVersion)" />
+        <PackageReference Include="xunit.runner.visualstudio" Version="2.8.*">
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="coverlet.collector" Version="6.0.2">
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Label="Integration tests" Include="Microsoft.AspNetCore.Mvc.Testing" Version="$(MicrosoftExtensionsVersion)" />
+    </ItemGroup>
 
 
-  <ItemGroup Label="Migrations">
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="$(EFVersion)">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="$(EFVersion)">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-  </ItemGroup>
-  
+    <ItemGroup Label="Migrations">
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="$(EFVersion)">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="$(EFVersion)">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+    </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\..\src\Juice.EventBus.IntegrationEventLog.EF.PostgreSQL\Juice.EventBus.IntegrationEventLog.EF.PostgreSQL.csproj" />
-    <ProjectReference Include="..\..\src\Juice.EventBus.IntegrationEventLog.EF.SqlServer\Juice.EventBus.IntegrationEventLog.EF.SqlServer.csproj" />
-    <ProjectReference Include="..\..\src\Juice.EventBus.IntegrationEventLog.EF\Juice.EventBus.IntegrationEventLog.EF.csproj" />
-    <ProjectReference Include="..\..\src\Juice.EventBus.RabbitMQ\Juice.EventBus.RabbitMQ.csproj" />
-    <ProjectReference Include="..\Juice.EF.Tests\Juice.EF.Tests.csproj" />
-  </ItemGroup>
 
-  <ItemGroup>
-    <None Update="appsettings.Development.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="appsettings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\test\Juice.Tests.Host\Juice.Tests.Host.csproj" />
+        <ProjectReference Include="..\..\src\Juice.EventBus.IntegrationEventLog.EF.PostgreSQL\Juice.EventBus.IntegrationEventLog.EF.PostgreSQL.csproj" />
+        <ProjectReference Include="..\..\src\Juice.EventBus.IntegrationEventLog.EF.SqlServer\Juice.EventBus.IntegrationEventLog.EF.SqlServer.csproj" />
+        <ProjectReference Include="..\..\src\Juice.EventBus.IntegrationEventLog.EF\Juice.EventBus.IntegrationEventLog.EF.csproj" />
+        <ProjectReference Include="..\..\src\Juice.EventBus.RabbitMQ\Juice.EventBus.RabbitMQ.csproj" />
+        <ProjectReference Include="..\Juice.EF.Tests\Juice.EF.Tests.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Update="appsettings.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
 
 </Project>

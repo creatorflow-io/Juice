@@ -8,7 +8,6 @@ using Juice.EF.Tests.Domain;
 using Juice.EF.Tests.Infrastructure;
 using Juice.EventBus;
 using Juice.EventBus.IntegrationEventLog.EF;
-using Juice.EventBus.RabbitMQ;
 using Juice.EventBus.Tests;
 using Juice.EventBus.Tests.Events;
 using Juice.EventBus.Tests.Handlers;
@@ -56,7 +55,7 @@ namespace Juice.Integrations.Tests
                 services.AddSingleton(provider => _testOutput);
 
                 var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
-                var configuration = configService.GetConfiguration();
+                var configuration = configService.GetConfiguration(GetType().Assembly);
 
                 services.AddLogging(builder =>
                 {
