@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+﻿using Newtonsoft.Json;
 
 namespace Juice.EventBus
 {
@@ -16,10 +16,8 @@ namespace Juice.EventBus
             CreationDate = creationDate;
         }
 
-        [JsonInclude]
         public Guid Id { get; init; } = Guid.NewGuid();
 
-        [JsonInclude]
         public DateTime CreationDate { get; init; } = DateTime.UtcNow;
 
         public virtual string GetEventKey()
