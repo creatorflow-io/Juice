@@ -10,7 +10,7 @@ namespace Juice.Domain
     public interface IRepository<T>
         where T : class
     {
-        IUnitOfWork UnitOfWork { get; }
+        IUnitOfWork<T> UnitOfWork { get; }
 
         Task<IOperationResult<T>> AddAsync(T entity, CancellationToken token = default);
         Task<IOperationResult> DeleteAsync(T entity, CancellationToken token = default);

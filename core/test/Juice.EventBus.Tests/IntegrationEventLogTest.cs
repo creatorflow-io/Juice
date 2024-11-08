@@ -46,7 +46,7 @@ namespace Juice.EventBus.Tests
             resolver.ConfigureServices(services =>
             {
                 var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
-                var configuration = configService.GetConfiguration();
+                var configuration = configService.GetConfiguration(GetType().Assembly);
 
                 // Register DbContext class
 
@@ -88,7 +88,7 @@ namespace Juice.EventBus.Tests
             resolver.ConfigureServices(services =>
             {
                 var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
-                var configuration = configService.GetConfiguration();
+                var configuration = configService.GetConfiguration(GetType().Assembly);
 
                 // Register DbContext class
 
@@ -138,7 +138,7 @@ namespace Juice.EventBus.Tests
                 services.AddSingleton(provider => _testOutput);
 
                 var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
-                var configuration = configService.GetConfiguration();
+                var configuration = configService.GetConfiguration(GetType().Assembly);
 
                 services.AddLogging(builder =>
                 {
@@ -150,8 +150,7 @@ namespace Juice.EventBus.Tests
                 // Register DbContext class
                 services.AddTransient(provider =>
                 {
-                    var configService = provider.GetRequiredService<IConfigurationService>();
-                    var connectionString = configService.GetConfiguration().GetConnectionString("Default");
+                    var connectionString = configuration.GetConnectionString("Default");
                     var builder = new DbContextOptionsBuilder<TestContext>();
                     builder.UseSqlServer(connectionString);
                     return new TestContext(provider, builder.Options);
@@ -239,7 +238,7 @@ namespace Juice.EventBus.Tests
                 services.AddSingleton(provider => _testOutput);
 
                 var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
-                var configuration = configService.GetConfiguration();
+                var configuration = configService.GetConfiguration(GetType().Assembly);
 
                 services.AddLogging(builder =>
                 {
