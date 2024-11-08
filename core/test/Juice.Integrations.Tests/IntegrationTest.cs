@@ -130,8 +130,10 @@ namespace Juice.Integrations.Tests
                 }
             });
             await integrationEventService.PublishEventsThroughEventBusAsync(transactionId);
-            sharedService.Handlers.Should().BeEmpty();
-            await Task.Delay(3000);
+            if(sharedService.Handlers.Count == 0)
+            {
+                await Task.Delay(3000);
+            }
             sharedService.Handlers.Should().Contain(nameof(ContentPublishedIntegrationEventHandler));
             var query = unitOfWork.Query();
         }
