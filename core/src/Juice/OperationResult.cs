@@ -1,7 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 using Juice.Operation;
-using System.Text.Json.Serialization;
-using System.Text.Json;
+using Newtonsoft.Json;
 
 namespace Juice
 {
@@ -219,7 +218,7 @@ namespace Juice
         /// </summary>
         /// <param name="json"></param>
         /// <returns></returns>
-        public static IOperationResult? FromJson(string json) => JsonSerializer.Deserialize<OperationResultInternal>(json);
+        public static IOperationResult? FromJson(string json) => JsonConvert.DeserializeObject<OperationResultInternal>(json);
         #endregion
 
         #region OperationResult<T>
@@ -316,7 +315,7 @@ namespace Juice
         /// <typeparam name="T"></typeparam>
         /// <param name="json"></param>
         /// <returns></returns>
-        public static IOperationResult<T>? FromJson<T>(string json) => JsonSerializer.Deserialize<OperationResultInternal<T>>(json);
+        public static IOperationResult<T>? FromJson<T>(string json) => JsonConvert.DeserializeObject<OperationResultInternal<T>>(json);
 
         #endregion
 
