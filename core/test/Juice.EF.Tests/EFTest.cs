@@ -189,5 +189,15 @@ namespace Juice.EF.Tests
             await mediator.Publish(dataEvent);
             await Task.Delay(1000);
         }
+
+        [IgnoreOnCIFact(DisplayName = "Repository UOW should"), TestPriority(1)]
+        public async Task Repository_uow_shouldAsync()
+        {
+            var dbContext = _serviceProvider.GetRequiredService<TestContext>();
+            var repository = new ContentRepository(dbContext);
+
+            _ = await repository.UnitOfWork.FindAsync(c => c.Code == "123");
+            await repository.TestDbContextAsync();
+        }
     }
 }
