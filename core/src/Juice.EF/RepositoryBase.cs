@@ -4,13 +4,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Juice.EF
 {
-    public abstract class RepositoryBase<T, TContext> : IRepository<T>
+    public abstract class RepositoryBase<T, TContext>(TContext context) : IRepository<T>
         where T : class
         where TContext : DbContext, IUnitOfWork
     {
-        public IUnitOfWork<T> UnitOfWork { get; private set; }
-        protected TContext DbContext => (TContext)UnitOfWork;
-        public RepositoryBase(TContext context) => UnitOfWork = new UnitOfWorkWrapper<T>(context);
+        public IUnitOfWork<T> UnitOfWork { get; private set; } = new UnitOfWorkWrapper<T>(context);
+        protected TContext DbContext { get; private set; } = context;
 
         public virtual Task<IOperationResult<T>> AddAsync(T entity, CancellationToken token = default)
             => UnitOfWork.AddAndSaveAsync(entity, token);
