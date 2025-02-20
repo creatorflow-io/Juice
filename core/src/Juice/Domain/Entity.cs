@@ -115,7 +115,7 @@ namespace Juice.Domain
     {
         #region Dynamic
 
-        public virtual JObject Properties { get; private set; } = new();
+        public virtual JObject Properties { get; protected set; } = [];
 
         [NotMapped]
         [JsonIgnore]
