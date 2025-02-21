@@ -25,6 +25,7 @@
     </ItemGroup>
 
     <ItemGroup Label="Migrations">
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="$(NpgsqlVersion)" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="$(EFVersion)" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="$(EFVersion)">
             <PrivateAssets>all</PrivateAssets>
@@ -39,6 +40,7 @@
     <ItemGroup>
         <PackageReference Include="Finbuckle.MultiTenant.AspNetCore" Version="$(FinbuckleVersion)" />
         <PackageReference Include="Microsoft.Extensions.Logging.Configuration" Version="$(MicrosoftExtensionsVersion)" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" Condition="'$(TargetFramework)' == 'net8.0'" />
         <PackageReference Include="Microsoft.Extensions.Logging" Version="$(MicrosoftExtensionsVersion)" />
         <PackageReference Include="Microsoft.Extensions.Options" Version="$(MicrosoftExtensionsVersion)" />
         <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="$(MicrosoftExtensionsVersion)" />
@@ -50,6 +52,9 @@
         <ProjectReference Include="..\..\src\Juice.AspNetCore\Juice.AspNetCore.csproj" />
         <ProjectReference Include="..\..\src\Juice.EF.MultiTenant\Juice.EF.MultiTenant.csproj" />
         <ProjectReference Include="..\..\src\Juice.EF\Juice.EF.csproj" />
+        <ProjectReference Include="..\Juice.EF.Tests.PostgreSQL\Juice.EF.Tests.PostgreSQL.csproj" />
+        <ProjectReference Include="..\Juice.EF.Tests.Shared\Juice.EF.Tests.Shared.csproj" />
+        <ProjectReference Include="..\Juice.EF.Tests.SqlServer\Juice.EF.Tests.SqlServer.csproj" />
     </ItemGroup>
 
 
