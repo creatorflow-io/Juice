@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace Juice.EF.Tests.Migrations
+namespace Juice.EF.Tests.SqlServer.Migrations
 {
     [DbContext(typeof(TestContext))]
     partial class TestContextModelSnapshot : ModelSnapshot
@@ -17,7 +17,7 @@ namespace Juice.EF.Tests.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "7.0.20")
+                .HasAnnotation("ProductVersion", "8.0.8")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);

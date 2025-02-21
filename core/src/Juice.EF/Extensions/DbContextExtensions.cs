@@ -359,9 +359,15 @@ namespace Juice.EF.Extensions
 
                 return (sql, new object[] { keyValue });
             }
-            else
+            else if (propertyValue?.Type == JTokenType.Boolean || propertyValue?.Type == JTokenType.Integer || propertyValue?.Type ==  JTokenType.Float)
             {
                 var sql = $"Update \"{metadata.GetSchema()}\".\"{metadata.GetTableName()}\" set \"{propertyColumn}\"=jsonb_set(\"{propertyColumn}\", '{{{{{propertyKey}}}}}', jsonb '{value}', true) where \"{keyColumn}\" = {{{argCount}}}";
+
+                return (sql, new object[] { keyValue });
+            }
+            else
+            {
+                var sql = $"Update \"{metadata.GetSchema()}\".\"{metadata.GetTableName()}\" set \"{propertyColumn}\"=jsonb_set(\"{propertyColumn}\", '{{{{{propertyKey}}}}}', jsonb '\"{value}\"', true) where \"{keyColumn}\" = {{{argCount}}}";
 
                 return (sql, new object[] { keyValue });
             }

@@ -3,10 +3,12 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Juice.EF.Tests.Migrations
+namespace Juice.EF.Tests.SqlServer.Migrations
 {
-    public partial class InitialCreate : Migration
+    /// <inheritdoc />
+    public partial class Initial : Migration
     {
+        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.EnsureSchema(
@@ -17,19 +19,34 @@ namespace Juice.EF.Tests.Migrations
                 schema: "Contents",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false, defaultValueSql: "newid()"),
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Code = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
+                    Properties = table.Column<string>(type: "nvarchar(max)", nullable: false, defaultValue: "{}"),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Disabled = table.Column<bool>(type: "bit", nullable: false),
                     CreatedUser = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     ModifiedUser = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    CreatedDate = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false, defaultValueSql: "SYSDATETIMEOFFSET()"),
-                    ModifiedDate = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
-                    SerializedProperties = table.Column<string>(type: "nvarchar(max)", nullable: false, defaultValue: "'{}'")
+                    CreatedDate = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    ModifiedDate = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Content", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "CrossTenantContent",
+                schema: "Contents",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TenantId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: true),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Disabled = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CrossTenantContent", x => x.Id);
                 });
 
             migrationBuilder.CreateIndex(
@@ -49,10 +66,15 @@ namespace Juice.EF.Tests.Migrations
                 .Annotation("SqlServer:Include", new[] { "Name", "Code", "CreatedDate" });
         }
 
+        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
                 name: "Content",
+                schema: "Contents");
+
+            migrationBuilder.DropTable(
+                name: "CrossTenantContent",
                 schema: "Contents");
         }
     }

@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using Finbuckle.MultiTenant.Abstractions;
 using FluentAssertions;
-using Juice.Domain;
 using Juice.EF.Tests.Infrastructure;
 using Juice.Extensions.DependencyInjection;
 using Juice.Models;
