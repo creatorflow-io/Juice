@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Juice.EF.Tests.Domain;
+using Juice.EF.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Juice.EF.Tests.Infrastructure

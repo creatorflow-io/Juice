@@ -2,32 +2,39 @@
 using System.Threading.Tasks;
 using FluentAssertions;
 using Juice.Domain.Events;
+using Juice.EF.Extensions;
+using Juice.EF.Migrations;
 using Juice.EF.Tests.Domain;
 using Juice.EF.Tests.EventHandlers;
 using Juice.EF.Tests.Infrastructure;
-using Juice.EF.Tests.Migrations;
 using Juice.Extensions.DependencyInjection;
 using Juice.Services;
 using Juice.XUnit;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit;
 using Xunit.Abstractions;
+using Xunit.Sdk;
 
 namespace Juice.EF.Tests
 {
     [TestCaseOrderer("Juice.XUnit.PriorityOrderer", "Juice.XUnit")]
     public class EFTest
     {
-        private readonly IServiceProvider _serviceProvider;
-        private readonly ILogger _logger;
+        private readonly ITestOutputHelper _testOutput;
 
         public EFTest(ITestOutputHelper testOutput)
         {
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
+            _testOutput = testOutput;
+        }
+
+        private IServiceProvider ConfigureServices(string provider)
+        {
 
             var resolver = new DependencyResolver
             {
@@ -42,15 +49,51 @@ namespace Juice.EF.Tests
                 services.AddSingleton<SharedService>();
 
                 // Register DbContext class
-                services.AddTransient(provider =>
+                services.AddTransient(sp =>
                 {
-                    var connectionString = configuration.GetConnectionString("Default");
-                    var builder = new DbContextOptionsBuilder<TestContext>();
-                    builder.UseSqlServer(connectionString, options =>
+                    var connectionName = provider switch
                     {
-                        options.MigrationsHistoryTable("__EFTestMigrationsHistory", "Contents");
-                    });
-                    return new TestContext(provider, builder.Options);
+                        "PostgreSQL" => "PostgreConnection",
+                        "SqlServer" => "SqlServerConnection",
+                        _ => throw new NotSupportedException($"Unsupported provider: {provider}")
+                    };
+
+                    var connectionString = configuration.GetConnectionString(connectionName);
+
+                    var builder = new DbContextOptionsBuilder<TestContext>();
+                    switch (provider)
+                    {
+                        case "PostgreSQL":
+                            AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
+                            builder.UseNpgsql(
+                               connectionString,
+                                x =>
+                                {
+                                    x.MigrationsHistoryTable("__EFTestMigrationsHistory", "Contents");
+                                    x.MigrationsAssembly("Juice.EF.Tests.PostgreSQL");
+                                });
+                            break;
+
+                        case "SqlServer":
+
+                            builder.UseSqlServer(
+                                connectionString,
+                            x =>
+                            {
+                                x.MigrationsHistoryTable("__EFTestMigrationsHistory", "Contents");
+                                x.MigrationsAssembly("Juice.EF.Tests.SqlServer");
+                            });
+                            break;
+                        default:
+                            throw new NotSupportedException($"Unsupported provider: {provider}");
+                    }
+
+                    builder
+                        .ReplaceService<IMigrationsAssembly, DbSchemaAwareMigrationAssembly>()
+                    ;
+
+                    return new TestContext(sp, builder.Options);
                 });
 
                 services.AddMediatR(options =>
@@ -60,7 +103,7 @@ namespace Juice.EF.Tests
 
                 services.AddDefaultStringIdGenerator();
 
-                services.AddSingleton(provider => testOutput);
+                services.AddSingleton(provider => _testOutput);
 
                 services.AddLogging(builder =>
                 {
@@ -70,32 +113,38 @@ namespace Juice.EF.Tests
                 });
 
             });
-
-            _serviceProvider = resolver.ServiceProvider;
-            _logger = _serviceProvider.GetRequiredService<ILogger<EFTest>>();
+            return resolver.ServiceProvider;
         }
 
-        [IgnoreOnCIFact(DisplayName = "DynamicEntity migration"), TestPriority(10)]
-        public async Task EF_should_be_migration_Async()
+        [IgnoreOnCITheory(DisplayName = "DynamicEntity migration"), TestPriority(10)]
+        [InlineData("SqlServer")]
+        [InlineData("PostgreSQL")]
+        public async Task EF_should_be_migration_Async(string provider)
         {
-            var dbContext = _serviceProvider.GetRequiredService<TestContext>();
+            var serviceProvider = ConfigureServices(provider);
+            var dbContext = serviceProvider.GetRequiredService<TestContext>();
 
-            dbContext.MigrateAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+            await dbContext.MigrateAsync();
 
             var content = await dbContext.Set<Content>().FirstOrDefaultAsync().ConfigureAwait(false);
 
         }
 
-        [IgnoreOnCIFact(DisplayName = "DynamicEntity unique Code"), TestPriority(2)]
-        public async Task Dynamic_entity_unique_code_Async()
+        [IgnoreOnCITheory(DisplayName = "DynamicEntity unique Code"), TestPriority(2)]
+        [InlineData("SqlServer")]
+        [InlineData("PostgreSQL")]
+        public async Task Dynamic_entity_unique_code_Async(string provider)
         {
-            var dbContext = _serviceProvider.GetRequiredService<TestContext>();
+            var serviceProvider = ConfigureServices(provider);
+            var dbContext = serviceProvider.GetRequiredService<TestContext>();
 
-            var idGenerator = _serviceProvider.GetRequiredService<IStringIdGenerator>();
+            var idGenerator = serviceProvider.GetRequiredService<IStringIdGenerator>();
+
+            var logger = serviceProvider.GetRequiredService<ILogger<EFTest>>();
 
             var code1 = idGenerator.GenerateRandomId(6);
 
-            _logger.LogInformation("Generated code {code}", code1);
+            logger.LogInformation("Generated code {code}", code1);
 
             var content = new Content(code1, "Test name " + DateTimeOffset.Now.ToString());
 
@@ -103,7 +152,7 @@ namespace Juice.EF.Tests
 
             await dbContext.SaveChangesAsync().ConfigureAwait(false);
 
-            _logger.LogInformation("Content {code} was added", code1);
+            logger.LogInformation("Content {code} was added", code1);
 
             var addedContent = await dbContext.Set<Content>().FirstOrDefaultAsync(c => c.Code == code1);
 
@@ -115,29 +164,33 @@ namespace Juice.EF.Tests
 
             await dbContext.SaveChangesAsync();
 
-            _logger.LogInformation("Content {code} was verified", code1);
+            logger.LogInformation("Content {code} was verified", code1);
 
             await Assert.ThrowsAsync<DbUpdateException>(async () =>
             {
                 var duplicatedContent = new Content(code1, "Test name " + DateTimeOffset.Now.ToString());
                 dbContext.Add(duplicatedContent);
-                _logger.LogInformation("Try to add new content with code {code}", code1);
+                logger.LogInformation("Try to add new content with code {code}", code1);
                 await dbContext.SaveChangesAsync().ConfigureAwait(false);
             });
         }
 
-        [IgnoreOnCIFact(DisplayName = "DynamicEntity update property"), TestPriority(1)]
-        public async Task Dynamic_entity_update_property_Async()
+        [IgnoreOnCITheory(DisplayName = "DynamicEntity update property"), TestPriority(1)]
+        [InlineData("SqlServer")]
+        [InlineData("PostgreSQL")]
+        public async Task Dynamic_entity_update_property_Async(string provider)
         {
-            var dbContext = _serviceProvider.GetRequiredService<TestContext>();
-            var sharedService = _serviceProvider.GetRequiredService<SharedService>();
+            var serviceProvider = ConfigureServices(provider);
+            var dbContext = serviceProvider.GetRequiredService<TestContext>();
+            var sharedService = serviceProvider.GetRequiredService<SharedService>();
+            var logger = serviceProvider.GetRequiredService<ILogger<EFTest>>();
             sharedService.Handlers.Clear();
 
-            var idGenerator = _serviceProvider.GetRequiredService<IStringIdGenerator>();
+            var idGenerator = serviceProvider.GetRequiredService<IStringIdGenerator>();
 
             var code1 = idGenerator.GenerateRandomId(6);
 
-            _logger.LogInformation("Generated code {code}", code1);
+            logger.LogInformation("Generated code {code}", code1);
 
             var content = new Content(code1, "Test name " + DateTimeOffset.Now.ToString());
 
@@ -149,7 +202,7 @@ namespace Juice.EF.Tests
 
             await dbContext.SaveChangesAsync().ConfigureAwait(false);
 
-            _logger.LogInformation("Content {code} was added", code1);
+            logger.LogInformation("Content {code} was added", code1);
 
             Assert.Contains(typeof(ContentDataEventHandler).Name, sharedService.Handlers);
             Assert.Contains(typeof(AuditEventHandler<AuditEvent<Content>>).Name, sharedService.Handlers);
@@ -162,12 +215,13 @@ namespace Juice.EF.Tests
 
             Assert.Equal(initValue, addedContent![property]);
 
-            _logger.LogInformation("Content {code} was verified", code1);
+            logger.LogInformation("Content {code} was verified", code1);
 
             addedContent[property] = "New value";
+            addedContent["number"] = 123;
             await dbContext.SaveChangesAsync().ConfigureAwait(false);
 
-            _logger.LogInformation("Content {code} was updated new value for property {property}", code1, property);
+            logger.LogInformation("Content {code} was updated new value for property {property}", code1, property);
 
             Assert.DoesNotContain(typeof(ContentDataEventHandler).Name, sharedService.Handlers);
             Assert.Contains(typeof(AuditEventHandler<AuditEvent<Content>>).Name, sharedService.Handlers);
@@ -183,7 +237,8 @@ namespace Juice.EF.Tests
         [Fact(DisplayName = "Data event handle"), TestPriority(1)]
         public async Task DataEvent_should_be_handle_Async()
         {
-            var mediator = _serviceProvider.GetRequiredService<IMediator>();
+            var serviceProvider = ConfigureServices("SqlServer");
+            var mediator = serviceProvider.GetRequiredService<IMediator>();
             var dataEvent = DataEvents.Inserted.CreateDataEvent(typeof(DataInserted<>), typeof(Content), new AuditRecord("TestTable"));
 
             await mediator.Publish(dataEvent);
@@ -193,7 +248,8 @@ namespace Juice.EF.Tests
         [IgnoreOnCIFact(DisplayName = "Repository UOW should"), TestPriority(1)]
         public async Task Repository_uow_shouldAsync()
         {
-            var dbContext = _serviceProvider.GetRequiredService<TestContext>();
+            var serviceProvider = ConfigureServices("SqlServer");
+            var dbContext = serviceProvider.GetRequiredService<TestContext>();
             var repository = new ContentRepository(dbContext);
 
             _ = await repository.UnitOfWork.FindAsync(c => c.Code == "123");
