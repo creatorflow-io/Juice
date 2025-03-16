@@ -1,10 +1,8 @@
 ﻿using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Polly;
 using Polly.Retry;
@@ -14,63 +12,47 @@ using RabbitMQ.Client.Exceptions;
 
 namespace Juice.EventBus.RabbitMQ
 {
-    public class RabbitMQEventBus : EventBusBase, IDisposable
+    public class RabbitMQEventBus : IEventBus, IDisposable
     {
-        public string BROKER_NAME = "juice_event_bus";
-
         private IRabbitMQPersistentConnection _persistentConnection;
 
         private IModel? _consumerChannel;
         private string _queueName;
+
+        public string BROKER_NAME = "default_exchange";
         private string _type;
+
+        private IModel? _producerChannel;
         private readonly int _retryCount;
 
+        protected IEventBusSubscriptionsManager SubsManager { get; }
+        protected ILogger Logger { get; }
         private IServiceScopeFactory _scopeFactory;
 
         public RabbitMQEventBus(IEventBusSubscriptionsManager subscriptionsManager,
             IServiceScopeFactory scopeFactory,
-            ILogger<RabbitMQEventBus> logger,
+            ILogger logger,
             IRabbitMQPersistentConnection mQPersistentConnection,
-            IOptions<RabbitMQOptions> options
+            RabbitMQOptions options
             )
-            : base(subscriptionsManager, logger)
         {
             _persistentConnection = mQPersistentConnection;
-            _queueName = options.Value.SubscriptionClientName ?? string.Empty;
-            _type = options.Value.ExchangeType ?? "direct";
-            if (!string.IsNullOrEmpty(options.Value.BrokerName))
+           
+            _queueName = options.SubscriptionClientName ?? string.Empty;
+            _type = options.ExchangeType ?? "direct";
+            if (!string.IsNullOrEmpty(options.BrokerName))
             {
-                BROKER_NAME = options.Value.BrokerName;
+                BROKER_NAME = options.BrokerName;
             }
-            _consumerChannel = CreateConsumerChannel();
             _scopeFactory = scopeFactory;
-            _retryCount = options.Value.RetryCount;
-            SubsManager.OnEventRemoved += SubsManager_OnEventRemoved;
+            _retryCount = options.RetryCount;
+
+            Logger = logger;
+            SubsManager = subscriptionsManager;
+            SubsManager.OnEventRemoved += DoInternalUnsubscription;
         }
 
         #region Init consume channel and processing incoming event
-
-        private void SubsManager_OnEventRemoved(object? sender, string eventName)
-        {
-            if (!_persistentConnection.IsConnected && !_persistentConnection.TryConnect())
-            {
-                return;
-            }
-            using (var channel = _persistentConnection.CreateModel())
-            {
-                channel.QueueUnbind(queue: _queueName,
-                    exchange: BROKER_NAME,
-                    routingKey: eventName);
-
-                Logger.LogInformation("Queue unbind {queueName}", _queueName);
-
-                if (SubsManager.IsEmpty)
-                {
-                    _consumerChannel?.Close();
-                }
-            }
-
-        }
 
         private async Task Consumer_ReceivedAsync(object sender, BasicDeliverEventArgs eventArgs)
         {
@@ -239,51 +221,105 @@ namespace Juice.EventBus.RabbitMQ
         #endregion
 
         #region Subscribe/UnSubscribe
-        public override void Subscribe<T, TH>(string? key = default)
+        public void Subscribe<T, TH>(string? key = default)
+            where T : IntegrationEvent
+            where TH : IIntegrationEventHandler<T>
         {
-            var eventName = key ?? SubsManager.GetDefaultEventKey<T>();
-
-            DoInternalSubscription(eventName);
-
-            Logger.LogInformation("Subscribing to event {EventName} with {EventHandler}", eventName, typeof(TH).GetGenericTypeName());
-
             SubsManager.AddSubscription<T, TH>(key);
 
-            StartBasicConsume();
+            if (_consumerChannel == null)
+            {
+                _consumerChannel = CreateConsumerChannel();
+                if (_consumerChannel == null) { throw new InvalidOperationException("RabbitMQ consumer channel cannot be initialized"); }
+                StartBasicConsume();
+            }
+
+            var eventName = key ?? SubsManager.GetDefaultEventKey<T>();
+            DoInternalSubscription(eventName);
+            Logger.LogInformation("Subscribing to event {EventName} with {EventHandler}", eventName, typeof(TH).GetGenericTypeName());
 
         }
 
+        /// <summary>
+        /// Use a new channel to unbind the queue to the exchange
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="eventName"></param>
+        private void DoInternalUnsubscription(object? sender, string eventName)
+        {
+            if (!_persistentConnection.IsConnected && !_persistentConnection.TryConnect())
+            {
+                return;
+            }
+            using var channel = _persistentConnection.CreateModel();
+            channel.QueueUnbind(queue: _queueName,
+                exchange: BROKER_NAME,
+                routingKey: eventName);
+
+            Logger.LogInformation("Queue unbind {queueName}", _queueName);
+
+            if (SubsManager.IsEmpty)
+            {
+                _consumerChannel?.Close();
+            }
+
+        }
+
+        /// <summary>
+        /// Use a new channel to bind the queue to the exchange
+        /// </summary>
+        /// <param name="eventName"></param>
+        /// <exception cref="InvalidOperationException"></exception>
         private void DoInternalSubscription(string eventName)
         {
-            var containsKey = SubsManager.HasSubscriptionsForEvent(eventName);
-            if (!containsKey)
-            {
-                if (!_persistentConnection.IsConnected && !_persistentConnection.TryConnect())
-                {
-                    return;
-                }
-
-                _consumerChannel?.QueueBind(queue: _queueName,
-                                exchange: BROKER_NAME,
-                                routingKey: eventName);
-            }
-
-        }
-        #endregion
-
-        #region Publish outgoing event
-        public override async Task PublishAsync(IntegrationEvent @event)
-        {
-            await Task.Yield();
-            if (@event == null)
-            {
-                throw new ArgumentNullException("@event");
-            }
             if (!_persistentConnection.IsConnected && !_persistentConnection.TryConnect())
             {
                 throw new InvalidOperationException("RabbitMQ broker is not connected");
             }
+            using var channel = _persistentConnection.CreateModel();
+            channel.QueueBind(queue: _queueName,
+                              exchange: BROKER_NAME,
+                              routingKey: eventName);
+        }
 
+        public virtual void Unsubscribe<T, TH>(string? key = default)
+            where T : IntegrationEvent
+            where TH : IIntegrationEventHandler<T>
+        {
+            var eventName = SubsManager.GetDefaultEventKey<T>();
+
+            Logger.LogInformation("Unsubscribing event {EventName} for hanler {Handler}", eventName, typeof(TH).GetGenericTypeName());
+
+            SubsManager.RemoveSubscription<T, TH>(key);
+
+        }
+        #endregion
+
+        #region Init producer channel
+        private IModel? CreateProducerChannel()
+        {
+            if (!_persistentConnection.IsConnected && !_persistentConnection.TryConnect())
+            {
+                return null;
+            }
+            Logger.LogInformation("Creating RabbitMQ producer channel. Broker: {Broker}.", BROKER_NAME);
+            var channel = _persistentConnection.CreateModel();
+            if (channel == null) { return null; }
+            channel.ExchangeDeclare(exchange: BROKER_NAME,
+                                    type: _type);
+            return channel;
+        }
+        #endregion
+        #region Publish outgoing event
+        public async Task PublishAsync(IntegrationEvent @event)
+        {
+            await Task.Yield();
+            ArgumentNullException.ThrowIfNull(@event);
+            if (!_persistentConnection.IsConnected && !_persistentConnection.TryConnect())
+            {
+                throw new InvalidOperationException("RabbitMQ broker is not connected");
+            }
+            
             var policy = RetryPolicy.Handle<BrokerUnreachableException>()
                 .Or<SocketException>()
                 .WaitAndRetry(_retryCount, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)), (ex, time) =>
@@ -295,43 +331,36 @@ namespace Juice.EventBus.RabbitMQ
 
             if (Logger.IsEnabled(LogLevel.Trace))
             {
-                Logger.LogTrace("Creating RabbitMQ channel to publish event: {EventId} ({EventName})", @event.Id, eventName);
+                Logger.LogTrace("Declaring RabbitMQ exchange to publish event: {EventId}", @event.Id);
             }
 
-            using (var channel = _persistentConnection.CreateModel())
+            var body = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(@event, @event.GetType(), new JsonSerializerOptions
             {
-                if (Logger.IsEnabled(LogLevel.Trace))
+                WriteIndented = true
+            });
+
+            policy.Execute(() =>
+            {
+                if (_producerChannel == null)
                 {
-                    Logger.LogTrace("Declaring RabbitMQ exchange to publish event: {EventId}", @event.Id);
+                    _producerChannel = CreateProducerChannel();
+                    if (_producerChannel == null) { throw new InvalidOperationException("RabbitMQ producer channel cannot be initialized"); }
+                }
+                var properties = _producerChannel.CreateBasicProperties();
+                properties.DeliveryMode = 2; // persistent
+
+                if (Logger.IsEnabled(LogLevel.Debug))
+                {
+                    Logger.LogDebug("Publishing event to RabbitMQ: {EventId} {EventName}", @event.Id, eventName);
                 }
 
-                if (channel == null) { return; }
-
-                channel.ExchangeDeclare(exchange: BROKER_NAME, type: _type);
-
-                var body = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(@event, @event.GetType(), new JsonSerializerOptions
-                {
-                    WriteIndented = true
-                });
-
-                policy.Execute(() =>
-                {
-                    var properties = channel.CreateBasicProperties();
-                    properties.DeliveryMode = 2; // persistent
-
-                    if (Logger.IsEnabled(LogLevel.Debug))
-                    {
-                        Logger.LogDebug("Publishing event to RabbitMQ: {EventId} {EventName}", @event.Id, eventName);
-                    }
-
-                    channel.BasicPublish(
-                        exchange: BROKER_NAME,
-                        routingKey: eventName,
-                        mandatory: true,
-                        basicProperties: properties,
-                        body: body);
-                });
-            }
+                _producerChannel.BasicPublish(
+                    exchange: BROKER_NAME,
+                    routingKey: eventName,
+                    mandatory: true,
+                    basicProperties: properties,
+                    body: body);
+            });
         }
 
         #endregion
@@ -348,6 +377,8 @@ namespace Juice.EventBus.RabbitMQ
                     // dispose managed state (managed objects)
                     _consumerChannel?.Dispose();
                     _consumerChannel = null!;
+                    _producerChannel?.Dispose();
+                    _producerChannel = null!;
                     _persistentConnection?.Dispose();
                     _persistentConnection = null!;
                     SubsManager?.Clear();

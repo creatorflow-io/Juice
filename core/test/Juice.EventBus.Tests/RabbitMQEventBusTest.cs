@@ -82,6 +82,58 @@ namespace Juice.EventBus.Tests
             }
         }
 
+        [IgnoreOnCIFact(DisplayName = "Multiple RabbitMQ exchange test")]
+        public async Task MultipleRabbitMQExchangeTestAsync()
+        {
+            var resolver = new DependencyResolver
+            {
+                CurrentDirectory = AppContext.BaseDirectory
+            };
+            resolver.ConfigureServices(services =>
+            {
+                var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
+                var configuration = configService.GetConfiguration(GetType().Assembly);
+                services.AddSingleton(_output);
+                services.AddLogging(builder =>
+                {
+                    builder.ClearProviders()
+                    .AddTestOutputLogger()
+                    .AddConfiguration(configuration.GetSection("Logging"));
+                });
+                services.AddHttpContextAccessor();
+                services.RegisterKeyedRabbitMQEventBus(configuration.GetSection("RabbitMQ"), options =>
+                {
+                    options.BrokerName = "exchange1";
+                });
+                services.RegisterKeyedRabbitMQEventBus(configuration.GetSection("RabbitMQ"), options =>
+                {
+                    options.BrokerName = "exchange2";
+                });
+                services.AddScoped<ScopedService>();
+                services.AddTransient<ContentPublishedIntegrationEventHandler>();
+                services.AddTransient<ContentPublishedIntegrationEventHandler1>();
+                services.AddSingleton<HandledService>();
+            });
+            var serviceProvider = resolver.ServiceProvider;
+            var eventBus1 = serviceProvider.GetRequiredKeyedService<IEventBus>("exchange1");
+            var eventBus2 = serviceProvider.GetRequiredKeyedService<IEventBus>("exchange2");
+            var handledService = serviceProvider.GetRequiredService<HandledService>();
+
+            eventBus1.Subscribe<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler>();
+            eventBus2.Subscribe<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler1>();
+            await Task.Delay(TimeSpan.FromSeconds(3)); // wait for pending messages to be processed
+            handledService.Handlers.Clear();
+            for (var i = 0; i < 10; i++)
+            {
+                await eventBus1.PublishAsync(new ContentPublishedIntegrationEvent($"Hello {i} exchange1"));
+                await eventBus2.PublishAsync(new ContentPublishedIntegrationEvent($"Hello {i} exchange2"));
+            }
+            await Task.Delay(TimeSpan.FromSeconds(5));
+            eventBus1.Unsubscribe<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler>();
+            eventBus2.Unsubscribe<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler1>();
+            await Task.Delay(TimeSpan.FromSeconds(1));
+            handledService.Handlers.Count.Should().BeOneOf(10, 20); // 20 if test run in isolation, 10 if test run in parallel
+        }
     }
 
 }

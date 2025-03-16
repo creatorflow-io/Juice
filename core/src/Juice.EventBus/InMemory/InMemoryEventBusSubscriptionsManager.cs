@@ -16,7 +16,7 @@ namespace Juice.EventBus
 
         private bool _topicSupported;
 
-        public InMemoryEventBusSubscriptionsManager(ILogger<InMemoryEventBusSubscriptionsManager> logger, bool topicSupport)
+        public InMemoryEventBusSubscriptionsManager(ILogger logger, bool topicSupport)
         {
             _handlers = new Dictionary<string, List<SubscriptionInfo>>();
             _eventTypes = new Dictionary<string, Type>();

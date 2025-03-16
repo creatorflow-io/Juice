@@ -16,7 +16,7 @@ namespace Juice.EventBus.RabbitMQ
            : IRabbitMQPersistentConnection
     {
         private IConnectionFactory _connectionFactory;
-        private ILogger<DefaultRabbitMQPersistentConnection> _logger;
+        private ILogger _logger;
         private readonly int _retryCount;
         private IConnection? _connection;
         private bool _disposed;
@@ -24,16 +24,17 @@ namespace Juice.EventBus.RabbitMQ
 
         private Lock sync_root = new();
 
-        public DefaultRabbitMQPersistentConnection(IOptions<RabbitMQOptions> optionsAccessor,
-            ILogger<DefaultRabbitMQPersistentConnection> logger)
+        public DefaultRabbitMQPersistentConnection(RabbitMQOptions options,
+            ILogger logger)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-            var options = optionsAccessor.Value;
             var factory = new ConnectionFactory()
             {
                 HostName = options.Connection,
-                DispatchConsumersAsync = true
+                DispatchConsumersAsync = true,
+                AutomaticRecoveryEnabled = true,
+                NetworkRecoveryInterval = TimeSpan.FromSeconds(5)
             };
             if (!string.IsNullOrEmpty(options.UserName))
             {
