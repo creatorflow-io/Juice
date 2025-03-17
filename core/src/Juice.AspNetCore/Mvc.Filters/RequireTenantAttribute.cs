@@ -13,7 +13,7 @@ namespace Juice.AspNetCore.Mvc.Filters
     {
         public async Task OnResourceExecutionAsync(ResourceExecutingContext context, ResourceExecutionDelegate next)
         {
-            var tenant = context.HttpContext.RequestServices.GetService<ITenant?>();
+            var tenant = context.HttpContext.RequestServices.GetService<ITenantAccessor>()?.Tenant;
             if (tenant == null)
             {
                 context.Result = new NotFoundResult();

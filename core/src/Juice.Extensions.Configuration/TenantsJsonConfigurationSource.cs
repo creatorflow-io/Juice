@@ -7,7 +7,7 @@ namespace Juice.Extensions.Configuration
 
     public class TenantsJsonConfigurationSource : FileConfigurationSource, ITenantsConfigurationSource
     {
-        public ITenant? Tenant { get; set; }
+        public ITenant? Tenant { get; init; }
         /// <summary>
         /// Builds the <see cref="JsonConfigurationProvider"/> for this source.
         /// </summary>

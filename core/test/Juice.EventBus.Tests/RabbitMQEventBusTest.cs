@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Finbuckle.MultiTenant;
+using Finbuckle.MultiTenant.Abstractions;
 using FluentAssertions;
 using Juice.EventBus.Tests.Events;
 using Juice.EventBus.Tests.Handlers;
@@ -113,6 +115,9 @@ namespace Juice.EventBus.Tests
                 services.AddTransient<ContentPublishedIntegrationEventHandler>();
                 services.AddTransient<ContentPublishedIntegrationEventHandler1>();
                 services.AddSingleton<HandledService>();
+
+                services.AddMultiTenant<TenantInfo>();
+                services.AddScoped<MultiTenant.IScopedTenantResolver, TenantResolver>();
             });
             var serviceProvider = resolver.ServiceProvider;
             var eventBus1 = serviceProvider.GetRequiredKeyedService<IEventBus>("exchange1");
@@ -125,14 +130,15 @@ namespace Juice.EventBus.Tests
             handledService.Handlers.Clear();
             for (var i = 0; i < 10; i++)
             {
-                await eventBus1.PublishAsync(new ContentPublishedIntegrationEvent($"Hello {i} exchange1"));
-                await eventBus2.PublishAsync(new ContentPublishedIntegrationEvent($"Hello {i} exchange2"));
+                await eventBus1.PublishAsync(new ContentPublishedIntegrationEvent($"Hello {i} exchange1") { TenantId = "tenant" + (i % 2 + 1) });
+                await eventBus2.PublishAsync(new ContentPublishedIntegrationEvent($"Hello {i} exchange2") { TenantId = "tenant" + (i % 2 + 1) });
             }
-            await Task.Delay(TimeSpan.FromSeconds(5));
+            await Task.Delay(TimeSpan.FromSeconds(7));
             eventBus1.Unsubscribe<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler>();
             eventBus2.Unsubscribe<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler1>();
             await Task.Delay(TimeSpan.FromSeconds(1));
             handledService.Handlers.Count.Should().BeOneOf(10, 20); // 20 if test run in isolation, 10 if test run in parallel
+            handledService.ResolvedTenants.Count.Should().Be(20);
         }
     }
 

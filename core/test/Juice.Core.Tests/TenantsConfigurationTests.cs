@@ -47,7 +47,7 @@ namespace Juice.Core.Tests
                          .AddConfiguration(context.Configuration.GetSection("Logging"));
                      });
 
-                     services.AddScoped<ITenant>(sp => new MyTenant { Identifier = DateTime.Now.Millisecond % 2 == 0 ? "TenantA" : "TenantB" });
+                     services.AddScoped<ITenantAccessor, TimeBasedTenantAccessor>();
                      services.AddTenantsConfiguration().AddTenantsJsonFile("appsettings.Development.json");
                      services.ConfigureTenantsOptions<Models.Options>("Options");
                  })
@@ -91,7 +91,7 @@ namespace Juice.Core.Tests
                      .AddConfiguration(context.Configuration.GetSection("Logging"));
                  });
 
-                 services.AddScoped<ITenant>(sp => new MyTenant { Identifier = DateTime.Now.Millisecond % 2 == 0 ? "TenantA" : "TenantB" });
+                 services.AddScoped<ITenantAccessor, TimeBasedTenantAccessor>();
                  services.AddTenantsConfiguration()
                     .AddTenantsJsonFile("appsettings.Development.json");
 
@@ -136,4 +136,9 @@ namespace Juice.Core.Tests
         public void SetProperty<T>(T? value, [CallerMemberName] string? name = null) => throw new NotImplementedException();
         public Task TriggerConfigurationChangedAsync() => Task.CompletedTask;
     }
+
+    internal class TimeBasedTenantAccessor : ITenantAccessor
+    {
+        public ITenant? Tenant => new MyTenant { Identifier = DateTime.Now.Millisecond % 2 == 0 ? "TenantA" : "TenantB" };
+}
 }

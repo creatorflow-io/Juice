@@ -1,6 +1,7 @@
 ﻿using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
+using Juice.MultiTenant;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -66,7 +67,7 @@ namespace Juice.EventBus.RabbitMQ
                     throw new InvalidOperationException($"Fake exception requested: \"{message}\"");
                 }
 
-                var processed = await ProcessingEventAsync(eventName, message);
+                var processed = await ProcessingEventAsync(eventArgs, eventName, message);
                 if (processed)
                 {
 
@@ -152,7 +153,7 @@ namespace Juice.EventBus.RabbitMQ
             return channel;
         }
 
-        private async Task<bool> ProcessingEventAsync(string eventName, string message)
+        private async Task<bool> ProcessingEventAsync(BasicDeliverEventArgs eventArgs,string eventName, string message)
         {
             using (Logger.BeginScope($"Processing integration event: {eventName}"))
             {
@@ -179,7 +180,9 @@ namespace Juice.EventBus.RabbitMQ
                         Logger.LogWarning("Failed to deserialize message to {eventType}", eventType.Name);
                         return false;
                     }
-
+                    var tenantId = eventArgs.BasicProperties.Headers?["TenantId"] is byte[] tenant ? Encoding.UTF8.GetString(tenant) : null;
+                    var tenantResolver = scope.ServiceProvider.GetService<IScopedTenantResolver>();
+                    using var _ = tenantResolver?.Resolve(tenantId);
                     var ok = false;
                     foreach (var subscription in subscriptions)
                     {
@@ -348,6 +351,10 @@ namespace Juice.EventBus.RabbitMQ
                 }
                 var properties = _producerChannel.CreateBasicProperties();
                 properties.DeliveryMode = 2; // persistent
+                properties.Headers = new Dictionary<string, object>
+                {
+                    { "TenantId", @event.TenantId ?? string.Empty }
+                };
 
                 if (Logger.IsEnabled(LogLevel.Debug))
                 {

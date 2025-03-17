@@ -13,7 +13,7 @@ namespace Juice.AspNetCore.Mvc.Filters
     {
         public override void OnActionExecuting(ActionExecutingContext context)
         {
-            var tenant = context.HttpContext.RequestServices.GetService<ITenant?>();
+            var tenant = context.HttpContext.RequestServices.GetService<ITenantAccessor>()?.Tenant;
             if (tenant != null)
             {
                 context.Result = new UnauthorizedResult();

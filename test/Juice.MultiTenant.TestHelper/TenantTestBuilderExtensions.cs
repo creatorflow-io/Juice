@@ -1,6 +1,7 @@
 ﻿using Finbuckle.MultiTenant;
 using Finbuckle.MultiTenant.Abstractions;
 using Juice.MultiTenant;
+using Juice.MultiTenant.TestHelper;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
@@ -18,9 +19,7 @@ namespace Microsoft.Extensions.DependencyInjection
         public static MultiTenantBuilder<TTenant> AddTestTenantRandom<TTenant>(this IServiceCollection services, string identifierA = "tenant-A", string identifierB = "tenant-B")
             where TTenant : class, ITenantInfo, ITenant, new()
         {
-#pragma warning disable CS8603 // Possible null reference return.
-            services.AddScoped<ITenant>(sp => sp.GetRequiredService<IMultiTenantContextAccessor<TTenant>>().MultiTenantContext.TenantInfo);
-#pragma warning restore CS8603 // Possible null reference return.
+            services.AddScoped<ITenantAccessor, FinbuckleTenantAccessor<TTenant>>();
             return services
                 .AddMultiTenant<TTenant>()
                 .WithInMemoryStore(options =>
@@ -51,9 +50,7 @@ namespace Microsoft.Extensions.DependencyInjection
         public static MultiTenantBuilder<TTenant> AddTestTenantStatic<TTenant>(this IServiceCollection services, string identifier = "tenant-A")
             where TTenant : class, ITenantInfo, ITenant, new()
         {
-#pragma warning disable CS8603 // Possible null reference return.
-            services.AddScoped<ITenant>(sp => sp.GetRequiredService<IMultiTenantContextAccessor<TTenant>>().MultiTenantContext.TenantInfo);
-#pragma warning restore CS8603 // Possible null reference return.
+            services.AddScoped<ITenantAccessor, FinbuckleTenantAccessor<TTenant>>();
             return services
                 .AddMultiTenant<TTenant>()
                 .WithInMemoryStore(options =>

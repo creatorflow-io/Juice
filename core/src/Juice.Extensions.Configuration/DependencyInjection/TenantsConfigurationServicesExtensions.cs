@@ -16,7 +16,7 @@ namespace Microsoft.Extensions.DependencyInjection
         {
             return services.AddScoped<ITenantsConfigurationSource>(sp =>
             {
-                var tenant = sp.GetService<ITenant>();
+                var tenant = sp.GetService<ITenantAccessor>()?.Tenant;
                 var source = new TenantsJsonConfigurationSource
                 {
                     Tenant = tenant,

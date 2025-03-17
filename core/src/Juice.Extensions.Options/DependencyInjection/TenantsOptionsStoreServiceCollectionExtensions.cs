@@ -16,7 +16,11 @@ namespace Microsoft.Extensions.DependencyInjection
         {
             services.TryAddTransient<ITenantsOptionsMutableStore>(sp =>
             {
-                var tenant = sp.GetRequiredService<ITenant>();
+                var tenant = sp.GetRequiredService<ITenantAccessor>().Tenant;
+                if (tenant == null)
+                {
+                    throw new InvalidOperationException("Tenant is not available");
+                }
                 return new TenantsOptionsMutableJsonFileStore(tenant, file);
             });
             return services;
@@ -32,7 +36,11 @@ namespace Microsoft.Extensions.DependencyInjection
         {
             services.TryAddTransient<ITenantsOptionsMutableStore<T>>(sp =>
             {
-                var tenant = sp.GetRequiredService<ITenant>();
+                var tenant = sp.GetRequiredService<ITenantAccessor>().Tenant;
+                if (tenant == null)
+                {
+                    throw new InvalidOperationException("Tenant is not available");
+                }
                 return new TenantsOptionsMutableFileStore<T>(tenant, file);
             });
             return services;

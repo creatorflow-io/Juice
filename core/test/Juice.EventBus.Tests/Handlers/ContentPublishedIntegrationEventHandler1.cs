@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
+using Finbuckle.MultiTenant.Abstractions;
 using Juice.EventBus.Tests.Events;
 using Microsoft.Extensions.Logging;
 
@@ -13,19 +10,29 @@ namespace Juice.EventBus.Tests.Handlers
         private ILogger _logger;
         private readonly HandledService _handledService;
         private readonly ScopedService? _scopedService;
-        public ContentPublishedIntegrationEventHandler1(ILogger<ContentPublishedIntegrationEventHandler> logger, HandledService handledService, ScopedService? scopedService = default)
+        private readonly ITenantInfo? _tenantInfo;
+        public ContentPublishedIntegrationEventHandler1(ILogger<ContentPublishedIntegrationEventHandler1> logger,
+            HandledService handledService,
+            IMultiTenantContextAccessor? tenantContextAccessor = default,
+            ScopedService? scopedService = default)
         {
             _logger = logger;
             _handledService = handledService;
+            _tenantInfo = tenantContextAccessor?.MultiTenantContext.TenantInfo;
             _scopedService = scopedService;
         }
         public async Task HandleAsync(ContentPublishedIntegrationEvent @event)
         {
             await Task.Delay(200);
-            _logger.LogInformation("[X] Received {0} at {1}", @event.Message, @event.CreationDate);
+            _logger.LogInformation("[X] Received {0} at {1}. TenantInfo: {2}", @event.Message, @event.CreationDate, _tenantInfo?.Identifier);
+            if(_tenantInfo?.Identifier != null)
+            {
+                _handledService.ResolvedTenants.Add(_tenantInfo.Identifier);
+            }
             if (_scopedService == null || !_scopedService.IsDisposed)
             {
                 _handledService.Handlers.Add(nameof(ContentPublishedIntegrationEventHandler1));
+                _logger.LogInformation("Handled by {Handler}", nameof(ContentPublishedIntegrationEventHandler1));
             }
         }
     }

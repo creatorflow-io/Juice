@@ -19,7 +19,7 @@ namespace Juice.Extensions.Swagger
         }
         public void Apply(OpenApiDocument swaggerDoc, DocumentFilterContext context)
         {
-            var tenant = _httpContextAccessor.HttpContext?.RequestServices.GetService<ITenant>();
+            var tenant = _httpContextAccessor.HttpContext?.RequestServices.GetService<ITenantAccessor>()?.Tenant;
             foreach (var apiDescription in context.ApiDescriptions)
             {
                 if (apiDescription.ActionDescriptor.FilterDescriptors

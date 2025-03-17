@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Juice.MultiTenant;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Juice.EventBus
@@ -10,7 +11,6 @@ namespace Juice.EventBus
     {
         private readonly IServiceScopeFactory _scopeFactory;
         private List<Task> _tasks = new List<Task>();
-        private readonly Lock _lock = new();
         private bool _disposedValue;
 
         public InMemoryEventBus(IEventBusSubscriptionsManager subscriptionsManager,
@@ -58,6 +58,8 @@ namespace Juice.EventBus
                 if (SubsManager.HasSubscriptionsForEvent(eventName))
                 {
                     using var scope = _scopeFactory.CreateScope();
+                    var tenantResolver = scope.ServiceProvider.GetService<IScopedTenantResolver>();
+                    using var tenant = tenantResolver?.Resolve(@event.TenantId);
                     var subscriptions = SubsManager.GetHandlersForEvent(eventName);
                     foreach (var subscription in subscriptions)
                     {
