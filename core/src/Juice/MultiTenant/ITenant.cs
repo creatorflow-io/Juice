@@ -10,5 +10,6 @@ namespace Juice.MultiTenant
         public string? Name { get; }
         string? Identifier { get; }
         public string? OwnerUser { get; }
+        public string? TenantClass { get; }
     }
 }

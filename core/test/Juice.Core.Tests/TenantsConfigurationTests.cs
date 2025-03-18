@@ -132,6 +132,8 @@ namespace Juice.Core.Tests
 
         public string? OwnerUser => throw new NotImplementedException();
 
+        public string? TenantClass => throw new NotImplementedException();
+
         public T? GetProperty<T>(Func<T>? defaultValue = null, [CallerMemberName] string? name = null) => throw new NotImplementedException();
         public void SetProperty<T>(T? value, [CallerMemberName] string? name = null) => throw new NotImplementedException();
         public Task TriggerConfigurationChangedAsync() => Task.CompletedTask;

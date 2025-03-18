@@ -10,6 +10,7 @@
         <PackageReference Include="Finbuckle.MultiTenant.AspNetCore" Version="$(FinbuckleVersion)" />
     </ItemGroup>
     <ItemGroup>
+        <ProjectReference Include="..\..\core\src\Juice.Extensions.MultiTenant\Juice.Extensions.MultiTenant.csproj" />
         <ProjectReference Include="..\..\core\src\Juice\Juice.csproj" />
     </ItemGroup>
 </Project>

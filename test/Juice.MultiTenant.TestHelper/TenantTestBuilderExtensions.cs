@@ -19,9 +19,9 @@ namespace Microsoft.Extensions.DependencyInjection
         public static MultiTenantBuilder<TTenant> AddTestTenantRandom<TTenant>(this IServiceCollection services, string identifierA = "tenant-A", string identifierB = "tenant-B")
             where TTenant : class, ITenantInfo, ITenant, new()
         {
-            services.AddScoped<ITenantAccessor, FinbuckleTenantAccessor<TTenant>>();
             return services
                 .AddMultiTenant<TTenant>()
+                .AddTenantAccessor()
                 .WithInMemoryStore(options =>
                 {
                     var tenantA = new TTenant();
@@ -50,9 +50,9 @@ namespace Microsoft.Extensions.DependencyInjection
         public static MultiTenantBuilder<TTenant> AddTestTenantStatic<TTenant>(this IServiceCollection services, string identifier = "tenant-A")
             where TTenant : class, ITenantInfo, ITenant, new()
         {
-            services.AddScoped<ITenantAccessor, FinbuckleTenantAccessor<TTenant>>();
             return services
                 .AddMultiTenant<TTenant>()
+                .AddTenantAccessor()
                 .WithInMemoryStore(options =>
                 {
                     var tenant = new TTenant();
