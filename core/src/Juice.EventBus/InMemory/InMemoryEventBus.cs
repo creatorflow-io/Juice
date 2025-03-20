@@ -20,10 +20,15 @@ namespace Juice.EventBus
             _scopeFactory = scopeFactory;
         }
 
-        public override Task PublishAsync(IntegrationEvent @event)
+        public override Task PublishAsync(IntegrationEvent @event, string? tenantId = default)
         {
             var eventName = @event.GetEventKey();
-            var _task = ProcessingEventAsync(eventName, @event);
+            if(tenantId != null && @event is IMultiTenantIntegrationEvent _t && _t.TenantId != null && !_t.TenantId.Equals(tenantId, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException("TenantId is not match with event tenantId", nameof(tenantId));
+            }
+            tenantId ??= @event is IMultiTenantIntegrationEvent tenantEvent ? tenantEvent.TenantId : default;
+            var _task = ProcessingEventAsync(eventName, @event, tenantId);
             _task.ContinueWith(task =>
             {
                 if (task.IsFaulted)
@@ -50,7 +55,7 @@ namespace Juice.EventBus
             return Task.CompletedTask;
         }
 
-        protected virtual async Task ProcessingEventAsync(string eventName, IntegrationEvent @event)
+        protected virtual async Task ProcessingEventAsync(string eventName, IntegrationEvent @event, string? tenantId)
         {
             using (Logger.BeginScope($"Processing integration event: {eventName} {@event.Id}"))
             {
@@ -59,7 +64,7 @@ namespace Juice.EventBus
                 {
                     using var scope = _scopeFactory.CreateScope();
                     var tenantResolver = scope.ServiceProvider.GetService<IScopedTenantResolver>();
-                    using var tenant = tenantResolver?.Resolve(@event.TenantId);
+                    using var tenant = tenantResolver?.Resolve(tenantId);
                     var subscriptions = SubsManager.GetHandlersForEvent(eventName);
                     foreach (var subscription in subscriptions)
                     {

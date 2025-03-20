@@ -14,7 +14,7 @@ namespace Juice.EventBus
             Logger = logger;
         }
 
-        public abstract Task PublishAsync(IntegrationEvent @event);
+        public abstract Task PublishAsync(IntegrationEvent @event, string? tenantId);
 
         public virtual void Subscribe<T, TH>(string? key = default)
             where T : IntegrationEvent

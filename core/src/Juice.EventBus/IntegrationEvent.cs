@@ -10,17 +10,15 @@ namespace Juice.EventBus
         }
 
         [JsonConstructor]
-        public IntegrationEvent(Guid id, DateTime creationDate, string? tenantId)
+        public IntegrationEvent(Guid id, DateTime creationDate)
         {
             Id = id;
             CreationDate = creationDate;
-            TenantId = tenantId;
         }
 
         public Guid Id { get; init; } = Guid.NewGuid();
 
         public DateTime CreationDate { get; init; } = DateTime.UtcNow;
-        public string? TenantId { get; init; }
 
         public virtual string GetEventKey()
         {

@@ -314,7 +314,7 @@ namespace Juice.EventBus.RabbitMQ
         }
         #endregion
         #region Publish outgoing event
-        public async Task PublishAsync(IntegrationEvent @event)
+        public async Task PublishAsync(IntegrationEvent @event, string? tenantId = default)
         {
             await Task.Yield();
             ArgumentNullException.ThrowIfNull(@event);
@@ -322,7 +322,12 @@ namespace Juice.EventBus.RabbitMQ
             {
                 throw new InvalidOperationException("RabbitMQ broker is not connected");
             }
-            
+            if (tenantId != null && @event is IMultiTenantIntegrationEvent _t && _t.TenantId != null && !_t.TenantId.Equals(tenantId, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException("TenantId is not match with event tenantId", nameof(tenantId));
+            }
+            tenantId ??= @event is IMultiTenantIntegrationEvent tenantEvent ? tenantEvent.TenantId : default;
+
             var policy = RetryPolicy.Handle<BrokerUnreachableException>()
                 .Or<SocketException>()
                 .WaitAndRetry(_retryCount, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)), (ex, time) =>
@@ -353,7 +358,7 @@ namespace Juice.EventBus.RabbitMQ
                 properties.DeliveryMode = 2; // persistent
                 properties.Headers = new Dictionary<string, object>
                 {
-                    { "TenantId", @event.TenantId ?? string.Empty }
+                    { "TenantId", tenantId ?? string.Empty }
                 };
 
                 if (Logger.IsEnabled(LogLevel.Debug))

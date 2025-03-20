@@ -9,7 +9,8 @@
         /// Publish <see cref="IntegrationEvent"/> to implemented broker like RabbitMQ, ServiceBus...
         /// </summary>
         /// <param name="event"></param>
-        Task PublishAsync(IntegrationEvent @event);
+        /// <param name="tenantId"></param>
+        Task PublishAsync(IntegrationEvent @event, string? tenantId = default);
 
         /// <summary>
         /// Subscribe an <see cref="IntegrationEvent"/> with specified <see cref="IIntegrationEventHandler{T}"/>
