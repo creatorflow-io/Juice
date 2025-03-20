@@ -1,6 +1,7 @@
 ﻿using Juice.EF.Extensions;
 using Juice.EventBus;
 using Juice.EventBus.IntegrationEventLog.EF;
+using Juice.MultiTenant;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
@@ -14,16 +15,19 @@ namespace Juice.Integrations.EventBus
         public TContext DomainContext { get; }
         private readonly ILogger _logger;
         private readonly IEventBus _eventBus;
+        private readonly ITenantAccessor? _tenantAccessor;
         public IntegrationEventService(IIntegrationEventLogService<TContext> eventLogService
             , TContext domainContext
             , IEventBus eventBus
             , ILogger<IntegrationEventService<TContext>> logger
+            , ITenantAccessor? tenantAccessor = default
             )
         {
             _eventLogService = eventLogService;
             DomainContext = domainContext;
             _logger = logger;
             _eventBus = eventBus;
+            _tenantAccessor = tenantAccessor;
         }
 
         public async Task AddAndSaveEventAsync(IntegrationEvent evt, IDbContextTransaction? transaction = default)
@@ -59,7 +63,7 @@ namespace Juice.Integrations.EventBus
                         await _eventLogService.MarkEventAsFailedAsync(logEvt.EventId);
                         continue;
                     }
-                    await _eventBus.PublishAsync(logEvt.IntegrationEvent);
+                    await _eventBus.PublishAsync(logEvt.IntegrationEvent, _tenantAccessor?.Tenant?.Identifier);
                     await _eventLogService.MarkEventAsPublishedAsync(logEvt.EventId);
                 }
                 catch (Exception ex)
