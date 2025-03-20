@@ -9,9 +9,10 @@ namespace Microsoft.Extensions.DependencyInjection
     public static class JuiceFinbuckleMultiTenantBuilderExtensions
     {
 
-        public static MultiTenantBuilder<TTenantInfo> AddTenantAccessor<TTenantInfo>(this MultiTenantBuilder<TTenantInfo> builder)
+        public static MultiTenantBuilder<TTenantInfo> AddTenantServices<TTenantInfo>(this MultiTenantBuilder<TTenantInfo> builder)
             where TTenantInfo : class, ITenant, ITenantInfo, new()
         {
+            builder.Services.TryAddScoped<IScopedTenantResolver, FinbuckleTenantResolver<TTenantInfo>>();
             builder.Services.TryAddScoped<ITenantAccessor, FinbuckleTenantAccessor<TTenantInfo>>();
 #pragma warning disable CS8603 // Possible null reference return.
             // Will be removed in future versions, use ITenantAccessor instead.

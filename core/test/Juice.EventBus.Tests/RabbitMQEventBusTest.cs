@@ -116,8 +116,7 @@ namespace Juice.EventBus.Tests
                 services.AddTransient<ContentPublishedIntegrationEventHandler1>();
                 services.AddSingleton<HandledService>();
 
-                services.AddMultiTenant<TenantInfo>();
-                services.AddScoped<MultiTenant.IScopedTenantResolver, TenantResolver>();
+                services.AddMultiTenant();
             });
             var serviceProvider = resolver.ServiceProvider;
             var eventBus1 = serviceProvider.GetRequiredKeyedService<IEventBus>("exchange1");

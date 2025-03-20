@@ -1,37 +1,46 @@
-﻿using Finbuckle.MultiTenant.Abstractions;
+﻿
 using Finbuckle.MultiTenant;
+using Finbuckle.MultiTenant.Abstractions;
+using Finbuckle.MultiTenant.Stores;
+using Finbuckle.MultiTenant.Events;
+using Juice.MultiTenant;
 using Microsoft.Extensions.Logging;
-using System;
+using Microsoft.Extensions.Logging.Abstractions;
 
-namespace Juice.EventBus.Tests
+namespace Juice.Extensions.MultiTenant
 {
-    internal class TenantResolver : MultiTenant.IScopedTenantResolver
+    internal class FinbuckleTenantResolver<TTenant>: IScopedTenantResolver
+        where TTenant : class, ITenant, ITenantInfo, new()
     {
         private readonly IMultiTenantContextSetter _tenantContextSetter;
         private readonly IMultiTenantContextAccessor _tenantContextAccessor;
-        private readonly ILogger<TenantResolver> _logger;
+        private readonly IEnumerable<IMultiTenantStore<TTenant>> _stores;
+        private readonly ILoggerFactory _loggerFactory;
 
-        public TenantResolver(IMultiTenantContextSetter tenantContextSetter,
+        public FinbuckleTenantResolver(IMultiTenantContextSetter tenantContextSetter,
             IMultiTenantContextAccessor tenantContextAccessor,
-            ILogger<TenantResolver> logger)
+            IEnumerable<IMultiTenantStore<TTenant>> stores,
+            ILoggerFactory logger)
         {
             _tenantContextAccessor = tenantContextAccessor;
             _tenantContextSetter = tenantContextSetter;
-            _logger = logger;
+            _stores = stores;
+            _loggerFactory = logger;
         }
 
         public IDisposable Resolve(string? tenantId)
         {
             var previousContext = _tenantContextAccessor.MultiTenantContext;
+            
             _tenantContextSetter.MultiTenantContext = new MultiTenantContext<TenantInfo>
             {
                 TenantInfo = new TenantInfo { Id = tenantId, Identifier = tenantId }
             };
-
-            _logger.LogInformation($"Resolved Tenant: {tenantId}");
+            var logger = _loggerFactory.CreateLogger<FinbuckleTenantResolver<TTenant>>();
+            logger.LogInformation($"Resolved Tenant: {tenantId}");
             return new TenantScope(() =>
             {
-                _logger.LogInformation($"Disposed Tenant: {tenantId}");
+                logger.LogInformation($"Disposed Tenant: {tenantId}");
                 _tenantContextSetter.MultiTenantContext = previousContext;
             });
         }

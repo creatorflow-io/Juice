@@ -21,7 +21,7 @@ namespace Microsoft.Extensions.DependencyInjection
         {
             return services
                 .AddMultiTenant<TTenant>()
-                .AddTenantAccessor()
+                .AddTenantServices()
                 .WithInMemoryStore(options =>
                 {
                     var tenantA = new TTenant();
@@ -52,7 +52,7 @@ namespace Microsoft.Extensions.DependencyInjection
         {
             return services
                 .AddMultiTenant<TTenant>()
-                .AddTenantAccessor()
+                .AddTenantServices()
                 .WithInMemoryStore(options =>
                 {
                     var tenant = new TTenant();
