@@ -1,13 +1,14 @@
 ﻿using System.Linq.Expressions;
 using Finbuckle.MultiTenant;
 using Finbuckle.MultiTenant.EntityFrameworkCore;
+using Juice.EF.MultiTenant;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Juice.MultiTenant.EF.Extensions
 {
-
+    
     public static class CrossTenantEntityTypeBuilderExtensions
     {
         private class ExpressionVariableScope
@@ -20,14 +21,28 @@ namespace Juice.MultiTenant.EF.Extensions
             return builder.Metadata.GetQueryFilter();
         }
         /// <summary>
-        /// Adds MultiTenant support for an entity. Call <see cref="IsCrossTenant" /> after
+        /// Adds MultiTenant support for an entity. Call <see cref="IsMultiTenant" /> after
         /// <see cref="EntityTypeBuilder.HasQueryFilter" /> to merge query filters. It is recommended
         /// to query the entries that have matched tenant first then fallback to non-tenant entries.
         /// 
         /// </summary>
         /// <param name="builder">The typed EntityTypeBuilder instance.</param>
         /// <returns>A MultiTenantEntityTypeBuilder instance.</returns>
+        ///
         public static MultiTenantEntityTypeBuilder IsCrossTenant(this EntityTypeBuilder builder)
+            => IsMultiTenant(builder, SharingType.Tenant);
+
+        /// <summary>
+        /// Adds MultiTenant support for an entity. Call <see cref="IsMultiTenant" /> after
+        /// <see cref="EntityTypeBuilder.HasQueryFilter" /> to merge query filters. It is recommended
+        /// to query the entries that have matched tenant first then fallback to non-tenant entries.
+        /// 
+        /// </summary>
+        /// <param name="builder">The typed EntityTypeBuilder instance.</param>
+        /// <param name="entitySharingType"></param>
+        /// <returns>A MultiTenantEntityTypeBuilder instance.</returns>
+        ///
+        public static MultiTenantEntityTypeBuilder IsMultiTenant(this EntityTypeBuilder builder, SharingType entitySharingType)
         {
             if (builder.Metadata.IsMultiTenant())
                 return new MultiTenantEntityTypeBuilder(builder);
@@ -63,7 +78,7 @@ namespace Juice.MultiTenant.EF.Extensions
             // build up expression tree for: EF.Property<string>(e, "TenantId")
             var tenantIdExp = Expression.Constant("TenantId", typeof(string));
             var efPropertyExp = Expression.Call(typeof(Microsoft.EntityFrameworkCore.EF), nameof(Microsoft.EntityFrameworkCore.EF.Property), new[] { typeof(string) }, entityParamExp, tenantIdExp);
-            var leftExp = efPropertyExp;
+            var entityExp = efPropertyExp;
 
             // build up express tree for: TenantInfo.Id
             // EF will magically sub the current db context in for scope.Context
@@ -71,16 +86,40 @@ namespace Juice.MultiTenant.EF.Extensions
             var contextMemberInfo = typeof(ExpressionVariableScope).GetMember(nameof(ExpressionVariableScope.Context))[0];
             var contextMemberAccessExp = Expression.MakeMemberAccess(scopeConstantExp, contextMemberInfo);
             var contextTenantInfoExp = Expression.Property(contextMemberAccessExp, nameof(IMultiTenantDbContext.TenantInfo));
-            var rightExp = Expression.Property(contextTenantInfoExp, nameof(IMultiTenantDbContext.TenantInfo.Id));
+            var contextExp = Expression.Property(contextTenantInfoExp, nameof(IMultiTenantDbContext.TenantInfo.Id));
 
-            // build expression tree for
-            // (EF.Property<string>(e, "TenantId") == TenantInfo.Id'
-            // OR EF.Property<string>(e, "TenantId") == null
-            // OR EF.Property<string>(e, "TenantId") == '')
-            var predicate = Expression.OrElse(
-                Expression.Equal(leftExp, rightExp),
-                Expression.OrElse(Expression.Equal(leftExp, Expression.Constant(null)),
-                Expression.Equal(leftExp, Expression.Constant(""))));
+            var predicate = entitySharingType switch
+            {
+                // (EF.Property<string>(e, "TenantId") == TenantInfo.Id'
+                // OR EF.Property<string>(e, "TenantId") == null
+                // OR EF.Property<string>(e, "TenantId") == '')
+                SharingType.Tenant => Expression.OrElse(
+                    Expression.Equal(entityExp, contextExp),
+                    Expression.OrElse(
+                        Expression.Equal(entityExp, Expression.Constant(null)),
+                        Expression.Equal(entityExp, Expression.Constant("")))),
+                // (EF.Property<string>(e, "TenantId") == TenantInfo.Id'
+                // OR TenantInfo.Id == null OR TenantInfo.Id == ''
+                SharingType.Global => Expression.OrElse(
+                    Expression.Equal(entityExp, contextExp),
+                    Expression.OrElse(
+                        Expression.Equal(contextExp, Expression.Constant(null)),
+                        Expression.Equal(contextExp, Expression.Constant("")))),
+                // (EF.Property<string>(e, "TenantId") == TenantInfo.Id'
+                // OR (
+                //      (EF.Property<string>(e, "TenantId") == null OR EF.Property<string>(e, "TenantId") == '')
+                //      AND (TenantInfo.Id == null OR TenantInfo.Id == '')
+                //    )
+                _ => Expression.OrElse(
+                    Expression.Equal(entityExp, contextExp),
+                    Expression.AndAlso(
+                        Expression.OrElse(
+                            Expression.Equal(entityExp, Expression.Constant(null)),
+                            Expression.Equal(entityExp, Expression.Constant(""))),
+                        Expression.OrElse(
+                            Expression.Equal(contextExp, Expression.Constant(null)),
+                            Expression.Equal(contextExp, Expression.Constant("")))))
+            };
 
             // combine with existing filter
             if (existingQueryFilter != null)
