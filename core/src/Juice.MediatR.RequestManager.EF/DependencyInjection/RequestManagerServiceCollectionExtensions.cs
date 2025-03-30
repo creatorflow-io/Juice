@@ -6,6 +6,7 @@ using Juice.MediatR.RequestManager.EF;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
@@ -23,6 +24,11 @@ namespace Microsoft.Extensions.DependencyInjection
         public static IServiceCollection AddEFMediatorRequestManager(this IServiceCollection services, IConfiguration configuration,
             Action<DbOptions>? configureOptions)
         {
+            if(services.Any(p => p.ServiceType == typeof(IRequestManager)))
+            {
+                return services;
+            }
+
             services.AddScoped(p =>
             {
                 var options = new DbOptions<ClientRequestContext> { DatabaseProvider = "SqlServer" };

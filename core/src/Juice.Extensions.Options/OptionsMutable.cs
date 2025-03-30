@@ -8,7 +8,7 @@ namespace Juice.Extensions.Options
     /// Implementation for <see cref="IOptionsMutable{T}"/>, use registerd <see cref="IOptionsMutableStore"/> to save change
     /// </summary>
     /// <typeparam name="T"></typeparam>
-	internal class OptionsMutable<T> : IOptionsMutable<T> where T : class, new()
+	public class OptionsMutable<T> : IOptionsMutable<T> where T : class, new()
     {
         private readonly IOptionsMonitor<T> _options;
         private readonly string _section;

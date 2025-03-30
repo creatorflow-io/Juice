@@ -2,7 +2,7 @@
 
 namespace Juice.Extensions.Configuration
 {
-    public interface ITenantsConfiguration : IConfiguration
+    public interface ITenantConfiguration : IConfiguration
     {
     }
 }

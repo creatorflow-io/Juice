@@ -49,7 +49,7 @@ namespace Juice.Core.Tests
             Assert.Equal(time, options.Value.Time);
         }
 
-        [Fact(DisplayName = "Strongly typed appsettings")]
+        [Fact(DisplayName = "Separated appsettings")]
         public async Task Config_should_write_to_separated_Async()
         {
             var builder = WebApplication.CreateBuilder();

@@ -3,23 +3,16 @@ using Microsoft.Extensions.Primitives;
 
 namespace Juice.Extensions.Configuration
 {
-    internal class TenantsConfiguration : ITenantsConfiguration
+    internal class TenantConfiguration : ITenantConfiguration
     {
-        private IConfigurationRoot _configuration;
+        private readonly IConfiguration _configuration;
+        private readonly IEnumerable<IConfigurationSource> _configurationSources;
 
-        public TenantsConfiguration(IConfiguration configuration, IEnumerable<ITenantsConfigurationSource> tenantsConfigurationSources)
+        public TenantConfiguration(IConfiguration configuration,
+            IEnumerable<IConfigurationSource> configurationSources)
         {
-            var builder = new ConfigurationBuilder()
-               .AddConfiguration(configuration);
-            foreach (var source in tenantsConfigurationSources.OfType<IConfigurationSource>())
-            {
-                if (source != null)
-                {
-                    builder.Add(source);
-                }
-            }
-            _configuration = builder
-               .Build();
+            _configuration = configuration;
+            _configurationSources = configurationSources;
         }
 
         /// <summary>
@@ -29,7 +22,16 @@ namespace Juice.Extensions.Configuration
         {
             get
             {
-                return _configuration;
+                var builder = new ConfigurationBuilder()
+               .AddConfiguration(_configuration);
+                foreach (var source in _configurationSources)
+                {
+                    if (source != null)
+                    {
+                        builder.Add(source);
+                    }
+                };
+                return builder.Build();
             }
         }
 
