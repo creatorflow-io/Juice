@@ -1,5 +1,6 @@
 ﻿using Juice.MediatR;
 using Juice.MediatR.RequestManager.Redis;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
@@ -18,8 +19,8 @@ namespace Microsoft.Extensions.DependencyInjection
         {
             services.Configure(configure);
 
-            services.AddScoped<IRequestManager, RequestManager>();
-            services.AddScoped(typeof(IRequestManager<>), typeof(RequestManager<>));
+            services.TryAddScoped<IRequestManager, RequestManager>();
+            services.TryAddScoped(typeof(IRequestManager<>), typeof(RequestManager<>));
             return services;
         }
     }

@@ -3,6 +3,7 @@ using Finbuckle.MultiTenant;
 using Juice.MultiTenant;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Juice.Extensions.MultiTenant;
+using Juice.Extensions.Configuration;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
@@ -12,8 +13,9 @@ namespace Microsoft.Extensions.DependencyInjection
         public static MultiTenantBuilder<TTenantInfo> AddTenantServices<TTenantInfo>(this MultiTenantBuilder<TTenantInfo> builder)
             where TTenantInfo : class, ITenant, ITenantInfo, new()
         {
+            builder.Services.AddTenantConfiguration();
             builder.Services.TryAddScoped<IScopedTenantResolver, FinbuckleTenantResolver<TTenantInfo>>();
-            builder.Services.TryAddScoped<ITenantAccessor, FinbuckleTenantAccessor<TTenantInfo>>();
+            builder.Services.TryAddSingleton<ITenantAccessor, FinbuckleTenantAccessor<TTenantInfo>>();
 #pragma warning disable CS8603 // Possible null reference return.
             // Will be removed in future versions, use ITenantAccessor instead.
             builder.Services.TryAddScoped<ITenant>(sp => sp.GetRequiredService<ITenantAccessor>().Tenant);

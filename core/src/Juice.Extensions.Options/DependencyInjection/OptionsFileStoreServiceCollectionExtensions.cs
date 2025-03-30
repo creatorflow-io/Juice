@@ -13,7 +13,7 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <returns></returns>
         public static IServiceCollection UseOptionsMutableFileStore(this IServiceCollection services, string file)
         {
-            services.TryAddTransient<IOptionsMutableStore>(sp => new DefaultOptionsMutableStore(file));
+            services.TryAddSingleton<IOptionsMutableStore>(sp => new DefaultOptionsMutableStore(file));
             return services;
         }
 
@@ -25,7 +25,7 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <returns></returns>
         public static IServiceCollection UseOptionsMutableFileStore<T>(this IServiceCollection services, string file)
         {
-            services.TryAddTransient<IOptionsMutableStore<T>>(sp => new DefaultOptionsMutableStore<T>(file));
+            services.TryAddSingleton<IOptionsMutableStore<T>>(sp => new DefaultOptionsMutableStore<T>(file));
             return services;
         }
     }

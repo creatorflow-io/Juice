@@ -6,26 +6,26 @@ using Microsoft.Extensions.Logging;
 
 namespace Juice.Extensions.Options
 {
-    internal class TenantsOptionsMutable<T> : ITenantsOptionsMutable<T>
+    internal class TenantOptionsMutable<T> : IOptionsMutable<T>
         where T : class, new()
     {
         private readonly string _section;
-        private readonly ITenantsConfiguration _tenantsConfiguration;
+        private readonly ITenantConfiguration _tenantConfiguration;
         private readonly Action<T>? _configureOptions;
         private readonly IOptionsMutableStore _store;
         private readonly ILogger _logger;
-        public TenantsOptionsMutable(
+        public TenantOptionsMutable(
             IServiceProvider serviceProvider,
             string section
             )
         {
-            _store = serviceProvider.GetService<ITenantsOptionsMutableStore<T>>() ?? serviceProvider.GetRequiredService<ITenantsOptionsMutableStore>();
-            _tenantsConfiguration = serviceProvider.GetRequiredService<ITenantsConfiguration>();
+            _store = serviceProvider.GetService<IOptionsMutableStore<T>>() ?? serviceProvider.GetRequiredService<IOptionsMutableStore>();
+            _tenantConfiguration = serviceProvider.GetRequiredService<ITenantConfiguration>();
             _section = section;
-            _logger = serviceProvider.GetRequiredService<ILogger<TenantsOptionsMutable<T>>>();
+            _logger = serviceProvider.GetRequiredService<ILogger<TenantOptionsMutable<T>>>();
         }
 
-        public TenantsOptionsMutable(
+        public TenantOptionsMutable(
             IServiceProvider serviceProvider,
             string section,
             Action<T>? configureOptions) : this(serviceProvider, section)
@@ -43,14 +43,15 @@ namespace Juice.Extensions.Options
 
         public T Get(string? name)
         {
-            if (name == null) {
+            if (name == null)
+            {
                 return Value;
             }
             if (_valueUpdated)
             {
                 return _updatedValue;
             }
-            var options = _tenantsConfiguration
+            var options = _tenantConfiguration
                     .GetSection(name).Get<T>() ?? new();
             _configureOptions?.Invoke(options);
             return options;

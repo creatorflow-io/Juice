@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using Finbuckle.MultiTenant;
+using FluentAssertions;
 using Juice.Extensions.Configuration;
 using Juice.Extensions.Options;
 using Juice.MultiTenant;
@@ -10,6 +12,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -30,7 +33,7 @@ namespace Juice.Core.Tests
         [Fact(DisplayName = "Read config from tenant appsettings"), TestPriority(1)]
         public void Config_should_read_from_tenant()
         {
-            using IHost host = Host.CreateDefaultBuilder()
+            using var host = Host.CreateDefaultBuilder()
                 .ConfigureAppConfiguration((hostContext, configApp) =>
                 {
                     configApp.Sources.Clear();
@@ -47,9 +50,13 @@ namespace Juice.Core.Tests
                          .AddConfiguration(context.Configuration.GetSection("Logging"));
                      });
 
-                     services.AddScoped<ITenantAccessor, TimeBasedTenantAccessor>();
-                     services.AddTenantsConfiguration().AddTenantsJsonFile("appsettings.Development.json");
-                     services.ConfigureTenantsOptions<Models.Options>("Options");
+                     services.AddMultiTenant();
+
+                     services.AddSingleton<RandomTenantAccessor>();
+                     services.AddSingleton<ITenantAccessor>(sp => sp.GetRequiredService<RandomTenantAccessor>());
+                     services.AddSingleton<ITenantSetter>(sp => sp.GetRequiredService<RandomTenantAccessor>());
+                     services.AddTenantJsonFile("appsettings.Development.json");
+                     services.ConfigurePerTenant<Models.Options> ("Options");
                  })
               .ConfigureWebHostDefaults(webBuilder =>
               {
@@ -59,16 +66,25 @@ namespace Juice.Core.Tests
 
             using (var scope = host.Services.CreateScope())
             {
-                var options = scope.ServiceProvider.GetRequiredService<ITenantsConfiguration>().GetSection("A:Name").Get<string>();
+                var options = scope.ServiceProvider.GetRequiredService<ITenantConfiguration>().GetSection("A:Name").Get<string>();
                 Assert.Equal("B", options);
             }
+
+            var resolvedTenants = new HashSet<string>();
 
             for (var i = 0; i < 10; i++)
             {
                 using var scope = host.Services.CreateScope();
-                var options = scope.ServiceProvider.GetRequiredService<ITenantsOptions<Models.Options>>();
+                var setter = scope.ServiceProvider.GetRequiredService<ITenantSetter>();
+                setter.InitNewTenant();
+                var options = scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<Models.Options>>();
+                var tenant = scope.ServiceProvider.GetRequiredService<ITenantAccessor>().Tenant;
+                tenant.Should().NotBeNull();
                 _output.WriteLine(options.Value.Name + ": " + options.Value.Time);
+                Assert.Equal(tenant!.Identifier == "TenantA" ? "Tenant A" : "Tenant B", options.Value.Name);
+                resolvedTenants.Add(tenant.Identifier!);
             }
+            resolvedTenants.Should().HaveCount(2);
         }
 
         [Fact(DisplayName = "Write config to tenant appsettings"), TestPriority(0)]
@@ -91,13 +107,17 @@ namespace Juice.Core.Tests
                      .AddConfiguration(context.Configuration.GetSection("Logging"));
                  });
 
-                 services.AddScoped<ITenantAccessor, TimeBasedTenantAccessor>();
-                 services.AddTenantsConfiguration()
-                    .AddTenantsJsonFile("appsettings.Development.json");
+                 services.AddMultiTenant();
 
-                 services.UseTenantsOptionsMutableFileStore("appsettings.Development.json");
+                 services.AddSingleton<RandomTenantAccessor>();
+                 services.AddSingleton<ITenantAccessor>(sp => sp.GetRequiredService<RandomTenantAccessor>());
+                 services.AddSingleton<ITenantSetter>(sp => sp.GetRequiredService<RandomTenantAccessor>());
 
-                 services.ConfigureTenantsOptionsMutable<Models.Options>("Options");
+                 services.AddTenantJsonFile("appsettings.Development.json");
+
+                 services.UseTenantOptionsMutableFileStore("appsettings.Development.json");
+
+                 services.ConfigureMutablePerTenant<Models.Options>("Options");
 
              })
               .ConfigureWebHostDefaults(webBuilder =>
@@ -105,16 +125,24 @@ namespace Juice.Core.Tests
               })
              .Build();
 
+            var resolvedTenants = new HashSet<string>();
+
             for (var i = 0; i < 10; i++)
             {
                 using var scope = host.Services.CreateScope();
                 var serviceProvider = scope.ServiceProvider;
-                var options = serviceProvider.GetRequiredService<ITenantsOptionsMutable<Models.Options>>();
+                var setter = serviceProvider.GetRequiredService<ITenantSetter>();
+                setter.InitNewTenant();
+                var options = serviceProvider.GetRequiredService<IOptionsMutable<Models.Options>>();
+                var tenant = serviceProvider.GetRequiredService<ITenantAccessor>().Tenant;
                 var time = DateTimeOffset.Now.ToString();
                 _output.WriteLine(options.Value.Name + ": " + time);
+                Assert.Equal(tenant!.Identifier == "TenantA" ? "Tenant A" : "Tenant B", options.Value.Name);
                 Assert.True(await options.UpdateAsync(o => o.Time = time));
                 Assert.Equal(time, options.Value.Time);
+                resolvedTenants.Add(tenant.Identifier!);
             }
+            resolvedTenants.Should().HaveCount(2);
         }
     }
 
@@ -139,8 +167,25 @@ namespace Juice.Core.Tests
         public Task TriggerConfigurationChangedAsync() => Task.CompletedTask;
     }
 
-    internal class TimeBasedTenantAccessor : ITenantAccessor
+    internal interface ITenantSetter
     {
-        public ITenant? Tenant => new MyTenant { Identifier = DateTime.Now.Millisecond % 2 == 0 ? "TenantA" : "TenantB" };
-}
+        void InitNewTenant();
+    }
+    internal class RandomTenantAccessor : ITenantAccessor, ITenantSetter
+    {
+        private readonly Random _random = new Random();
+        private ITenant? _tenant;
+
+        public RandomTenantAccessor()
+        {
+            InitNewTenant();
+        }
+
+        public void InitNewTenant()
+        {
+            _tenant = new MyTenant { Identifier = _random.Next() % 2 == 0 ? "TenantA" : "TenantB" };
+        }
+
+        public ITenant? Tenant => _tenant;
+    }
 }

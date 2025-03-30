@@ -1,4 +1,5 @@
 ﻿using Juice.EventBus;
+using Juice.Extensions.Options;
 using Juice.Modular;
 using Juice.Tests.Host.IntegrationEvents;
 using Microsoft.AspNetCore.DataProtection;
@@ -11,7 +12,7 @@ namespace Juice.Tests.Host
     {
         public override void ConfigureServices(IServiceCollection services, IMvcBuilder mvc, IWebHostEnvironment env, IConfiguration configuration)
         {
-            services.ConfigureTenantsOptions<Options>("Options");
+            services.ConfigurePerTenant<Options>("Options");
 
 
             services.AddMemoryCache();
