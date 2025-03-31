@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
-    public static class OptionsFileStoreServiceCollectionExtensions
+    public static class OptionsMutableStoreServiceCollectionExtensions
     {
         /// <summary>
         /// Save options to [file.json]

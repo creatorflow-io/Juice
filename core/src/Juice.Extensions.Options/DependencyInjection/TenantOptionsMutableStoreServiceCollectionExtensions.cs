@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
-    public static class TenantOptionsStoreServiceCollectionExtensions
+    public static class TenantOptionsMutableStoreServiceCollectionExtensions
     {
         /// <summary>
         /// Save per-tenant options to tenants/[Tenant name]/[file.json]

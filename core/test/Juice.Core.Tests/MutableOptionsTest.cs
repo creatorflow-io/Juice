@@ -43,7 +43,8 @@ namespace Juice.Core.Tests
             services.ConfigureMutable<Options>(configuration.GetSection("Options"));
 
             var serviceProvider = builder.Build().Services;
-            var options = serviceProvider.GetRequiredService<IOptionsMutable<Options>>();
+            using var scope = serviceProvider.GetRequiredService<IServiceScopeFactory>().CreateScope();
+            var options = scope.ServiceProvider.GetRequiredService<IOptionsMutable<Options>>();
             var time = DateTimeOffset.Now.ToString();
             Assert.True(await options.UpdateAsync(o => o.Time = time));
             Assert.Equal(time, options.Value.Time);
