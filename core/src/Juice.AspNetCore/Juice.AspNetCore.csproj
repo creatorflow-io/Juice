@@ -30,9 +30,9 @@
         <PackageReference Include="GraphQL.Server.Transports.AspNetCore" Version="8.0.3" />
     </ItemGroup>
 
-    <ItemGroup Label="Fix refs conflict">
+    <!--<ItemGroup Label="Fix refs conflict">
         <PackageReference Condition="'$(TargetFramework)' == 'net8.0'" Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
-    </ItemGroup>
+    </ItemGroup>-->
     <ItemGroup>
         <PackageReference Include="Microsoft.EntityFrameworkCore" Version="$(EFVersion)" />
     </ItemGroup>
