@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Finbuckle.MultiTenant;
 using FluentAssertions;
 using Juice.Extensions.Configuration;
+using Juice.Extensions.MultiTenant;
 using Juice.Extensions.Options;
 using Juice.MultiTenant;
 using Juice.XUnit;
@@ -31,7 +32,7 @@ namespace Juice.Core.Tests
 
 
         [Fact(DisplayName = "Read config from tenant appsettings"), TestPriority(1)]
-        public void Config_should_read_from_tenant()
+        public async Task Config_should_read_from_tenantAsync()
         {
             using var host = Host.CreateDefaultBuilder()
                 .ConfigureAppConfiguration((hostContext, configApp) =>
@@ -51,38 +52,40 @@ namespace Juice.Core.Tests
                      });
 
                      services.AddMultiTenant();
-
-                     services.AddSingleton<RandomTenantAccessor>();
-                     services.AddSingleton<ITenantAccessor>(sp => sp.GetRequiredService<RandomTenantAccessor>());
-                     services.AddSingleton<ITenantSetter>(sp => sp.GetRequiredService<RandomTenantAccessor>());
+                     services.AddSingleton<MySingletonService>();
+                     services.AddTestTenantRandom<Extensions.MultiTenant.TenantInfo>();
                      services.AddTenantJsonFile("appsettings.Development.json");
-                     services.ConfigurePerTenant<Models.Options> ("Options");
+                     services.ConfigurePerTenant<Models.Options>("Options");
                  })
               .ConfigureWebHostDefaults(webBuilder =>
               {
               })
              .Build();
 
-
-            using (var scope = host.Services.CreateScope())
+            await host.Services.TenantInvokeAsync(async (context) =>
             {
-                var options = scope.ServiceProvider.GetRequiredService<ITenantConfiguration>().GetSection("A:Name").Get<string>();
+                var tenantAccessor = context.RequestServices.GetRequiredService<ITenantAccessor>();
+                var tenantIdentifier = tenantAccessor.Tenant?.Identifier;
+                tenantIdentifier.Should().NotBeNull();
+                var options = context.RequestServices.GetRequiredService<ITenantConfiguration>().GetSection("A:Name").Get<string>();
                 Assert.Equal("B", options);
-            }
+            });
 
             var resolvedTenants = new HashSet<string>();
 
+            var singletonService = host.Services.GetRequiredService<MySingletonService>();
+
             for (var i = 0; i < 10; i++)
             {
-                using var scope = host.Services.CreateScope();
-                var setter = scope.ServiceProvider.GetRequiredService<ITenantSetter>();
-                setter.InitNewTenant();
-                var options = scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<Models.Options>>();
-                var tenant = scope.ServiceProvider.GetRequiredService<ITenantAccessor>().Tenant;
-                tenant.Should().NotBeNull();
-                _output.WriteLine(options.Value.Name + ": " + options.Value.Time);
-                Assert.Equal(tenant!.Identifier == "TenantA" ? "Tenant A" : "Tenant B", options.Value.Name);
-                resolvedTenants.Add(tenant.Identifier!);
+                await host.Services.TenantInvokeAsync(async (context) =>
+                {
+                    var options = context.RequestServices.GetRequiredService<IOptionsSnapshot<Models.Options>>();
+                    var tenant = context.RequestServices.GetRequiredService<ITenantAccessor>().Tenant;
+                    _output.WriteLine(tenant!.Identifier + ": " + options.Value.Name + ": " + options.Value.Time);
+                    Assert.Equal(tenant.Identifier == "TenantA" ? "Tenant A" : "Tenant B", options.Value.Name);
+                    resolvedTenants.Add(tenant.Identifier!);
+                    Assert.Equal(tenant.Identifier, singletonService.TenantIdentifier);
+                });
             }
             resolvedTenants.Should().HaveCount(2);
         }
@@ -107,11 +110,7 @@ namespace Juice.Core.Tests
                      .AddConfiguration(context.Configuration.GetSection("Logging"));
                  });
 
-                 services.AddMultiTenant();
-
-                 services.AddSingleton<RandomTenantAccessor>();
-                 services.AddSingleton<ITenantAccessor>(sp => sp.GetRequiredService<RandomTenantAccessor>());
-                 services.AddSingleton<ITenantSetter>(sp => sp.GetRequiredService<RandomTenantAccessor>());
+                 services.AddTestTenantRandom<Extensions.MultiTenant.TenantInfo>();
 
                  services.AddTenantJsonFile("appsettings.Development.json");
 
@@ -129,63 +128,36 @@ namespace Juice.Core.Tests
 
             for (var i = 0; i < 10; i++)
             {
-                using var scope = host.Services.CreateScope();
-                var serviceProvider = scope.ServiceProvider;
-                var setter = serviceProvider.GetRequiredService<ITenantSetter>();
-                setter.InitNewTenant();
-                var options = serviceProvider.GetRequiredService<IOptionsMutable<Models.Options>>();
-                var tenant = serviceProvider.GetRequiredService<ITenantAccessor>().Tenant;
-                var time = DateTimeOffset.Now.ToString();
-                _output.WriteLine(options.Value.Name + ": " + time);
-                Assert.Equal(tenant!.Identifier == "TenantA" ? "Tenant A" : "Tenant B", options.Value.Name);
-                Assert.True(await options.UpdateAsync(o => o.Time = time));
-                Assert.Equal(time, options.Value.Time);
-                resolvedTenants.Add(tenant.Identifier!);
+                await host.Services.TenantInvokeAsync(async (context) =>
+                {
+                    var options = context.RequestServices.GetRequiredService<IOptionsMutable<Models.Options>>();
+                    var tenant = context.RequestServices.GetRequiredService<ITenantAccessor>().Tenant;
+                    var time = DateTimeOffset.Now.ToString();
+                    _output.WriteLine(options.Value.Name + ": " + time);
+                    Assert.Equal(tenant!.Identifier == "TenantA" ? "Tenant A" : "Tenant B", options.Value.Name);
+                    Assert.True(await options.UpdateAsync(o => o.Time = time));
+                    Assert.Equal(time, options.Value.Time);
+                    resolvedTenants.Add(tenant.Identifier!);
+                });
             }
             resolvedTenants.Should().HaveCount(2);
         }
     }
 
-    internal class MyOptions
+    internal class MySingletonService
     {
-    }
-
-    internal class MyTenant : ITenant
-    {
-        public string? Id { get; set; }
-        public object? this[string key] { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-
-        public string? Name { get; set; }
-        public string? Identifier { get; set; }
-
-        public string? OwnerUser => throw new NotImplementedException();
-
-        public string? TenantClass => throw new NotImplementedException();
-
-        public T? GetProperty<T>(Func<T>? defaultValue = null, [CallerMemberName] string? name = null) => throw new NotImplementedException();
-        public void SetProperty<T>(T? value, [CallerMemberName] string? name = null) => throw new NotImplementedException();
-        public Task TriggerConfigurationChangedAsync() => Task.CompletedTask;
-    }
-
-    internal interface ITenantSetter
-    {
-        void InitNewTenant();
-    }
-    internal class RandomTenantAccessor : ITenantAccessor, ITenantSetter
-    {
-        private readonly Random _random = new Random();
-        private ITenant? _tenant;
-
-        public RandomTenantAccessor()
+        private readonly IServiceScopeFactory _scopeFactory;
+        public MySingletonService(IServiceScopeFactory scopeFactory)
         {
-            InitNewTenant();
+            _scopeFactory = scopeFactory;
         }
-
-        public void InitNewTenant()
+        public string? TenantIdentifier
         {
-            _tenant = new MyTenant { Identifier = _random.Next() % 2 == 0 ? "TenantA" : "TenantB" };
+            get
+            {
+                using var scope = _scopeFactory.CreateScope();
+                return scope.ServiceProvider.GetRequiredService<ITenantAccessor>().Tenant?.Identifier;
+            }
         }
-
-        public ITenant? Tenant => _tenant;
     }
 }

@@ -1,7 +1,6 @@
 ﻿using Finbuckle.MultiTenant;
 using Finbuckle.MultiTenant.Abstractions;
 using Juice.MultiTenant;
-using Juice.MultiTenant.TestHelper;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
@@ -16,7 +15,7 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <param name="identifierA"></param>
         /// <param name="identifierB"></param>
         /// <returns></returns>
-        public static MultiTenantBuilder<TTenant> AddTestTenantRandom<TTenant>(this IServiceCollection services, string identifierA = "tenant-A", string identifierB = "tenant-B")
+        public static MultiTenantBuilder<TTenant> AddTestTenantRandom<TTenant>(this IServiceCollection services, string identifierA = "TenantA", string identifierB = "TenantB")
             where TTenant : class, ITenantInfo, ITenant, new()
         {
             return services
@@ -35,7 +34,7 @@ namespace Microsoft.Extensions.DependencyInjection
                 })
                 .WithDelegateStrategy((context) =>
                 {
-                    var id = DateTime.Now.Millisecond % 2 == 0 ? identifierA : identifierB;
+                    var id = Random.Shared.Next() % 2 == 0 ? identifierA : identifierB;
                     return Task.FromResult<string?>(id);
                 });
         }

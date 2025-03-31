@@ -6,10 +6,11 @@ namespace Microsoft.Extensions.DependencyInjection
 {
     public static class TenantTestServiceProviderExtensions
     {
-        public static Task TenantInvokeAsync(this IServiceProvider serviceProvider, RequestDelegate next)
+        public static async Task TenantInvokeAsync(this IServiceProvider serviceProvider, RequestDelegate next)
         {
-            HttpContext httpContext = new MyHttpContext(serviceProvider);
-            return new MultiTenantMiddleware(next).Invoke(httpContext);
+            using var scope = serviceProvider.CreateScope();
+            HttpContext httpContext = new MyHttpContext(scope.ServiceProvider);
+            await new MultiTenantMiddleware(next).Invoke(httpContext);
         }
     }
 }
