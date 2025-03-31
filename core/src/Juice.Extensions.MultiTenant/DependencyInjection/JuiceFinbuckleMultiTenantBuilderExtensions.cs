@@ -14,7 +14,8 @@ namespace Microsoft.Extensions.DependencyInjection
             where TTenantInfo : class, ITenant, ITenantInfo, new()
         {
             builder.Services.AddTenantConfiguration();
-            builder.Services.TryAddScoped<IScopedTenantResolver, FinbuckleTenantResolver<TTenantInfo>>();
+            builder.Services.TryAddSingleton<IScopedTenantResolver, FinbuckleTenantResolver<TTenantInfo>>();
+            builder.Services.TryAddSingleton<IScopedTenantResolver<TTenantInfo>, FinbuckleTenantResolver<TTenantInfo>>();
             builder.Services.TryAddSingleton<ITenantAccessor, FinbuckleTenantAccessor<TTenantInfo>>();
 #pragma warning disable CS8603 // Possible null reference return.
             // Will be removed in future versions, use ITenantAccessor instead.

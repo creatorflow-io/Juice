@@ -5,4 +5,9 @@ namespace Juice.MultiTenant
     {
         IDisposable Resolve(string? tenantId);
     }
+
+    public interface IScopedTenantResolver<TTenant> : IScopedTenantResolver
+    {
+        IDisposable Resolve(TTenant? tenant);
+    }
 }
