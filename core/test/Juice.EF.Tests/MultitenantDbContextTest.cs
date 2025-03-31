@@ -65,15 +65,14 @@ namespace Juice.EF.Tests
 
             });
 
-            var serviceProvider = resolver.ServiceProvider.CreateScope().ServiceProvider;
-            await serviceProvider.TenantInvokeAsync(context =>
+            await resolver.ServiceProvider.TenantInvokeAsync(context =>
             {
-                var tenantContextAccessor = serviceProvider.GetRequiredService<IMultiTenantContextAccessor>();
+                var tenantContextAccessor = context.RequestServices.GetRequiredService<IMultiTenantContextAccessor>();
                 tenantContextAccessor.MultiTenantContext.Should().NotBeNull();
                 tenantContextAccessor.MultiTenantContext.TenantInfo.Should().NotBeNull();
-                var tenant = serviceProvider.GetService<ITenantAccessor>()?.Tenant;
+                var tenant = context.RequestServices.GetService<ITenantAccessor>()?.Tenant;
                 tenant.Should().NotBeNull();
-                var dbContext = serviceProvider.GetRequiredService<TestContext>();
+                var dbContext = context.RequestServices.GetRequiredService<TestContext>();
                 dbContext.TenantInfo.Should().NotBeNull();
                 _output.WriteLine("dbContext.TenantInfo: {0}", dbContext.TenantInfo!.Identifier);
                 return Task.CompletedTask;

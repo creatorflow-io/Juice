@@ -22,6 +22,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\..\..\test\Juice.MultiTenant.TestHelper\Juice.MultiTenant.TestHelper.csproj" />
         <ProjectReference Include="..\..\..\test\Juice.XUnit\Juice.XUnit.csproj" />
         <ProjectReference Include="..\..\src\Juice.AspNetCore\Juice.AspNetCore.csproj" />
         <ProjectReference Include="..\..\src\Juice.Extensions.Logging\Juice.Extensions.Logging.csproj" />

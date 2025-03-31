@@ -6,7 +6,6 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
     <ItemGroup Label="AspNetCore">
-        <FrameworkReference Include="Microsoft.AspNetCore.App" />
         <PackageReference Include="Finbuckle.MultiTenant.AspNetCore" Version="$(FinbuckleVersion)" />
     </ItemGroup>
     <ItemGroup>
