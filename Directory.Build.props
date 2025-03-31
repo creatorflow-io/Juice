@@ -22,7 +22,7 @@
     <ProtobufVersion>3.24.3</ProtobufVersion>
     <MediatRVersion>12.4.*</MediatRVersion>
     <RedisVersion>2.8.*</RedisVersion>
-    <FinbuckleVersion>7.0.*</FinbuckleVersion>
+    <FinbuckleVersion>9.1.*</FinbuckleVersion>
     <SwashbuckleVersion>6.8.*</SwashbuckleVersion>
     <XUnitVersion>2.9.*</XUnitVersion>
     <TestSdk>17.11.*</TestSdk>
@@ -37,8 +37,8 @@
 
   <PropertyGroup Label="Versioning" Condition="'$(TargetFramework)' == 'net8.0'">
     <MicrosoftExtensionsVersion>8.0.*</MicrosoftExtensionsVersion>
-    <EFVersion>8.0.8</EFVersion>
-    <NpgsqlVersion>8.0.8</NpgsqlVersion>
+    <EFVersion>8.0.*</EFVersion>
+    <NpgsqlVersion>8.0.*</NpgsqlVersion>
   </PropertyGroup>
 
   <PropertyGroup Label="Build">

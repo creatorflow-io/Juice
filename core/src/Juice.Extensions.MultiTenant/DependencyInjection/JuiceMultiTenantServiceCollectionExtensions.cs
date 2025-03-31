@@ -5,7 +5,7 @@ namespace Microsoft.Extensions.DependencyInjection
 {
     public static class JuiceMultiTenantServiceCollectionExtensions
     {
-        public static MultiTenantBuilder<TenantInfo> AddMultiTenant(this IServiceCollection services, Action<MultiTenantOptions>? config = null)
+        public static MultiTenantBuilder<TenantInfo> AddMultiTenant(this IServiceCollection services, Action<MultiTenantOptions<TenantInfo>>? config = null)
             => (config != null ? services.AddMultiTenant<TenantInfo>(config) : services.AddMultiTenant<TenantInfo>())
                 .AddTenantServices();
     }
