@@ -3,7 +3,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
-    public static class ConfigureMutableServiceCollectionExtensions
+    public static class OptionsServiceCollectionExtensions
     {
         /// <summary>
         /// Configure mutable options then you can update options value by inject <see cref="IOptionsMutable{T}"/>
@@ -16,7 +16,7 @@ namespace Microsoft.Extensions.DependencyInjection
             IConfigurationSection section) where T : class, new()
         {
             services.Configure<T>(section);
-            services.AddTransient<IOptionsMutable<T>>(provider =>
+            services.AddScoped<IOptionsMutable<T>>(provider =>
             {
                 return new OptionsMutable<T>(provider, section.Path);
             });
@@ -44,11 +44,13 @@ namespace Microsoft.Extensions.DependencyInjection
             {
                 services.Configure(configureOptions);
             }
-            services.AddTransient<IOptionsMutable<T>>(provider =>
+            services.AddScoped<IOptionsMutable<T>>(provider =>
             {
                 return new OptionsMutable<T>(provider, section.Path, configureOptions);
             });
         }
+
+
 
     }
 }

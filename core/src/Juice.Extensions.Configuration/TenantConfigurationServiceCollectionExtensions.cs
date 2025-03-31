@@ -10,6 +10,15 @@ namespace Juice.Extensions.Configuration
         {
             return services.AddSingleton<ITenantConfiguration, TenantConfiguration>();
         }
+
+        /// <summary>
+        /// Add a configuration source that reads from a json file per tenant
+        /// </summary>
+        /// <param name="services"></param>
+        /// <param name="path"></param>
+        /// <param name="optional"></param>
+        /// <param name="reloadOnChange"></param>
+        /// <returns></returns>
         public static IServiceCollection AddTenantJsonFile(this IServiceCollection services, string path, bool optional = false, bool reloadOnChange = false)
         {
             return services.AddSingleton<IConfigurationSource>(sp =>
@@ -25,5 +34,6 @@ namespace Juice.Extensions.Configuration
                 };
             });
         }
+
     }
 }
