@@ -63,12 +63,13 @@ namespace Juice.Integrations.EventBus
                         await _eventLogService.MarkEventAsFailedAsync(logEvt.EventId);
                         continue;
                     }
-                    await _eventBus.PublishAsync(logEvt.IntegrationEvent, _tenantAccessor?.Tenant?.Identifier);
+                    await _eventBus.PublishAsync(logEvt.IntegrationEvent, _tenantAccessor?.Tenant?.Id);
                     await _eventLogService.MarkEventAsPublishedAsync(logEvt.EventId);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "ERROR publishing integration event: {IntegrationEventId}. {Message}", logEvt.EventId, ex.Message);
+                    _logger.LogError(ex, "ERROR publishing integration event: {IntegrationEventId}. TenantId: {tenantId}, TenantIdentifier: {tenantIdentifier}. {Message}",
+                        logEvt.EventId, _tenantAccessor?.Tenant?.Id, _tenantAccessor?.Tenant?.Identifier, ex.Message);
                     _logger.LogTrace(ex, "ERROR publishing integration event: {IntegrationEventId}. {Trace}", logEvt.EventId, ex.StackTrace);
                     await _eventLogService.MarkEventAsFailedAsync(logEvt.EventId);
                 }
