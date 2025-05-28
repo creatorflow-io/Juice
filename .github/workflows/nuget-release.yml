@@ -10,3 +10,8 @@ jobs:
     build:
       uses: creatorflow-io/shared-workflows/.github/workflows/shared-publish.yml@net8
       secrets: inherit
+      with:
+        Target: |
+          6.0.x
+          8.0.x
+          9.0.x

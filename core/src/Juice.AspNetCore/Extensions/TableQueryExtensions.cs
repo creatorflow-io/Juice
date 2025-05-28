@@ -10,6 +10,10 @@ namespace Juice.Extensions
         {
             foreach (var sort in request.Sorts)
             {
+                if (string.IsNullOrEmpty(sort.Property))
+                {
+                    continue;
+                }
                 var property = string.Concat(sort.Property[0].ToString().ToUpper(), sort.Property.AsSpan(1));
 
                 if (sort.Direction == SortDirection.Asc)

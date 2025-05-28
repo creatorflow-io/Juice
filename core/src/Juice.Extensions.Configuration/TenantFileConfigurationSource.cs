@@ -9,7 +9,7 @@ namespace Juice.Extensions.Configuration
         /// <summary>
         /// The tenant accessor
         /// </summary>
-        public required ITenantAccessor TenantAccessor { get; set; }
+        public ITenantAccessor? TenantAccessor { get; set; }
         public override IConfigurationProvider Build(IConfigurationBuilder builder)
         {
             EnsureDefaults(builder);

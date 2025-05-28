@@ -236,8 +236,8 @@ namespace Juice.Core.Tests
             var allocatedMemory = GC.GetTotalMemory(true);
             var json1 = System.Text.Json.JsonSerializer.Serialize(obj);
             allocatedMemory = (GC.GetTotalMemory(true) - allocatedMemory) / 1024;
-            var elapsed = timer.Elapsed.TotalMicroseconds;
-            output.WriteLine($"System.Text.Json.JsonSerializer.Serialize {name}: {elapsed}us {allocatedMemory}kb");
+            var elapsed = timer.Elapsed.TotalMilliseconds;
+            output.WriteLine($"System.Text.Json.JsonSerializer.Serialize {name}: {elapsed}ms {allocatedMemory}kb");
             return json1;
         }
 
@@ -249,8 +249,8 @@ namespace Juice.Core.Tests
             var allocatedMemory = GC.GetTotalMemory(true);
             var json1 = Newtonsoft.Json.JsonConvert.SerializeObject(obj);
             allocatedMemory = (GC.GetTotalMemory(true) - allocatedMemory) / 1024;
-            var elapsed = timer.Elapsed.TotalMicroseconds;
-            output.WriteLine($"Newtonsoft.Json.JsonConvert.SerializeObject {name}: {elapsed}us {allocatedMemory}kb");
+            var elapsed = timer.Elapsed.TotalMilliseconds;
+            output.WriteLine($"Newtonsoft.Json.JsonConvert.SerializeObject {name}: {elapsed}ms {allocatedMemory}kb");
             return json1;
         }
 
@@ -262,8 +262,8 @@ namespace Juice.Core.Tests
             var allocatedMemory = GC.GetTotalMemory(true);
             var obj = System.Text.Json.JsonSerializer.Deserialize<T>(json, options);
             allocatedMemory = (GC.GetTotalMemory(true) - allocatedMemory) / 1024;
-            var elapsed = timer.Elapsed.TotalMicroseconds;
-            output.WriteLine($"System.Text.Json.JsonSerializer.Deserialize {name}: {elapsed}us {allocatedMemory}kb");
+            var elapsed = timer.Elapsed.TotalMilliseconds;
+            output.WriteLine($"System.Text.Json.JsonSerializer.Deserialize {name}: {elapsed}ms {allocatedMemory}kb");
             return obj;
         }
 
@@ -275,8 +275,8 @@ namespace Juice.Core.Tests
             var allocatedMemory = GC.GetTotalMemory(true);
             var obj = Newtonsoft.Json.JsonConvert.DeserializeObject<T>(json);
             allocatedMemory = (GC.GetTotalMemory(true) - allocatedMemory) / 1024;
-            var elapsed = timer.Elapsed.TotalMicroseconds;
-            output.WriteLine($"Newtonsoft.Json.JsonConvert.DeserializeObject {name}: {elapsed}us {allocatedMemory}kb");
+            var elapsed = timer.Elapsed.TotalMilliseconds;
+            output.WriteLine($"Newtonsoft.Json.JsonConvert.DeserializeObject {name}: {elapsed}ms {allocatedMemory}kb");
             return obj;
         }
 
@@ -288,8 +288,8 @@ namespace Juice.Core.Tests
             var allocatedMemory = GC.GetTotalMemory(true);
             var json1 = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(obj);
             allocatedMemory = (GC.GetTotalMemory(true) - allocatedMemory) / 1024;
-            var elapsed = timer.Elapsed.TotalMicroseconds;
-            output.WriteLine($"System.Text.Json.JsonSerializer.SerializeToUtf8Bytes {name}: {elapsed}us {allocatedMemory}kb");
+            var elapsed = timer.Elapsed.TotalMilliseconds;
+            output.WriteLine($"System.Text.Json.JsonSerializer.SerializeToUtf8Bytes {name}: {elapsed}ms {allocatedMemory}kb");
         }
 
         private void NewtonsoftJsonSerializeUtf8Bytes<T>(
@@ -301,15 +301,15 @@ namespace Juice.Core.Tests
             // create a bytes array from the json string
             var json1 = Encoding.UTF8.GetBytes(Newtonsoft.Json.JsonConvert.SerializeObject(obj));
             allocatedMemory = (GC.GetTotalMemory(true) - allocatedMemory) / 1024;
-            var elapsed = timer.Elapsed.TotalMicroseconds;
-            output.WriteLine($"Newtonsoft.Json.JsonConvert.SerializeToUtf8Bytes {name}: {elapsed}us {allocatedMemory}kb");
+            var elapsed = timer.Elapsed.TotalMilliseconds;
+            output.WriteLine($"Newtonsoft.Json.JsonConvert.SerializeToUtf8Bytes {name}: {elapsed}ms {allocatedMemory}kb");
         }
 
         internal class Person
         {
-            public required string Name { get; set; }
+            public string? Name { get; set; }
             public int Age { get; set; }
-            public required string City { get; set; }
+            public string? City { get; set; }
         }
     }
 }

@@ -54,11 +54,17 @@ namespace Juice.Operation
         }
 
         protected virtual int StackTraceSkip => 3;
-        private string? _trace;
+        private string? _trace = default;
         private void SetTraceInfo()
         {
-            _trace = _exception?.StackTrace
-                ?? new StackTrace(new StackTrace(StackTraceSkip, true).GetFrames().Take(3)).ToString();
+            if (_exception != null) { _trace = _exception.StackTrace; return; }
+
+            var frames = new StackTrace(StackTraceSkip, true).GetFrames();
+            if (frames != null)
+            {
+                _trace = string.Join(Environment.NewLine, frames.Take(3).Select(f => f.ToString()));
+            }
+
         }
 
         public void ThrowIfNotSucceeded()

@@ -5,7 +5,7 @@ namespace Juice.Extensions.Configuration
 {
     public class TenantFileConfigurationProvider : JsonConfigurationProvider
     {
-        private readonly ITenantAccessor _tenantAccessor;
+        private readonly ITenantAccessor? _tenantAccessor;
         public TenantFileConfigurationProvider(TenantFileConfigurationSource source) : base(source)
         {
             _tenantAccessor = source.TenantAccessor;
@@ -13,7 +13,7 @@ namespace Juice.Extensions.Configuration
         public override void Load(Stream stream)
         {
             // Read the tenant ID
-            var tenantId = _tenantAccessor.Tenant?.Identifier;
+            var tenantId = _tenantAccessor?.Tenant?.Identifier;
             if (string.IsNullOrWhiteSpace(tenantId))
             {
                 return;

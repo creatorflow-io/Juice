@@ -13,7 +13,7 @@ using RabbitMQ.Client.Exceptions;
 
 namespace Juice.EventBus.RabbitMQ
 {
-    public class RabbitMQEventBus : IEventBus, IDisposable
+    internal class RabbitMQEventBus : IEventBus, IDisposable
     {
         private IRabbitMQPersistentConnection _persistentConnection;
 
@@ -411,5 +411,17 @@ namespace Juice.EventBus.RabbitMQ
             GC.SuppressFinalize(this);
         }
         #endregion
+    }
+
+    internal class RabbitMQEventBus<T> : RabbitMQEventBus, IEventBus<T>
+    {
+        public RabbitMQEventBus(IEventBusSubscriptionsManager subscriptionsManager,
+            IServiceScopeFactory scopeFactory,
+            ILogger logger,
+            IRabbitMQPersistentConnection mQPersistentConnection,
+            RabbitMQOptions options)
+            : base(subscriptionsManager, scopeFactory, logger, mQPersistentConnection, options)
+        {
+        }
     }
 }

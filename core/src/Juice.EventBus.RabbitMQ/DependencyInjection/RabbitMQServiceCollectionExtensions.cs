@@ -24,22 +24,17 @@ namespace Microsoft.Extensions.DependencyInjection
                 var options = new RabbitMQOptions();
                 configuration.Bind(options);
                 configure?.Invoke(options);
-
-                services.TryAddSingleton<IEventBusSubscriptionsManager>(sp => {
-                    var logger = sp.GetRequiredService<ILogger<InMemoryEventBusSubscriptionsManager>>();
-                    return new InMemoryEventBusSubscriptionsManager(logger, options.ExchangeType == "topic");
-                });
-
-                services.TryAddSingleton<IRabbitMQPersistentConnection>(sp=>
+                if(services.Any(s => s.ServiceType == typeof(IEventBus)))
                 {
-                    var logger = sp.GetRequiredService<ILogger<DefaultRabbitMQPersistentConnection>>();
-                    return new DefaultRabbitMQPersistentConnection(options, logger);
-                });
-
-                services.TryAddSingleton<IEventBus>(sp => {
-                    var subsManager = sp.GetRequiredService<IEventBusSubscriptionsManager>();
-                    var logger = sp.GetRequiredService<ILogger<RabbitMQEventBus>>();
-                    var connection = sp.GetRequiredService<IRabbitMQPersistentConnection>();
+                    throw new InvalidOperationException("The default service of IEventBus is already registered. Please check your service registrations.");
+                }
+                services.AddSingleton<IEventBus>(sp => {
+                    var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+                    var logger = loggerFactory.CreateLogger<RabbitMQEventBus>();
+                    var logger1 = loggerFactory.CreateLogger<InMemoryEventBusSubscriptionsManager>();
+                    var logger2 = loggerFactory.CreateLogger<DefaultRabbitMQPersistentConnection>();
+                    var subsManager = new InMemoryEventBusSubscriptionsManager(logger1, options.ExchangeType == "topic");
+                    var connection = new DefaultRabbitMQPersistentConnection(options, logger2);
                     var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
                     return new RabbitMQEventBus(subsManager, scopeFactory, logger, connection, options);
                 });
@@ -48,6 +43,39 @@ namespace Microsoft.Extensions.DependencyInjection
             }
             return services;
 
+        }
+
+        /// <summary>
+        /// Register RabbitMQ Event Bus for specific type
+        /// </summary>
+        /// <param name="services"></param>
+        /// <param name="configuration"></param>
+        /// <param name="configure"></param>
+        /// <returns></returns>
+        public static IServiceCollection RegisterRabbitMQEventBus<T>(this IServiceCollection services, IConfiguration configuration, Action<RabbitMQOptions>? configure = null)
+        {
+            var enabled = configuration.GetValue<bool>(nameof(RabbitMQOptions.RabbitMQEnabled));
+            if (enabled)
+            {
+                var options = new RabbitMQOptions();
+                configuration.Bind(options);
+                configure?.Invoke(options);
+
+                services.TryAddSingleton<IEventBus<T>>(sp =>
+                {
+                    var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+                    var logger = loggerFactory.CreateLogger<RabbitMQEventBus>();
+                    var logger1 = loggerFactory.CreateLogger<InMemoryEventBusSubscriptionsManager>();
+                    var logger2 = loggerFactory.CreateLogger<DefaultRabbitMQPersistentConnection>();
+                    var subsManager = new InMemoryEventBusSubscriptionsManager(logger1, options.ExchangeType == "topic");
+                    var connection = new DefaultRabbitMQPersistentConnection(options, logger2);
+                    var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
+                    return new RabbitMQEventBus<T>(subsManager, scopeFactory, logger, connection, options);
+                });
+
+                services.AddIntegrationEventTypesService();
+            }
+            return services;
         }
 
         /// <summary>
@@ -69,25 +97,15 @@ namespace Microsoft.Extensions.DependencyInjection
 
                 ArgumentNullException.ThrowIfNull(options.BrokerName, nameof(options.BrokerName));
 
-                services.TryAddKeyedSingleton<IEventBusSubscriptionsManager>(options.BrokerName, (sp, key) => {
-                    var logger = sp.GetRequiredService<ILoggerFactory>();
-                    return new InMemoryEventBusSubscriptionsManager(logger.CreateLogger(typeof(InMemoryEventBusSubscriptionsManager).Name + "_" + key),
-                        options.ExchangeType == "topic");
-                });
-
-                services.TryAddKeyedSingleton<IRabbitMQPersistentConnection>(options.BrokerName, (sp, key) => {
-                    var logger = sp.GetRequiredService<ILoggerFactory>();
-                    return new DefaultRabbitMQPersistentConnection(options, logger.CreateLogger(typeof(DefaultRabbitMQPersistentConnection).Name + "_" + key));
-                });
-
                 services.TryAddKeyedSingleton<IEventBus>(options.BrokerName, (sp, key) => {
-                    var subsManager = sp.GetRequiredKeyedService<IEventBusSubscriptionsManager>(key);
-                    var logger = sp.GetRequiredService<ILoggerFactory>();
-                    var connection = sp.GetRequiredKeyedService<IRabbitMQPersistentConnection>(key);
+                    var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+                    var logger = loggerFactory.CreateLogger(typeof(RabbitMQEventBus).Name + "_" + key);
+                    var logger1 = loggerFactory.CreateLogger<InMemoryEventBusSubscriptionsManager>();
+                    var logger2 = loggerFactory.CreateLogger<DefaultRabbitMQPersistentConnection>();
+                    var subsManager = new InMemoryEventBusSubscriptionsManager(logger1, options.ExchangeType == "topic");
+                    var connection = new DefaultRabbitMQPersistentConnection(options, logger2);
                     var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
-                    return new RabbitMQEventBus(subsManager, scopeFactory,
-                        logger.CreateLogger(typeof(RabbitMQEventBus).Name + "_" + key),
-                        connection, options);
+                    return new RabbitMQEventBus(subsManager, scopeFactory, logger, connection, options);
                 });
 
                 services.AddIntegrationEventTypesService();

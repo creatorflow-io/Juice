@@ -24,6 +24,10 @@ namespace Juice.MediatR.RequestManager.Redis
         {
             _logger = logger;
             _configuration = options.Value;
+            if (string.IsNullOrEmpty(_configuration.ConnectionString))
+            {
+                throw new ArgumentException("Redis connection string is not configured.");
+            }
             lazyConnection = new Lazy<ConnectionMultiplexer>(() =>
             {
                 return ConnectionMultiplexer.Connect(_configuration.ConnectionString);

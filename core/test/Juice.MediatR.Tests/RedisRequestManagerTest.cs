@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Juice.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit;
@@ -33,13 +34,13 @@ namespace Juice.MediatR.Tests
             resolver.ConfigureServices(services =>
             {
                 var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
-                var configuration = configService.GetConfiguration();
+                var configuration = configService.GetConfiguration(typeof(RedisRequestManagerTest).Assembly);
 
                 // Register DbContext class
 
                 services.AddRedisMediatorRequestManager(options =>
                 {
-                    
+                    options.ConnectionString = configuration.GetConnectionString("Redis");
                 });
 
                 services.AddSingleton(provider => _testOutput);

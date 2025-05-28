@@ -10,14 +10,14 @@
     <PackageIconUrl>https://avatars.githubusercontent.com/u/107674950</PackageIconUrl>
     <RepositoryUrl>https://github.com/creatorflow-io/Juice</RepositoryUrl>
 
-    <VersionPrefix>8.3.0</VersionPrefix>
+    <VersionPrefix>8.4.0</VersionPrefix>
     <VersionSuffix>local.$([System.DateTime]::Now.ToString(`yyyyMMdd`)).1</VersionSuffix>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
   <PropertyGroup Label="Versioning">
     <LibraryTargetFramework>netstandard2.1</LibraryTargetFramework>
-    <AppTargetFramework>net8.0;net9.0</AppTargetFramework>
+    <AppTargetFramework>net6.0;net8.0;net9.0</AppTargetFramework>
     <GrpcVersion>2.57.0</GrpcVersion>
     <ProtobufVersion>3.24.3</ProtobufVersion>
     <MediatRVersion>12.4.*</MediatRVersion>
@@ -28,17 +28,27 @@
     <TestSdk>17.11.*</TestSdk>
   </PropertyGroup>
 
-
+  
   <PropertyGroup Label="Versioning" Condition="'$(TargetFramework)' == 'net9.0'">
     <MicrosoftExtensionsVersion>9.0.*</MicrosoftExtensionsVersion>
     <EFVersion>9.0.*</EFVersion>
     <NpgsqlVersion>9.0.*</NpgsqlVersion>
+    <MvcTesting>$(MicrosoftExtensionsVersion)</MvcTesting>
   </PropertyGroup>
 
   <PropertyGroup Label="Versioning" Condition="'$(TargetFramework)' == 'net8.0'">
     <MicrosoftExtensionsVersion>8.0.*</MicrosoftExtensionsVersion>
     <EFVersion>8.0.*</EFVersion>
     <NpgsqlVersion>8.0.*</NpgsqlVersion>
+    <MvcTesting>$(MicrosoftExtensionsVersion)</MvcTesting>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Versioning" Condition="'$(TargetFramework)' == 'net6.0'">
+    <MicrosoftExtensionsVersion>7.0.*</MicrosoftExtensionsVersion>
+    <EFVersion>7.0.*</EFVersion>
+    <NpgsqlVersion>7.0.*</NpgsqlVersion>
+    <FinbuckleVersion>8.1.*</FinbuckleVersion>
+    <MvcTesting>6.0.*</MvcTesting>
   </PropertyGroup>
 
   <PropertyGroup Label="Build">

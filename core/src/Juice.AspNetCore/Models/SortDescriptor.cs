@@ -9,7 +9,7 @@
         /// <summary>
         /// Sort property
         /// </summary>
-        public required string Property { get; init; }
+        public string? Property { get; init; }
         /// <summary>
         /// Sort direction
         /// </summary>

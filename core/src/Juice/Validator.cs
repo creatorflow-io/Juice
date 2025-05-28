@@ -15,8 +15,22 @@ namespace Juice
                 throw new ArgumentOutOfRangeException(property, $"Property {property} can be max {maxLength} characters long.");
             }
         }
+
+        public static void ThrowIfNullOrWhiteSpace(string? value, [CallerArgumentExpression(nameof(value))] string? property = null)
+        {
+#if NET8_0_OR_GREATER
+            ArgumentException.ThrowIfNullOrWhiteSpace(value, property);
+#else
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                property ??= "value";
+                throw new ArgumentNullException(property, $"Argument \"{property}\" cannot be null or whitespace.");
+            }
+#endif
+        }
+
         public static Validator New => new();
-        #endregion
+#endregion
     }
 
 }

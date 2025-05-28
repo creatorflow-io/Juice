@@ -30,4 +30,9 @@
             where TH : IIntegrationEventHandler<T>
             where T : IntegrationEvent;
     }
+
+    public interface IEventBus<T>: IEventBus
+    {
+        
+    }
 }

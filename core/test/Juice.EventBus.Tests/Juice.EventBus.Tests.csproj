@@ -20,7 +20,7 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
-        <PackageReference Label="Integration tests" Include="Microsoft.AspNetCore.Mvc.Testing" Version="$(MicrosoftExtensionsVersion)" />
+        <PackageReference Label="Integration tests" Include="Microsoft.AspNetCore.Mvc.Testing" Version="$(MvcTesting)" />
     </ItemGroup>
 
 
@@ -37,6 +37,7 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.3" Condition="'$(TargetFramework)' == 'net8.0'" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.1" Condition="'$(TargetFramework)' == 'net6.0'" />
     </ItemGroup>
 
     <ItemGroup>
