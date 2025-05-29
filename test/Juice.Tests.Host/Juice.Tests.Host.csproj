@@ -40,10 +40,7 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
     </ItemGroup>
-    <ItemGroup Label="Fix refs conflict">
-        <PackageReference Condition="'$(TargetFramework)' == 'net6.0'" Include="Microsoft.Extensions.Options" Version="7.0.1" />
-        <PackageReference Condition="'$(TargetFramework)' == 'net6.0'" Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.1" />
-    </ItemGroup>
+
     <ItemGroup>
         <PackageReference Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" Version="$(MicrosoftExtensionsVersion)" />
         <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="$(MicrosoftExtensionsVersion)"/>

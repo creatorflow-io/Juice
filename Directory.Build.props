@@ -44,7 +44,7 @@
   </PropertyGroup>
 
   <PropertyGroup Label="Versioning" Condition="'$(TargetFramework)' == 'net6.0'">
-    <MicrosoftExtensionsVersion>7.0.*</MicrosoftExtensionsVersion>
+    <MicrosoftExtensionsVersion>8.0.*</MicrosoftExtensionsVersion>
     <EFVersion>7.0.*</EFVersion>
     <NpgsqlVersion>7.0.*</NpgsqlVersion>
     <FinbuckleVersion>8.1.*</FinbuckleVersion>
