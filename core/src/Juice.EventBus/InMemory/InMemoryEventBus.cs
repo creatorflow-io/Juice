@@ -7,7 +7,7 @@ namespace Juice.EventBus
     /// <summary>
     /// Local event bus throught memory
     /// </summary>
-    public class InMemoryEventBus : EventBusBase, IDisposable
+    internal class InMemoryEventBus : EventBusBase, IDisposable
     {
         private readonly IServiceScopeFactory _scopeFactory;
         private List<Task> _tasks = new List<Task>();

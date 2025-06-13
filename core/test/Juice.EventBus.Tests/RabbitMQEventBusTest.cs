@@ -10,6 +10,7 @@ using Juice.XUnit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit.Abstractions;
+using static Juice.EventBus.Tests.RabbitMQEventBusTest;
 
 namespace Juice.EventBus.Tests
 {
@@ -143,6 +144,18 @@ namespace Juice.EventBus.Tests
 #endif
         internal class TypedBroker1;
         internal class TypedBroker2;
+
+        internal interface ITypedBroker1 : IEventBus<TypedBroker1>
+        {
+        }
+
+        internal class MyEventBusWrapper : EventBusWrapper, ITypedBroker1
+        {
+            public MyEventBusWrapper(IEventBus<TypedBroker1> eventBus) : base(eventBus)
+            {
+            }
+        }
+
         [IgnoreOnCIFact(DisplayName = "Multiple RabbitMQ exchange test")]
         public async Task MultipleRabbitMQExchangeTestAsync()
         {
@@ -171,6 +184,7 @@ namespace Juice.EventBus.Tests
                 {
                     options.BrokerName = "exchange2";
                 });
+                services.AddEventBusWrapper<ITypedBroker1, MyEventBusWrapper>();
                 services.AddScoped<ScopedService>();
                 services.AddTransient<ContentPublishedIntegrationEventHandler>();
                 services.AddTransient<ContentPublishedIntegrationEventHandler1>();
@@ -179,7 +193,7 @@ namespace Juice.EventBus.Tests
                 services.AddMultiTenant();
             });
             var serviceProvider = resolver.ServiceProvider;
-            var eventBus1 = serviceProvider.GetRequiredService<IEventBus<TypedBroker1>>();
+            var eventBus1 = serviceProvider.GetRequiredService<ITypedBroker1>();
             var eventBus2 = serviceProvider.GetRequiredService<IEventBus<TypedBroker2>>();
             var handledService = serviceProvider.GetRequiredService<HandledService>();
 
