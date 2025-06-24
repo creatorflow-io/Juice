@@ -6,5 +6,6 @@ namespace Juice.EventBus.Tests
     {
         public ConcurrentBag<string> Handlers { get; } = [];
         public ConcurrentBag<string> ResolvedTenants { get; } = [];
+        public ConcurrentDictionary<string, int> HandledCount { get; } = new ConcurrentDictionary<string, int>();
     }
 }

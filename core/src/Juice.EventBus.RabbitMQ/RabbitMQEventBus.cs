@@ -19,12 +19,14 @@ namespace Juice.EventBus.RabbitMQ
 
         private IModel? _consumerChannel;
         private string _queueName;
+        private string? _queueType; // classic (default), quorum
 
         public string BROKER_NAME = "default_exchange";
-        private string _type;
+        private string _exchangeType; // direct, fanout, topic, headers
 
         private IModel? _producerChannel;
         private readonly int _retryCount;
+        private readonly bool _ackOnProcessed = true;
 
         protected IEventBusSubscriptionsManager SubsManager { get; }
         protected ILogger Logger { get; }
@@ -40,13 +42,18 @@ namespace Juice.EventBus.RabbitMQ
             _persistentConnection = mQPersistentConnection;
            
             _queueName = options.SubscriptionClientName ?? string.Empty;
-            _type = options.ExchangeType ?? "direct";
+            _queueType = options.QueueType; // classic, quorum
+            _exchangeType = options.ExchangeType ?? "direct";
             if (!string.IsNullOrEmpty(options.BrokerName))
             {
                 BROKER_NAME = options.BrokerName;
             }
             _scopeFactory = scopeFactory;
             _retryCount = options.RetryCount;
+            if (options.AckOnProcessed.HasValue)
+            {
+                _ackOnProcessed = options.AckOnProcessed.Value;
+            }
 
             Logger = logger;
             SubsManager = subscriptionsManager;
@@ -67,8 +74,8 @@ namespace Juice.EventBus.RabbitMQ
                     throw new InvalidOperationException($"Fake exception requested: \"{message}\"");
                 }
 
-                var processed = await ProcessingEventAsync(eventArgs, eventName, message);
-                if (processed)
+                var (processed, ok) = await ProcessingEventAsync(eventArgs, eventName, message);
+                if (ok || (processed && _ackOnProcessed))
                 {
 
                     // Even on exception we take the message off the queue.
@@ -125,13 +132,15 @@ namespace Juice.EventBus.RabbitMQ
             if (channel == null) { return null; }
 
             channel.ExchangeDeclare(exchange: BROKER_NAME,
-                                    type: _type);
+                                    type: _exchangeType);
 
             var queuDeclareOk = channel.QueueDeclare(queue: _queueName,
                                  durable: true,
                                  exclusive: false,
                                  autoDelete: false,
-                                 arguments: null);
+                                 arguments: _queueType != null
+                                 ? new Dictionary<string, object> { { "x-queue-type", _queueType } }
+                                 : null);
 
             if (_queueName == string.Empty && queuDeclareOk != null)
             {
@@ -153,7 +162,7 @@ namespace Juice.EventBus.RabbitMQ
             return channel;
         }
 
-        private async Task<bool> ProcessingEventAsync(BasicDeliverEventArgs eventArgs,string eventName, string message)
+        private async Task<(bool Handled, bool Ok)> ProcessingEventAsync(BasicDeliverEventArgs eventArgs,string eventName, string message)
         {
             using (Logger.BeginScope($"Processing integration event: {eventName}"))
             {
@@ -169,8 +178,8 @@ namespace Juice.EventBus.RabbitMQ
                     var eventType = SubsManager.GetEventTypeByName(eventName);
                     if (eventType == null)
                     {
-                        Logger.LogWarning("Failed to get event type for event: {EventName}", eventName);
-                        return false;
+                        Logger.LogWarning("No event type found for event: {EventName}", eventName);
+                        return (false, false);
                     }
                     var concreteType = typeof(IIntegrationEventHandler<>).MakeGenericType(eventType);
 
@@ -178,12 +187,12 @@ namespace Juice.EventBus.RabbitMQ
                     if (integrationEvent == null)
                     {
                         Logger.LogWarning("Failed to deserialize message to {eventType}", eventType.Name);
-                        return false;
+                        return (false, false);
                     }
                     var tenantId = eventArgs.BasicProperties.Headers?["TenantId"] is byte[] tenant ? Encoding.UTF8.GetString(tenant) : null;
                     var tenantResolver = scope.ServiceProvider.GetService<IScopedTenantResolver>();
                     using var _ = tenantResolver?.Resolve(tenantId);
-                    var ok = false;
+                    bool ok = false, handled = false;
                     foreach (var subscription in subscriptions)
                     {
                         if(!subscription.HandlerType.IsAssignableTo(concreteType))
@@ -202,6 +211,7 @@ namespace Juice.EventBus.RabbitMQ
                         
                         try
                         {
+                            handled = true;
                             await (Task)concreteType.GetMethod(nameof(IIntegrationEventHandler<IntegrationEvent>.HandleAsync))!.Invoke(handler, new object[] { integrationEvent! })!;
                             ok = true;
                         }
@@ -209,14 +219,18 @@ namespace Juice.EventBus.RabbitMQ
                         {
                             var eventId = integrationEvent != null ? ((IntegrationEvent)integrationEvent).Id : Guid.Empty;
                             Logger.LogError(ex, "{handler} failed to handle event: {EventName}, eventId: {eventId}", handler.GetGenericTypeName(), eventName, eventId);
+                            if(Logger.IsEnabled(LogLevel.Trace))
+                            {
+                                Logger.LogTrace(ex, "Event: {EventName}, eventId: {eventId} exception stack trace: {StackTrace}", eventName, eventId, ex.StackTrace);
+                            }
                         }
                     }
-                    return ok;
+                    return (handled, ok);
                 }
                 else
                 {
                     Logger.LogDebug("No subscription for RabbitMQ event: {EventName}", eventName);
-                    return false;
+                    return (false, false);
                 }
             }
         }
@@ -309,7 +323,7 @@ namespace Juice.EventBus.RabbitMQ
             var channel = _persistentConnection.CreateModel();
             if (channel == null) { return null; }
             channel.ExchangeDeclare(exchange: BROKER_NAME,
-                                    type: _type);
+                                    type: _exchangeType);
             return channel;
         }
         #endregion

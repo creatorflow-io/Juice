@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Finbuckle.MultiTenant;
-using Finbuckle.MultiTenant.Abstractions;
 using FluentAssertions;
 using Juice.EventBus.Tests.Events;
 using Juice.EventBus.Tests.Handlers;
@@ -10,7 +9,6 @@ using Juice.XUnit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit.Abstractions;
-using static Juice.EventBus.Tests.RabbitMQEventBusTest;
 
 namespace Juice.EventBus.Tests
 {
@@ -214,5 +212,97 @@ namespace Juice.EventBus.Tests
             handledService.ResolvedTenants.Count.Should().Be(20);
         }
 
+        [IgnoreOnCIFact(DisplayName = "Should handle multiple time on failure")]
+        public async Task SendNAckOnFailureAsync()
+        {
+            var resolver = new DependencyResolver
+            {
+                CurrentDirectory = AppContext.BaseDirectory
+            };
+            resolver.ConfigureServices(services =>
+            {
+                var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
+                var configuration = configService.GetConfiguration(GetType().Assembly);
+                services.AddSingleton(_output);
+                services.AddLogging(builder =>
+                {
+                    builder.ClearProviders()
+                    .AddTestOutputLogger()
+                    .AddConfiguration(configuration.GetSection("Logging"));
+                });
+                services.AddHttpContextAccessor();
+                services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"), options =>
+                {
+                    options.BrokerName = "topic.juice_bus";
+                    options.SubscriptionClientName = "juice_eventbus_test_events";
+                    options.ExchangeType = "topic";
+                    options.AckOnProcessed = false;
+                });
+                services.AddTransient<LogEventFailureHandler>();
+                services.AddSingleton<HandledService>();
+            });
+            var serviceProvider = resolver.ServiceProvider;
+            var eventBus = serviceProvider.GetService<IEventBus>();
+            var handledService = serviceProvider.GetRequiredService<HandledService>();
+            if (eventBus != null)
+            {
+                eventBus.Subscribe<LogEvent, LogEventFailureHandler>("kernel.*");
+                await Task.Delay(TimeSpan.FromSeconds(3)); // wait for pending messages to be processed
+                handledService.HandledCount.Clear();
+                await eventBus.PublishAsync(new LogEvent { Facility = "kernel", Serverty = LogLevel.Error });
+                await Task.Delay(TimeSpan.FromSeconds(1));
+                eventBus.Unsubscribe<LogEvent, LogEventFailureHandler>();
+                await Task.Delay(TimeSpan.FromSeconds(1));
+
+                handledService.HandledCount.Should().ContainKey(nameof(LogEventFailureHandler));
+                handledService.HandledCount[nameof(LogEventFailureHandler)].Should().BeGreaterThan(1);
+                _output.WriteLine($"Handled count: {handledService.HandledCount[nameof(LogEventFailureHandler)]}");
+            }
+        }
+
+        [IgnoreOnCIFact(DisplayName = "Should handle once on failure")]
+        public async Task SendAckOnFailureAsync()
+        {
+            var resolver = new DependencyResolver
+            {
+                CurrentDirectory = AppContext.BaseDirectory
+            };
+            resolver.ConfigureServices(services =>
+            {
+                var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
+                var configuration = configService.GetConfiguration(GetType().Assembly);
+                services.AddSingleton(_output);
+                services.AddLogging(builder =>
+                {
+                    builder.ClearProviders()
+                    .AddTestOutputLogger()
+                    .AddConfiguration(configuration.GetSection("Logging"));
+                });
+                services.AddHttpContextAccessor();
+                services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"), options =>
+                {
+                    options.BrokerName = "topic.juice_bus";
+                    options.SubscriptionClientName = "juice_eventbus_test_events";
+                    options.ExchangeType = "topic";
+                });
+                services.AddTransient<LogEventFailureHandler>();
+                services.AddSingleton<HandledService>();
+            });
+            var serviceProvider = resolver.ServiceProvider;
+            var eventBus = serviceProvider.GetService<IEventBus>();
+            var handledService = serviceProvider.GetRequiredService<HandledService>();
+            if (eventBus != null)
+            {
+                eventBus.Subscribe<LogEvent, LogEventFailureHandler>("kernel.*");
+                await Task.Delay(TimeSpan.FromSeconds(3)); // wait for pending messages to be processed
+                handledService.HandledCount.Clear();
+                await eventBus.PublishAsync(new LogEvent { Facility = "kernel", Serverty = LogLevel.Error });
+                await Task.Delay(TimeSpan.FromSeconds(1));
+                eventBus.Unsubscribe<LogEvent, LogEventFailureHandler>();
+                await Task.Delay(TimeSpan.FromSeconds(1));
+                handledService.HandledCount.Should().ContainKey(nameof(LogEventFailureHandler));
+                handledService.HandledCount[nameof(LogEventFailureHandler)].Should().Be(1);
+            }
+        }
     }
 }
