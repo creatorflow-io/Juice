@@ -92,6 +92,10 @@ namespace Juice.Conventions.StartupDiscovery.Extensions
                         && startup.Equals(s.ImplementationType))
                     )
                     {
+                        if(Attribute.GetCustomAttribute(startup, typeof(ObsoleteAttribute)) is ObsoleteAttribute obsolete)
+                        {
+                            logger?.LogWarning("Feature {0} is marked as obsolete: {1}", featureName, obsolete.Message);
+                        }
                         logger?.LogInformation("Registered feature's startup {0} {1}", featureName, startup.FullName);
                         builder.Services.Add(new ServiceDescriptor(typeof(IModuleStartup), startup, ServiceLifetime.Transient));
                     }
