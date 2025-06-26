@@ -46,7 +46,7 @@ namespace Microsoft.Extensions.DependencyInjection
         }
 
         /// <summary>
-        /// Register RabbitMQ Event Bus for specific type
+        /// Register RabbitMQ service of type <c>T</c> as <see cref="IEventBus{T}"/> and <typeparamref name="T"/> if <typeparamref name="T"/> implements <see cref="IEventBus"/>.
         /// </summary>
         /// <param name="services"></param>
         /// <param name="configuration"></param>
@@ -72,6 +72,11 @@ namespace Microsoft.Extensions.DependencyInjection
                     var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
                     return new RabbitMQEventBus<T>(subsManager, scopeFactory, logger, connection, options);
                 });
+
+                if(typeof(T).IsAssignableTo(typeof(IEventBus)))
+                {
+                    services.AddEventBusProxy<T>();
+                }
 
                 services.AddIntegrationEventTypesService();
             }

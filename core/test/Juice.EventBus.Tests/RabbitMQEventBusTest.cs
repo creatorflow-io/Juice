@@ -143,15 +143,8 @@ namespace Juice.EventBus.Tests
         internal class TypedBroker1;
         internal class TypedBroker2;
 
-        internal interface ITypedBroker1 : IEventBus<TypedBroker1>
+        internal interface ITypedBroker : IEventBus
         {
-        }
-
-        internal class MyEventBusWrapper : EventBusWrapper, ITypedBroker1
-        {
-            public MyEventBusWrapper(IEventBus<TypedBroker1> eventBus) : base(eventBus)
-            {
-            }
         }
 
         [IgnoreOnCIFact(DisplayName = "Multiple RabbitMQ exchange test")]
@@ -174,15 +167,15 @@ namespace Juice.EventBus.Tests
                 });
                 services.AddHttpContextAccessor();
 
+                services.RegisterRabbitMQEventBus<ITypedBroker>(configuration.GetSection("RabbitMQ"), options =>
+                {
+                    options.BrokerName = "exchange";
+                });
                 services.RegisterRabbitMQEventBus<TypedBroker1>(configuration.GetSection("RabbitMQ"), options =>
                 {
                     options.BrokerName = "exchange1";
                 });
-                services.RegisterRabbitMQEventBus<TypedBroker2>(configuration.GetSection("RabbitMQ"), options =>
-                {
-                    options.BrokerName = "exchange2";
-                });
-                services.AddEventBusWrapper<ITypedBroker1, MyEventBusWrapper>();
+
                 services.AddScoped<ScopedService>();
                 services.AddTransient<ContentPublishedIntegrationEventHandler>();
                 services.AddTransient<ContentPublishedIntegrationEventHandler1>();
@@ -191,8 +184,8 @@ namespace Juice.EventBus.Tests
                 services.AddMultiTenant();
             });
             var serviceProvider = resolver.ServiceProvider;
-            var eventBus1 = serviceProvider.GetRequiredService<ITypedBroker1>();
-            var eventBus2 = serviceProvider.GetRequiredService<IEventBus<TypedBroker2>>();
+            var eventBus1 = serviceProvider.GetRequiredService<ITypedBroker>();
+            var eventBus2 = serviceProvider.GetRequiredService<IEventBus<TypedBroker1>>();
             var handledService = serviceProvider.GetRequiredService<HandledService>();
 
             eventBus1.Subscribe<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler>();

@@ -31,7 +31,7 @@
             where T : IntegrationEvent;
     }
 
-    public interface IEventBus<T>: IEventBus
+    public interface IEventBus<in T>: IEventBus
     {
         
     }
