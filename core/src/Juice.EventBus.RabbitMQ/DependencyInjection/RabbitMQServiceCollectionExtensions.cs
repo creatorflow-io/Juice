@@ -64,7 +64,7 @@ namespace Microsoft.Extensions.DependencyInjection
                 services.TryAddSingleton<IEventBus<T>>(sp =>
                 {
                     var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
-                    var logger = loggerFactory.CreateLogger<RabbitMQEventBus>();
+                    var logger = loggerFactory.CreateLogger<RabbitMQEventBus<T>>();
                     var logger1 = loggerFactory.CreateLogger<InMemoryEventBusSubscriptionsManager>();
                     var logger2 = loggerFactory.CreateLogger<DefaultRabbitMQPersistentConnection>();
                     var subsManager = new InMemoryEventBusSubscriptionsManager(logger1, options.ExchangeType == "topic");

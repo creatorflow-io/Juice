@@ -26,6 +26,31 @@ namespace Microsoft.Extensions.DependencyInjection
         }
 
         /// <summary>
+        /// Register in-memory event bus for specific type <typeparamref name="T"/> as <see cref="IEventBus{T}"/> and <typeparamref name="T"/> if <typeparamref name="T"/> implements <see cref="IEventBus"/>.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="services"></param>
+        /// <param name="topicSupport"></param>
+        /// <returns></returns>
+        public static IServiceCollection RegisterInMemoryEventBus<T>(this IServiceCollection services, bool topicSupport = true)
+        {
+            services.TryAddSingleton<IEventBus<T>>(sp =>
+            {
+                var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+                var logger = loggerFactory.CreateLogger<InMemoryEventBus<T>>();
+                var logger1 = loggerFactory.CreateLogger<InMemoryEventBusSubscriptionsManager>();
+                var subsManager = new InMemoryEventBusSubscriptionsManager(logger1, topicSupport);
+                var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
+                return new InMemoryEventBus<T>(subsManager, scopeFactory, logger);
+            });
+            if (typeof(T).IsAssignableTo(typeof(IEventBus)))
+            {
+                services.AddEventBusProxy<T>();
+            }
+            return services;
+        }
+
+        /// <summary>
         /// Register integration event types service.
         /// </summary>
         /// <param name="services"></param>

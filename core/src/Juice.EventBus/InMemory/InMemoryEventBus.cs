@@ -130,4 +130,13 @@ namespace Juice.EventBus
             GC.SuppressFinalize(this);
         }
     }
+
+    internal class InMemoryEventBus<T>: InMemoryEventBus, IEventBus<T>
+    {
+        public InMemoryEventBus(IEventBusSubscriptionsManager subscriptionsManager,
+            IServiceScopeFactory scopeFactory,
+            ILogger<InMemoryEventBus<T>> logger) : base(subscriptionsManager, scopeFactory, logger)
+        {
+        }
+    }
 }
