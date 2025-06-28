@@ -46,7 +46,7 @@ namespace Juice.MediatR.RequestManager.Redis
 
             if (success)
             {
-                await Connection.GetDatabase().StringSetAsync(key, "", default, When.Exists);
+                await Connection.GetDatabase().StringSetAsync(key, DateTimeOffset.Now.ToString(), default, When.Exists);
             }
             else
             {
@@ -72,7 +72,7 @@ namespace Juice.MediatR.RequestManager.Redis
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError($"ReleaseLock lock fail...{ex.Message}");
+                    _logger.LogError(ex, "Error while trying to complete request for command {CommandId}. {Message}", id, ex.Message);
                 }
             }
         }

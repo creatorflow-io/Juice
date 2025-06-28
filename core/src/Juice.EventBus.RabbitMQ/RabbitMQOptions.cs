@@ -24,9 +24,13 @@
         /// </summary>
         public string? QueueType { get; set; }
         /// <summary>
-        /// Indicates whether to acknowledge messages after they have been processed or must succeeded.
-        /// <para>Default <c>true</c> if the value is not set</para>
+        /// Maximum number of retries for processing a message before it is considered failed.
+        /// <para>No retry if less than or equal 0</para>
         /// </summary>
-        public bool? AckOnProcessed { get; set; }
+        public int ProcessMaxRetries { get; set; }
+        /// <summary>
+        /// Retry message after milliseconds, use when declare DLX queue
+        /// </summary>
+        public int ProcessRetryDelayMs { get; set; } = 5000;
     }
 }

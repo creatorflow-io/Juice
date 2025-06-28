@@ -48,7 +48,11 @@ namespace Juice.EventBus.Tests
 
                 services.AddHttpContextAccessor();
 
-                services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"));
+                services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"), options =>
+                {
+                    options.BrokerName = "exchange1";
+                    options.SubscriptionClientName = "juice_eventbus_xunit_1";
+                });
 
                 services.AddScoped<ScopedService>();
 
@@ -105,11 +109,13 @@ namespace Juice.EventBus.Tests
 
                 services.RegisterKeyedRabbitMQEventBus(configuration.GetSection("RabbitMQ"), options =>
                 {
-                    options.BrokerName = "exchange1";
+                    options.BrokerName = "exchange2";
+                    options.SubscriptionClientName = "juice_eventbus_xunit_2";
                 });
                 services.RegisterKeyedRabbitMQEventBus(configuration.GetSection("RabbitMQ"), options =>
                 {
-                    options.BrokerName = "exchange2";
+                    options.BrokerName = "exchange21";
+                    options.SubscriptionClientName = "juice_eventbus_xunit_2.1";
                 });
                 services.AddScoped<ScopedService>();
                 services.AddTransient<ContentPublishedIntegrationEventHandler>();
@@ -119,8 +125,8 @@ namespace Juice.EventBus.Tests
                 services.AddMultiTenant();
             });
             var serviceProvider = resolver.ServiceProvider;
-            var eventBus1 = serviceProvider.GetRequiredKeyedService<IEventBus>("exchange1");
-            var eventBus2 = serviceProvider.GetRequiredKeyedService<IEventBus>("exchange2");
+            var eventBus1 = serviceProvider.GetRequiredKeyedService<IEventBus>("exchange2");
+            var eventBus2 = serviceProvider.GetRequiredKeyedService<IEventBus>("exchange21");
             var handledService = serviceProvider.GetRequiredService<HandledService>();
 
             eventBus1.Subscribe<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler>();
@@ -169,11 +175,13 @@ namespace Juice.EventBus.Tests
 
                 services.RegisterRabbitMQEventBus<ITypedBroker>(configuration.GetSection("RabbitMQ"), options =>
                 {
-                    options.BrokerName = "exchange";
+                    options.BrokerName = "exchange3";
+                    options.SubscriptionClientName = "juice_eventbus_xunit_3";
                 });
                 services.RegisterRabbitMQEventBus<TypedBroker1>(configuration.GetSection("RabbitMQ"), options =>
                 {
-                    options.BrokerName = "exchange1";
+                    options.BrokerName = "exchange31";
+                    options.SubscriptionClientName = "juice_eventbus_xunit_3.1";
                 });
 
                 services.AddScoped<ScopedService>();
@@ -205,7 +213,7 @@ namespace Juice.EventBus.Tests
             handledService.ResolvedTenants.Count.Should().Be(20);
         }
 
-        [IgnoreOnCIFact(DisplayName = "Should handle multiple time on failure")]
+        [IgnoreOnCIFact(DisplayName = "Should retry 3 times on failure")]
         public async Task SendNAckOnFailureAsync()
         {
             var resolver = new DependencyResolver
@@ -226,10 +234,11 @@ namespace Juice.EventBus.Tests
                 services.AddHttpContextAccessor();
                 services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"), options =>
                 {
-                    options.BrokerName = "topic.juice_bus";
-                    options.SubscriptionClientName = "juice_eventbus_test_events";
+                    options.BrokerName = "exchange4";
+                    options.SubscriptionClientName = "juice_eventbus_xunit_4";
                     options.ExchangeType = "topic";
-                    options.AckOnProcessed = false;
+                    options.ProcessRetryDelayMs = 1000; // retry every second
+                    options.ProcessMaxRetries = 3; // retry 3 times
                 });
                 services.AddTransient<LogEventFailureHandler>();
                 services.AddSingleton<HandledService>();
@@ -243,12 +252,12 @@ namespace Juice.EventBus.Tests
                 await Task.Delay(TimeSpan.FromSeconds(3)); // wait for pending messages to be processed
                 handledService.HandledCount.Clear();
                 await eventBus.PublishAsync(new LogEvent { Facility = "kernel", Serverty = LogLevel.Error });
-                await Task.Delay(TimeSpan.FromSeconds(1));
+                await Task.Delay(TimeSpan.FromSeconds(5));
                 eventBus.Unsubscribe<LogEvent, LogEventFailureHandler>();
                 await Task.Delay(TimeSpan.FromSeconds(1));
 
                 handledService.HandledCount.Should().ContainKey(nameof(LogEventFailureHandler));
-                handledService.HandledCount[nameof(LogEventFailureHandler)].Should().BeGreaterThan(1);
+                handledService.HandledCount[nameof(LogEventFailureHandler)].Should().Be(4);
                 _output.WriteLine($"Handled count: {handledService.HandledCount[nameof(LogEventFailureHandler)]}");
             }
         }
@@ -274,9 +283,10 @@ namespace Juice.EventBus.Tests
                 services.AddHttpContextAccessor();
                 services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"), options =>
                 {
-                    options.BrokerName = "topic.juice_bus";
-                    options.SubscriptionClientName = "juice_eventbus_test_events";
+                    options.BrokerName = "exchange5";
+                    options.SubscriptionClientName = "juice_eventbus_xunit_5";
                     options.ExchangeType = "topic";
+                    options.ProcessMaxRetries = 0; // Set to 0 to disable retries
                 });
                 services.AddTransient<LogEventFailureHandler>();
                 services.AddSingleton<HandledService>();
@@ -297,5 +307,6 @@ namespace Juice.EventBus.Tests
                 handledService.HandledCount[nameof(LogEventFailureHandler)].Should().Be(1);
             }
         }
+
     }
 }

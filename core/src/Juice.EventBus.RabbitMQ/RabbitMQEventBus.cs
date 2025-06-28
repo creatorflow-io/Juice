@@ -21,12 +21,14 @@ namespace Juice.EventBus.RabbitMQ
         private string _queueName;
         private string? _queueType; // classic (default), quorum
 
-        public string BROKER_NAME = "default_exchange";
+        private string _exchange = "default_exchange";
+        private string ExchangeRetry => $"{_exchange}.retry";
         private string _exchangeType; // direct, fanout, topic, headers
 
         private IModel? _producerChannel;
         private readonly int _retryCount;
-        private readonly bool _ackOnProcessed = true;
+        private int _maxProcessRetries; // max retry count for processing event
+        private int _processRetryDelayMs;
 
         protected IEventBusSubscriptionsManager SubsManager { get; }
         protected ILogger Logger { get; }
@@ -40,20 +42,18 @@ namespace Juice.EventBus.RabbitMQ
             )
         {
             _persistentConnection = mQPersistentConnection;
-           
+
             _queueName = options.SubscriptionClientName ?? string.Empty;
             _queueType = options.QueueType; // classic, quorum
             _exchangeType = options.ExchangeType ?? "direct";
             if (!string.IsNullOrEmpty(options.BrokerName))
             {
-                BROKER_NAME = options.BrokerName;
+                _exchange = options.BrokerName;
             }
             _scopeFactory = scopeFactory;
             _retryCount = options.RetryCount;
-            if (options.AckOnProcessed.HasValue)
-            {
-                _ackOnProcessed = options.AckOnProcessed.Value;
-            }
+            _maxProcessRetries = options.ProcessMaxRetries;
+            _processRetryDelayMs = options.ProcessRetryDelayMs;
 
             Logger = logger;
             SubsManager = subscriptionsManager;
@@ -75,17 +75,46 @@ namespace Juice.EventBus.RabbitMQ
                 }
 
                 var (processed, ok) = await ProcessingEventAsync(eventArgs, eventName, message);
-                if (ok || (processed && _ackOnProcessed))
+                if (_consumerChannel == null)
+                {
+                    return;
+                }
+                if (ok)
                 {
 
                     // Even on exception we take the message off the queue.
-                    // in a REAL WORLD app this should be handled with a Dead Letter Exchange (DLX). 
+                    // in a REAL WORLD app this should be handled with a Dead Letter _exchange (DLX). 
                     // For more information see: https://www.rabbitmq.com/dlx.html
-                    _consumerChannel?.BasicAck(eventArgs.DeliveryTag, multiple: false);
+                    _consumerChannel.BasicAck(eventArgs.DeliveryTag, multiple: false);
                 }
-                else
+                else if (!processed || _maxProcessRetries <= 0) // if no handler found for event or processing failed and no retries are allowed
                 {
-                    _consumerChannel?.BasicNack(eventArgs.DeliveryTag, multiple: true, requeue: true);
+                    Logger.LogWarning("No handler found for RabbitMQ event: {EventName}", eventName);
+                    _consumerChannel.BasicNack(eventArgs.DeliveryTag, multiple: false, requeue: false);
+                }
+                else // if processing failed
+                {
+                    var headers = eventArgs.BasicProperties.Headers;
+                    int attempts = headers.ContainsKey("x-attempts") ? int.Parse(headers["x-attempts"]?.ToString() ?? "0") : 0;
+                    if (attempts >= _maxProcessRetries)
+                    {
+                        if (Logger.IsEnabled(LogLevel.Debug))
+                        {
+                            Logger.LogDebug("Max processing retries reached for event: {EventName}, attempts: {Attempts}", eventName, attempts);
+                        }
+                        _consumerChannel.BasicNack(eventArgs.DeliveryTag, multiple: true, requeue: false);
+                    }
+                    else
+                    {
+                        eventArgs.BasicProperties.Headers["x-attempts"] = attempts + 1;
+                        if (Logger.IsEnabled(LogLevel.Debug))
+                        {
+                            Logger.LogDebug("Retrying event: {EventName}, attempts: {Attempts}", eventName, eventArgs.BasicProperties.Headers["x-attempts"]);
+                        }
+                        // re-publish with updated header
+                        _consumerChannel.BasicPublish(ExchangeRetry, eventArgs.RoutingKey, eventArgs.BasicProperties, eventArgs.Body);
+                        _consumerChannel.BasicAck(eventArgs.DeliveryTag, multiple: false);
+                    }
                 }
             }
             catch (Exception ex)
@@ -119,6 +148,10 @@ namespace Juice.EventBus.RabbitMQ
             }
         }
 
+        /// <summary>
+        /// Init exchanges and queues
+        /// </summary>
+        /// <returns></returns>
         private IModel? CreateConsumerChannel()
         {
             if (!_persistentConnection.IsConnected && !_persistentConnection.TryConnect())
@@ -126,15 +159,20 @@ namespace Juice.EventBus.RabbitMQ
                 return null;
             }
 
-            Logger.LogInformation("Creating RabbitMQ consumer channel. Broker: {Broker}.", BROKER_NAME);
+            Logger.LogInformation("Creating RabbitMQ consumer channel. Broker: {Broker}.", _exchange);
 
             var channel = _persistentConnection.CreateModel();
             if (channel == null) { return null; }
 
-            channel.ExchangeDeclare(exchange: BROKER_NAME,
+            channel.ExchangeDeclare(exchange: _exchange,
                                     type: _exchangeType);
 
-            var queuDeclareOk = channel.QueueDeclare(queue: _queueName,
+            if (Logger.IsEnabled(LogLevel.Debug))
+            {
+                Logger.LogDebug("Declaring RabbitMQ exchange: {ExchangeName} with type: {ExchangeType}", _exchange, _exchangeType);
+            }
+
+            QueueDeclareOk queuDeclareOk = channel.QueueDeclare(queue: _queueName,
                                  durable: true,
                                  exclusive: false,
                                  autoDelete: false,
@@ -142,9 +180,47 @@ namespace Juice.EventBus.RabbitMQ
                                  ? new Dictionary<string, object> { { "x-queue-type", _queueType } }
                                  : null);
 
-            if (_queueName == string.Empty && queuDeclareOk != null)
+            if (_queueName == string.Empty)
             {
                 _queueName = queuDeclareOk.QueueName;
+                if (Logger.IsEnabled(LogLevel.Debug))
+                {
+                    Logger.LogDebug("RabbitMQ queue declared with name: {QueueName}", _queueName);
+                }
+            }
+
+            // Declare retry exchange and queue
+            if (_maxProcessRetries > 0)
+            {
+                channel.ExchangeDeclare(exchange: ExchangeRetry,
+                    type: ExchangeType.Fanout);
+                if (Logger.IsEnabled(LogLevel.Debug))
+                {
+                    Logger.LogDebug("Declaring RabbitMQ retry exchange: {ExchangeName} with type: {ExchangeType}", ExchangeRetry, ExchangeType.Fanout);
+                }
+                var argsRetry = new Dictionary<string, object>
+                {
+                    ["x-dead-letter-exchange"] = _exchange,
+                    ["x-message-ttl"] = _processRetryDelayMs // default ttl in queue level
+                };
+                if (_queueType != null)
+                {
+                    argsRetry["x-queue-type"] = _queueType;
+                }
+
+                if (Logger.IsEnabled(LogLevel.Debug))
+                {
+                    Logger.LogDebug("Declaring RabbitMQ retry queue: {QueueName} with arguments: {Arguments}", ExchangeRetry, argsRetry);
+                }
+
+                channel.QueueDeclare(queue: ExchangeRetry,
+                                 durable: true,
+                                 exclusive: false,
+                                 autoDelete: false,
+                                 arguments: argsRetry);
+                channel.QueueBind(queue: ExchangeRetry,
+                              exchange: ExchangeRetry,
+                              routingKey: string.Empty);
             }
 
             channel.CallbackException += (sender, ea) =>
@@ -162,7 +238,7 @@ namespace Juice.EventBus.RabbitMQ
             return channel;
         }
 
-        private async Task<(bool Handled, bool Ok)> ProcessingEventAsync(BasicDeliverEventArgs eventArgs,string eventName, string message)
+        private async Task<(bool Handled, bool Ok)> ProcessingEventAsync(BasicDeliverEventArgs eventArgs, string eventName, string message)
         {
             using (Logger.BeginScope($"Processing integration event: {eventName}"))
             {
@@ -189,13 +265,15 @@ namespace Juice.EventBus.RabbitMQ
                         Logger.LogWarning("Failed to deserialize message to {eventType}", eventType.Name);
                         return (false, false);
                     }
-                    var tenantId = eventArgs.BasicProperties.Headers?["TenantId"] is byte[] tenant ? Encoding.UTF8.GetString(tenant) : null;
+                    var tenantId =
+                        eventArgs.BasicProperties.Headers?.ContainsKey("TenantId") == true &&
+                        eventArgs.BasicProperties.Headers?["TenantId"] is byte[] tenant ? Encoding.UTF8.GetString(tenant) : null;
                     var tenantResolver = scope.ServiceProvider.GetService<IScopedTenantResolver>();
                     using var _ = tenantResolver?.Resolve(tenantId);
                     bool ok = false, handled = false;
                     foreach (var subscription in subscriptions)
                     {
-                        if(!subscription.HandlerType.IsAssignableTo(concreteType))
+                        if (!subscription.HandlerType.IsAssignableTo(concreteType))
                         {
                             Logger.LogWarning("Type {typeName} not assignable to {concreteType}", subscription.HandlerType.Name, concreteType.Name);
 
@@ -208,7 +286,7 @@ namespace Juice.EventBus.RabbitMQ
 
                             continue;
                         }
-                        
+
                         try
                         {
                             handled = true;
@@ -219,7 +297,7 @@ namespace Juice.EventBus.RabbitMQ
                         {
                             var eventId = integrationEvent != null ? ((IntegrationEvent)integrationEvent).Id : Guid.Empty;
                             Logger.LogError(ex, "{handler} failed to handle event: {EventName}, eventId: {eventId}", handler.GetGenericTypeName(), eventName, eventId);
-                            if(Logger.IsEnabled(LogLevel.Trace))
+                            if (Logger.IsEnabled(LogLevel.Trace))
                             {
                                 Logger.LogTrace(ex, "Event: {EventName}, eventId: {eventId} exception stack trace: {StackTrace}", eventName, eventId, ex.StackTrace);
                             }
@@ -270,7 +348,7 @@ namespace Juice.EventBus.RabbitMQ
             }
             using var channel = _persistentConnection.CreateModel();
             channel.QueueUnbind(queue: _queueName,
-                exchange: BROKER_NAME,
+                exchange: _exchange,
                 routingKey: eventName);
 
             Logger.LogInformation("Queue unbind {queueName}", _queueName);
@@ -295,7 +373,7 @@ namespace Juice.EventBus.RabbitMQ
             }
             using var channel = _persistentConnection.CreateModel();
             channel.QueueBind(queue: _queueName,
-                              exchange: BROKER_NAME,
+                              exchange: _exchange,
                               routingKey: eventName);
         }
 
@@ -319,14 +397,15 @@ namespace Juice.EventBus.RabbitMQ
             {
                 return null;
             }
-            Logger.LogInformation("Creating RabbitMQ producer channel. Broker: {Broker}.", BROKER_NAME);
+            Logger.LogInformation("Creating RabbitMQ producer channel. Broker: {Broker}.", _exchange);
             var channel = _persistentConnection.CreateModel();
             if (channel == null) { return null; }
-            channel.ExchangeDeclare(exchange: BROKER_NAME,
+            channel.ExchangeDeclare(exchange: _exchange,
                                     type: _exchangeType);
             return channel;
         }
         #endregion
+
         #region Publish outgoing event
         public async Task PublishAsync(IntegrationEvent @event, string? tenantId = default)
         {
@@ -381,7 +460,7 @@ namespace Juice.EventBus.RabbitMQ
                 }
 
                 _producerChannel.BasicPublish(
-                    exchange: BROKER_NAME,
+                    exchange: _exchange,
                     routingKey: eventName,
                     mandatory: true,
                     basicProperties: properties,
