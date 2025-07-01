@@ -15,6 +15,23 @@ namespace Juice.Domain
         Task<IOperationResult<T>> AddAsync(T entity, CancellationToken token = default);
         Task<IOperationResult> DeleteAsync(T entity, CancellationToken token = default);
         Task<IOperationResult> UpdateAsync(T entity, CancellationToken token = default);
-        Task<T?> FindAsync(Expression<Func<T, bool>> predicate, CancellationToken token = default);
+        Task<T?> FindAsync(Expression<Func<T, bool>> predicate, bool readOnly = false, CancellationToken token = default);
+        /// <summary>
+        /// Read an entity by its key as not tracked object.
+        /// </summary>
+        /// <typeparam name="TKey"></typeparam>
+        /// <param name="id"></param>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        Task<T?> ReadAsync<TKey>(TKey id, CancellationToken token = default);
+        /// <summary>
+        /// Get an entity by its key as tracked object.
+        /// </summary>
+        /// <typeparam name="TKey"></typeparam>
+        /// <param name="id"></param>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        Task<T?> GetAsync<TKey>(TKey id, CancellationToken token = default);
+        IQueryable<T> Query();
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System.Linq.Expressions;
 using Juice.Domain;
+using Juice.EF.Extensions;
 using Microsoft.EntityFrameworkCore;
 
 namespace Juice.EF
@@ -12,13 +13,13 @@ namespace Juice.EF
 
         #region UnitOfWork
 
-        public bool HasActiveTransaction
+        public virtual bool HasActiveTransaction
             => Database.CurrentTransaction != null
             && Database.CurrentTransaction.TransactionId != _commitedTransactionId;
 
         private Guid? _commitedTransactionId;
 
-        public async Task<bool> CommitTransactionAsync(Guid transactionId, CancellationToken token = default)
+        public virtual async Task<bool> CommitTransactionAsync(Guid transactionId, CancellationToken token = default)
         {
             if (transactionId == _commitedTransactionId)
             {
@@ -46,69 +47,21 @@ namespace Juice.EF
 
         protected virtual Task OnTransactionCommittedAsync() => Task.CompletedTask;
 
-        public virtual async Task<IOperationResult<T>> AddAndSaveAsync<T>(T entity, CancellationToken token = default)
+        public virtual Task<IOperationResult<T>> AddAndSaveAsync<T>(T entity, CancellationToken token = default)
             where T : class
-        {
-            try
-            {
-                var entry = Set<T>().Add(entity);
-                await SaveChangesAsync(token);
-                return OperationResult.Result(entry.Entity);
-            }
-            catch (Exception ex)
-            {
-                return OperationResult.Failed<T>(ex);
-            }
-        }
+            => this.AddAndSaveInternalAsync(entity, token);
 
-        public virtual async Task<IOperationResult> AddAndSaveAsync<T>(IEnumerable<T> entities, CancellationToken token = default)
+        public virtual Task<IOperationResult> AddAndSaveAsync<T>(IEnumerable<T> entities, CancellationToken token = default)
             where T : class
-        {
-            try
-            {
-                Set<T>().AddRange(entities);
-                await SaveChangesAsync(token);
-                return OperationResult.Success;
-            }
-            catch (Exception ex)
-            {
-                return OperationResult.Failed(ex);
-            }
-        }
+            => this.AddAndSaveInternalAsync(entities, token);
 
-        public virtual async Task<IOperationResult> DeleteAsync<T>(T entity, CancellationToken token = default)
+        public virtual Task<IOperationResult> DeleteAsync<T>(T entity, CancellationToken token = default)
             where T : class
-        {
-            try
-            {
-                Set<T>().Remove(entity);
-                await SaveChangesAsync(token);
-                return OperationResult.Success;
-            }
-            catch (Exception ex)
-            {
-                return OperationResult.Failed(ex);
-            }
-        }
+            => this.DeleteInternalAsync(entity, token);
 
-        public virtual async Task<IOperationResult> UpdateAsync<T>(T entity, CancellationToken token = default)
+        public virtual Task<IOperationResult> UpdateAsync<T>(T entity, CancellationToken token = default)
             where T : class
-        {
-            try
-            {
-                var tracked = Entry(entity).State != EntityState.Detached;
-                if (!tracked)
-                {
-                    Set<T>().Update(entity);
-                }
-                await SaveChangesAsync(token);
-                return OperationResult.Success;
-            }
-            catch (Exception ex)
-            {
-                return OperationResult.Failed(ex);
-            }
-        }
+            => this.UpdateInternalAsync(entity, token);
 
         public virtual async Task<T?> FindAsync<T>(Expression<Func<T, bool>> predicate, CancellationToken token = default)
             where T : class
@@ -116,7 +69,7 @@ namespace Juice.EF
             return await Set<T>().FirstOrDefaultAsync(predicate, token);
         }
 
-        public IQueryable<T> Query<T>()
+        public virtual IQueryable<T> Query<T>()
             where T : class
             => Set<T>();
         #endregion

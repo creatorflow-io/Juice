@@ -406,6 +406,70 @@ namespace Juice.EF.Extensions
 
         public static IDbContextTransaction? GetCurrentTransaction(this DbContext context)
             => context.Database.CurrentTransaction;
+
+        internal static async Task<IOperationResult<T>> AddAndSaveInternalAsync<T>(this DbContext context, T entity, CancellationToken token = default)
+            where T : class
+        {
+            try
+            {
+                var entry = context.Set<T>().Add(entity);
+                await context.SaveChangesAsync(token);
+                return OperationResult.Result(entry.Entity);
+            }
+            catch (Exception ex)
+            {
+                return OperationResult.Failed<T>(ex);
+            }
+        }
+
+        internal static async Task<IOperationResult> AddAndSaveInternalAsync<T>(this DbContext context, IEnumerable<T> entities, CancellationToken token = default)
+           where T : class
+        {
+            try
+            {
+                context.Set<T>().AddRange(entities);
+                await context.SaveChangesAsync(token);
+                return OperationResult.Success;
+            }
+            catch (Exception ex)
+            {
+                return OperationResult.Failed(ex);
+            }
+        }
+
+        internal static async Task<IOperationResult> DeleteInternalAsync<T>(this DbContext context, T entity, CancellationToken token = default)
+            where T : class
+        {
+            try
+            {
+                context.Set<T>().Remove(entity);
+                await context.SaveChangesAsync(token);
+                return OperationResult.Success;
+            }
+            catch (Exception ex)
+            {
+                return OperationResult.Failed(ex);
+            }
+        }
+
+        internal static async Task<IOperationResult> UpdateInternalAsync<T>(this DbContext context, T entity, CancellationToken token = default)
+            where T : class
+        {
+            try
+            {
+                var tracked = context.Entry(entity).State != EntityState.Detached;
+                if (!tracked)
+                {
+                    context.Set<T>().Update(entity);
+                }
+                await context.SaveChangesAsync(token);
+                return OperationResult.Success;
+            }
+            catch (Exception ex)
+            {
+                return OperationResult.Failed(ex);
+            }
+        }
         #endregion
     }
 }
