@@ -16,6 +16,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Sdk;
@@ -92,6 +93,9 @@ namespace Juice.EF.Tests
                     builder
                         .ReplaceService<IMigrationsAssembly, DbSchemaAwareMigrationAssembly>()
                     ;
+
+                    builder.UseLoggerFactory(sp.GetRequiredService<ILoggerFactory>())
+                        .EnableSensitiveDataLogging();
 
                     return new TestContext(sp, builder.Options);
                 });
@@ -253,6 +257,12 @@ namespace Juice.EF.Tests
             var repository = new ContentRepository(dbContext);
 
             _ = await repository.UnitOfWork.FindAsync(c => c.Code == "123");
+
+            var c = await repository.Query().FirstOrDefaultAsync();
+            if (c != null)
+            {
+                _ = await repository.ReadAsync(c.Id);
+            }
             await repository.TestDbContextAsync();
         }
     }

@@ -33,33 +33,43 @@ namespace Juice.EF
         /// <returns></returns>
         protected virtual Expression<Func<T, bool>> CreateIdPredicate<TKey>(TKey value)
         {
-            var param = Expression.Parameter(typeof(T));
+            var param = Expression.Parameter(typeof(T), "x");
             MemberExpression? id = null;
+
+            // Try to find the key property by [Key] attribute, or fallback to "Id" or "{TypeName}Id"
+            var keyProp = (typeof(T).GetProperties()
+                .FirstOrDefault(p => p.GetCustomAttribute<KeyAttribute>() != null)
+                ?? typeof(T).GetProperty("Id")
+                ?? typeof(T).GetProperty($"{typeof(T).Name}Id")) ?? throw new InvalidOperationException("Cannot find the key property of the entity");
+
+            id = Expression.Property(param, keyProp);
+
+            // Convert the string value to the actual type of the key
+            object convertedValue;
             try
             {
-                var name = typeof(T).GetProperties().Where(p => p.GetCustomAttribute<KeyAttribute>() != null).FirstOrDefault()?.Name;
-                if (name != null)
+                var targetType = Nullable.GetUnderlyingType(keyProp.PropertyType) ?? keyProp.PropertyType;
+                if (typeof(TKey) == targetType)
                 {
-                    id = Expression.PropertyOrField(param, name);
+                    // If TKey is not the same type as the key property, we need to convert it
+                    convertedValue = value!;
+                }
+                else
+                {
+                    convertedValue = Convert.ChangeType(value, targetType)!;
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Failed to convert value '{value}' to type {keyProp.PropertyType}", ex);
+            }
 
-            if (id == null && typeof(T).GetProperty("Id") != null)
-            {
-                id = Expression.PropertyOrField(param, "Id");
-            }
-            if (id == null && typeof(T).GetProperty($"{typeof(T).Name}Id") != null)
-            {
-                id = Expression.PropertyOrField(param, $"{typeof(T).Name}Id");
-            }
-            if (id == null)
-            {
-                throw new InvalidOperationException("Cannot find the key property of the entity");
-            }
-            var body = Expression.Equal(id, Expression.Constant(value));
+            var constant = Expression.Constant(convertedValue, keyProp.PropertyType);
+            var body = Expression.Equal(id, constant);
+
             return Expression.Lambda<Func<T, bool>>(body, param);
         }
+
         public virtual Task<T?> ReadAsync<TKey>(TKey id, CancellationToken token = default)
             => FindAsync(CreateIdPredicate(id), true, token);
         public virtual Task<T?> GetAsync<TKey>(TKey id, CancellationToken token = default)
