@@ -69,11 +69,19 @@ namespace Juice.EF
 
             return Expression.Lambda<Func<T, bool>>(body, param);
         }
-
+        /// <inheritdoc/>
         public virtual Task<T?> ReadAsync<TKey>(TKey id, CancellationToken token = default)
             => FindAsync(CreateIdPredicate(id), true, token);
+        /// <inheritdoc/>
         public virtual Task<T?> GetAsync<TKey>(TKey id, CancellationToken token = default)
             => FindAsync(CreateIdPredicate(id), false, token);
+        /// <inheritdoc/>
+        public virtual Task<bool> ExistsAsync<TKey>(TKey id, CancellationToken token = default)
+        {
+            var predicate = CreateIdPredicate(id);
+            return DbContext.Set<T>().AnyAsync(predicate, token);
+        }
+        /// <inheritdoc/>
         public virtual IQueryable<T> Query() => DbContext.Set<T>();
     }
 }

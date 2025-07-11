@@ -32,6 +32,18 @@ namespace Juice.Domain
         /// <param name="token"></param>
         /// <returns></returns>
         Task<T?> GetAsync<TKey>(TKey id, CancellationToken token = default);
+        /// <summary>
+        /// Check if an entity exists by its key.
+        /// </summary>
+        /// <typeparam name="TKey"></typeparam>
+        /// <param name="id"></param>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        Task<bool> ExistsAsync<TKey>(TKey id, CancellationToken token = default);
+        /// <summary>
+        /// Get a queryable for the entity type.
+        /// </summary>
+        /// <returns></returns>
         IQueryable<T> Query();
     }
 }
