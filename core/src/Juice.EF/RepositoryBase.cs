@@ -23,7 +23,7 @@ namespace Juice.EF
         public virtual Task<IOperationResult> UpdateAsync(T entity, CancellationToken token = default)
             => DbContext.UpdateInternalAsync(entity, token);
         public virtual Task<T?> FindAsync(Expression<Func<T, bool>> predicate, bool readOnly = false, CancellationToken token = default)
-            => (readOnly ? DbContext.Set<T>().AsNoTracking() : DbContext.Set<T>()).FirstOrDefaultAsync(predicate, token);
+            => (readOnly ? Query().AsNoTracking() : Query()).FirstOrDefaultAsync(predicate, token);
 
         /// <summary>
         /// Create a predicate to find an entity by its key
