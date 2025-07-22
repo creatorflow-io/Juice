@@ -23,6 +23,7 @@
         /// Queue type to use for subscribing to messages. (EX: classic, quorum)
         /// </summary>
         public string? QueueType { get; set; }
+        public long TTL { get; set; } = 172800000; // Time to live in milliseconds for messages in the queue. Default is 48 hours (48 * 60 * 60 * 1000 ms).
         /// <summary>
         /// Maximum number of retries for processing a message before it is considered failed.
         /// <para>No retry if less than or equal 0</para>

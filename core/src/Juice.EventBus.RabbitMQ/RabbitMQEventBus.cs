@@ -24,6 +24,7 @@ namespace Juice.EventBus.RabbitMQ
         private string _exchange = "default_exchange";
         private string ExchangeRetry => $"{_exchange}.retry";
         private string _exchangeType; // direct, fanout, topic, headers
+        private long _ttl; // Time to live in milliseconds for messages in the queue
 
         private IModel? _producerChannel;
         private readonly int _retryCount;
@@ -46,6 +47,7 @@ namespace Juice.EventBus.RabbitMQ
             _queueName = options.SubscriptionClientName ?? string.Empty;
             _queueType = options.QueueType; // classic, quorum
             _exchangeType = options.ExchangeType ?? "direct";
+            _ttl = options.TTL; // default ttl in queue level
             if (!string.IsNullOrEmpty(options.BrokerName))
             {
                 _exchange = options.BrokerName;
@@ -172,13 +174,19 @@ namespace Juice.EventBus.RabbitMQ
                 Logger.LogDebug("Declaring RabbitMQ exchange: {ExchangeName} with type: {ExchangeType}", _exchange, _exchangeType);
             }
 
+            var queueArguments = new Dictionary<string, object>
+            {
+                ["x-message-ttl"] = _ttl // default ttl in queue level
+            };
+            if (_queueType != null)
+            {
+                queueArguments["x-queue-type"] = _queueType; // classic, quorum
+            }
             QueueDeclareOk queuDeclareOk = channel.QueueDeclare(queue: _queueName,
                                  durable: true,
                                  exclusive: false,
                                  autoDelete: false,
-                                 arguments: _queueType != null
-                                 ? new Dictionary<string, object> { { "x-queue-type", _queueType } }
-                                 : null);
+                                 arguments: queueArguments);
 
             if (_queueName == string.Empty)
             {
