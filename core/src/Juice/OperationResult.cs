@@ -26,7 +26,7 @@ namespace Juice
         public bool HasData => Data != null;
         public bool SucceededWithData => Succeeded && HasData;
 
-        public new virtual OperationModel<T> OperationModel => new OperationModel<T>(Message, StackTrace, Succeeded, Failure, DataValue);
+        public new virtual OperationModel<T> OperationModel => new OperationModel<T>(Message, StackTrace, Succeeded, Failure, Data);
     }
 
     public static class OperationResultExtensions

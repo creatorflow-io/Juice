@@ -21,7 +21,7 @@ namespace Juice.Operation
     {
         public T? Data { get; }
 
-        public OperationModel(string? message, string? stackTrace, bool succeeded, OperationalFailure failure, T data) : base(message, stackTrace, succeeded, failure)
+        public OperationModel(string? message, string? stackTrace, bool succeeded, OperationalFailure failure, T? data) : base(message, stackTrace, succeeded, failure)
         {
             Data = data;
         }
