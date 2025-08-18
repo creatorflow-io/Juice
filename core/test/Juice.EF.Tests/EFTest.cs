@@ -219,6 +219,11 @@ namespace Juice.EF.Tests
 
             Assert.Equal(initValue, addedContent![property]);
 
+            addedContent.CreatedDate.Should().NotBe(DateTimeOffset.MinValue);
+            addedContent.CreatedUser.Should().Be("test-user");
+            addedContent.ModifiedUser.Should().BeNullOrEmpty();
+            addedContent.ModifiedDate.Should().BeNull();
+
             logger.LogInformation("Content {code} was verified", code1);
 
             addedContent[property] = "New value";
@@ -234,6 +239,9 @@ namespace Juice.EF.Tests
 
             editedContent.Should().NotBeNull();
             Assert.Equal("New value", editedContent![property]);
+
+            editedContent.ModifiedUser.Should().NotBeNullOrEmpty();
+            editedContent.ModifiedUser.Should().Be("test-user");
 
             await Task.Delay(1000);
         }

@@ -1,4 +1,5 @@
-﻿using Juice.Domain.Events;
+﻿using System.Security.Claims;
+using Juice.Domain.Events;
 namespace Juice.EF
 {
     public interface IAuditableDbContext
@@ -18,5 +19,6 @@ namespace Juice.EF
         List<AuditEntry> PendingAuditEntries { get; set; }
 
         string? User { get; }
+        ClaimsPrincipal? UserPrincipal { get; }
     }
 }

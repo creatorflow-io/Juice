@@ -4,7 +4,6 @@ using Juice.EF.Tests.Domain;
 using Microsoft.EntityFrameworkCore;
 using Juice.MultiTenant.EF;
 using Juice.EF.Extensions;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace Juice.EF.Tests.Infrastructure
 {
@@ -12,7 +11,7 @@ namespace Juice.EF.Tests.Infrastructure
     public class TestContext : MultiTenantDbContext
     {
         public const string SCHEMA = "Contents";
-        //public DbSet<Content> Contents { get; set; }
+        public override string? User => "test-user";
 
         public TestContext(IServiceProvider serviceProvider, DbContextOptions<TestContext> options) : base(options)
         {

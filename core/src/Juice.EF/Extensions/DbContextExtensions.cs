@@ -153,6 +153,11 @@ namespace Juice.EF.Extensions
                                 entry.Property(nameof(ICreationInfo.CreatedUser)).CurrentValue = user;
                             }
                             entry.Property(nameof(ICreationInfo.CreatedDate)).CurrentValue = DateTimeOffset.Now;
+                            if(auditEntry != null)
+                            {
+                                auditEntry.CurrentValues[nameof(ICreationInfo.CreatedUser)] = user;
+                                auditEntry.CurrentValues[nameof(ICreationInfo.CreatedDate)] = entry.Property(nameof(ICreationInfo.CreatedDate)).CurrentValue;
+                            }
                         }
                         #endregion
 
@@ -186,8 +191,18 @@ namespace Juice.EF.Extensions
                         }
                         else if (entry.Entity is IModificationInfo)
                         {
+                            if(auditEntry != null)
+                            {
+                                auditEntry.OriginalValues[nameof(IModificationInfo.ModifiedUser)] = entry.Property(nameof(IModificationInfo.ModifiedUser)).CurrentValue;
+                                auditEntry.OriginalValues[nameof(IModificationInfo.ModifiedDate)] = entry.Property(nameof(IModificationInfo.ModifiedDate)).CurrentValue;
+                            }
                             entry.Property(nameof(IModificationInfo.ModifiedUser)).CurrentValue = user;
                             entry.Property(nameof(IModificationInfo.ModifiedDate)).CurrentValue = DateTimeOffset.Now;
+                            if (auditEntry != null)
+                            {
+                                auditEntry.CurrentValues[nameof(IModificationInfo.ModifiedUser)] = user;
+                                auditEntry.CurrentValues[nameof(IModificationInfo.ModifiedDate)] = entry.Property(nameof(IModificationInfo.ModifiedDate)).CurrentValue;
+                            }
                         }
                         if (entry.Entity is ICreationInfo)
                         {

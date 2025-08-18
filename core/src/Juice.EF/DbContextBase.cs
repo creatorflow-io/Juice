@@ -31,7 +31,9 @@ namespace Juice.EF
                 _ => null
             };
         }
-        public string? User { get; protected set; }
+        public virtual string? User => UserPrincipal?.Claims
+            .FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier || c.Type == ClaimTypes.Name)?.Value;
+        public ClaimsPrincipal? UserPrincipal { get; protected set; }
         public List<DataEvent> PendingDataEvents { get; set; } = new List<DataEvent>();
         public List<AuditEntry> PendingAuditEntries { get; set; } = new List<AuditEntry>();
 
@@ -58,7 +60,7 @@ namespace Juice.EF
         public virtual void ConfigureServices(IServiceProvider serviceProvider)
         {
             var httpContextAccessor = serviceProvider.GetService<IHttpContextAccessor>();
-            User = httpContextAccessor?.HttpContext?.User?.FindFirst(ClaimTypes.Name)?.Value;
+            UserPrincipal = httpContextAccessor?.HttpContext?.User;
 
             if (_logger == null)
             {
@@ -193,7 +195,7 @@ namespace Juice.EF
             _logger?.LogDebug(GetType().Name + " is disposing...");
             _options = null;
             Schema = null;
-            User = null;
+            UserPrincipal = null;
             _mediator = null;
             _logger = null;
             _pendingRefreshEntities.Clear();
