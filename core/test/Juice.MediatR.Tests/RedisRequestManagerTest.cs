@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Juice.Extensions.DependencyInjection;
+using Juice.XUnit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -22,7 +23,7 @@ namespace Juice.MediatR.Tests
         }
 
 
-        [Fact(DisplayName = "Manager should not be null")]
+        [IgnoreOnCIFact(DisplayName = "Manager should not be null")]
         public async Task Manager_should_not_be_nullAsync()
         {
             await Task.CompletedTask;
