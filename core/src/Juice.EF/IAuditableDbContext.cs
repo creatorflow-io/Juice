@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using Juice.Domain.Events;
+using Juice.Measurement;
 namespace Juice.EF
 {
     public interface IAuditableDbContext
@@ -19,6 +20,10 @@ namespace Juice.EF
         List<AuditEntry> PendingAuditEntries { get; set; }
 
         string? User { get; }
+
         ClaimsPrincipal? UserPrincipal { get; }
+
+        ITimeTracker? TimeTracker { get; }
+
     }
 }

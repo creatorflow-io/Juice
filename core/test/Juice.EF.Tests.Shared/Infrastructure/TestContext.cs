@@ -29,6 +29,9 @@ namespace Juice.EF.Tests.Infrastructure
 
                 entity.Property(m => m.Code).HasMaxLength(Constants.NameLength);
 
+                entity.Property(m => m.AlternativeCreatedUser).HasMaxLength(Constants.NameLength);
+                entity.Property(m => m.AlternativeModifiedUser).HasMaxLength(Constants.NameLength);
+
                 #region Indexing
                 var indexBuilder = entity.HasIndex(nameof(Content.Code))
                     .IsUnique()

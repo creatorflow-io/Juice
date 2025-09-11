@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using Finbuckle.MultiTenant;
+using Finbuckle.MultiTenant.Abstractions;
 using FluentAssertions;
 using Juice.Domain.Events;
 using Juice.EF.Extensions;
@@ -8,6 +11,7 @@ using Juice.EF.Tests.Domain;
 using Juice.EF.Tests.EventHandlers;
 using Juice.EF.Tests.Infrastructure;
 using Juice.Extensions.DependencyInjection;
+using Juice.MultiTenant;
 using Juice.Services;
 using Juice.XUnit;
 using MediatR;
@@ -16,10 +20,8 @@ using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using Xunit;
 using Xunit.Abstractions;
-using Xunit.Sdk;
 
 namespace Juice.EF.Tests
 {
@@ -50,6 +52,7 @@ namespace Juice.EF.Tests
                 services.AddSingleton<SharedService>();
 
                 // Register DbContext class
+                services.AddTransient(sp => new DbOptions<TestContext> { EnableTimeTracking = true });
                 services.AddTransient(sp =>
                 {
                     var connectionName = provider switch
@@ -116,6 +119,22 @@ namespace Juice.EF.Tests
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
 
+                services.AddExecutionTimeMeasurement();
+
+                services.AddMultiTenant()
+                    .WithStaticStrategy("test-tenant")
+                    .WithInMemoryStore(options =>
+                    {
+                        options.Tenants = new List<Juice.Extensions.MultiTenant.TenantInfo>()
+                        {
+                            new()
+                            {
+                                Id = null,
+                                Identifier = "test-tenant",
+                                Name = "Test Tenant",
+                            }
+                        };
+                    });
             });
             return resolver.ServiceProvider;
         }
@@ -135,11 +154,13 @@ namespace Juice.EF.Tests
         }
 
         [IgnoreOnCITheory(DisplayName = "DynamicEntity unique Code"), TestPriority(2)]
-        [InlineData("SqlServer")]
         [InlineData("PostgreSQL")]
+        [InlineData("SqlServer")]
         public async Task Dynamic_entity_unique_code_Async(string provider)
         {
-            var serviceProvider = ConfigureServices(provider);
+            using var scope = ConfigureServices(provider).CreateScope();
+            var serviceProvider = scope.ServiceProvider;
+
             var dbContext = serviceProvider.GetRequiredService<TestContext>();
 
             var idGenerator = serviceProvider.GetRequiredService<IStringIdGenerator>();
@@ -152,21 +173,32 @@ namespace Juice.EF.Tests
 
             var content = new Content(code1, "Test name " + DateTimeOffset.Now.ToString());
 
-            dbContext.Add(content);
+            var entry = dbContext.Add(content);
 
             await dbContext.SaveChangesAsync().ConfigureAwait(false);
 
             logger.LogInformation("Content {code} was added", code1);
 
+            var timeMeasured = dbContext.TimeTracker!.ToString();
+            logger.LogInformation("Time measured: \n{timeMeasured}", timeMeasured);
+
             var addedContent = await dbContext.Set<Content>().FirstOrDefaultAsync(c => c.Code == code1);
 
             addedContent.Should().NotBeNull();
 
-            addedContent!.CreatedDate.Should().NotBe(DateTimeOffset.MinValue);
+            addedContent!.CreatedDate.Should().BeCloseTo(DateTimeOffset.Now, TimeSpan.FromMinutes(1));
+            addedContent.CreatedUser.Should().Be("test-user");
+            addedContent.AlternativeCreatedUser.Should().Be("test-user");
+            addedContent.AlternativeCreationDate.Should().BeCloseTo(DateTimeOffset.Now, TimeSpan.FromMinutes(1));
 
             addedContent.Disable();
 
             await dbContext.SaveChangesAsync();
+
+            addedContent.ModifiedDate.Should().BeCloseTo(DateTimeOffset.Now, TimeSpan.FromMinutes(1));
+            addedContent.ModifiedUser.Should().Be("test-user");
+            addedContent.AlternativeModifiedUser.Should().Be("test-user");
+            addedContent.AlternativeModificationDate.Should().BeCloseTo(DateTimeOffset.Now, TimeSpan.FromMinutes(1));
 
             logger.LogInformation("Content {code} was verified", code1);
 
@@ -272,6 +304,43 @@ namespace Juice.EF.Tests
                 _ = await repository.ReadAsync(c.Id);
             }
             await repository.TestDbContextAsync();
+        }
+
+        [IgnoreOnCITheory(DisplayName = "Non-audit measure"), TestPriority(10)]
+        [InlineData("SqlServer")]
+        [InlineData("PostgreSQL")]
+        public async Task Non_audit_measure_Async(string provider)
+        {
+            using var scope = ConfigureServices(provider).CreateScope();
+            var serviceProvider = scope.ServiceProvider;
+            var tenantResolver = serviceProvider.GetRequiredService<IScopedTenantResolver<Juice.Extensions.MultiTenant.TenantInfo>>();
+            using var tenantScope = tenantResolver.Resolve("test-tenant");
+
+            var tenantInfo = serviceProvider.GetRequiredService<IMultiTenantContextAccessor>().MultiTenantContext?.TenantInfo;
+            tenantInfo.Should().NotBeNull();
+            tenantInfo!.Identifier.Should().Be("test-tenant");
+
+            var dbContext = serviceProvider.GetRequiredService<TestContext>();
+
+            var idGenerator = serviceProvider.GetRequiredService<IStringIdGenerator>();
+
+            var logger = serviceProvider.GetRequiredService<ILogger<EFTest>>();
+
+            var code1 = idGenerator.GenerateRandomId(6);
+
+            logger.LogInformation("Generated code {code}", code1);
+
+            var content = new CrossTenantContent(Guid.NewGuid(), "Test name " + DateTimeOffset.Now.ToString());
+
+            var entry = dbContext.Add(content);
+
+            await dbContext.SaveChangesAsync().ConfigureAwait(false);
+
+            logger.LogInformation("Content {code} was added", code1);
+
+            var timeMeasured = dbContext.TimeTracker!.ToString();
+            logger.LogInformation("Time measured: \n{timeMeasured}", timeMeasured);
+
         }
     }
 }

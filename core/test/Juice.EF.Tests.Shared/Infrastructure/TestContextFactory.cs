@@ -41,13 +41,15 @@ namespace Juice.EF.Tests.Infrastructure
                             AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
                             builder.UseNpgsql(
-                               connectionString);
+                               connectionString,
+                               b => b.MigrationsAssembly("Juice.EF.Tests.PostgreSQL"));
                             break;
 
                         case "SqlServer":
 
                             builder.UseSqlServer(
-                                connectionString);
+                                connectionString,
+                                b => b.MigrationsAssembly("Juice.EF.Tests.SqlServer"));
                             break;
                         default:
                             throw new NotSupportedException($"Unsupported provider: {provider}");

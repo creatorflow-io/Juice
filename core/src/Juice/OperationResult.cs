@@ -6,27 +6,29 @@ namespace Juice
 {
     public interface IOperationResult
     {
-        public string? Message { get; }
-        public string? StackTrace { get; }
-        public bool Succeeded { get; }
-        public OperationalFailure Failure { get; }
+        string? Message { get; }
+        string? StackTrace { get; }
+        bool Succeeded { get; }
+        OperationalFailure Failure { get; }
         [JsonIgnore]
-        public Exception? Exception { get; }
-        public void ThrowIfNotSucceeded();
-        public string ToString();
+        [System.Text.Json.Serialization.JsonIgnore]
+        Exception? Exception { get; }
+        void ThrowIfNotSucceeded();
+        string ToString();
 
-        public virtual OperationModel OperationModel => new OperationModel(Message, StackTrace, Succeeded, Failure);
+        virtual OperationModel OperationModel => new OperationModel(Message, StackTrace, Succeeded, Failure);
     }
 
     public interface IOperationResult<T> : IOperationResult
     {
-        public T? Data { get; set; }
+        T? Data { get; set; }
         [JsonIgnore]
-        public T DataValue => Data ?? throw new InvalidOperationException("Data is null");
-        public bool HasData => Data != null;
-        public bool SucceededWithData => Succeeded && HasData;
+        [System.Text.Json.Serialization.JsonIgnore]
+        T DataValue => Data ?? throw new InvalidOperationException("Data is null");
+        bool HasData => Data != null;
+        bool SucceededWithData => Succeeded && HasData;
 
-        public new virtual OperationModel<T> OperationModel => new OperationModel<T>(Message, StackTrace, Succeeded, Failure, Data);
+        new virtual OperationModel<T> OperationModel => new OperationModel<T>(Message, StackTrace, Succeeded, Failure, Data);
     }
 
     public static class OperationResultExtensions
@@ -257,8 +259,14 @@ namespace Juice
         /// <param name="data"></param>
         /// <returns></returns>
         public static IOperationResult<T> Failed<T>(string? message, T? data = default)
-            => new OperationResultInternal<T>()
+        {
+            if(data is Exception ex)
+            {
+                return Failed<T>(ex, message);
+            }
+            return new OperationResultInternal<T>()
             { Succeeded = false, Message = message, Data = data };
+        }
 
         /// <summary>
         /// Create a succeeded <see cref="IOperationResult{T}"/> with data and a message

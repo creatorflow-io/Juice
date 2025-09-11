@@ -10,7 +10,7 @@ namespace Juice.MultiTenant.EF
     public abstract class MultiTenantDbContext : DbContextBase, IMultiTenantDbContext
     {
         #region Finbuckle
-        public ITenantInfo? TenantInfo { get; internal set; }
+        public virtual ITenantInfo? TenantInfo { get; internal set; }
         public virtual TenantMismatchMode TenantMismatchMode { get; set; } = TenantMismatchMode.Throw;
 
         public virtual TenantNotSetMode TenantNotSetMode { get; set; } = TenantNotSetMode.Throw;

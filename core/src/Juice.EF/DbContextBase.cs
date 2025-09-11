@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using Juice.Domain.Events;
 using Juice.EF.Extensions;
+using Juice.Measurement;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -36,6 +37,8 @@ namespace Juice.EF
         public ClaimsPrincipal? UserPrincipal { get; protected set; }
         public List<DataEvent> PendingDataEvents { get; set; } = new List<DataEvent>();
         public List<AuditEntry> PendingAuditEntries { get; set; } = new List<AuditEntry>();
+
+        public ITimeTracker? TimeTracker { get; protected set; }
 
         #endregion
 
@@ -81,6 +84,10 @@ namespace Juice.EF
 
             _options = serviceProvider.GetService(typeof(DbOptions<>).MakeGenericType(GetType())) as DbOptions;
             Schema = _options?.Schema;
+            if(_options?.EnableTimeTracking ?? false)
+            {
+                TimeTracker = serviceProvider.GetService<ITimeTracker>();
+            }
         }
 
         protected abstract void ConfigureModel(ModelBuilder modelBuilder);

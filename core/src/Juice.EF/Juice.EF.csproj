@@ -12,11 +12,12 @@
         <PackageReference Include="Microsoft.EntityFrameworkCore" Version="$(EFVersion)" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="$(EFVersion)" />
         <PackageReference Label="severity vulnerability fix" Include="Microsoft.Data.SqlClient" Version="5.2.2" />
-        <PackageReference Label="severity vulnerability fix" Include="Microsoft.Extensions.Caching.Memory" Version="8.0.*" Condition="'$(TargetFramework)' == 'net8.0'"/>
+        <PackageReference Label="severity vulnerability fix" Include="Microsoft.Extensions.Caching.Memory" Version="8.0.*" Condition="'$(TargetFramework)' == 'net8.0'" />
         <PackageReference Include="System.Drawing.Common" Version="8.0.10" />
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\Juice.Measurement\Juice.Measurement.csproj" />
         <ProjectReference Include="..\Juice.MediatR\Juice.MediatR.csproj" />
         <ProjectReference Include="..\Juice\Juice.csproj" />
     </ItemGroup>

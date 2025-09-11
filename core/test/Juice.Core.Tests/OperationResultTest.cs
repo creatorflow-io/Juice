@@ -63,6 +63,28 @@ namespace Juice.Core.Tests
         }
 
         [Fact]
+        public void OR_failed_should_be_corrected_params()
+        {
+            var rs = OR.Failed("message", new Exception("Inner message"));
+
+            rs.Succeeded.Should().BeFalse();
+            rs.Message.Should().Be("message");
+            rs.Exception.Should().NotBeNull();
+            _output.WriteLine(rs.ToString());
+        }
+
+        [Fact]
+        public void OR_failed_should_has_exception_message()
+        {
+            var rs = OR.Failed(new Exception("Inner message"));
+
+            rs.Succeeded.Should().BeFalse();
+            rs.Message.Should().Be("Inner message");
+            rs.Exception.Should().NotBeNull();
+            _output.WriteLine(rs.ToString());
+        }
+
+        [Fact]
         public void OR_should_be_throwed_with_full_stack_trace()
         {
             var rs = Action();

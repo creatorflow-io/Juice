@@ -34,6 +34,7 @@ namespace Juice.Operation
                     : value is ArgumentNullException ? OperationalFailure.InvalidArgument
                     : Failure;
                 }
+                _message ??= _exception.Message;
                 SetTraceInfo();
             }
         }

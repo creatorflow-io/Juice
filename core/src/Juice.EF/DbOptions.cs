@@ -8,6 +8,7 @@ namespace Juice.EF
         public string? ConnectionName { get; set; }
         public string? Schema { get; set; }
         public JsonPropertyBehavior JsonPropertyBehavior { get; set; }
+        public bool EnableTimeTracking { get; set; } = false;
     }
 
     public class DbOptions<TContext> : DbOptions
