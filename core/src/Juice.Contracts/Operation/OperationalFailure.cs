@@ -6,6 +6,7 @@
         NotFound,
         Unauthorized,
         NotImplemented,
-        InvalidArgument
+        InvalidArgument,
+        Timeout
     }
 }

@@ -129,12 +129,14 @@ namespace Juice
         /// Create a failed <see cref="IOperationResult"/> with message
         /// </summary>
         /// <param name="message"></param>
+        /// <param name="failure"></param>
         /// <returns></returns>
-        public static IOperationResult Failed(string? message)
+        public static IOperationResult Failed(string? message, OperationalFailure? failure = default)
             => new OperationResultInternal()
             {
                 Succeeded = false,
-                Message = message
+                Message = message,
+                Failure = failure ?? OperationalFailure.None
             };
 
         /// <summary>
@@ -188,6 +190,15 @@ namespace Juice
         /// <returns></returns>
         public static IOperationResult ArgumentNull(object? argument, [CallerArgumentExpression("argument")] string? paramName = null)
             => new OperationResultInternal(OperationalFailure.InvalidArgument, $"Argument \"{(paramName ?? "argument").Trim('"')}\" cannot be null");
+
+        /// <summary>
+        /// Create an argument invalid <see cref="IOperationResult"/>
+        /// </summary>
+        /// <param name="argument"></param>
+        /// <param name="paramName"></param>
+        /// <returns></returns>
+        public static IOperationResult ArgumentInvalid(object? argument, [CallerArgumentExpression("argument")] string? paramName = null)
+            => new OperationResultInternal(OperationalFailure.InvalidArgument, $"Argument \"{(paramName ?? "argument").Trim('"')}\" is invalid");
 
         /// <summary>
         /// Create an <see cref="IOperationResult"/> from json

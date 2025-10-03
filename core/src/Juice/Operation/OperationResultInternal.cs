@@ -19,6 +19,7 @@ namespace Juice.Operation
         public OperationalFailure Failure { get; init; }
 
         [JsonIgnore]
+        [System.Text.Json.Serialization.JsonIgnore]
         private Exception? _exception;
         public Exception? Exception
         {
@@ -86,6 +87,8 @@ namespace Juice.Operation
             OperationalFailure.NotFound => "Not Found",
             OperationalFailure.Unauthorized => "Unauthorized",
             OperationalFailure.NotImplemented => "Not Implemented",
+            OperationalFailure.InvalidArgument => "Invalid Argument",
+            OperationalFailure.Timeout => "Operation Timed Out",
             _ => "Operation Failed"
         };
 
