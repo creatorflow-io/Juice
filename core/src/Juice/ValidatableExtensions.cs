@@ -2,7 +2,7 @@
 
 namespace Juice
 {
-    public static partial class Validatable
+    public static class ValidatableExtensions
     {
         public static IOperationResult ValidationResult(this IValidatable validatable)
         {
