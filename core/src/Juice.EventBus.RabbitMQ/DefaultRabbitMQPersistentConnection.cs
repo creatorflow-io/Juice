@@ -1,8 +1,5 @@
 ﻿using System.Net.Sockets;
-using System.Threading;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Polly;
 using Polly.Retry;
 using RabbitMQ.Client;
@@ -31,8 +28,7 @@ namespace Juice.EventBus.RabbitMQ
 
             var factory = new ConnectionFactory()
             {
-                HostName = options.Connection,
-                DispatchConsumersAsync = true,
+                HostName = options.Connection!,
                 AutomaticRecoveryEnabled = true,
                 NetworkRecoveryInterval = TimeSpan.FromSeconds(5)
             };
@@ -64,14 +60,14 @@ namespace Juice.EventBus.RabbitMQ
             }
         }
 
-        public IModel? CreateModel()
+        public async ValueTask<IChannel?> CreateChannelAsync(CancellationToken cancellationToken = default)
         {
             if (!IsConnected)
             {
                 throw new InvalidOperationException("No RabbitMQ connections are available to perform this action");
             }
 
-            return _connection?.CreateModel();
+            return await _connection!.CreateChannelAsync();
         }
         #region Disposable
 
@@ -91,7 +87,6 @@ namespace Juice.EventBus.RabbitMQ
                 {
                     _disposing = true;
                     // dispose managed state (managed objects)
-                    _connection?.Close();
                     _connection?.Dispose();
                     _connection = null!;
                     _logger = null!;
@@ -106,18 +101,16 @@ namespace Juice.EventBus.RabbitMQ
         }
         #endregion
 
-        public bool TryConnect()
+        public async ValueTask<bool> TryConnectAsync()
         {
-            if (_disposed || _disposing) {
+            if (_disposed || _disposing)
+            {
                 _logger.LogInformation("Connect bypassed because RabbitMQ Client is disposed");
                 return false;
             }
-            
-            _logger.LogInformation("RabbitMQ Client is trying to connect");
 
-            lock (sync_root)
-            {
-                var policy = RetryPolicy.Handle<SocketException>()
+            _logger.LogInformation("RabbitMQ Client is trying to connect");
+            var policy = RetryPolicy.Handle<SocketException>()
                     .Or<BrokerUnreachableException>()
                     .WaitAndRetry(_retryCount, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)), (ex, time) =>
                     {
@@ -125,56 +118,76 @@ namespace Juice.EventBus.RabbitMQ
                     }
                 );
 
-                policy.Execute(() =>
+            IConnection? connection = null;
+            await policy.Execute(async () =>
                 {
-                    _connection = _connectionFactory
-                          .CreateConnection();
+                    connection = await _connectionFactory.CreateConnectionAsync();
                 });
 
-                if (IsConnected)
+            if (connection != null)
+            {
+
+                connection!.ConnectionShutdownAsync += OnConnectionShutdownAsync;
+                connection.CallbackExceptionAsync += OnCallbackExceptionAsync;
+                connection.ConnectionBlockedAsync += OnConnectionBlockedAsync;
+                lock (sync_root)
                 {
-                    _connection!.ConnectionShutdown += OnConnectionShutdown;
-                    _connection.CallbackException += OnCallbackException;
-                    _connection.ConnectionBlocked += OnConnectionBlocked;
-
-                    _logger.LogInformation("RabbitMQ Client acquired a persistent connection to '{HostName}' and is subscribed to failure events", _connection.Endpoint.HostName);
-
-                    return true;
+                    _connection = connection;
                 }
-                else
-                {
-                    _logger.LogCritical("FATAL ERROR: RabbitMQ connections could not be created and opened");
+                _logger.LogInformation("RabbitMQ Client acquired a persistent connection to '{HostName}' and is subscribed to failure events", connection.Endpoint.HostName);
 
-                    return false;
-                }
+                return true;
             }
+            else
+            {
+                _logger.LogCritical("FATAL ERROR: RabbitMQ connections could not be created and opened");
+
+                return false;
+            }
+
         }
 
-        private void OnConnectionBlocked(object? sender, ConnectionBlockedEventArgs e)
+        private Task OnConnectionBlockedAsync(object? sender, ConnectionBlockedEventArgs e)
         {
-            if (_disposed) { return; }
+            if (_disposed) { return Task.CompletedTask; }
 
-            _logger.LogWarning("A RabbitMQ connection is shutdown. Trying to re-connect...");
-
-            TryConnect();
+            _logger.LogWarning("A RabbitMQ connection is blocked.");
+            return Task.CompletedTask;
         }
 
-        private void OnCallbackException(object? sender, CallbackExceptionEventArgs e)
+        private async Task OnCallbackExceptionAsync(object? sender, CallbackExceptionEventArgs e)
         {
             if (_disposed) { return; }
 
             _logger.LogWarning("A RabbitMQ connection throw exception. Trying to re-connect...");
 
-            TryConnect();
+            await TryConnectAsync();
         }
 
-        private void OnConnectionShutdown(object? sender, ShutdownEventArgs reason)
+        private async Task OnConnectionShutdownAsync(object? sender, ShutdownEventArgs reason)
         {
             if (_disposed || _disposing) { return; }
 
             _logger.LogWarning("A RabbitMQ connection is on shutdown. Trying to re-connect...");
 
-            TryConnect();
+            await TryConnectAsync();
+        }
+
+        public async ValueTask DisconnectAsync()
+        {
+            if (_disposed || _disposing)
+            {
+                _logger.LogInformation("Disconnect bypassed because RabbitMQ Client is disposed");
+                return;
+            }
+            if (_connection != null)
+            {
+                _connection.ConnectionShutdownAsync -= OnConnectionShutdownAsync;
+                _connection.CallbackExceptionAsync -= OnCallbackExceptionAsync;
+                _connection.ConnectionBlockedAsync -= OnConnectionBlockedAsync;
+                await _connection.CloseAsync();
+                _logger.LogInformation("RabbitMQ Client is disconnected.");
+            }
         }
     }
 }

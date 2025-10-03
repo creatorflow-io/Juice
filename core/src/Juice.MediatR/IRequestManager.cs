@@ -1,13 +1,11 @@
-﻿using MediatR;
-
-namespace Juice.MediatR
+﻿namespace Juice.MediatR
 {
     public interface IRequestManagerBase
     {
-        Task<bool> TryCreateRequestForCommandAsync<T>(Guid id)
+        ValueTask<bool> TryCreateRequestForCommandAsync<T>(Guid id)
             where T : IBaseRequest;
 
-        Task TryCompleteRequestAsync<T>(Guid id, bool success)
+        ValueTask TryCompleteRequestAsync<T>(Guid id, bool success)
             where T : IBaseRequest;
     }
 

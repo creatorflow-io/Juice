@@ -1,5 +1,5 @@
 ﻿using System.Text.RegularExpressions;
-using Juice.CompnentModel;
+using Juice.ComponentModel;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 

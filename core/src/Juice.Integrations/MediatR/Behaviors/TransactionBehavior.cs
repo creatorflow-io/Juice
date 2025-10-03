@@ -2,7 +2,7 @@
 using Juice.EF;
 using Juice.EventBus;
 using Juice.Integrations.EventBus;
-using MediatR;
+using Juice.MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -13,6 +13,7 @@ namespace Juice.Integrations.MediatR.Behaviors
         where TRequest : IRequest<TResponse>
         where TContext : DbContext, IUnitOfWork
     {
+        public int Order => int.MaxValue - 20; // run late
         private readonly ILogger _logger;
         private readonly TContext _dbContext;
         private readonly IIntegrationEventService<TContext> _integrationEventService;
@@ -26,7 +27,7 @@ namespace Juice.Integrations.MediatR.Behaviors
             _logger = logger ?? throw new ArgumentException(nameof(ILogger));
         }
 
-        public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
+        public async ValueTask<TResponse> Handle(TRequest request, RequestHandlerDelegate<TRequest, TResponse> next, CancellationToken cancellationToken)
         {
             var typeName = request.GetGenericTypeName();
 
@@ -36,7 +37,7 @@ namespace Juice.Integrations.MediatR.Behaviors
                 {
                     _logger.LogDebug("DbContext has active transaction");
 
-                    return await next();
+                    return await next.Invoke(request, cancellationToken);
                 }
                 TResponse? response = default;
 
@@ -48,7 +49,7 @@ namespace Juice.Integrations.MediatR.Behaviors
                         {
                             _logger.LogDebug("----- Command data {CommandName} ({@Command})", typeName, request);
                         }
-                        response = await next();
+                        response = await next.Invoke(request, cancellationToken);
                     }
                 }, cancellationToken);
                 await _integrationEventService.PublishEventsThroughEventBusAsync(transactionId);

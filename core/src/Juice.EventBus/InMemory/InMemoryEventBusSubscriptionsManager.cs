@@ -27,20 +27,20 @@ namespace Juice.EventBus
         public bool IsEmpty => !_handlers.Keys.Any();
         public void Clear() => _handlers.Clear();
 
-        public void AddSubscription<T, TH>(string? key)
+        public async ValueTask AddSubscriptionAsync<T, TH>(string? key)
             where T : IntegrationEvent
             where TH : IIntegrationEventHandler<T>
         {
             var eventName = key ?? this.GetDefaultEventKey<T>();
 
-            DoAddSubscription(typeof(TH), eventName, isDynamic: false);
+            await DoAddSubscriptionAsync(typeof(TH), eventName, isDynamic: false);
 
             _eventTypes[eventName] = typeof(T);
         }
 
-        private void DoAddSubscription(Type handlerType, string eventName, bool isDynamic)
+        private async ValueTask DoAddSubscriptionAsync(Type handlerType, string eventName, bool isDynamic)
         {
-            if (!HasSubscriptionsForEvent(eventName))
+            if (!await HasSubscriptionsForEventAsync(eventName))
             {
                 _handlers.Add(eventName, new List<SubscriptionInfo>());
             }
@@ -63,16 +63,15 @@ namespace Juice.EventBus
             }
         }
 
-        public void RemoveSubscription<T, TH>(string? key)
+        public async ValueTask RemoveSubscriptionAsync<T, TH>(string? key)
             where TH : IIntegrationEventHandler<T>
             where T : IntegrationEvent
         {
             var eventName = key ?? this.GetDefaultEventKey<T>();
-            var handlerToRemove = DoFindSubscriptionToRemove(eventName, typeof(TH));
+            var handlerToRemove = await FindSubscriptionToRemoveAsync(eventName, typeof(TH));
 
             DoRemoveHandler(eventName, handlerToRemove);
         }
-
 
         private void DoRemoveHandler(string eventName, SubscriptionInfo? subsToRemove)
         {
@@ -89,19 +88,19 @@ namespace Juice.EventBus
             }
         }
 
-        public IEnumerable<SubscriptionInfo> GetHandlersForEvent(string eventName)
+        public ValueTask<IEnumerable<SubscriptionInfo>> GetHandlersForEventAsync(string eventName)
         {
             _logger.LogDebug("{Id} Get subscriptions of {eventName}.", _guid, eventName);
-            if (_handlers.ContainsKey(eventName)) { return _handlers[eventName]; }
-            if(!_topicSupported) { return Array.Empty<SubscriptionInfo>(); }
+            if (_handlers.ContainsKey(eventName)) { return ValueTask.FromResult(_handlers[eventName].AsEnumerable()); }
+            if(!_topicSupported) { return ValueTask.FromResult(Array.Empty<SubscriptionInfo>().AsEnumerable()); }
             foreach (var key in _handlers.Keys)
             {
                 if (RoutingKeyUtils.IsTopicMatch(eventName, key))
                 {
-                    return _handlers[key];
+                    return ValueTask.FromResult(_handlers[key].AsEnumerable());
                 }
             }
-            return Array.Empty<SubscriptionInfo>();
+            return ValueTask.FromResult(Array.Empty<SubscriptionInfo>().AsEnumerable());
         }
 
         private void RaiseOnEventRemoved(string eventName)
@@ -110,35 +109,35 @@ namespace Juice.EventBus
             handler?.Invoke(this, eventName);
         }
 
-        private SubscriptionInfo? DoFindSubscriptionToRemove(string eventName, Type handlerType)
+        private async ValueTask<SubscriptionInfo?> FindSubscriptionToRemoveAsync(string eventName, Type handlerType)
         {
-            if (!HasSubscriptionsForEvent(eventName))
+            if (!await HasSubscriptionsForEventAsync(eventName))
             {
                 return null;
             }
-            var subscription = GetHandlersForEvent(eventName);
+            var subscription = await GetHandlersForEventAsync(eventName);
             return subscription.SingleOrDefault(s => s.HandlerType == handlerType);
 
         }
 
-        public bool HasSubscriptionsForEvent(string eventName) => _handlers.ContainsKey(eventName)
-            || (_topicSupported && _handlers.Keys.Any(key => RoutingKeyUtils.IsTopicMatch(eventName, key)));
+        public ValueTask<bool> HasSubscriptionsForEventAsync(string eventName) => ValueTask.FromResult(_handlers.ContainsKey(eventName)
+            || (_topicSupported && _handlers.Keys.Any(key => RoutingKeyUtils.IsTopicMatch(eventName, key))));
 
-        public Type? GetEventTypeByName(string eventName)
+        public ValueTask<Type?> GetEventTypeByNameAsync(string eventName)
         {
             if (_eventTypes.ContainsKey(eventName))
             {
-                return _eventTypes[eventName];
+                return ValueTask.FromResult<Type?>(_eventTypes[eventName]);
             }
-            if(!_topicSupported) { return default; }
+            if(!_topicSupported) { ValueTask.FromResult<Type?>(default); }
             foreach (var key in _eventTypes.Keys)
             {
                 if (RoutingKeyUtils.IsTopicMatch(eventName, key))
                 {
-                    return _eventTypes[key];
+                    return ValueTask.FromResult<Type?>(_eventTypes[key]);
                 }
             }
-            return default;
+            return ValueTask.FromResult<Type?>(default);
         }
 
         public string GetDefaultEventKey(Type type)

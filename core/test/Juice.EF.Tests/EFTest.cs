@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reactive;
 using System.Threading.Tasks;
 using Finbuckle.MultiTenant;
 using Finbuckle.MultiTenant.Abstractions;
@@ -11,10 +13,10 @@ using Juice.EF.Tests.Domain;
 using Juice.EF.Tests.EventHandlers;
 using Juice.EF.Tests.Infrastructure;
 using Juice.Extensions.DependencyInjection;
+using Juice.MediatR;
 using Juice.MultiTenant;
 using Juice.Services;
 using Juice.XUnit;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
@@ -223,6 +225,11 @@ namespace Juice.EF.Tests
             sharedService.Handlers.Clear();
 
             var idGenerator = serviceProvider.GetRequiredService<IStringIdGenerator>();
+
+            var handlers = serviceProvider.GetServices<INotificationHandler<DataInserted<Content>>>()
+                .Select(h => h.GetType().Name)
+                .ToArray();
+            logger.LogInformation("Registered DataInserted<Content> handlers: {handlers}", string.Join(", ", handlers));
 
             var code1 = idGenerator.GenerateRandomId(6);
 

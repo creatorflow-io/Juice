@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Juice.MediatR;
-using MediatR;
+﻿using Juice.MediatR;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
@@ -15,8 +10,8 @@ namespace Microsoft.Extensions.DependencyInjection
             where THandler : class, IRequestHandler<TRequest>
             where TIdentifiedHandler : class, IRequestHandler<IdentifiedCommand<TRequest>>
         {
-            services.AddTransient<IRequestHandler<TRequest>, THandler>();
-            services.AddTransient<IRequestHandler<IdentifiedCommand<TRequest>>, TIdentifiedHandler>();
+            services.TryAddTransient<IRequestHandler<TRequest>, THandler>();
+            services.TryAddTransient<IRequestHandler<IdentifiedCommand<TRequest>>, TIdentifiedHandler>();
             return services;
         }
 
@@ -25,8 +20,8 @@ namespace Microsoft.Extensions.DependencyInjection
             where THandler : class, IRequestHandler<TRequest, TResponse>
             where TIdentifiedHandler : class, IRequestHandler<IdentifiedCommand<TRequest, TResponse>, TResponse>
         {
-            services.AddTransient<IRequestHandler<TRequest, TResponse>, THandler>();
-            services.AddTransient<IRequestHandler<IdentifiedCommand<TRequest, TResponse>, TResponse>, TIdentifiedHandler>();
+            services.TryAddTransient<IRequestHandler<TRequest, TResponse>, THandler>();
+            services.TryAddTransient<IRequestHandler<IdentifiedCommand<TRequest, TResponse>, TResponse>, TIdentifiedHandler>();
             return services;
         }
     }

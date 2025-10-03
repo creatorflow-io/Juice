@@ -42,6 +42,7 @@
         <ProjectReference Include="..\..\src\Juice.MediatR.RequestManager.EF.PostgreSQL\Juice.MediatR.RequestManager.EF.PostgreSQL.csproj" />
         <ProjectReference Include="..\..\src\Juice.MediatR.RequestManager.EF.SqlServer\Juice.MediatR.RequestManager.EF.SqlServer.csproj" />
         <ProjectReference Include="..\..\src\Juice.MediatR.RequestManager.Redis\Juice.MediatR.RequestManager.Redis.csproj" />
+        <ProjectReference Include="..\..\src\Juice.MediatR\Juice.MediatR.csproj" />
         <ProjectReference Include="..\Juice.EF.Tests\Juice.EF.Tests.csproj" />
     </ItemGroup>
 

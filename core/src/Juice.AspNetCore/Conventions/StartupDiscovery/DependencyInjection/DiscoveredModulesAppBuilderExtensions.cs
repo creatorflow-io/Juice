@@ -19,7 +19,7 @@ namespace Juice.Modular
         }
 
         /// <summary>
-        /// Call Configure on all enabled modules
+        /// Call ConfigurePipelineAsync on all enabled modules
         /// </summary>
         /// <param name="app"></param>
         /// <param name="env"></param>
@@ -38,7 +38,7 @@ namespace Juice.Modular
             {
                 try
                 {
-                    startup.Configure(app, app, env);
+                    startup.ConfigurePipelineAsync(app, app, env);
                 }
                 catch (Exception ex)
                 {
@@ -53,13 +53,13 @@ namespace Juice.Modular
                 throw new Exception("Some module failed. Please enable logging for Startup at Trace level for more information.");
             }
 
-            app.Lifetime.ApplicationStopping.Register(() =>
+            app.Lifetime.ApplicationStopping.Register(async () =>
             {
                 foreach (var startup in startups)
                 {
                     try
                     {
-                        startup.OnShutdown(app.Services, env);
+                        await startup.ShutdownAsync(app.Services, env);
                     }
                     catch (Exception ex)
                     {

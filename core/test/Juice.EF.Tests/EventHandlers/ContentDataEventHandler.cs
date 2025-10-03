@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using Juice.Domain.Events;
 using Juice.EF.Tests.Domain;
-using MediatR;
+using Juice.MediatR;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -17,12 +17,12 @@ namespace Juice.EF.Tests.EventHandlers
             _logger = logger;
             _sharedService = sharedService;
         }
-        public Task Handle(DataInserted<Content> dataEvent, CancellationToken cancellationToken)
+        public ValueTask Handle(DataInserted<Content> dataEvent, CancellationToken cancellationToken)
         {
             _logger.LogInformation("ContentDataEvent:" + JsonConvert.SerializeObject(dataEvent));
             _logger.LogInformation("ContentDataEvent:" + dataEvent.Entity?.Id);
             _sharedService.Handlers.Add(typeof(ContentDataEventHandler).Name);
-            return Task.CompletedTask;
+            return ValueTask.CompletedTask;
         }
     }
 }

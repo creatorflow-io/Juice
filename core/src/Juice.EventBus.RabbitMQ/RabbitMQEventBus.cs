@@ -1,6 +1,7 @@
 ﻿using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Juice.MultiTenant;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -17,7 +18,7 @@ namespace Juice.EventBus.RabbitMQ
     {
         private IRabbitMQPersistentConnection _persistentConnection;
 
-        private IModel? _consumerChannel;
+        private IChannel? _consumerChannel;
         private string _queueName;
         private string? _queueType; // classic (default), quorum
 
@@ -26,7 +27,7 @@ namespace Juice.EventBus.RabbitMQ
         private string _exchangeType; // direct, fanout, topic, headers
         private long _ttl; // Time to live in milliseconds for messages in the queue
 
-        private IModel? _producerChannel;
+        private IChannel? _producerChannel;
         private readonly int _retryCount;
         private int _maxProcessRetries; // max retry count for processing event
         private int _processRetryDelayMs;
@@ -59,7 +60,12 @@ namespace Juice.EventBus.RabbitMQ
 
             Logger = logger;
             SubsManager = subscriptionsManager;
-            SubsManager.OnEventRemoved += DoInternalUnsubscription;
+            SubsManager.OnEventRemoved += OnEventRemoved;
+        }
+
+        private void OnEventRemoved(object? sender, string e)
+        {
+            DoInternalUnsubscriptionAsync(sender, e).GetAwaiter().GetResult();
         }
 
         #region Init consume channel and processing incoming event
@@ -87,16 +93,17 @@ namespace Juice.EventBus.RabbitMQ
                     // Even on exception we take the message off the queue.
                     // in a REAL WORLD app this should be handled with a Dead Letter _exchange (DLX). 
                     // For more information see: https://www.rabbitmq.com/dlx.html
-                    _consumerChannel.BasicAck(eventArgs.DeliveryTag, multiple: false);
+                    await _consumerChannel.BasicAckAsync(eventArgs.DeliveryTag, multiple: false);
                 }
                 else if (!processed || _maxProcessRetries <= 0) // if no handler found for event or processing failed and no retries are allowed
                 {
                     Logger.LogWarning("No handler found for RabbitMQ event: {EventName}", eventName);
-                    _consumerChannel.BasicNack(eventArgs.DeliveryTag, multiple: false, requeue: false);
+                    await _consumerChannel.BasicNackAsync(eventArgs.DeliveryTag, multiple: false, requeue: false);
                 }
                 else // if processing failed
                 {
                     var headers = eventArgs.BasicProperties.Headers;
+                    headers ??= new Dictionary<string, object?>();
                     int attempts = headers.ContainsKey("x-attempts") ? int.Parse(headers["x-attempts"]?.ToString() ?? "0") : 0;
                     if (attempts >= _maxProcessRetries)
                     {
@@ -104,18 +111,33 @@ namespace Juice.EventBus.RabbitMQ
                         {
                             Logger.LogDebug("Max processing retries reached for event: {EventName}, attempts: {Attempts}", eventName, attempts);
                         }
-                        _consumerChannel.BasicNack(eventArgs.DeliveryTag, multiple: true, requeue: false);
+                        await _consumerChannel.BasicNackAsync(eventArgs.DeliveryTag, multiple: true, requeue: false);
                     }
                     else
                     {
-                        eventArgs.BasicProperties.Headers["x-attempts"] = attempts + 1;
+                        headers["x-attempts"] = attempts + 1;
                         if (Logger.IsEnabled(LogLevel.Debug))
                         {
-                            Logger.LogDebug("Retrying event: {EventName}, attempts: {Attempts}", eventName, eventArgs.BasicProperties.Headers["x-attempts"]);
+                            Logger.LogDebug("Retrying event: {EventName}, attempts: {Attempts}", eventName, headers["x-attempts"]);
                         }
                         // re-publish with updated header
-                        _consumerChannel.BasicPublish(ExchangeRetry, eventArgs.RoutingKey, eventArgs.BasicProperties, eventArgs.Body);
-                        _consumerChannel.BasicAck(eventArgs.DeliveryTag, multiple: false);
+                        await _consumerChannel.BasicPublishAsync(
+                            exchange: ExchangeRetry,
+                            routingKey: eventName,
+                            mandatory: true,
+                            basicProperties: new BasicProperties
+                            {
+                                ContentType = eventArgs.BasicProperties.ContentType,
+                                CorrelationId = eventArgs.BasicProperties.CorrelationId,
+                                MessageId = eventArgs.BasicProperties.MessageId,
+                                Timestamp = eventArgs.BasicProperties.Timestamp,
+                                DeliveryMode = DeliveryModes.Persistent,
+                                Headers = headers
+                            },
+                            body: eventArgs.Body
+
+                            );
+                        await _consumerChannel.BasicAckAsync(eventArgs.DeliveryTag, multiple: false);
                     }
                 }
             }
@@ -127,7 +149,7 @@ namespace Juice.EventBus.RabbitMQ
 
         }
 
-        private void StartBasicConsume()
+        private async Task StartBasicConsumeAsync()
         {
             Logger.LogInformation("Starting RabbitMQ basic consume queue {queueName}.", _queueName);
 
@@ -135,14 +157,14 @@ namespace Juice.EventBus.RabbitMQ
             {
                 var consumer = new AsyncEventingBasicConsumer(_consumerChannel);
 
-                consumer.Received += Consumer_ReceivedAsync;
+                consumer.ReceivedAsync += Consumer_ReceivedAsync;
 
-                _consumerChannel.BasicConsume(
+                await _consumerChannel.BasicConsumeAsync(
                     queue: _queueName,
                     autoAck: false,
                     consumer: consumer);
 
-                _consumerChannel.BasicQos(0, 1, false);
+                await _consumerChannel.BasicQosAsync(0, 1, false);
             }
             else
             {
@@ -154,19 +176,19 @@ namespace Juice.EventBus.RabbitMQ
         /// Init exchanges and queues
         /// </summary>
         /// <returns></returns>
-        private IModel? CreateConsumerChannel()
+        private async ValueTask<IChannel?> CreateConsumerChannelAsync()
         {
-            if (!_persistentConnection.IsConnected && !_persistentConnection.TryConnect())
+            if (!_persistentConnection.IsConnected && ! await _persistentConnection.TryConnectAsync())
             {
                 return null;
             }
 
             Logger.LogInformation("Creating RabbitMQ consumer channel. Broker: {Broker}.", _exchange);
 
-            var channel = _persistentConnection.CreateModel();
+            var channel = await _persistentConnection.CreateChannelAsync();
             if (channel == null) { return null; }
 
-            channel.ExchangeDeclare(exchange: _exchange,
+            await channel.ExchangeDeclareAsync(exchange: _exchange,
                                     type: _exchangeType);
 
             if (Logger.IsEnabled(LogLevel.Debug))
@@ -182,11 +204,11 @@ namespace Juice.EventBus.RabbitMQ
             {
                 queueArguments["x-queue-type"] = _queueType; // classic, quorum
             }
-            QueueDeclareOk queuDeclareOk = channel.QueueDeclare(queue: _queueName,
+            QueueDeclareOk queuDeclareOk = await channel.QueueDeclareAsync(queue: _queueName,
                                  durable: true,
                                  exclusive: false,
                                  autoDelete: false,
-                                 arguments: queueArguments);
+                                 arguments: queueArguments!);
 
             if (_queueName == string.Empty)
             {
@@ -200,7 +222,7 @@ namespace Juice.EventBus.RabbitMQ
             // Declare retry exchange and queue
             if (_maxProcessRetries > 0)
             {
-                channel.ExchangeDeclare(exchange: ExchangeRetry,
+                await channel.ExchangeDeclareAsync(exchange: ExchangeRetry,
                     type: ExchangeType.Fanout);
                 if (Logger.IsEnabled(LogLevel.Debug))
                 {
@@ -221,25 +243,25 @@ namespace Juice.EventBus.RabbitMQ
                     Logger.LogDebug("Declaring RabbitMQ retry queue: {QueueName} with arguments: {Arguments}", ExchangeRetry, argsRetry);
                 }
 
-                channel.QueueDeclare(queue: ExchangeRetry,
+                await channel.QueueDeclareAsync(queue: ExchangeRetry,
                                  durable: true,
                                  exclusive: false,
                                  autoDelete: false,
                                  arguments: argsRetry);
-                channel.QueueBind(queue: ExchangeRetry,
+                await channel.QueueBindAsync(queue: ExchangeRetry,
                               exchange: ExchangeRetry,
                               routingKey: string.Empty);
             }
 
-            channel.CallbackException += (sender, ea) =>
+            channel.CallbackExceptionAsync += async (sender, ea) =>
             {
                 Logger.LogWarning(ea.Exception, "Recreating RabbitMQ consumer channel");
 
                 _consumerChannel?.Dispose();
-                _consumerChannel = CreateConsumerChannel();
+                _consumerChannel = await CreateConsumerChannelAsync();
                 if (_consumerChannel != null)
                 {
-                    StartBasicConsume();
+                    await StartBasicConsumeAsync();
                 }
             };
 
@@ -250,16 +272,16 @@ namespace Juice.EventBus.RabbitMQ
         {
             using (Logger.BeginScope($"Processing integration event: {eventName}"))
             {
-                if (SubsManager.HasSubscriptionsForEvent(eventName))
+                if (await SubsManager.HasSubscriptionsForEventAsync(eventName))
                 {
                     using var scope = _scopeFactory.CreateScope();
-                    var subscriptions = SubsManager.GetHandlersForEvent(eventName);
+                    var subscriptions = await SubsManager.GetHandlersForEventAsync(eventName);
                     if (Logger.IsEnabled(LogLevel.Trace))
                     {
                         Logger.LogTrace("Found {count} handlers for event: {EventName}", subscriptions.Count(), eventName);
                     }
 
-                    var eventType = SubsManager.GetEventTypeByName(eventName);
+                    var eventType = await SubsManager.GetEventTypeByNameAsync(eventName);
                     if (eventType == null)
                     {
                         Logger.LogWarning("No event type found for event: {EventName}", eventName);
@@ -324,21 +346,21 @@ namespace Juice.EventBus.RabbitMQ
         #endregion
 
         #region Subscribe/UnSubscribe
-        public void Subscribe<T, TH>(string? key = default)
+        public async ValueTask SubscribeAsync<T, TH>(string? key = default)
             where T : IntegrationEvent
             where TH : IIntegrationEventHandler<T>
         {
-            SubsManager.AddSubscription<T, TH>(key);
+            await SubsManager.AddSubscriptionAsync<T, TH>(key);
 
             if (_consumerChannel == null)
             {
-                _consumerChannel = CreateConsumerChannel();
+                _consumerChannel = await CreateConsumerChannelAsync();
                 if (_consumerChannel == null) { throw new InvalidOperationException("RabbitMQ consumer channel cannot be initialized"); }
-                StartBasicConsume();
+                await StartBasicConsumeAsync();
             }
 
             var eventName = key ?? SubsManager.GetDefaultEventKey<T>();
-            DoInternalSubscription(eventName);
+            await DoInternalSubscriptionAsync(eventName);
             Logger.LogInformation("Subscribing to event {EventName} with {EventHandler}", eventName, typeof(TH).GetGenericTypeName());
 
         }
@@ -348,22 +370,23 @@ namespace Juice.EventBus.RabbitMQ
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="eventName"></param>
-        private void DoInternalUnsubscription(object? sender, string eventName)
+        private async Task DoInternalUnsubscriptionAsync(object? sender, string eventName)
         {
-            if (!_persistentConnection.IsConnected && !_persistentConnection.TryConnect())
+            if (!_persistentConnection.IsConnected && !await _persistentConnection.TryConnectAsync())
             {
                 return;
             }
-            using var channel = _persistentConnection.CreateModel();
-            channel.QueueUnbind(queue: _queueName,
+            using var channel = await _persistentConnection.CreateChannelAsync();
+            if (channel == null) { return; }
+            await channel.QueueUnbindAsync(queue: _queueName,
                 exchange: _exchange,
                 routingKey: eventName);
 
             Logger.LogInformation("Queue unbind {queueName}", _queueName);
 
-            if (SubsManager.IsEmpty)
+            if (SubsManager.IsEmpty && _consumerChannel != null)
             {
-                _consumerChannel?.Close();
+                await _consumerChannel.CloseAsync();
             }
 
         }
@@ -373,19 +396,20 @@ namespace Juice.EventBus.RabbitMQ
         /// </summary>
         /// <param name="eventName"></param>
         /// <exception cref="InvalidOperationException"></exception>
-        private void DoInternalSubscription(string eventName)
+        private async Task DoInternalSubscriptionAsync(string eventName)
         {
-            if (!_persistentConnection.IsConnected && !_persistentConnection.TryConnect())
+            if (!_persistentConnection.IsConnected && !await _persistentConnection.TryConnectAsync())
             {
                 throw new InvalidOperationException("RabbitMQ broker is not connected");
             }
-            using var channel = _persistentConnection.CreateModel();
-            channel.QueueBind(queue: _queueName,
+            using var channel = await _persistentConnection.CreateChannelAsync();
+            if (channel == null) { throw new InvalidOperationException("RabbitMQ channel cannot be created"); }
+             await channel.QueueBindAsync(queue: _queueName,
                               exchange: _exchange,
                               routingKey: eventName);
         }
 
-        public virtual void Unsubscribe<T, TH>(string? key = default)
+        public virtual ValueTask UnsubscribeAsync<T, TH>(string? key = default)
             where T : IntegrationEvent
             where TH : IIntegrationEventHandler<T>
         {
@@ -393,33 +417,34 @@ namespace Juice.EventBus.RabbitMQ
 
             Logger.LogInformation("Unsubscribing event {EventName} for hanler {Handler}", eventName, typeof(TH).GetGenericTypeName());
 
-            SubsManager.RemoveSubscription<T, TH>(key);
+            SubsManager.RemoveSubscriptionAsync<T, TH>(key);
 
+            return ValueTask.CompletedTask;
         }
         #endregion
 
         #region Init producer channel
-        private IModel? CreateProducerChannel()
+        private async ValueTask<IChannel?> CreateProducerChannelAsync()
         {
-            if (!_persistentConnection.IsConnected && !_persistentConnection.TryConnect())
+            if (!_persistentConnection.IsConnected && !await _persistentConnection.TryConnectAsync())
             {
                 return null;
             }
             Logger.LogInformation("Creating RabbitMQ producer channel. Broker: {Broker}.", _exchange);
-            var channel = _persistentConnection.CreateModel();
+            var channel = await _persistentConnection.CreateChannelAsync();
             if (channel == null) { return null; }
-            channel.ExchangeDeclare(exchange: _exchange,
+            await channel.ExchangeDeclareAsync(exchange: _exchange,
                                     type: _exchangeType);
             return channel;
         }
         #endregion
 
         #region Publish outgoing event
-        public async Task PublishAsync(IntegrationEvent @event, string? tenantId = default)
+        public async ValueTask PublishAsync(IntegrationEvent @event, string? tenantId = default)
         {
             await Task.Yield();
             ArgumentNullException.ThrowIfNull(@event);
-            if (!_persistentConnection.IsConnected && !_persistentConnection.TryConnect())
+            if (!_persistentConnection.IsConnected && ! await _persistentConnection.TryConnectAsync())
             {
                 throw new InvalidOperationException("RabbitMQ broker is not connected");
             }
@@ -448,18 +473,24 @@ namespace Juice.EventBus.RabbitMQ
                 WriteIndented = true
             });
 
-            policy.Execute(() =>
+            await policy.Execute(async () =>
             {
                 if (_producerChannel == null)
                 {
-                    _producerChannel = CreateProducerChannel();
+                    _producerChannel = await CreateProducerChannelAsync();
                     if (_producerChannel == null) { throw new InvalidOperationException("RabbitMQ producer channel cannot be initialized"); }
                 }
-                var properties = _producerChannel.CreateBasicProperties();
-                properties.DeliveryMode = 2; // persistent
-                properties.Headers = new Dictionary<string, object>
+                var properties = new BasicProperties
                 {
-                    { "TenantId", tenantId ?? string.Empty }
+                    ContentType = "application/json",
+                    CorrelationId = @event.Id.ToString(),
+                    MessageId = Guid.NewGuid().ToString(),
+                    Timestamp = new AmqpTimestamp(DateTimeOffset.UtcNow.ToUnixTimeSeconds()),
+                    DeliveryMode = DeliveryModes.Persistent,
+                    Headers = new Dictionary<string, object?>()
+                    {
+                        { "TenantId", tenantId ?? string.Empty }
+                    }
                 };
 
                 if (Logger.IsEnabled(LogLevel.Debug))
@@ -467,7 +498,7 @@ namespace Juice.EventBus.RabbitMQ
                     Logger.LogDebug("Publishing event to RabbitMQ: {EventId} {EventName}", @event.Id, eventName);
                 }
 
-                _producerChannel.BasicPublish(
+                await _producerChannel.BasicPublishAsync(
                     exchange: _exchange,
                     routingKey: eventName,
                     mandatory: true,
@@ -479,6 +510,23 @@ namespace Juice.EventBus.RabbitMQ
         #endregion
 
         #region Dispose
+
+        public async ValueTask CloseAsync()
+        {
+            if (_consumerChannel != null)
+            {
+                await _consumerChannel.CloseAsync();
+            }
+            if (_producerChannel != null)
+            {
+                await _producerChannel.CloseAsync();
+            }
+            if (_persistentConnection != null)
+            {
+                await _persistentConnection.DisconnectAsync();
+            }
+        }
+
         private bool _disposedValue;
 
         protected virtual void Dispose(bool disposing)

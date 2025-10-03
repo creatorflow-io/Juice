@@ -4,7 +4,6 @@ using System.Reflection;
 using Juice.Domain;
 using Juice.EF.Extensions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace Juice.EF
 {

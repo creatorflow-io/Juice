@@ -1,5 +1,4 @@
-﻿using MediatR;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 
 namespace Juice.MediatR.RequestManager.EF
 {
@@ -11,7 +10,7 @@ namespace Juice.MediatR.RequestManager.EF
             _context = context;
         }
 
-        public async Task TryCompleteRequestAsync<T>(Guid id, bool success)
+        public async ValueTask TryCompleteRequestAsync<T>(Guid id, bool success)
             where T : IBaseRequest
         {
             try
@@ -36,7 +35,7 @@ namespace Juice.MediatR.RequestManager.EF
             }
         }
 
-        public async Task<bool> TryCreateRequestForCommandAsync<T>(Guid id)
+        public async ValueTask<bool> TryCreateRequestForCommandAsync<T>(Guid id)
             where T : IBaseRequest
         {
             // retry failed or interupted conmmands

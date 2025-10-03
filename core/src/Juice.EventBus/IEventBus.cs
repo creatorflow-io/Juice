@@ -10,25 +10,31 @@
         /// </summary>
         /// <param name="event"></param>
         /// <param name="tenantId"></param>
-        Task PublishAsync(IntegrationEvent @event, string? tenantId = default);
+        ValueTask PublishAsync(IntegrationEvent @event, string? tenantId = default);
 
         /// <summary>
-        /// Subscribe an <see cref="IntegrationEvent"/> with specified <see cref="IIntegrationEventHandler{T}"/>
+        /// SubscribeAsync an <see cref="IntegrationEvent"/> with specified <see cref="IIntegrationEventHandler{T}"/>
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <typeparam name="TH"></typeparam>
-        void Subscribe<T, TH>(string? key = default)
+        ValueTask SubscribeAsync<T, TH>(string? key = default)
             where T : IntegrationEvent
             where TH : IIntegrationEventHandler<T>;
 
         /// <summary>
-        /// Subscribe an <see cref="IntegrationEvent"/> with specified <see cref="IIntegrationEventHandler{T}"/>
+        /// SubscribeAsync an <see cref="IntegrationEvent"/> with specified <see cref="IIntegrationEventHandler{T}"/>
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <typeparam name="TH"></typeparam>
-        void Unsubscribe<T, TH>(string? key = default)
+        ValueTask UnsubscribeAsync<T, TH>(string? key = default)
             where TH : IIntegrationEventHandler<T>
             where T : IntegrationEvent;
+
+        /// <summary>
+        /// Destroy the event bus
+        /// </summary>
+        /// <returns></returns>
+        ValueTask CloseAsync();
     }
 
     public interface IEventBus<in T>: IEventBus

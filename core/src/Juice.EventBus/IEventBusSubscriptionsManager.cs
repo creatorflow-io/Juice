@@ -6,23 +6,23 @@
 
         event EventHandler<string> OnEventRemoved;
 
-        void AddSubscription<T, TH>(string? key)
+        ValueTask AddSubscriptionAsync<T, TH>(string? key)
            where T : IntegrationEvent
            where TH : IIntegrationEventHandler<T>;
 
-        void RemoveSubscription<T, TH>(string? key)
+        ValueTask RemoveSubscriptionAsync<T, TH>(string? key)
              where TH : IIntegrationEventHandler<T>
              where T : IntegrationEvent;
 
-        bool HasSubscriptionsForEvent(string eventName);
+        ValueTask<bool> HasSubscriptionsForEventAsync(string eventName);
         /// <summary>
         /// Return the registered event type by name
         /// </summary>
         /// <param name="eventName"></param>
         /// <returns></returns>
-        Type? GetEventTypeByName(string eventName);
+        ValueTask<Type?> GetEventTypeByNameAsync(string eventName);
         void Clear();
-        IEnumerable<SubscriptionInfo> GetHandlersForEvent(string eventName);
+        ValueTask<IEnumerable<SubscriptionInfo>> GetHandlersForEventAsync(string eventName);
         string GetDefaultEventKey(Type type);
     }
 

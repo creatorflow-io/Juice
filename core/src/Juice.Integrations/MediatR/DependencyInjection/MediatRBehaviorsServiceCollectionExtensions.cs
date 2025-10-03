@@ -1,5 +1,5 @@
 ﻿using Juice.Integrations.MediatR.Behaviors;
-using MediatR;
+using Juice.MediatR;
 
 namespace Microsoft.Extensions.DependencyInjection
 {

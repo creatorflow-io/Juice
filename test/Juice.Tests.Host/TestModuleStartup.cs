@@ -52,22 +52,23 @@ namespace Juice.Tests.Host
 
         }
 
-        public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IWebHostEnvironment env)
+        public override async ValueTask ConfigurePipelineAsync(IApplicationBuilder app, IEndpointRouteBuilder routes, IWebHostEnvironment env)
         {
             var eventBus = app.ApplicationServices.GetRequiredService<IEventBus>();
 
-            eventBus.Subscribe<TenantActivatedIntegrationEvent, TenantActivatedIntegrationEventHandler>();
-            eventBus.Subscribe<TenantSettingsChangedIntegrationEvent, TenantSettingsChangedIntegrationEventHandler>();
-            eventBus.Subscribe<LogEvent, LogEventHandler>("kernel.*");
+            await eventBus.SubscribeAsync<TenantActivatedIntegrationEvent, TenantActivatedIntegrationEventHandler>();
+            await eventBus.SubscribeAsync<TenantSettingsChangedIntegrationEvent, TenantSettingsChangedIntegrationEventHandler>();
+            await eventBus.SubscribeAsync<LogEvent, LogEventHandler>("kernel.*");
         }
 
-        public override void OnShutdown(IServiceProvider serviceProvider, IWebHostEnvironment env)
+        public override async ValueTask ShutdownAsync(IServiceProvider serviceProvider, IWebHostEnvironment env)
         {
             var eventBus = serviceProvider.GetRequiredService<IEventBus>();
 
-            eventBus.Unsubscribe<TenantActivatedIntegrationEvent, TenantActivatedIntegrationEventHandler>();
-            eventBus.Unsubscribe<TenantSettingsChangedIntegrationEvent, TenantSettingsChangedIntegrationEventHandler>();
-            eventBus.Unsubscribe<LogEvent, LogEventHandler>("kernel.*");
+            await eventBus.UnsubscribeAsync<TenantActivatedIntegrationEvent, TenantActivatedIntegrationEventHandler>();
+            await eventBus.UnsubscribeAsync<TenantSettingsChangedIntegrationEvent, TenantSettingsChangedIntegrationEventHandler>();
+            await eventBus.UnsubscribeAsync<LogEvent, LogEventHandler>("kernel.*");
+            await eventBus.CloseAsync();
         }
     }
 }

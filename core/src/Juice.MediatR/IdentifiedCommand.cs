@@ -1,13 +1,5 @@
-﻿using MediatR;
-
-namespace Juice.MediatR
+﻿namespace Juice.MediatR
 {
-    public interface IIdentifiedRequest<T>
-        where T : IBaseRequest
-    {
-        Guid Id { get; }
-        T Command { get; }
-    }
     public class IdentifiedCommand<TRequest> : IRequest, IIdentifiedRequest<TRequest>
         where TRequest : IRequest
     {

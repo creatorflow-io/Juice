@@ -1,5 +1,5 @@
 ﻿using Newtonsoft.Json;
-using Juice.CompnentModel;
+using Juice.ComponentModel;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 

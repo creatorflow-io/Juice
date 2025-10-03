@@ -91,7 +91,7 @@ namespace Juice.Integrations.Tests
 
             var eventBus = resolver.ServiceProvider.GetRequiredService<IEventBus>();
 
-            eventBus.Subscribe<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler>();
+            await eventBus.SubscribeAsync<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler>();
 
             using var scope = resolver.ServiceProvider.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<TestContext>();
@@ -136,6 +136,9 @@ namespace Juice.Integrations.Tests
             }
             sharedService.Handlers.Should().Contain(nameof(ContentPublishedIntegrationEventHandler));
             var query = unitOfWork.Query();
+
+            await eventBus.UnsubscribeAsync<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler>();
+            await eventBus.CloseAsync();
         }
 
     }

@@ -60,7 +60,7 @@ namespace Juice.EventBus.Tests
             var eventBus = scope.ServiceProvider.GetRequiredService<IEventBus>();
             var handledService = scope.ServiceProvider.GetRequiredService<HandledService>();
 
-            eventBus.Subscribe<LogEvent, LogEventHandler>("kernel.*");
+            await eventBus.SubscribeAsync<LogEvent, LogEventHandler>("kernel.*");
 
             await eventBus.PublishAsync(new LogEvent { Facility = "auth", Serverty = LogLevel.Error });
             await Task.Delay(TimeSpan.FromSeconds(1));
@@ -72,6 +72,9 @@ namespace Juice.EventBus.Tests
 
             await Task.Delay(TimeSpan.FromSeconds(1));
             handledService.Handlers.Should().HaveCount(2);
+
+            await eventBus.UnsubscribeAsync<LogEvent, LogEventHandler>();
+            await eventBus.CloseAsync();
         }
 
     }

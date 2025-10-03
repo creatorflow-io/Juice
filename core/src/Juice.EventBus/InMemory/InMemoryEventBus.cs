@@ -20,7 +20,7 @@ namespace Juice.EventBus
             _scopeFactory = scopeFactory;
         }
 
-        public override Task PublishAsync(IntegrationEvent @event, string? tenantId = default)
+        public override ValueTask PublishAsync(IntegrationEvent @event, string? tenantId = default)
         {
             var eventName = @event.GetEventKey();
             if(tenantId != null && @event is IMultiTenantIntegrationEvent _t && _t.TenantId != null && !_t.TenantId.Equals(tenantId, StringComparison.OrdinalIgnoreCase))
@@ -52,7 +52,7 @@ namespace Juice.EventBus
             {
                 _tasks.Add(_task);
             }
-            return Task.CompletedTask;
+            return ValueTask.CompletedTask;
         }
 
         protected virtual async Task ProcessingEventAsync(string eventName, IntegrationEvent @event, string? tenantId)
@@ -60,19 +60,19 @@ namespace Juice.EventBus
             using (Logger.BeginScope($"Processing integration event: {eventName} {@event.Id}"))
             {
 
-                if (SubsManager.HasSubscriptionsForEvent(eventName))
+                if (await SubsManager.HasSubscriptionsForEventAsync(eventName))
                 {
                     using var scope = _scopeFactory.CreateScope();
                     var tenantResolver = scope.ServiceProvider.GetService<IScopedTenantResolver>();
                     using var tenant = tenantResolver?.Resolve(tenantId);
-                    var subscriptions = SubsManager.GetHandlersForEvent(eventName);
+                    var subscriptions = await SubsManager.GetHandlersForEventAsync(eventName);
                     foreach (var subscription in subscriptions)
                     {
                         var handler = scope.ServiceProvider.GetService(subscription.HandlerType);
                         if (handler == null) {
                             Logger.LogWarning("Handler {HandlerType} was not registerd", subscription.HandlerType.Name);
                             continue; }
-                        var eventType = SubsManager.GetEventTypeByName(eventName);
+                        var eventType = await SubsManager.GetEventTypeByNameAsync(eventName);
                         if (eventType == null) {
                             Logger.LogWarning("Event type was not registerd for {EventName}", eventName);
                             continue; }

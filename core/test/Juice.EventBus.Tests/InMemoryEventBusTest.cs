@@ -63,8 +63,8 @@ namespace Juice.EventBus.Tests
             {
                 var handledService = _serviceProvider.GetRequiredService<HandledService>();
 
-                eventBus.Subscribe<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler>();
-                eventBus.Subscribe<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler1>();
+                await eventBus.SubscribeAsync<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler>();
+                await eventBus.SubscribeAsync<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler1>();
 
                 await eventBus.PublishAsync(new ContentPublishedIntegrationEvent("Hello"));
                 _logger.LogInformation("Event published");
@@ -81,18 +81,25 @@ namespace Juice.EventBus.Tests
             var eventBus = _serviceProvider.GetService<IEventBus>();
             if (eventBus != null)
             {
-                var handledService = _serviceProvider.GetRequiredService<HandledService>();
+                try
+                {
+                    var handledService = _serviceProvider.GetRequiredService<HandledService>();
 
-                eventBus.Subscribe<TopicIntegrationEvent, TopicIntegrationEventHandler>("*.upload");
-                eventBus.Subscribe<TopicIntegrationEvent, TopicIntegrationEventHandler>();
+                    await eventBus.SubscribeAsync<TopicIntegrationEvent, TopicIntegrationEventHandler>("*.upload");
+                    await eventBus.SubscribeAsync<TopicIntegrationEvent, TopicIntegrationEventHandler>();
 
-                await eventBus.PublishAsync(new TopicIntegrationEvent("abc.xyz"));
-                await Task.Delay(TimeSpan.FromSeconds(1));
-                handledService.Handlers.Should().BeEmpty();
+                    await eventBus.PublishAsync(new TopicIntegrationEvent("abc.xyz"));
+                    await Task.Delay(TimeSpan.FromSeconds(1));
+                    handledService.Handlers.Should().BeEmpty();
 
-                await eventBus.PublishAsync(new TopicIntegrationEvent("abc.upload"));
-                await Task.Delay(TimeSpan.FromSeconds(1));
-                handledService.Handlers.Should().Contain(nameof(TopicIntegrationEventHandler));
+                    await eventBus.PublishAsync(new TopicIntegrationEvent("abc.upload"));
+                    await Task.Delay(TimeSpan.FromSeconds(1));
+                    handledService.Handlers.Should().Contain(nameof(TopicIntegrationEventHandler));
+                }
+                finally
+                {
+                    await eventBus.CloseAsync();
+                }
 
             }
         }

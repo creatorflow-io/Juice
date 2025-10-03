@@ -1,5 +1,4 @@
-﻿
-namespace Juice.Operation
+﻿namespace Juice.Operation
 {
     public record OperationModel
     {

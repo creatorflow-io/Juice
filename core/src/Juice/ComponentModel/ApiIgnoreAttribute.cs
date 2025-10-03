@@ -1,5 +1,5 @@
 ﻿using Newtonsoft.Json;
-namespace Juice.CompnentModel
+namespace Juice.ComponentModel
 {
     /// <summary>
     /// If you wan to ignore property in swagger doc but need property for JSON serialize/deserialize

@@ -2,7 +2,7 @@
 using Juice.Domain.Events;
 using Juice.EF.Extensions;
 using Juice.Measurement;
-using MediatR;
+using Juice.MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;

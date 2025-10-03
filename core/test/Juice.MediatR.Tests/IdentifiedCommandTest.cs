@@ -9,7 +9,6 @@ using Juice.Extensions.DependencyInjection;
 using Juice.MediatR.RequestManager.EF;
 using Juice.Services;
 using Juice.XUnit;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -445,10 +444,10 @@ namespace Juice.MediatR.Tests
             {
                 _sharedService = sharedService;
             }
-            public Task Handle(Request request, CancellationToken cancellationToken)
+            public ValueTask Handle(Request request, CancellationToken cancellationToken)
             {
                 _sharedService.HandledServices.Add(nameof(RequestHandler));
-                return Task.CompletedTask;
+                return ValueTask.CompletedTask;
             }
         }
 
@@ -462,10 +461,10 @@ namespace Juice.MediatR.Tests
                 _sharedService = sharedService;
             }
 
-            protected override Task<IOperationResult> CreateResultForDuplicatedRequestAsync(Request message)
+            protected override ValueTask<IOperationResult> CreateResultForDuplicatedRequestAsync(Request message)
             {
                 _sharedService.HandledServices.Add(nameof(RequestIdentifiedCommandHandler));
-                return Task.FromResult((IOperationResult)OperationResult.Success);
+                return ValueTask.FromResult(OperationResult.Success);
             }
             protected override (string IdProperty, string CommandId) ExtractDebugInfo(Request command)
                 => (nameof(command.Id), command.Id.ToString());
@@ -483,10 +482,10 @@ namespace Juice.MediatR.Tests
             {
                 _sharedService = sharedService;
             }
-            public Task<string> Handle(RequestWithResult request, CancellationToken cancellationToken)
+            public ValueTask<string> Handle(RequestWithResult request, CancellationToken cancellationToken)
             {
                 _sharedService.HandledServices.Add(nameof(RequestWithResultHandler));
-                return Task.FromResult("Hello World");
+                return ValueTask.FromResult("Hello World");
             }
         }
 
@@ -500,10 +499,10 @@ namespace Juice.MediatR.Tests
                 _sharedService = sharedService;
             }
 
-            protected override Task<string> CreateResultForDuplicatedRequestAsync(RequestWithResult message)
+            protected override ValueTask<string> CreateResultForDuplicatedRequestAsync(RequestWithResult message)
             {
                 _sharedService.HandledServices.Add(nameof(RequestWithResultIdentifiedCommandHandler));
-                return Task.FromResult("Duplicated operation");
+                return ValueTask.FromResult("Duplicated operation");
             }
 
             protected override (string IdProperty, string CommandId) ExtractDebugInfo(RequestWithResult command)
@@ -527,10 +526,10 @@ namespace Juice.MediatR.Tests
                 _sharedService = sharedService;
             }
 
-            public Task<IOperationResult> Handle(Operation request, CancellationToken cancellationToken)
+            public ValueTask<IOperationResult> Handle(Operation request, CancellationToken cancellationToken)
             {
                 _sharedService.HandledServices.Add(nameof(OperationHandler));
-                return Task.FromResult<IOperationResult>(OperationResult.Result("Hello World"));
+                return ValueTask.FromResult<IOperationResult>(OperationResult.Result("Hello World"));
             }
         }
 
@@ -544,11 +543,12 @@ namespace Juice.MediatR.Tests
                 _sharedService = sharedService;
             }
 
-            protected override Task<IOperationResult> CreateResultForDuplicatedRequestAsync(Operation message)
+            protected override ValueTask<IOperationResult> CreateResultForDuplicatedRequestAsync(Operation command)
             {
                 _sharedService.HandledServices.Add(nameof(OperationIdentifiedCommandHandler));
-                return Task.FromResult((IOperationResult)OperationResult.Success);
+                return ValueTask.FromResult(OperationResult.Success);
             }
+
             protected override (string IdProperty, string CommandId) ExtractDebugInfo(Operation command)
                 => (nameof(command.Id), command.Id.ToString());
         }
@@ -569,10 +569,10 @@ namespace Juice.MediatR.Tests
                 _sharedService = sharedService;
             }
 
-            public Task<IOperationResult<string>> Handle(OperationWithResult request, CancellationToken cancellationToken)
+            public ValueTask<IOperationResult<string>> Handle(OperationWithResult request, CancellationToken cancellationToken)
             {
                 _sharedService.HandledServices.Add(nameof(OperationWithResultHandler));
-                return Task.FromResult<IOperationResult<string>>(OperationResult.Result("Hello World"));
+                return ValueTask.FromResult(OperationResult.Result("Hello World"));
             }
         }
 
@@ -586,10 +586,10 @@ namespace Juice.MediatR.Tests
                 _sharedService = sharedService;
             }
 
-            protected override Task<IOperationResult<string>> CreateResultForDuplicatedRequestAsync(OperationWithResult message)
+            protected override ValueTask<IOperationResult<string>> CreateResultForDuplicatedRequestAsync(OperationWithResult message)
             {
                 _sharedService.HandledServices.Add(nameof(OperationWithResultIdentifiedCommandHandler));
-                return Task.FromResult((IOperationResult<string>)OperationResult.Result("Duplicated operation"));
+                return ValueTask.FromResult(OperationResult.Result("Duplicated operation"));
             }
             protected override (string IdProperty, string CommandId) ExtractDebugInfo(OperationWithResult command)
                 => (nameof(command.Id), command.Id.ToString());

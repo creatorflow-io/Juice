@@ -36,6 +36,8 @@ namespace Microsoft.Extensions.DependencyInjection
                     var subsManager = new InMemoryEventBusSubscriptionsManager(logger1, options.ExchangeType == "topic");
                     var connection = new DefaultRabbitMQPersistentConnection(options, logger2);
                     var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
+                    logger.LogDebug("RabbitMQ EventBus created with BrokerName: {BrokerName}, HostName: {HostName}, Port: {Port}, VirtualHost: {VirtualHost}, ExchangeType: {ExchangeType}, User: {User}",
+                        options.BrokerName, options.Connection, options.Port, options.VirtualHost, options.ExchangeType, options.UserName);
                     return new RabbitMQEventBus(subsManager, scopeFactory, logger, connection, options);
                 });
 

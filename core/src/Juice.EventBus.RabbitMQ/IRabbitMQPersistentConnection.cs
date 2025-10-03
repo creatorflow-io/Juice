@@ -7,8 +7,10 @@ namespace Juice.EventBus.RabbitMQ
     {
         bool IsConnected { get; }
 
-        bool TryConnect();
+        ValueTask<bool> TryConnectAsync();
 
-        IModel? CreateModel();
+        ValueTask DisconnectAsync();
+
+        ValueTask<IChannel?> CreateChannelAsync(CancellationToken cancellationToken = default);
     }
 }

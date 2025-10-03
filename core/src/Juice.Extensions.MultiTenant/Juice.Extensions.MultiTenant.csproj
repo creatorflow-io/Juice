@@ -12,7 +12,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\Juice.Contracts\Juice.Contracts.csproj" />
         <ProjectReference Include="..\Juice.Extensions.Options\Juice.Extensions.Options.csproj" />
-        <ProjectReference Include="..\Juice\Juice.csproj" />
     </ItemGroup>
 </Project>

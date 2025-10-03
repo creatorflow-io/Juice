@@ -1,5 +1,5 @@
 ﻿using Juice.Domain;
-using MediatR;
+using Juice.MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -34,7 +34,7 @@ namespace Juice.EF.Extensions
         {
             try
             {
-                if (ctx.PendingAuditEntries != null && ctx.PendingAuditEntries.Any())
+                if (ctx.PendingAuditEntries != null && ctx.PendingAuditEntries.Count > 0)
                 {
                     if (mediator != null)
                     {
@@ -57,7 +57,7 @@ namespace Juice.EF.Extensions
                                 // Publish the Audit event
                                 var @event = auditEntry.AuditEvent(ctx.AuditEventType);
                                 await mediator.Publish(@event!);
-                                if(logger != null && logger.IsEnabled(LogLevel.Debug))
+                                if (logger != null && logger.IsEnabled(LogLevel.Debug))
                                 {
                                     logger.LogDebug("[DispatchDataChangeEvents] Published an {type}: {name}", @event!.GetType().Name, @event!.Name);
                                 }
@@ -66,14 +66,14 @@ namespace Juice.EF.Extensions
                     }
                     ctx.PendingAuditEntries.Clear();
                 }
-                if (ctx.PendingDataEvents != null && ctx.PendingDataEvents.Any())
+                if (ctx.PendingDataEvents != null && ctx.PendingDataEvents.Count > 0)
                 {
                     if (mediator != null)
                     {
                         foreach (var dataEvent in ctx.PendingDataEvents)
                         {
                             await mediator.Publish(dataEvent);
-                            if(logger != null && logger.IsEnabled(LogLevel.Debug))
+                            if (logger != null && logger.IsEnabled(LogLevel.Debug))
                             {
                                 logger.LogDebug("[DispatchDataChangeEvents] Published an {type}: {name}", dataEvent.GetType().Name, dataEvent.Name);
                             }
@@ -85,7 +85,7 @@ namespace Juice.EF.Extensions
             catch (Exception ex)
             {
                 logger?.LogWarning(ex, "[DispatchDataChangeEvents] Error: {0}", ex.Message);
-                if(logger != null && logger.IsEnabled(LogLevel.Trace))
+                if (logger != null && logger.IsEnabled(LogLevel.Trace))
                 {
                     logger.LogError(ex, "[DispatchDataChangeEvents] Error trace: {0}", ex.StackTrace);
                 }

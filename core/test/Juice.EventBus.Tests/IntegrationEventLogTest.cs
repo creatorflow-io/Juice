@@ -172,7 +172,7 @@ namespace Juice.EventBus.Tests
             var eventBus = resolver.ServiceProvider.GetService<IEventBus>();
             if (eventBus != null)
             {
-                eventBus.Subscribe<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler>();
+                await eventBus.SubscribeAsync<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler>();
 
                 using var scope = resolver.ServiceProvider.CreateScope();
                 var context = scope.ServiceProvider.GetRequiredService<TestContext>();
@@ -219,6 +219,9 @@ namespace Juice.EventBus.Tests
                 }
 
                 await Task.Delay(3000);
+
+                await eventBus.UnsubscribeAsync<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler>();
+                await eventBus.CloseAsync();
             }
 
         }

@@ -1,5 +1,5 @@
-﻿using Juice.Extensions;
-using MediatR;
+﻿using Juice.MediatR.Extensions;
+using Juice.MediatR.Internal;
 using Microsoft.Extensions.Logging;
 
 namespace Juice.MediatR
@@ -39,9 +39,9 @@ namespace Juice.MediatR
             // Send the embeded business command to mediator so it runs its related CommandHandler 
             var result =
                 command is IRequest<R> requestWithResult ? await _mediator.Send(requestWithResult, cancellationToken)
-                : command is IRequest request ?  await SendWrapperAsync(request, cancellationToken)
-                : throw new InvalidOperationException($"Command {commandName} does not implement IRequest<R> or IRequest<IOperationResult<R>> or IRequest");
-                ;
+                : command is IRequest request ? await SendWrapperAsync(request, cancellationToken)
+                : throw new InvalidOperationException($"Command {commandName} does not implement IRequest<R>, IRequest<IOperationResult<R>> or IRequest");
+            ;
             if (_logger.IsEnabled(LogLevel.Debug))
             {
                 _logger.LogDebug(
@@ -55,16 +55,21 @@ namespace Juice.MediatR
             return result;
         }
 
-        private async Task<R> SendWrapperAsync(IRequest command, CancellationToken cancellationToken)
+        private async ValueTask<R> SendWrapperAsync(IRequest command, CancellationToken cancellationToken)
         {
-            try { 
+            if (!typeof(R).IsAssignableTo(typeof(IOperationResult)))
+            {
+                throw new InvalidOperationException($"Command {command.GetGenericTypeName()} does not implement IRequest<R> or IRequest<IOperationResult<R>>. Unable to convert void result to {typeof(R).Name}");
+            }
+            try
+            {
                 await _mediator.Send(command, cancellationToken);
-                return (R) Convert.ChangeType((IOperationResult) OperationResult.Success, typeof(R));
+                return (R)Convert.ChangeType(new OperationResult { Succeeded = true }, typeof(R));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error sending command: {CommandName}", command.GetGenericTypeName());
-                return (R)Convert.ChangeType((IOperationResult) OperationResult.Failed(ex), typeof(R));
+                return (R)Convert.ChangeType(new OperationResult { Message = ex.Message }, typeof(R));
             }
         }
 
@@ -81,7 +86,7 @@ namespace Juice.MediatR
         /// Creates the result value to return if a previous request was found
         /// </summary>
         /// <returns></returns>
-        protected abstract Task<R> CreateResultForDuplicatedRequestAsync(T message);
+        protected abstract ValueTask<R> CreateResultForDuplicatedRequestAsync(T command);
 
     }
 
@@ -102,7 +107,7 @@ namespace Juice.MediatR
             IRequestManagerBase requestManager,
             ILogger logger) : base(mediator, requestManager, logger)
         {
-           
+
         }
 
 
@@ -113,7 +118,7 @@ namespace Juice.MediatR
         /// <param name="message">IdentifiedCommand which contains both original command and request ID</param>
         /// <param name="cancellationToken"></param>
         /// <returns>Return value of inner command or default value if request same ID was found</returns>
-        public async Task Handle(IdentifiedCommand<TRequest> message, CancellationToken cancellationToken)
+        public async ValueTask Handle(IdentifiedCommand<TRequest> message, CancellationToken cancellationToken)
         {
 
             var created = await _requestManager.TryCreateRequestForCommandAsync<TRequest>(message.Id);
@@ -156,7 +161,7 @@ namespace Juice.MediatR
             IRequestManagerBase requestManager,
             ILogger logger) : base(mediator, requestManager, logger)
         {
-           
+
         }
 
         /// <summary>
@@ -166,7 +171,7 @@ namespace Juice.MediatR
         /// <param name="message">IdentifiedCommand which contains both original command and request ID</param>
         /// <param name="cancellationToken"></param>
         /// <returns>Return value of inner command or default value if request same ID was found</returns>
-        public async Task<TResponse> Handle(IdentifiedCommand<TRequest, TResponse> message, CancellationToken cancellationToken)
+        public async ValueTask<TResponse> Handle(IdentifiedCommand<TRequest, TResponse> message, CancellationToken cancellationToken)
         {
 
             var created = await _requestManager.TryCreateRequestForCommandAsync<TRequest>(message.Id);
@@ -176,9 +181,9 @@ namespace Juice.MediatR
             }
             try
             {
-                var data = await DispatchAsync(message.Command, message.Id, cancellationToken);
+                var result = await DispatchAsync(message.Command, message.Id, cancellationToken);
                 await _requestManager.TryCompleteRequestAsync<TRequest>(message.Id, true);
-                return data;
+                return result;
             }
             catch (Exception)
             {

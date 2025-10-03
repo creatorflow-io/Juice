@@ -6,12 +6,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Juice
 {
-    public interface IValidatable
-    {
-        IList<string> ValidationErrors { get; }
-    }
-
-    public static class ValidatableExtensions
+    public static class Validatable
     {
         public static void AddValidationError(this IValidatable validatable, string error)
         {

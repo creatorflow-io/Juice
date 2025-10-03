@@ -1,5 +1,6 @@
 ﻿using System;
 using FluentAssertions;
+using Juice.Operation;
 using Xunit;
 using Xunit.Abstractions;
 

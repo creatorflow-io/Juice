@@ -18,17 +18,18 @@ namespace Juice.Modular
         /// </summary>
         public virtual int ConfigureOrder => StartOrder;
 
-        
-        public virtual void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IWebHostEnvironment env)
+        public virtual ValueTask ConfigurePipelineAsync(IApplicationBuilder app, IEndpointRouteBuilder routes, IWebHostEnvironment env)
         {
+            return ValueTask.CompletedTask;
         }
 
         public virtual void ConfigureServices(IServiceCollection services, IMvcBuilder mvc, IWebHostEnvironment env, IConfiguration configuration)
         {
         }
 
-        public virtual void OnShutdown(IServiceProvider serviceProvider, IWebHostEnvironment env)
+        public virtual ValueTask ShutdownAsync(IServiceProvider serviceProvider, IWebHostEnvironment env)
         {
+            return ValueTask.CompletedTask;
         }
     }
 }

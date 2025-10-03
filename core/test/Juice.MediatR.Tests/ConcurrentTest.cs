@@ -2,7 +2,6 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Juice.Extensions.DependencyInjection;
-using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -88,7 +87,7 @@ namespace Juice.MediatR.Tests
                 this._logger = logger;
                 _sharedService = sharedService;
             }
-            public async Task Handle(NoticeA notification, CancellationToken cancellationToken)
+            public async ValueTask Handle(NoticeA notification, CancellationToken cancellationToken)
             {
                 await Task.Delay(200);
                 _logger.LogInformation("Notice created at {Created} and processed after {After} milliseconds. User: {User}",
@@ -107,7 +106,7 @@ namespace Juice.MediatR.Tests
             {
                 _logger = logger;
             }
-            public async Task<int> Handle(CmdB request, CancellationToken cancellationToken)
+            public async ValueTask<int> Handle(CmdB request, CancellationToken cancellationToken)
             {
                 await Task.Delay(200);
                 _logger.LogInformation("Command created at {Created} and processed after {After} milliseconds", request.DateTime, (DateTimeOffset.Now - request.DateTime).TotalMilliseconds);

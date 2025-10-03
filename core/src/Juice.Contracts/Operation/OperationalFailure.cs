@@ -1,4 +1,4 @@
-﻿namespace Juice
+﻿namespace Juice.Operation
 {
     public enum OperationalFailure
     {

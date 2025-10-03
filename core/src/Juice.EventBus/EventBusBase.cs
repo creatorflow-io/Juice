@@ -14,20 +14,20 @@ namespace Juice.EventBus
             Logger = logger;
         }
 
-        public abstract Task PublishAsync(IntegrationEvent @event, string? tenantId);
+        public abstract ValueTask PublishAsync(IntegrationEvent @event, string? tenantId);
 
-        public virtual void Subscribe<T, TH>(string? key = default)
+        public virtual ValueTask SubscribeAsync<T, TH>(string? key = default)
             where T : IntegrationEvent
             where TH : IIntegrationEventHandler<T>
         {
             var eventName = key ?? SubsManager.GetDefaultEventKey<T>();
             Logger.LogInformation("Subscribing event {EventName} with {EventHandler}", eventName, typeof(TH).GetGenericTypeName());
 
-            SubsManager.AddSubscription<T, TH>(key);
-
+            SubsManager.AddSubscriptionAsync<T, TH>(key);
+            return ValueTask.CompletedTask;
         }
 
-        public virtual void Unsubscribe<T, TH>(string? key = default)
+        public virtual ValueTask UnsubscribeAsync<T, TH>(string? key = default)
             where T : IntegrationEvent
             where TH : IIntegrationEventHandler<T>
         {
@@ -35,9 +35,14 @@ namespace Juice.EventBus
 
             Logger.LogInformation("Unsubscribing event {EventName} for hanler {Handler}", eventName, typeof(TH).GetGenericTypeName());
 
-            SubsManager.RemoveSubscription<T, TH>(key);
+            SubsManager.RemoveSubscriptionAsync<T, TH>(key);
 
+            return ValueTask.CompletedTask;
         }
 
+        public virtual ValueTask CloseAsync()
+        {
+            return ValueTask.CompletedTask;
+        }
     }
 }

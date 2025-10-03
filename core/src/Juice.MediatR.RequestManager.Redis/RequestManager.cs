@@ -1,4 +1,4 @@
-﻿using MediatR;
+﻿using Juice.MediatR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
@@ -39,7 +39,7 @@ namespace Juice.MediatR.RequestManager.Redis
             return typeof(T).Name + ":" + id.ToString();
         }
 
-        public async Task TryCompleteRequestAsync<T>(Guid id, bool success)
+        public async ValueTask TryCompleteRequestAsync<T>(Guid id, bool success)
             where T : IBaseRequest
         {
             var key = GetKey<T>(id);
@@ -76,7 +76,7 @@ namespace Juice.MediatR.RequestManager.Redis
                 }
             }
         }
-        public async Task<bool> TryCreateRequestForCommandAsync<T>(Guid id)
+        public async ValueTask<bool> TryCreateRequestForCommandAsync<T>(Guid id)
             where T : IBaseRequest
         {
             var key = GetKey<T>(id);

@@ -1,8 +1,7 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using Juice.Domain.Events;
-using Juice.EF.Tests.Domain;
-using MediatR;
+using Juice.MediatR;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -18,7 +17,7 @@ namespace Juice.EF.Tests.EventHandlers
             _logger = logger;
             _sharedService = sharedService;
         }
-        public Task Handle(T dataEvent, CancellationToken token)
+        public ValueTask Handle(T dataEvent, CancellationToken token)
         {
             if (dataEvent.IsAudit)
             {
@@ -30,7 +29,7 @@ namespace Juice.EF.Tests.EventHandlers
             }
 
             _sharedService.Handlers.Add(typeof(DataEventHandler<T>).Name);
-            return Task.CompletedTask;
+            return ValueTask.CompletedTask;
         }
     }
 }

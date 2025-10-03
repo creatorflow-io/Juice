@@ -1,5 +1,5 @@
 ﻿using Juice.EventBus;
-using MediatR;
+using Juice.MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace Juice.Integrations.MediatR.Behaviors
@@ -8,17 +8,18 @@ namespace Juice.Integrations.MediatR.Behaviors
         where TRequest : IRequest<TResponse>
         where TResponse : IOperationResult
     {
+        public int Order => int.MaxValue - 10; // run very late
         private readonly ILogger _logger;
         public OperationExceptionBehavior(ILogger<OperationExceptionBehavior<TRequest, TResponse>> logger)
         {
             _logger = logger;
         }
-        public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
+        public async ValueTask<TResponse> Handle(TRequest request, RequestHandlerDelegate<TRequest, TResponse> next, CancellationToken cancellationToken)
         {
             var typeName = request.GetGenericTypeName();
             try
             {
-                TResponse result = await next();
+                TResponse result = await next.Invoke(request, cancellationToken);
 
                 if (!result.Succeeded)
                 {

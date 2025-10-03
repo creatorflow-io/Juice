@@ -15,12 +15,12 @@ namespace Juice.Modular
         int StartOrder { get; }
 
         /// <summary>
-        /// The order in which the module will be call Configure
+        /// The order in which the module will be call ConfigurePipelineAsync
         /// </summary>
         int ConfigureOrder { get; }
 
         /// <summary>
-        /// Configure services
+        /// ConfigurePipelineAsync services
         /// </summary>
         /// <param name="services"></param>
         /// <param name="mvc"></param>
@@ -29,19 +29,19 @@ namespace Juice.Modular
         void ConfigureServices(IServiceCollection services, IMvcBuilder mvc, IWebHostEnvironment env, IConfiguration configuration);
 
         /// <summary>
-        /// Configure pipeline
+        /// ConfigurePipelineAsync pipeline
         /// </summary>
         /// <param name="app"></param>
         /// <param name="routes"></param>
         /// <param name="env"></param>
-        void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IWebHostEnvironment env);
+        ValueTask ConfigurePipelineAsync(IApplicationBuilder app, IEndpointRouteBuilder routes, IWebHostEnvironment env);
 
         /// <summary>
         /// Called when the application is shutting down
         /// </summary>
         /// <param name="env"></param>
         /// <param name="serviceProvider"></param>
-        void OnShutdown(IServiceProvider serviceProvider, IWebHostEnvironment env);
+        ValueTask ShutdownAsync(IServiceProvider serviceProvider, IWebHostEnvironment env);
     }
 
 }
