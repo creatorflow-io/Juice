@@ -3,7 +3,6 @@ using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Juice.MediatR.Internal;
-
 public sealed class Mediator : IMediator
 {
     // --- IMediator implementation ---
@@ -15,25 +14,22 @@ public sealed class Mediator : IMediator
     }
 
     #region Request
-    public ValueTask Send<TRequest>(TRequest request, CancellationToken cancellationToken = default)
-    where TRequest : IRequest
+    public ValueTask Send<TRequest>(TRequest request, CancellationToken cancellationToken = default) where TRequest : IRequest
     {
         if (request is null)
         {
             throw new ArgumentNullException(nameof(request));
         }
-
-        var invoker = (Func<IRequest, CancellationToken, ValueTask>)_cache.GetOrAdd(
+        var invoker = (Func<TRequest, CancellationToken, ValueTask>)_cache.GetOrAdd(
             request.GetType(),
-            static (type, state) => state.BuildInvoker(type),
+            static (type, state) => state.BuildRequestInvoker<TRequest>(type),
             this);
-
         return invoker(request, cancellationToken);
     }
 
-    private Func<IRequest, CancellationToken, ValueTask> BuildInvoker(Type requestType)
+    private Func<TRequest, CancellationToken, ValueTask> BuildRequestInvoker<TRequest>(Type requestType)
+        where TRequest : IRequest
     {
-        // Resolve handler
         var handlerType = typeof(IRequestHandler<>).MakeGenericType(requestType);
         var handlers = _provider.GetServices(handlerType).ToArray();
         if (handlers.Length == 0)
@@ -45,7 +41,6 @@ public sealed class Mediator : IMediator
             throw new InvalidOperationException($"Multiple handlers registered for {requestType.Name}");
         }
         var handler = handlers[0]!;
-
         // Resolve behaviors
         var behaviorType = typeof(IPipelineBehavior<>).MakeGenericType(requestType);
         var behaviors = (IEnumerable<object>)_provider.GetServices(behaviorType);
@@ -53,9 +48,8 @@ public sealed class Mediator : IMediator
         var method = GetType()
             .GetMethod(nameof(InvokeRequestPipelineAsync), BindingFlags.NonPublic | BindingFlags.Static)!
             .MakeGenericMethod(requestType);
-
-        // build delegate: (IRequest req, CancellationToken ct) => InvokeRequestPipelineAsync<TRequest>(handler, behaviors, (TRequest)req, ct)
-        return (req, ct) => (ValueTask)method.Invoke(null, new object[] { handler, behaviors, req, ct })!;
+        // build delegate: (TRequest n, CancellationToken ct) => InvokeRequestPipelineAsync<TNotification>(handler, behaviors, n, ct)
+        return (n, ct) => (ValueTask)method.Invoke(null, new object[] { handler, behaviors, n, ct })!;
     }
 
     private static async ValueTask InvokeRequestPipelineAsync<TRequest>(
@@ -68,11 +62,12 @@ public sealed class Mediator : IMediator
         // Build chain
         behaviors = [.. behaviors.DistinctBy(b => b.GetType())];
         Array.Sort(behaviors, (a, b) => a.Order.CompareTo(b.Order));
+        // Wrap with behaviors
         ValueTask Next(int index)
         {
             if (index < behaviors.Length)
             {
-                return behaviors[index].Handle(request, new RequestHandlerDelegate<TRequest>((r, c) => Next(index + 1)), ct);
+                return behaviors[index].Handle(request, new RequestHandlerDelegate<TRequest>((n, c) => Next(index + 1)), ct);
             }
             return handler.Handle(request, ct);
         }
@@ -91,13 +86,13 @@ public sealed class Mediator : IMediator
 
         var invoker = (Func<IRequest<TResponse>, CancellationToken, ValueTask<TResponse>>)_cache.GetOrAdd(
             request.GetType(),
-            static (type, state) => state.BuildInvoker<TResponse>(type),
+            static (type, state) => state.BuildResponseInvoker<TResponse>(type),
             this);
 
         return invoker(request, cancellationToken);
     }
 
-    private Func<IRequest<TResponse>, CancellationToken, ValueTask<TResponse>> BuildInvoker<TResponse>(Type requestType)
+    private Func<IRequest<TResponse>, CancellationToken, ValueTask<TResponse>> BuildResponseInvoker<TResponse>(Type requestType)
     {
         // Resolve handler
         var handlerType = typeof(IRequestHandler<,>).MakeGenericType(requestType, typeof(TResponse));
@@ -117,14 +112,14 @@ public sealed class Mediator : IMediator
         var behaviors = (IEnumerable<object>)_provider.GetServices(behaviorType);
 
         var method = GetType()
-        .GetMethod(nameof(InvokeRequestResponsePipelineAsync), BindingFlags.NonPublic | BindingFlags.Static)!
+        .GetMethod(nameof(InvokeResponsePipelineAsync), BindingFlags.NonPublic | BindingFlags.Static)!
         .MakeGenericMethod(requestType, typeof(TResponse));
 
-        // build delegate: (IRequest<TResponse> req, CancellationToken ct) => InvokeRequestResponsePipelineAsync<TRequest,TResponse>(handler, behaviors, (TRequest)req, ct)
+        // build delegate: (IRequest<TResponse> req, CancellationToken ct) => InvokeResponsePipelineAsync<TRequest,TResponse>(handler, behaviors, (TRequest)req, ct)
         return (req, ct) => (ValueTask<TResponse>)method.Invoke(null, new object[] { handler, behaviors, req, ct })!;
     }
 
-    private static async ValueTask<TResponse> InvokeRequestResponsePipelineAsync<TRequest, TResponse>(
+    private static async ValueTask<TResponse> InvokeResponsePipelineAsync<TRequest, TResponse>(
         IRequestHandler<TRequest, TResponse> handler,
         IPipelineBehavior<TRequest, TResponse>[] behaviors,
         TRequest request,
@@ -247,12 +242,28 @@ public sealed class Mediator : IMediator
     where TNotification : INotification
     {
         // Final chain: execute handlers one by one
-        async ValueTask RunHandlers()
+        async ValueTask RunParallel()
         {
             await Task.WhenAll(
                 handlers.Select(h => h.Handle(notification, ct).AsTask())
             ).ConfigureAwait(false);
         }
+        async ValueTask Sequential()
+        {
+            foreach (var handler in handlers)
+            {
+                await handler.Handle(notification, ct).ConfigureAwait(false);
+            }
+        }
+        async ValueTask FireAndForget()
+        {
+            foreach (var handler in handlers)
+            {
+                _ = handler.Handle(notification, ct);
+            }
+            await Task.CompletedTask;
+        }
+
         // Build chain
         behaviors = [.. behaviors.DistinctBy(b => b.GetType())];
         Array.Sort(behaviors, (a, b) => a.Order.CompareTo(b.Order));
@@ -263,8 +274,11 @@ public sealed class Mediator : IMediator
             {
                 return behaviors[index].Handle(notification, new NotificationHandlerDelegate<TNotification>((n, c) => Next(index + 1)), ct);
             }
-
-            return RunHandlers();
+            return notification is ISequenceNotification
+                ? Sequential()
+                : notification is IFireAndForgetNotification
+                    ? FireAndForget()
+                    : RunParallel();
         }
 
         await Next(0).ConfigureAwait(false);

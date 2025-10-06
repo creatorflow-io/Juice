@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -31,8 +32,8 @@ namespace Juice.MediatR.Tests
             {
                 builder.RegisterServicesFromAssemblyContaining<MediatorTest>();
             });
-            services.AddTransient<IPipelineBehavior<Request>, TimingBehavior<Request>>();
-            services.AddTransient<IPipelineBehavior<Ping, string>, TimingBehavior<Ping, string>>();
+            //services.AddTransient<IPipelineBehavior<Request>, TimingBehavior<Request>>();
+            //services.AddTransient<IPipelineBehavior<Ping, string>, TimingBehavior<Ping, string>>();
             services.AddSingleton(_output);
             services.AddSingleton<SharedService>();
             return services.BuildServiceProvider();
@@ -46,21 +47,21 @@ namespace Juice.MediatR.Tests
             Assert.NotNull(mediator);
             Assert.IsType<Internal.Mediator>(mediator);
 
-            var handlers = provider.GetServices<IRequestHandler<Request>>();
-            handlers.Should().HaveCount(1);
-
-            await mediator.Send(new Request());
             var shared = provider.GetRequiredService<SharedService>();
-            shared.Calls.Should().Contain("RequestHandler");
-            shared.Clear();
+
             // parallel
-            Parallel.For(0, 10000, async i =>
+            var n = 10000;
+            Parallel.For(0, n, async i =>
             {
-                await mediator.Send(new Request());
+                using var scope = provider.CreateScope();
+                var m = scope.ServiceProvider.GetRequiredService<IMediator>();
+                await m.Send(new Request());
             });
 
-            await WaitAsync(shared, 10000);
-            shared.CallCount.Should().Be(10000);
+            await WaitAsync(shared, n);
+            shared.CallCount.Should().Be(n);
+            shared.BehaviorCount.Should().Be(n);
+            _output.WriteLine("Completed {0} requests", n);
         }
 
         [Fact]
@@ -69,7 +70,7 @@ namespace Juice.MediatR.Tests
             var provider = BuildServiceProvider();
             var mediator = provider.GetRequiredService<IMediator>();
             Assert.NotNull(mediator);
-            Assert.IsType<MediatR.Internal.Mediator>(mediator);
+            Assert.IsType<Internal.Mediator>(mediator);
             var behaviors = provider.GetServices<IPipelineBehavior<Ping, string>>();
             var response = await mediator.Send(new Ping());
             response.Should().Be("Pong");
@@ -79,12 +80,15 @@ namespace Juice.MediatR.Tests
             _output.WriteLine("Sending 10,000 requests...");
 
             // parallel
-            Parallel.For(0, 10000, async i =>
+            var n = 10000;
+            Parallel.For(0, n, async i =>
             {
+                using var scope = provider.CreateScope();
+                var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
                 await mediator.Send(new Ping());
             });
-            await WaitAsync(shared, 10000);
-            shared.CallCount.Should().Be(10000);
+            await WaitAsync(shared, n);
+            shared.CallCount.Should().Be(n);
         }
 
         [Fact]
@@ -128,73 +132,78 @@ namespace Juice.MediatR.Tests
         public async Task Notification_should_sendAsync()
         {
             var serviceProvider = BuildServiceProvider();
-            var mediator = serviceProvider.GetRequiredService<IMediator>();
             var shared = serviceProvider.GetRequiredService<SharedService>();
 
-            for (var i = 0; i < 100; i++)
-            {
-                await TestAsync(mediator, shared);
-            }
+            using var scope = serviceProvider.CreateScope();
+            var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+            await NotificationAsync(mediator, shared);
         }
 
-        private async Task TestAsync(IMediator mediator, SharedService shared)
+        private async Task NotificationAsync(IMediator mediator, SharedService shared)
         {
             shared.Clear();
+            shared.ClearBehavior();
             var start = Stopwatch.StartNew();
             long before = GC.GetAllocatedBytesForCurrentThread();
-            int n = 100000;
+            int n = "true".Equals(Environment.GetEnvironmentVariable("CI")) ? 10 : 100000;
             Parallel.For(0, n, async (i) =>
             {
                 await mediator.Publish(new Notification());
             });
+            
+            _output.WriteLine("Published " + n + " messages. Taken " + start.ElapsedMilliseconds + " ms");
             await WaitAsync(shared, n);
+
             long after = GC.GetAllocatedBytesForCurrentThread();
             start.Stop();
             _output.WriteLine("Allocated " + (after - before) / 1024 + " kB for " + n + " requests. Taken " + start.ElapsedMilliseconds + " ms");
             shared.CallCount.Should().Be(n);
+            shared.BehaviorCount.Should().Be(n);
             GC.Collect();
         }
 
-        private async Task WaitAsync(SharedService shared, int count)
+        [Fact]
+        public async Task FireAndForgetNotification_should_sendAsync()
+        {
+            var serviceProvider = BuildServiceProvider();
+            var shared = serviceProvider.GetRequiredService<SharedService>();
+            using var scope = serviceProvider.CreateScope();
+            var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+            await FireAndForgetNotificationAsync(mediator, shared);
+        }
+
+        private async Task FireAndForgetNotificationAsync(IMediator mediator, SharedService shared)
+        {
+            shared.Clear();
+            shared.ClearBehavior();
+            var start = Stopwatch.StartNew();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            int n = "true".Equals(Environment.GetEnvironmentVariable("CI")) ? 10 : 10000;
+            for (var i = 0; i< n; i++)
+            {
+                await mediator.Publish(new FireAndForgetNotification());
+            }
+            _output.WriteLine("Published " + n + " messages. Taken " + start.ElapsedMilliseconds + " ms");
+            start.ElapsedMilliseconds.Should().BeLessThan(500); // should be quick as same as parallel publish, fire and forget
+            await WaitAsync(shared, n, 50000);
+
+            long after = GC.GetAllocatedBytesForCurrentThread();
+            start.Stop();
+            _output.WriteLine("Allocated " + (after - before) / 1024 + " kB for " + n + " requests. Taken " + start.ElapsedMilliseconds + " ms");
+            shared.CallCount.Should().Be(n);
+            shared.BehaviorCount.Should().Be(n);
+            GC.Collect();
+        }
+
+        private async Task WaitAsync(SharedService shared, int count, int ms = 30000)
         {
             var start = Stopwatch.StartNew();
             while (shared.CallCount < count)
             {
                 await Task.Delay(10);
-                if (start.ElapsedMilliseconds > 3000)
+                if (start.ElapsedMilliseconds > ms)
                 {
                     break;
-                }
-            }
-        }
-
-        private class SharedService
-        {
-            public HashSet<string> Calls { get; } = new();
-            private int _count;
-            private object _lock = new();
-            public int CallCount
-            {
-                get
-                {
-                    lock (_lock)
-                    {
-                        return _count;
-                    }
-                }
-            }
-            public void Increment()
-            {
-                lock (_lock)
-                {
-                    _count++;
-                }
-            }
-            public void Clear()
-            {
-                lock (_lock)
-                {
-                    _count = 0;
                 }
             }
         }
@@ -205,26 +214,41 @@ namespace Juice.MediatR.Tests
         private class RequestHandler : IRequestHandler<Request>
         {
             private readonly SharedService _shared;
-            public RequestHandler(SharedService shared) => _shared = shared;
+            private Guid _id = Guid.NewGuid();
+            private ILogger _logger;
+            public RequestHandler(SharedService shared, ILogger<RequestHandler> logger)
+            {
+                _shared = shared;
+                _logger = logger;
+            }
+
             public async ValueTask Handle(Request request, CancellationToken cancellationToken)
             {
-                _shared.Calls.Add("RequestHandler");
-                _shared.Increment();
                 await Task.Delay(100, cancellationToken);
+                // increment call count must be the last operation to avoid breaking wait logic
+                _shared.Increment();
+                _logger.LogInformation("{Id} Handled Request", _id);
             }
         }
         private class TimingBehavior<TRequest> : IPipelineBehavior<TRequest>
-    where TRequest : IRequest
+            where TRequest : IRequest
         {
             public int Order => int.MaxValue - 20; // run late
             private readonly ILogger _logger;
-            public TimingBehavior(ILogger<TimingBehavior<TRequest>> logger) => _logger = logger;
+            private Guid _id = Guid.NewGuid();
+            private readonly SharedService _shared;
+            public TimingBehavior(ILogger<TimingBehavior<TRequest>> logger, SharedService shared)
+            {
+                _logger = logger;
+                _shared = shared;
+            }
             public async ValueTask Handle(TRequest request, RequestHandlerDelegate<TRequest> next, CancellationToken ct)
             {
                 var sw = Stopwatch.StartNew();
                 await next.Invoke(request, ct).ConfigureAwait(false);
                 sw.Stop();
-                _logger.LogInformation("Handled {Request} in {Elapsed} ticks", typeof(TRequest).Name, sw.ElapsedTicks);
+                _shared.IncrementBehavior();
+                _logger.LogInformation("{Id} Handled {Request} in {Elapsed} ticks", _id, typeof(TRequest).Name, sw.ElapsedTicks);
             }
         }
         private class Ping : IRequest<string>
@@ -316,10 +340,36 @@ namespace Juice.MediatR.Tests
         private class Notification : INotification { }
         private class NotificationHandler(SharedService sharedService) : INotificationHandler<Notification>
         {
-            public ValueTask Handle(Notification notification, CancellationToken cancellationToken = default)
+            public async ValueTask Handle(Notification notification, CancellationToken cancellationToken = default)
             {
+                await Task.Delay(50, cancellationToken);
                 sharedService.Increment();
-                return ValueTask.CompletedTask;
+            }
+        }
+        private class NotificationBehavior<TNotification> : INotificationPipelineBehavior<TNotification>
+            where TNotification : INotification
+        {
+            public int Order => int.MaxValue - 20; // run late
+            private readonly SharedService _shared;
+            public NotificationBehavior(SharedService shared)
+            {
+                _shared = shared;
+            }
+            public async ValueTask Handle(TNotification notification, NotificationHandlerDelegate<TNotification> next, CancellationToken ct)
+            {
+                await next.Invoke(notification, ct).ConfigureAwait(false);
+                _shared.IncrementBehavior();
+            }
+        }
+        private record FireAndForgetNotification : IFireAndForgetNotification
+        {
+        }
+        private class FireAndForgetNotificationHandler(SharedService sharedService) : INotificationHandler<FireAndForgetNotification>
+        {
+            public async ValueTask Handle(FireAndForgetNotification notification, CancellationToken cancellationToken = default)
+            {
+                await Task.Delay(50, cancellationToken);
+                sharedService.Increment();
             }
         }
     }

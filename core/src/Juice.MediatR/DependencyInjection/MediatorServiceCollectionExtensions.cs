@@ -71,6 +71,7 @@ namespace Microsoft.Extensions.DependencyInjection
                     }
                     // Only handle mediator interfaces
                     if (def == typeof(INotificationHandler<>) ||
+                        def == typeof(IPipelineBehavior<>) ||
                         def == typeof(IPipelineBehavior<,>) ||
                         def == typeof(IStreamPipelineBehavior<,>) ||
                         def == typeof(INotificationPipelineBehavior<>))

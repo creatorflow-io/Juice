@@ -68,11 +68,6 @@ namespace Juice.MediatR.Tests
             await Task.Delay(1000);
         }
 
-        private class SharedService
-        {
-            public string? User { get; set; }
-        }
-
         private class NoticeA : INotification
         {
             public DateTimeOffset DateTime { get; } = DateTimeOffset.Now;

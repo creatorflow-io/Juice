@@ -6,7 +6,6 @@
         ValueTask Handle(
             TNotification notification,
             NotificationHandlerDelegate<TNotification> next,
-            CancellationToken cancellationToken
-            );
+            CancellationToken cancellationToken);
     }
 }
