@@ -24,24 +24,26 @@ namespace Microsoft.Extensions.DependencyInjection
             Services = services ?? throw new ArgumentNullException(nameof(services));
         }
 
-        public void RegisterServicesFromAssemblyContaining<T>()
+        public void RegisterServicesFromAssemblyContaining<T>(bool includeNonPublicTypes = false)
         {
             var assembly = typeof(T).Assembly;
-            RegisterServicesFromAssembly(assembly);
+            RegisterServicesFromAssembly(assembly, includeNonPublicTypes);
         }
 
-        public void RegisterServicesFromAssemblyContaining(Type type)
+        public void RegisterServicesFromAssemblyContaining(Type type, bool includeNonPublicTypes = false)
         {
             if (type == null) throw new ArgumentNullException(nameof(type));
             var assembly = type.Assembly;
-            RegisterServicesFromAssembly(assembly);
+            RegisterServicesFromAssembly(assembly, includeNonPublicTypes);
         }
 
-        public void RegisterServicesFromAssembly(Assembly assembly)
+        public void RegisterServicesFromAssembly(Assembly assembly, bool includeNonPublicTypes = false)
         {
             var types = assembly.GetTypes()
                 .Where(t => !t.IsAbstract && !t.IsInterface)
+                .Where(t => t.IsPublic || includeNonPublicTypes)
                 .ToList();
+
 
             foreach (var type in types)
             {

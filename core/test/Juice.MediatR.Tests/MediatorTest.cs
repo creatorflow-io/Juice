@@ -30,7 +30,7 @@ namespace Juice.MediatR.Tests
             });
             services.AddMediatR(builder =>
             {
-                builder.RegisterServicesFromAssemblyContaining<MediatorTest>();
+                builder.RegisterServicesFromAssemblyContaining<MediatorTest>(true);
             });
             //services.AddTransient<IPipelineBehavior<Request>, TimingBehavior<Request>>();
             //services.AddTransient<IPipelineBehavior<Ping, string>, TimingBehavior<Ping, string>>();
@@ -185,7 +185,7 @@ namespace Juice.MediatR.Tests
             }
             _output.WriteLine("Published " + n + " messages. Taken " + start.ElapsedMilliseconds + " ms");
             start.ElapsedMilliseconds.Should().BeLessThan(500); // should be quick as same as parallel publish, fire and forget
-            await WaitAsync(shared, n, 50000);
+            await WaitAsync(shared, n, 5000);
 
             long after = GC.GetAllocatedBytesForCurrentThread();
             start.Stop();
