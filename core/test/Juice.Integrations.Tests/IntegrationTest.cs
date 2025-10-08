@@ -76,7 +76,7 @@ namespace Juice.Integrations.Tests
                 services.AddDefaultStringIdGenerator();
 
                 services
-                    .AddIntegrationEventService<TestContext, IEventBus>()
+                    .AddIntegrationEventService()
                     .AddIntegrationEventLog()
                     .RegisterContext<TestContext>(_testSchema1);
 
@@ -104,6 +104,8 @@ namespace Juice.Integrations.Tests
             await logContext.MigrateAsync();
 
             var integrationEventService = scope.ServiceProvider.GetRequiredService<IIntegrationEventService<TestContext>>();
+
+            var integrationEventService1 = scope.ServiceProvider.GetRequiredService<IIntegrationEventService<TestContext, IEventBus>>();
 
             var idGenerator = scope.ServiceProvider.GetRequiredService<IStringIdGenerator>();
 

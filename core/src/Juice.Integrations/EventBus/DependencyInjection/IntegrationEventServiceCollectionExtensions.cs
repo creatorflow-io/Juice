@@ -12,12 +12,10 @@ namespace Microsoft.Extensions.DependencyInjection
         /// </summary>
         /// <param name="services"></param>
         /// <returns></returns>
-        public static IServiceCollection AddIntegrationEventService<TContext, TBus>(this IServiceCollection services)
-            where TContext : DbContext
-            where TBus : IEventBus
+        public static IServiceCollection AddIntegrationEventService(this IServiceCollection services)
         {
-            services.TryAdd(ServiceDescriptor.Scoped(typeof(IIntegrationEventService<TContext>),
-                typeof(IntegrationEventService<TContext, TBus>)));
+            services.TryAdd(ServiceDescriptor.Scoped(typeof(IIntegrationEventService<,>),typeof(IntegrationEventService<,>)));
+            services.TryAdd(ServiceDescriptor.Scoped(typeof(IIntegrationEventService<>), typeof(IntegrationEventService<>)));
             return services;
         }
     }

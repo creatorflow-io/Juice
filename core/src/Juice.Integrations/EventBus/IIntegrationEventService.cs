@@ -4,11 +4,8 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Juice.Integrations.EventBus
 {
-    public interface IIntegrationEventService<out TContext>
-        where TContext : DbContext
+    public interface IIntegrationEventService
     {
-        TContext DomainContext { get; }
-
         /// <summary>
         /// Use specified transaction when working with transient DbContext
         /// </summary>
@@ -24,5 +21,14 @@ namespace Juice.Integrations.EventBus
         Task PublishEventsThroughEventBusAsync(Guid transactionId);
 
     }
-
+    public interface IIntegrationEventService<out TContext, out TEventBus>: IIntegrationEventService
+        where TContext : DbContext
+        where TEventBus : IEventBus
+    {
+    }
+    public interface IIntegrationEventService<out TContext> : IIntegrationEventService<TContext, IEventBus>
+        where TContext : DbContext
+    {
+        
+    }
 }

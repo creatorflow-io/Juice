@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Juice.Integrations.EventBus
 {
-    internal class IntegrationEventService<TContext, TEventBus> : IIntegrationEventService<TContext>
+    internal class IntegrationEventService<TContext, TEventBus> : IIntegrationEventService<TContext, TEventBus>
         where TContext : DbContext
         where TEventBus : IEventBus
     {
@@ -75,6 +75,19 @@ namespace Juice.Integrations.EventBus
                     await _eventLogService.MarkEventAsFailedAsync(logEvt.EventId);
                 }
             }
+        }
+    }
+
+    internal class IntegrationEventService<TContext>: IntegrationEventService<TContext, IEventBus>, IIntegrationEventService<TContext>
+        where TContext : DbContext
+    {
+        public IntegrationEventService(IIntegrationEventLogService<TContext> eventLogService
+            , TContext domainContext
+            , IEventBus eventBus
+            , ILogger<IntegrationEventService<TContext>> logger
+            , ITenantAccessor? tenantAccessor = default)
+            : base(eventLogService, domainContext, eventBus, logger, tenantAccessor)
+        {
         }
     }
 }

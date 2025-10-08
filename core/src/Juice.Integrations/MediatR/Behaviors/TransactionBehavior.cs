@@ -8,18 +8,19 @@ using Microsoft.Extensions.Logging;
 
 namespace Juice.Integrations.MediatR.Behaviors
 {
-    public abstract class TransactionBehavior<TRequest, TResponse, TContext>
+    public abstract class TransactionBehavior<TRequest, TResponse, TContext, TEventBus>
         : IPipelineBehavior<TRequest, TResponse>
         where TRequest : IRequest<TResponse>
         where TContext : DbContext, IUnitOfWork
+        where TEventBus : IEventBus
     {
         public int Order => int.MaxValue - 20; // run late
         private readonly ILogger _logger;
         private readonly TContext _dbContext;
-        private readonly IIntegrationEventService<TContext> _integrationEventService;
+        private readonly IIntegrationEventService _integrationEventService;
 
         public TransactionBehavior(TContext dbContext,
-            IIntegrationEventService<TContext> integrationEventService,
+            IIntegrationEventService<TContext, TEventBus> integrationEventService,
             ILogger logger)
         {
             _dbContext = dbContext ?? throw new ArgumentException(typeof(TContext).Name);
