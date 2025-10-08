@@ -72,7 +72,7 @@ namespace Juice.MediatR.Tests
             Assert.NotNull(mediator);
             Assert.IsType<Internal.Mediator>(mediator);
             var behaviors = provider.GetServices<IPipelineBehavior<Ping, string>>();
-            var response = await mediator.Send(new Ping());
+            var response = await mediator.Send(new Cmd<Ping>());
             response.Should().Be("Pong");
             var shared = provider.GetRequiredService<SharedService>();
             shared.Clear();
@@ -85,7 +85,7 @@ namespace Juice.MediatR.Tests
             {
                 using var scope = provider.CreateScope();
                 var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-                await mediator.Send(new Ping());
+                await mediator.Send(new Cmd<Ping>());
             });
             await WaitAsync(shared, n);
             shared.CallCount.Should().Be(n);
@@ -150,7 +150,7 @@ namespace Juice.MediatR.Tests
             {
                 await mediator.Publish(new Notification());
             });
-            
+
             _output.WriteLine("Published " + n + " messages. Taken " + start.ElapsedMilliseconds + " ms");
             await WaitAsync(shared, n);
 
@@ -179,7 +179,7 @@ namespace Juice.MediatR.Tests
             var start = Stopwatch.StartNew();
             long before = GC.GetAllocatedBytesForCurrentThread();
             int n = "true".Equals(Environment.GetEnvironmentVariable("CI")) ? 10 : 10000;
-            for (var i = 0; i< n; i++)
+            for (var i = 0; i < n; i++)
             {
                 await mediator.Publish(new FireAndForgetNotification());
             }
@@ -207,7 +207,7 @@ namespace Juice.MediatR.Tests
                 }
             }
         }
-
+        #region Request
         private class Request : IRequest
         {
         }
@@ -251,15 +251,35 @@ namespace Juice.MediatR.Tests
                 _logger.LogInformation("{Id} Handled {Request} in {Elapsed} ticks", _id, typeof(TRequest).Name, sw.ElapsedTicks);
             }
         }
-        private class Ping : IRequest<string>
+        #endregion
+        #region Request/Response
+        private abstract class MyTask
         {
+            public abstract string Response { get; set; }
         }
-        private class PingHandler(SharedService shared) : IRequestHandler<Ping, string>
+        private class Cmd<TTask> : IRequest<string>
+            where TTask : MyTask, new()
         {
-            public ValueTask<string> Handle(Ping request, CancellationToken cancellationToken)
+            public TTask Task { get; set; } = new TTask();
+        }
+        private abstract class CmdHandler<TTask> : IRequestHandler<Cmd<TTask>, string>
+            where TTask : MyTask, new()
+        {
+            public virtual ValueTask<string> Handle(Cmd<TTask> request, CancellationToken cancellationToken)
+            {
+                return ValueTask.FromResult(request.Task.Response);
+            }
+        }
+        private class Ping: MyTask
+        {
+            public override string Response { get; set; } = "Pong";
+        }
+        private class PingCommandHandler(SharedService shared) : CmdHandler<Ping>
+        {
+            public override ValueTask<string> Handle(Cmd<Ping> request, CancellationToken cancellationToken)
             {
                 shared.Increment();
-                return ValueTask.FromResult("Pong");
+                return base.Handle(request, cancellationToken);
             }
         }
         private class TimingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
@@ -307,6 +327,8 @@ namespace Juice.MediatR.Tests
                 }
             }
         }
+        #endregion
+        #region Stream
         private record GetNumbers(int Count) : IStreamRequest<int>;
         private class GetNumbersHandler : IStreamRequestHandler<GetNumbers, int>
         {
@@ -337,6 +359,8 @@ namespace Juice.MediatR.Tests
                 _logger.LogInformation("Handled stream {Request} in {Elapsed} ticks", typeof(TRequest).Name, sw.ElapsedTicks);
             }
         }
+        #endregion
+        #region Notification
         private class Notification : INotification { }
         private class NotificationHandler(SharedService sharedService) : INotificationHandler<Notification>
         {
@@ -372,5 +396,6 @@ namespace Juice.MediatR.Tests
                 sharedService.Increment();
             }
         }
+        #endregion
     }
 }

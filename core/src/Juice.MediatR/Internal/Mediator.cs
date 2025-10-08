@@ -36,7 +36,7 @@ public sealed class Mediator : IMediator
         {
             throw new InvalidOperationException($"No handler registered for {requestType.Name}");
         }
-        if (handlers.Length > 1)
+        if (handlers.DistinctBy(h => h!.GetType()).Count() > 1)
         {
             throw new InvalidOperationException($"Multiple handlers registered for {requestType.Name}");
         }
@@ -101,7 +101,7 @@ public sealed class Mediator : IMediator
         {
             throw new InvalidOperationException($"No handler registered for {requestType.Name}");
         }
-        if (handlers.Length > 1)
+        if (handlers.DistinctBy(h => h!.GetType()).Count() > 1)
         {
             throw new InvalidOperationException($"Multiple handlers registered for {requestType.Name}");
         }
@@ -166,7 +166,7 @@ public sealed class Mediator : IMediator
         {
             throw new InvalidOperationException($"No handler registered for {requestType.Name}");
         }
-        if (handlers.Length > 1)
+        if (handlers.DistinctBy(h => h!.GetType()).Count() > 1)
         {
             throw new InvalidOperationException($"Multiple handlers registered for {requestType.Name}");
         }

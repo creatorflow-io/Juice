@@ -8,18 +8,19 @@ using Microsoft.Extensions.Logging;
 
 namespace Juice.Integrations.EventBus
 {
-    internal class IntegrationEventService<TContext> : IIntegrationEventService<TContext>
+    internal class IntegrationEventService<TContext, TEventBus> : IIntegrationEventService<TContext>
         where TContext : DbContext
+        where TEventBus : IEventBus
     {
         private IIntegrationEventLogService<TContext> _eventLogService;
         public TContext DomainContext { get; }
         private readonly ILogger _logger;
-        private readonly IEventBus _eventBus;
+        private readonly TEventBus _eventBus;
         private readonly ITenantAccessor? _tenantAccessor;
         public IntegrationEventService(IIntegrationEventLogService<TContext> eventLogService
             , TContext domainContext
-            , IEventBus eventBus
-            , ILogger<IntegrationEventService<TContext>> logger
+            , TEventBus eventBus
+            , ILogger<IntegrationEventService<TContext, TEventBus>> logger
             , ITenantAccessor? tenantAccessor = default
             )
         {

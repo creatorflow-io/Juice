@@ -9,7 +9,7 @@ namespace Microsoft.Extensions.DependencyInjection
     {
         public static IServiceCollection AddMediatR(this IServiceCollection services, Action<MediatorBuilder>? buildAction = default)
         {
-            services.AddTransient<IMediator, Mediator>();
+            services.TryAddTransient<IMediator, Mediator>();
             var builder = new MediatorBuilder(services);
             buildAction?.Invoke(builder);
             return services;
@@ -24,20 +24,26 @@ namespace Microsoft.Extensions.DependencyInjection
             Services = services ?? throw new ArgumentNullException(nameof(services));
         }
 
-        public void RegisterServicesFromAssemblyContaining<T>(bool includeNonPublicTypes = false)
+        public void RegisterServicesFromAssemblyContaining<T>(bool? includeNonPublicTypes = default)
         {
             var assembly = typeof(T).Assembly;
-            RegisterServicesFromAssembly(assembly, includeNonPublicTypes);
+            RegisterServicesFromAssemblyInternal(assembly, includeNonPublicTypes ?? assembly == Assembly.GetCallingAssembly());
         }
 
-        public void RegisterServicesFromAssemblyContaining(Type type, bool includeNonPublicTypes = false)
+        public void RegisterServicesFromAssemblyContaining(Type type, bool? includeNonPublicTypes = default)
         {
             if (type == null) throw new ArgumentNullException(nameof(type));
             var assembly = type.Assembly;
-            RegisterServicesFromAssembly(assembly, includeNonPublicTypes);
+            RegisterServicesFromAssemblyInternal(assembly, includeNonPublicTypes ?? assembly == Assembly.GetCallingAssembly());
         }
 
-        public void RegisterServicesFromAssembly(Assembly assembly, bool includeNonPublicTypes = false)
+        public void RegisterServicesFromAssembly(Assembly assembly, bool? includeNonPublicTypes = default)
+        {
+            if (assembly == null) throw new ArgumentNullException(nameof(assembly));
+            RegisterServicesFromAssemblyInternal(assembly, includeNonPublicTypes ?? assembly == Assembly.GetCallingAssembly());
+        }
+
+        private void RegisterServicesFromAssemblyInternal(Assembly assembly, bool includeNonPublicTypes)
         {
             var types = assembly.GetTypes()
                 .Where(t => !t.IsAbstract && !t.IsInterface)

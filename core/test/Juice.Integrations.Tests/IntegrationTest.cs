@@ -76,7 +76,7 @@ namespace Juice.Integrations.Tests
                 services.AddDefaultStringIdGenerator();
 
                 services
-                    .AddIntegrationEventService()
+                    .AddIntegrationEventService<TestContext, IEventBus>()
                     .AddIntegrationEventLog()
                     .RegisterContext<TestContext>(_testSchema1);
 
