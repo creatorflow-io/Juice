@@ -8,21 +8,20 @@ using Microsoft.Extensions.Logging;
 
 namespace Juice.Integrations.EventBus
 {
-    internal class IntegrationEventService<TContext, TEventBus> : IIntegrationEventService<TContext, TEventBus>
+
+    internal class IntegrationEventService<TContext> : IIntegrationEventService<TContext>
         where TContext : DbContext
-        where TEventBus : IEventBus
     {
         private IIntegrationEventLogService<TContext> _eventLogService;
         public TContext DomainContext { get; }
         private readonly ILogger _logger;
-        private readonly TEventBus _eventBus;
+        private readonly IEventBus _eventBus;
         private readonly ITenantAccessor? _tenantAccessor;
         public IntegrationEventService(IIntegrationEventLogService<TContext> eventLogService
             , TContext domainContext
-            , TEventBus eventBus
-            , ILogger<IntegrationEventService<TContext, TEventBus>> logger
-            , ITenantAccessor? tenantAccessor = default
-            )
+            , IEventBus eventBus
+            , ILogger<IntegrationEventService<TContext>> logger
+            , ITenantAccessor? tenantAccessor = default)
         {
             _eventLogService = eventLogService;
             DomainContext = domainContext;
@@ -58,7 +57,7 @@ namespace Juice.Integrations.EventBus
                 try
                 {
                     await _eventLogService.MarkEventAsInProgressAsync(logEvt.EventId);
-                    if(logEvt.IntegrationEvent is null)
+                    if (logEvt.IntegrationEvent is null)
                     {
                         _logger.LogError("Integration event is null. EventId: {IntegrationEventId}", logEvt.EventId);
                         await _eventLogService.MarkEventAsFailedAsync(logEvt.EventId);
@@ -78,16 +77,20 @@ namespace Juice.Integrations.EventBus
         }
     }
 
-    internal class IntegrationEventService<TContext>: IntegrationEventService<TContext, IEventBus>, IIntegrationEventService<TContext>
+    internal class IntegrationEventService<TContext, TEventBus> : IntegrationEventService<TContext>, IIntegrationEventService<TContext, TEventBus>
         where TContext : DbContext
+        where TEventBus : IEventBus
     {
+        
         public IntegrationEventService(IIntegrationEventLogService<TContext> eventLogService
             , TContext domainContext
-            , IEventBus eventBus
-            , ILogger<IntegrationEventService<TContext>> logger
-            , ITenantAccessor? tenantAccessor = default)
-            : base(eventLogService, domainContext, eventBus, logger, tenantAccessor)
+            , TEventBus eventBus
+            , ILogger<IntegrationEventService<TContext, TEventBus>> logger
+            , ITenantAccessor? tenantAccessor = default
+            ) : base(eventLogService, domainContext, eventBus, logger, tenantAccessor)
         {
         }
+
     }
+
 }

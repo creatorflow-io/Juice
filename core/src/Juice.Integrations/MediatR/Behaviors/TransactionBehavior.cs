@@ -20,7 +20,7 @@ namespace Juice.Integrations.MediatR.Behaviors
         private readonly IIntegrationEventService _integrationEventService;
 
         public TransactionBehavior(TContext dbContext,
-            IIntegrationEventService<TContext, TEventBus> integrationEventService,
+            IIntegrationEventService<TContext> integrationEventService,
             ILogger logger)
         {
             _dbContext = dbContext ?? throw new ArgumentException(typeof(TContext).Name);

@@ -21,14 +21,15 @@ namespace Juice.Integrations.EventBus
         Task PublishEventsThroughEventBusAsync(Guid transactionId);
 
     }
-    public interface IIntegrationEventService<out TContext, out TEventBus>: IIntegrationEventService
+    public interface IIntegrationEventService<out TContext> : IIntegrationEventService
+        where TContext : DbContext
+    {
+
+    }
+
+    public interface IIntegrationEventService<out TContext, out TEventBus>: IIntegrationEventService<TContext>
         where TContext : DbContext
         where TEventBus : IEventBus
     {
-    }
-    public interface IIntegrationEventService<out TContext> : IIntegrationEventService<TContext, IEventBus>
-        where TContext : DbContext
-    {
-        
     }
 }
