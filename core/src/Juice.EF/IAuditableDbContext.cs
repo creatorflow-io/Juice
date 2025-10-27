@@ -25,5 +25,6 @@ namespace Juice.EF
 
         ITimeTracker? TimeTracker { get; }
 
+        void SetUser(ClaimsPrincipal? user);
     }
 }

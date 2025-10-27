@@ -13,7 +13,8 @@ namespace Juice
         Exception? Exception { get; }
         void ThrowIfNotSucceeded();
         string ToString();
-
+        [Newtonsoft.Json.JsonIgnore]
+        [System.Text.Json.Serialization.JsonIgnore]
         virtual OperationModel OperationModel => new OperationModel(Message, StackTrace, Succeeded, Failure);
     }
 
@@ -23,9 +24,14 @@ namespace Juice
         [Newtonsoft.Json.JsonIgnore]
         [System.Text.Json.Serialization.JsonIgnore]
         T DataValue => Data ?? throw new InvalidOperationException("Data is null");
+        [Newtonsoft.Json.JsonIgnore]
+        [System.Text.Json.Serialization.JsonIgnore]
         bool HasData => Data != null;
+        [Newtonsoft.Json.JsonIgnore]
+        [System.Text.Json.Serialization.JsonIgnore]
         bool SucceededWithData => Succeeded && HasData;
-
+        [Newtonsoft.Json.JsonIgnore]
+        [System.Text.Json.Serialization.JsonIgnore]
         new virtual OperationModel<T> OperationModel => new OperationModel<T>(Message, StackTrace, Succeeded, Failure, Data);
     }
 

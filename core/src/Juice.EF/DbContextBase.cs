@@ -90,6 +90,11 @@ namespace Juice.EF
             }
         }
 
+        public virtual void SetUser(ClaimsPrincipal? user)
+        {
+            UserPrincipal = user;
+        }
+
         protected abstract void ConfigureModel(ModelBuilder modelBuilder);
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

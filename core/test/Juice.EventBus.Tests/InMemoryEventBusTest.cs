@@ -45,6 +45,7 @@ namespace Juice.EventBus.Tests
                 services.AddTransient<ContentPublishedIntegrationEventHandler1>();
 
                 services.AddTransient<TopicIntegrationEventHandler>();
+                services.AddTransient<TopicIntegrationEventHandler1>();
 
                 services.AddSingleton<HandledService>();
 
@@ -86,15 +87,19 @@ namespace Juice.EventBus.Tests
                     var handledService = _serviceProvider.GetRequiredService<HandledService>();
 
                     await eventBus.SubscribeAsync<TopicIntegrationEvent, TopicIntegrationEventHandler>("*.upload");
-                    await eventBus.SubscribeAsync<TopicIntegrationEvent, TopicIntegrationEventHandler>();
+                    await eventBus.SubscribeAsync<TopicIntegrationEvent, TopicIntegrationEventHandler1>("*.*");
 
                     await eventBus.PublishAsync(new TopicIntegrationEvent("abc.xyz"));
                     await Task.Delay(TimeSpan.FromSeconds(1));
-                    handledService.Handlers.Should().BeEmpty();
+                    handledService.Handlers.Count.Should().Be(1);
+                    handledService.Handlers.Should().Contain(nameof(TopicIntegrationEventHandler1));
+                    handledService.Handlers.Clear();
 
                     await eventBus.PublishAsync(new TopicIntegrationEvent("abc.upload"));
                     await Task.Delay(TimeSpan.FromSeconds(1));
+                    handledService.Handlers.Count.Should().Be(2);
                     handledService.Handlers.Should().Contain(nameof(TopicIntegrationEventHandler));
+                    handledService.Handlers.Should().Contain(nameof(TopicIntegrationEventHandler1));
                 }
                 finally
                 {

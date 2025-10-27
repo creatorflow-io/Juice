@@ -178,7 +178,7 @@ namespace Juice.EventBus.RabbitMQ
         /// <returns></returns>
         private async ValueTask<IChannel?> CreateConsumerChannelAsync()
         {
-            if (!_persistentConnection.IsConnected && ! await _persistentConnection.TryConnectAsync())
+            if (!_persistentConnection.IsConnected && !await _persistentConnection.TryConnectAsync())
             {
                 return null;
             }
@@ -270,76 +270,74 @@ namespace Juice.EventBus.RabbitMQ
 
         private async Task<(bool Handled, bool Ok)> ProcessingEventAsync(BasicDeliverEventArgs eventArgs, string eventName, string message)
         {
-            using (Logger.BeginScope($"Processing integration event: {eventName}"))
+            using var _ = Logger.BeginScope($"Processing integration event: {eventName}");
+            if (await SubsManager.HasSubscriptionsForEventAsync(eventName))
             {
-                if (await SubsManager.HasSubscriptionsForEventAsync(eventName))
+                using var scope = _scopeFactory.CreateScope();
+                var subscriptions = await SubsManager.GetHandlersForEventAsync(eventName);
+                if (Logger.IsEnabled(LogLevel.Trace))
                 {
-                    using var scope = _scopeFactory.CreateScope();
-                    var subscriptions = await SubsManager.GetHandlersForEventAsync(eventName);
-                    if (Logger.IsEnabled(LogLevel.Trace))
-                    {
-                        Logger.LogTrace("Found {count} handlers for event: {EventName}", subscriptions.Count(), eventName);
-                    }
-
-                    var eventType = await SubsManager.GetEventTypeByNameAsync(eventName);
-                    if (eventType == null)
-                    {
-                        Logger.LogWarning("No event type found for event: {EventName}", eventName);
-                        return (false, false);
-                    }
-                    var concreteType = typeof(IIntegrationEventHandler<>).MakeGenericType(eventType);
-
-                    var integrationEvent = JsonConvert.DeserializeObject(message, eventType);
-                    if (integrationEvent == null)
-                    {
-                        Logger.LogWarning("Failed to deserialize message to {eventType}", eventType.Name);
-                        return (false, false);
-                    }
-                    var tenantId =
-                        eventArgs.BasicProperties.Headers?.ContainsKey("TenantId") == true &&
-                        eventArgs.BasicProperties.Headers?["TenantId"] is byte[] tenant ? Encoding.UTF8.GetString(tenant) : null;
-                    var tenantResolver = scope.ServiceProvider.GetService<IScopedTenantResolver>();
-                    using var _ = tenantResolver?.Resolve(tenantId);
-                    bool ok = false, handled = false;
-                    foreach (var subscription in subscriptions)
-                    {
-                        if (!subscription.HandlerType.IsAssignableTo(concreteType))
-                        {
-                            Logger.LogWarning("Type {typeName} not assignable to {concreteType}", subscription.HandlerType.Name, concreteType.Name);
-
-                            continue;
-                        }
-                        var handler = scope.ServiceProvider.GetService(subscription.HandlerType);
-                        if (handler == null)
-                        {
-                            Logger.LogWarning("Type {typeName} not registered as a service", subscription.HandlerType.Name);
-
-                            continue;
-                        }
-
-                        try
-                        {
-                            handled = true;
-                            await (Task)concreteType.GetMethod(nameof(IIntegrationEventHandler<IntegrationEvent>.HandleAsync))!.Invoke(handler, new object[] { integrationEvent! })!;
-                            ok = true;
-                        }
-                        catch (Exception ex)
-                        {
-                            var eventId = integrationEvent != null ? ((IntegrationEvent)integrationEvent).Id : Guid.Empty;
-                            Logger.LogError(ex, "{handler} failed to handle event: {EventName}, eventId: {eventId}", handler.GetGenericTypeName(), eventName, eventId);
-                            if (Logger.IsEnabled(LogLevel.Trace))
-                            {
-                                Logger.LogTrace(ex, "Event: {EventName}, eventId: {eventId} exception stack trace: {StackTrace}", eventName, eventId, ex.StackTrace);
-                            }
-                        }
-                    }
-                    return (handled, ok);
+                    Logger.LogTrace("Found {count} handlers for event: {EventName}", subscriptions.Count(), eventName);
                 }
-                else
+
+                var eventType = await SubsManager.GetEventTypeByNameAsync(eventName);
+                if (eventType == null)
                 {
-                    Logger.LogDebug("No subscription for RabbitMQ event: {EventName}", eventName);
+                    Logger.LogWarning("No event type found for event: {EventName}", eventName);
                     return (false, false);
                 }
+                var concreteType = typeof(IIntegrationEventHandler<>).MakeGenericType(eventType);
+
+                var integrationEvent = JsonConvert.DeserializeObject(message, eventType);
+                if (integrationEvent == null)
+                {
+                    Logger.LogWarning("Failed to deserialize message to {eventType}", eventType.Name);
+                    return (false, false);
+                }
+                var tenantId =
+                    eventArgs.BasicProperties.Headers?.ContainsKey("TenantId") == true &&
+                    eventArgs.BasicProperties.Headers?["TenantId"] is byte[] tenant ? Encoding.UTF8.GetString(tenant) : null;
+                var tenantResolver = scope.ServiceProvider.GetService<IScopedTenantResolver>();
+                using var _1 = tenantResolver?.Resolve(tenantId);
+                bool ok = false, handled = false;
+                foreach (var subscription in subscriptions)
+                {
+                    if (!subscription.HandlerType.IsAssignableTo(concreteType))
+                    {
+                        Logger.LogWarning("Type {typeName} not assignable to {concreteType}", subscription.HandlerType.Name, concreteType.Name);
+
+                        continue;
+                    }
+                    var handler = scope.ServiceProvider.GetService(subscription.HandlerType);
+                    if (handler == null)
+                    {
+                        Logger.LogWarning("Type {typeName} not registered as a service", subscription.HandlerType.Name);
+
+                        continue;
+                    }
+
+                    try
+                    {
+                        handled = true;
+                        await (Task)concreteType.GetMethod(nameof(IIntegrationEventHandler<IntegrationEvent>.HandleAsync))!.Invoke(handler, new object[] { integrationEvent! })!;
+                        ok = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        var eventId = integrationEvent != null ? ((IntegrationEvent)integrationEvent).Id : Guid.Empty;
+                        Logger.LogError(ex, "{handler} failed to handle event: {EventName}, eventId: {eventId}", handler.GetGenericTypeName(), eventName, eventId);
+                        if (Logger.IsEnabled(LogLevel.Trace))
+                        {
+                            Logger.LogTrace(ex, "Event: {EventName}, eventId: {eventId} exception stack trace: {StackTrace}", eventName, eventId, ex.StackTrace);
+                        }
+                    }
+                }
+                return (handled, ok);
+            }
+            else
+            {
+                Logger.LogDebug("No subscription for RabbitMQ event: {EventName}", eventName);
+                return (false, false);
             }
         }
 
@@ -404,9 +402,9 @@ namespace Juice.EventBus.RabbitMQ
             }
             using var channel = await _persistentConnection.CreateChannelAsync();
             if (channel == null) { throw new InvalidOperationException("RabbitMQ channel cannot be created"); }
-             await channel.QueueBindAsync(queue: _queueName,
-                              exchange: _exchange,
-                              routingKey: eventName);
+            await channel.QueueBindAsync(queue: _queueName,
+                             exchange: _exchange,
+                             routingKey: eventName);
         }
 
         public virtual ValueTask UnsubscribeAsync<T, TH>(string? key = default)
@@ -444,7 +442,7 @@ namespace Juice.EventBus.RabbitMQ
         {
             await Task.Yield();
             ArgumentNullException.ThrowIfNull(@event);
-            if (!_persistentConnection.IsConnected && ! await _persistentConnection.TryConnectAsync())
+            if (!_persistentConnection.IsConnected && !await _persistentConnection.TryConnectAsync())
             {
                 throw new InvalidOperationException("RabbitMQ broker is not connected");
             }

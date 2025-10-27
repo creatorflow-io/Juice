@@ -1,6 +1,7 @@
 ﻿using System;
 using FluentAssertions;
 using Juice.Operation;
+using Newtonsoft.Json;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -54,13 +55,23 @@ namespace Juice.Core.Tests
         [Fact]
         public void OR_should_be_failed_with_data()
         {
-            var rs = OR.Failed<string>(new Exception("Inner message"), "message", "string data");
-
-            rs.Succeeded.Should().BeFalse();
-            rs.Data.Should().Be("string data");
-            rs.Message.Should().Be("message");
-            rs.Exception.Should().NotBeNull();
-            _output.WriteLine(rs.ToString());
+            try
+            {
+                throw new Exception("Inner message");
+            }catch (Exception ex)
+            {
+                var rs = OR.Failed(ex, "message", "string data");
+                rs.Succeeded.Should().BeFalse();
+                rs.Data.Should().Be("string data");
+                rs.Message.Should().Be("message");
+                rs.Exception.Should().NotBeNull();
+                _output.WriteLine(rs.ToString());
+                var _ = JsonConvert.SerializeObject(rs);
+                _output.WriteLine(_);
+                var _1 = System.Text.Json.JsonSerializer.Serialize(rs);
+                _output.WriteLine(_1);
+                _.Should().Be(_1);
+            }
         }
 
         [Fact]

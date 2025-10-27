@@ -93,14 +93,17 @@ namespace Juice.EventBus
             _logger.LogDebug("{Id} Get subscriptions of {eventName}.", _guid, eventName);
             if (_handlers.ContainsKey(eventName)) { return ValueTask.FromResult(_handlers[eventName].AsEnumerable()); }
             if(!_topicSupported) { return ValueTask.FromResult(Array.Empty<SubscriptionInfo>().AsEnumerable()); }
-            foreach (var key in _handlers.Keys)
-            {
-                if (RoutingKeyUtils.IsTopicMatch(eventName, key))
+
+            return ValueTask.FromResult(
+                _handlers.Keys.SelectMany(key =>
                 {
-                    return ValueTask.FromResult(_handlers[key].AsEnumerable());
-                }
-            }
-            return ValueTask.FromResult(Array.Empty<SubscriptionInfo>().AsEnumerable());
+                    if (RoutingKeyUtils.IsTopicMatch(eventName, key))
+                    {
+                        return _handlers[key].AsEnumerable();
+                    }
+                    return [];
+                })
+                );
         }
 
         private void RaiseOnEventRemoved(string eventName)

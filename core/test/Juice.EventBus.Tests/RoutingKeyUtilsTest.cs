@@ -63,6 +63,8 @@ namespace Juice.EventBus.Tests
 
             _output.WriteLine(RoutingKeyUtils.ToRouteMatchingKey("job.#.pending"));
             RoutingKeyUtils.IsTopicMatch("job.media.dummy.job.pending", "job.#.pending").Should().BeTrue();
+
+            RoutingKeyUtils.IsTopicMatch("a.b", "*.*").Should().BeTrue();
         }
         private string ToMatchKey(string key)
         {
