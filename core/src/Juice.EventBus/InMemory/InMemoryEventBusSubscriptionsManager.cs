@@ -38,9 +38,9 @@ namespace Juice.EventBus
             _eventTypes[eventName] = typeof(T);
         }
 
-        private async ValueTask DoAddSubscriptionAsync(Type handlerType, string eventName, bool isDynamic)
+        private ValueTask DoAddSubscriptionAsync(Type handlerType, string eventName, bool isDynamic)
         {
-            if (!await HasSubscriptionsForEventAsync(eventName))
+            if (!_handlers.ContainsKey(eventName))
             {
                 _handlers.Add(eventName, new List<SubscriptionInfo>());
             }
@@ -61,6 +61,7 @@ namespace Juice.EventBus
             {
                 _handlers[eventName].Add(SubscriptionInfo.Typed(handlerType));
             }
+            return ValueTask.CompletedTask;
         }
 
         public async ValueTask RemoveSubscriptionAsync<T, TH>(string? key)

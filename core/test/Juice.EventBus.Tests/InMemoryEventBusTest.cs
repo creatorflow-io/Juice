@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Juice.EventBus.Tests.Events;
@@ -86,16 +87,16 @@ namespace Juice.EventBus.Tests
                 {
                     var handledService = _serviceProvider.GetRequiredService<HandledService>();
 
-                    await eventBus.SubscribeAsync<TopicIntegrationEvent, TopicIntegrationEventHandler>("*.upload");
-                    await eventBus.SubscribeAsync<TopicIntegrationEvent, TopicIntegrationEventHandler1>("*.*");
+                    await eventBus.SubscribeAsync<TopicIntegrationEvent, TopicIntegrationEventHandler>("wf.user.task.#");
+                    await eventBus.SubscribeAsync<TopicIntegrationEvent, TopicIntegrationEventHandler1>("wf.user.task.#.pending");
 
-                    await eventBus.PublishAsync(new TopicIntegrationEvent("abc.xyz"));
+                    await eventBus.PublishAsync(new TopicIntegrationEvent("wf.user.task.voice.completed"));
                     await Task.Delay(TimeSpan.FromSeconds(1));
                     handledService.Handlers.Count.Should().Be(1);
-                    handledService.Handlers.Should().Contain(nameof(TopicIntegrationEventHandler1));
+                    handledService.Handlers.Should().Contain(nameof(TopicIntegrationEventHandler));
                     handledService.Handlers.Clear();
 
-                    await eventBus.PublishAsync(new TopicIntegrationEvent("abc.upload"));
+                    await eventBus.PublishAsync(new TopicIntegrationEvent("wf.user.task.voice.pending"));
                     await Task.Delay(TimeSpan.FromSeconds(1));
                     handledService.Handlers.Count.Should().Be(2);
                     handledService.Handlers.Should().Contain(nameof(TopicIntegrationEventHandler));
@@ -107,6 +108,20 @@ namespace Juice.EventBus.Tests
                 }
 
             }
+        }
+
+        [IgnoreOnCIFact(DisplayName = "InMemory subscriptions manager test")]
+        public async Task InMemoryUnsubscribeTestAsync()
+        {
+            var subsManager = new InMemoryEventBusSubscriptionsManager(_serviceProvider.GetRequiredService<ILogger<InMemoryEventBusSubscriptionsManager>>(), true);
+            await subsManager.AddSubscriptionAsync<TopicIntegrationEvent, TopicIntegrationEventHandler>("wf.user.task.#");
+            await subsManager.AddSubscriptionAsync<TopicIntegrationEvent, TopicIntegrationEventHandler1>("wf.user.task.#.pending");
+
+            var subscriptions = await subsManager.GetHandlersForEventAsync("wf.user.task.voice.completed");
+            subscriptions.Count().Should().Be(1);
+
+            subscriptions = await subsManager.GetHandlersForEventAsync("wf.user.task.voice.pending");
+            subscriptions.Count().Should().Be(2);
         }
     }
 }

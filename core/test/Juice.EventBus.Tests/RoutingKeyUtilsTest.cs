@@ -62,7 +62,10 @@ namespace Juice.EventBus.Tests
             RoutingKeyUtils.IsTopicMatch("kernel.info.x.y", key).Should().BeFalse();
 
             _output.WriteLine(RoutingKeyUtils.ToRouteMatchingKey("job.#.pending"));
-            RoutingKeyUtils.IsTopicMatch("job.media.dummy.job.pending", "job.#.pending").Should().BeTrue();
+            RoutingKeyUtils.IsTopicMatch("job.media.task.transcode.completed", "job.media.task.#").Should().BeTrue();
+            RoutingKeyUtils.IsTopicMatch("job.media.task.transcode.completed", "job.media.task.#.pending").Should().BeFalse();
+            RoutingKeyUtils.IsTopicMatch("job.media.task.transcode.pending", "job.media.task.#").Should().BeTrue();
+            RoutingKeyUtils.IsTopicMatch("job.media.task.transcode.pending", "job.media.task.#.pending").Should().BeTrue();
 
             RoutingKeyUtils.IsTopicMatch("a.b", "*.*").Should().BeTrue();
         }
