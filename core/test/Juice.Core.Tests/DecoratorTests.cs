@@ -23,9 +23,7 @@ namespace Juice.Core.Tests
         [Fact]
         public void Service_by_instanceAsync()
         {
-            var dependencyResolver = new DependencyResolver();
-
-            dependencyResolver.ConfigureServices(services =>
+            var dependencyResolver = DependencyResolver.Create(services =>
             {
                 services.AddSingleton(_output);
 
@@ -47,9 +45,7 @@ namespace Juice.Core.Tests
         [Fact]
         public void Services_by_instanceAsync()
         {
-            var dependencyResolver = new DependencyResolver();
-
-            dependencyResolver.ConfigureServices(services =>
+            var dependencyResolver = DependencyResolver.Create(services =>
             {
                 services.AddSingleton(_output);
 
@@ -74,9 +70,7 @@ namespace Juice.Core.Tests
         [Fact]
         public void Service_by_factoryAsync()
         {
-            var dependencyResolver = new DependencyResolver();
-
-            dependencyResolver.ConfigureServices(services =>
+            var dependencyResolver = DependencyResolver.Create(services =>
             {
                 services.AddSingleton(_output);
 
@@ -98,9 +92,7 @@ namespace Juice.Core.Tests
         [Fact]
         public void Services_by_factoryAsync()
         {
-            var dependencyResolver = new DependencyResolver();
-
-            dependencyResolver.ConfigureServices(services =>
+            var dependencyResolver = DependencyResolver.Create(services =>
             {
                 services.AddSingleton(_output);
 
@@ -125,9 +117,7 @@ namespace Juice.Core.Tests
         [Fact]
         public void Service_by_typeAsync()
         {
-            var dependencyResolver = new DependencyResolver();
-
-            dependencyResolver.ConfigureServices(services =>
+            var dependencyResolver = DependencyResolver.Create(services =>
             {
                 services.AddSingleton(_output);
 
@@ -149,9 +139,7 @@ namespace Juice.Core.Tests
         [Fact]
         public void Services_by_typeAsync()
         {
-            var dependencyResolver = new DependencyResolver();
-
-            dependencyResolver.ConfigureServices(services =>
+            var dependencyResolver = DependencyResolver.Create(services =>
             {
                 services.AddSingleton(_output);
 

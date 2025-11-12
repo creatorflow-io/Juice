@@ -11,12 +11,8 @@ namespace Juice.MediatR.RequestManager.EF.Migrations
         public ClientRequestContext CreateDbContext(string[] args)
         {
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
-            var resolver = new DependencyResolver
-            {
-                CurrentDirectory = AppContext.BaseDirectory
-            };
-
-            resolver.ConfigureServices(services =>
+           
+            return DependencyResolver.Create(services =>
             {
 
                 // Register DbContext class
@@ -43,9 +39,7 @@ namespace Juice.MediatR.RequestManager.EF.Migrations
                        _ => throw new NotSupportedException($"Unsupported provider: {provider}")
                    });
 
-            });
-
-            return resolver.ServiceProvider.GetRequiredService<ClientRequestContext>();
+            }).ServiceProvider.GetRequiredService<ClientRequestContext>();
         }
     }
 }

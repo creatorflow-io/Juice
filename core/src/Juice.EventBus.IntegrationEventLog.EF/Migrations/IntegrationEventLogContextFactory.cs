@@ -11,12 +11,7 @@ namespace Juice.EventBus.IntegrationEventLog.EF.Migrations
     {
         public IntegrationEventLogContext CreateDbContext(string[] args)
         {
-            var resolver = new DependencyResolver
-            {
-                CurrentDirectory = AppContext.BaseDirectory
-            };
-
-            resolver.ConfigureServices(services =>
+            return DependencyResolver.Create(services =>
             {
 
                 // Register DbContext class
@@ -41,9 +36,7 @@ namespace Juice.EventBus.IntegrationEventLog.EF.Migrations
 
                         _ => throw new NotSupportedException($"Unsupported provider: {provider}")
                     });
-            });
-
-            return resolver.ServiceProvider.GetRequiredService<IntegrationEventLogContext>();
+            }).ServiceProvider.GetRequiredService<IntegrationEventLogContext>();
         }
     }
 }

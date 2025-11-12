@@ -46,5 +46,12 @@ namespace Juice.Extensions.DependencyInjection
         {
             config.Invoke(_services);
         }
+
+        public static DependencyResolver Create(Action<IServiceCollection> config, string? currentDirectory = default)
+        {
+            var resolver = new DependencyResolver(currentDirectory);
+            resolver.ConfigureServices(config);
+            return resolver;
+        }
     }
 }

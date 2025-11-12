@@ -17,7 +17,7 @@ namespace Juice.MultiTenant.EF
         #endregion
 
         /// <summary>
-        /// Please call <c>ConfigureServices(IServiceProvider serviceProvider)</c> directly in your constructor
+        /// Please call <c>Create(IServiceProvider serviceProvider)</c> directly in your constructor
         /// <para>or inside <c>IDbContextFactory.CreateDbContext()</c> if you are using PooledDbContextFactory</para>
         /// <para>to init internal services</para>
         /// </summary>

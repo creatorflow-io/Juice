@@ -10,7 +10,7 @@ namespace Juice.Modular
     public interface IModuleStartup
     {
         /// <summary>
-        /// The order in which the module will be call ConfigureServices
+        /// The order in which the module will be call Create
         /// </summary>
         int StartOrder { get; }
 
