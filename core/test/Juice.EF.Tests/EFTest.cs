@@ -38,15 +38,8 @@ namespace Juice.EF.Tests
             _testOutput = testOutput;
         }
 
-        private IServiceProvider ConfigureServices(string provider)
-        {
-
-            var resolver = new DependencyResolver
-            {
-                CurrentDirectory = AppContext.BaseDirectory
-            };
-
-            resolver.ConfigureServices(services =>
+        private DependencyResolver ConfigureServices(string provider)
+            => DependencyResolver.Create(services =>
             {
                 var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
                 var configuration = configService.GetConfiguration(GetType().Assembly);
@@ -138,15 +131,14 @@ namespace Juice.EF.Tests
                         };
                     });
             });
-            return resolver.ServiceProvider;
-        }
+
 
         [IgnoreOnCITheory(DisplayName = "DynamicEntity migration"), TestPriority(10)]
         [InlineData("SqlServer")]
         [InlineData("PostgreSQL")]
         public async Task EF_should_be_migration_Async(string provider)
         {
-            var serviceProvider = ConfigureServices(provider);
+            var serviceProvider = ConfigureServices(provider).ServiceProvider;
             var dbContext = serviceProvider.GetRequiredService<TestContext>();
 
             await dbContext.MigrateAsync();
@@ -218,7 +210,7 @@ namespace Juice.EF.Tests
         [InlineData("PostgreSQL")]
         public async Task Dynamic_entity_update_property_Async(string provider)
         {
-            var serviceProvider = ConfigureServices(provider);
+            var serviceProvider = ConfigureServices(provider).ServiceProvider;
             var dbContext = serviceProvider.GetRequiredService<TestContext>();
             var sharedService = serviceProvider.GetRequiredService<SharedService>();
             var logger = serviceProvider.GetRequiredService<ILogger<EFTest>>();
@@ -288,7 +280,7 @@ namespace Juice.EF.Tests
         [Fact(DisplayName = "Data event handle"), TestPriority(1)]
         public async Task DataEvent_should_be_handle_Async()
         {
-            var serviceProvider = ConfigureServices("SqlServer");
+            var serviceProvider = ConfigureServices("SqlServer").ServiceProvider;
             var mediator = serviceProvider.GetRequiredService<IMediator>();
             var dataEvent = DataEvents.Inserted.CreateDataEvent(typeof(DataInserted<>), typeof(Content), new AuditRecord("TestTable"));
 
@@ -299,7 +291,7 @@ namespace Juice.EF.Tests
         [IgnoreOnCIFact(DisplayName = "Repository UOW should"), TestPriority(1)]
         public async Task Repository_uow_shouldAsync()
         {
-            var serviceProvider = ConfigureServices("SqlServer");
+            var serviceProvider = ConfigureServices("SqlServer").ServiceProvider;
             var dbContext = serviceProvider.GetRequiredService<TestContext>();
             var repository = new ContentRepository(dbContext);
 
