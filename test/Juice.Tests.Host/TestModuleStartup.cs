@@ -6,7 +6,7 @@ using StackExchange.Redis;
 
 namespace Juice.Tests.Host
 {
-    [Feature(Required = true)]
+    [Feature(Required = true, Dependencies = ["Missed"])]
     public class TestModuleStartup : ModuleStartup
     {
         public override void ConfigureServices(IServiceCollection services, IMvcBuilder mvc, IWebHostEnvironment env, IConfiguration configuration)

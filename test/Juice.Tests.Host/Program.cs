@@ -12,7 +12,7 @@ var app = builder.Build();
 
 app.UseRouting();
 
-app.ConfigureDiscoveredModules(app.Environment);
+app.ConfigureDiscoveredModules();
 
 app.MapGet("/health", async (context) =>
 {

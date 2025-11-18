@@ -69,6 +69,16 @@ namespace Juice.Conventions.StartupDiscovery.Extensions
 
             var requirements = GetDependentFeatures(types, new HashSet<string>(), enabled, disabled, logger, nameProvider);
 
+            var missingTypes = requirements
+                .Where(r => !types.Any(t => r
+                    .Equals((nameProvider?.GetFeatureName(t) ?? t.GetFeatureName()), StringComparison.OrdinalIgnoreCase)))
+                .ToArray();
+
+            if (missingTypes.Any())
+            {
+                logger?.LogWarning("Some required features are missing: {0}", string.Join(", ", missingTypes));
+            }
+
             var hasConflict = false;
 
             foreach (var startup in types)
@@ -92,7 +102,7 @@ namespace Juice.Conventions.StartupDiscovery.Extensions
                         && startup.Equals(s.ImplementationType))
                     )
                     {
-                        if(Attribute.GetCustomAttribute(startup, typeof(ObsoleteAttribute)) is ObsoleteAttribute obsolete)
+                        if (Attribute.GetCustomAttribute(startup, typeof(ObsoleteAttribute)) is ObsoleteAttribute obsolete)
                         {
                             logger?.LogWarning("Feature {0} is marked as obsolete: {1}", featureName, obsolete.Message);
                         }

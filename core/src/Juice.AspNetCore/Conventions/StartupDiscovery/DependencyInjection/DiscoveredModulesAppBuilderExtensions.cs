@@ -24,8 +24,19 @@ namespace Juice.Modular
         /// <param name="app"></param>
         /// <param name="env"></param>
         /// <exception cref="Exception"></exception>
-        public static void ConfigureDiscoveredModules(this WebApplication app, IWebHostEnvironment env)
+        public static void ConfigureDiscoveredModules(this WebApplication app, IWebHostEnvironment? env = default)
+            => app.ConfigureDiscoveredModulesAsync(env).GetAwaiter().GetResult();
+
+        /// <summary>
+        /// Call ConfigurePipelineAsync on all enabled modules
+        /// </summary>
+        /// <param name="app"></param>
+        /// <param name="env"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public static async Task ConfigureDiscoveredModulesAsync(this WebApplication app, IWebHostEnvironment? env = default)
         {
+            env ??= app.Environment;
             var startups = app.Services.GetServices<IModuleStartup>()
                 .OrderBy(s => s.ConfigureOrder)
                 .ToArray();
@@ -38,7 +49,7 @@ namespace Juice.Modular
             {
                 try
                 {
-                    startup.ConfigurePipelineAsync(app, app, env);
+                    await startup.ConfigurePipelineAsync(app, app, env);
                 }
                 catch (Exception ex)
                 {
