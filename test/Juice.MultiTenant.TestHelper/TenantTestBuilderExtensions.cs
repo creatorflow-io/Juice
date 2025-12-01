@@ -62,5 +62,27 @@ namespace Microsoft.Extensions.DependencyInjection
                 .WithStaticStrategy(identifier);
         }
 
+        /// <summary>
+        /// Add a mismatched tenant for testing, return a builder for further configuration
+        /// </summary>
+        /// <typeparam name="TTenant"></typeparam>
+        /// <param name="services"></param>
+        /// <param name="identifier"></param>
+        /// <returns></returns>
+        public static MultiTenantBuilder<TTenant> AddTestTenantMismatch<TTenant>(this IServiceCollection services)
+            where TTenant : class, ITenantInfo, ITenant, new()
+        {
+            return services
+                .AddMultiTenant<TTenant>()
+                .AddTenantServices()
+                .WithInMemoryStore(options =>
+                {
+                    var tenant = new TTenant();
+                    (tenant as ITenantInfo).Id = "tenant-A";
+                    (tenant as ITenantInfo).Identifier = "tenant-A";
+                    options.Tenants.Add(tenant);
+                })
+                .WithStaticStrategy("tenant-B");
+        }
     }
 }

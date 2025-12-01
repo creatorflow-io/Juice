@@ -1,5 +1,6 @@
 ﻿using System.Linq.Expressions;
 using Finbuckle.MultiTenant;
+using Finbuckle.MultiTenant.Abstractions;
 using Finbuckle.MultiTenant.EntityFrameworkCore;
 using Juice.EF.MultiTenant;
 using Microsoft.AspNetCore.Identity;
@@ -80,13 +81,19 @@ namespace Juice.MultiTenant.EF.Extensions
             var efPropertyExp = Expression.Call(typeof(Microsoft.EntityFrameworkCore.EF), nameof(Microsoft.EntityFrameworkCore.EF.Property), new[] { typeof(string) }, entityParamExp, tenantIdExp);
             var entityExp = efPropertyExp;
 
-            // build up express tree for: TenantInfo.Id
+            // build up express tree for: TenantInfo?.Id
             // EF will magically sub the current db context in for scope.Context
             var scopeConstantExp = Expression.Constant(new ExpressionVariableScope());
             var contextMemberInfo = typeof(ExpressionVariableScope).GetMember(nameof(ExpressionVariableScope.Context))[0];
             var contextMemberAccessExp = Expression.MakeMemberAccess(scopeConstantExp, contextMemberInfo);
             var contextTenantInfoExp = Expression.Property(contextMemberAccessExp, nameof(IMultiTenantDbContext.TenantInfo));
-            var contextExp = Expression.Property(contextTenantInfoExp, nameof(IMultiTenantDbContext.TenantInfo.Id));
+            var tenantInfoIsNullExp = Expression.Equal(contextTenantInfoExp, Expression.Constant(null, typeof(ITenantInfo)));
+            var tenantInfoIdExp = Expression.Property(contextTenantInfoExp, nameof(ITenantInfo.Id));
+            var contextExp = Expression.Condition(
+                tenantInfoIsNullExp,
+                Expression.Constant(null, typeof(string)),
+                tenantInfoIdExp
+            );
 
             var predicate = entitySharingType switch
             {

@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Finbuckle.MultiTenant.Abstractions;
 using FluentAssertions;
+using Juice.EF.Tests.Domain;
 using Juice.EF.Tests.Infrastructure;
 using Juice.Extensions.DependencyInjection;
 using Juice.Extensions.MultiTenant;
@@ -35,10 +36,12 @@ namespace Juice.EF.Tests
             resolver.ConfigureServices(services =>
             {
                 var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
-                var configuration = configService.GetConfiguration();
+                var configuration = configService.GetConfiguration(GetType().Assembly);
 
                 services.AddSingleton<SharedService>();
-                var connectionString = configService.GetConfiguration().GetConnectionString("Default");
+                var connectionString = configuration.GetConnectionString("Default");
+
+                _output.WriteLine("ConnectionString: {0}", connectionString);
                 // Register DbContext class
                 services.AddDbContext<TestContext>(options =>
                 {
@@ -65,7 +68,7 @@ namespace Juice.EF.Tests
 
             });
 
-            await resolver.ServiceProvider.TenantInvokeAsync(context =>
+            await resolver.ServiceProvider.TenantInvokeAsync(async context =>
             {
                 var tenantContextAccessor = context.RequestServices.GetRequiredService<IMultiTenantContextAccessor>();
                 tenantContextAccessor.MultiTenantContext.Should().NotBeNull();
@@ -75,11 +78,65 @@ namespace Juice.EF.Tests
                 var dbContext = context.RequestServices.GetRequiredService<TestContext>();
                 dbContext.TenantInfo.Should().NotBeNull();
                 _output.WriteLine("dbContext.TenantInfo: {0}", dbContext.TenantInfo!.Identifier);
-                return Task.CompletedTask;
+                var content = await dbContext.Set<Content>().FirstOrDefaultAsync();
+                content.Should().NotBeNull();
             });
 
         }
 
+
+        [IgnoreOnCIFact(DisplayName = "DbContext tenant mismatch"), TestPriority(1)]
+        public async Task Multitenant_dbcontext_shoud_mismatchAsync()
+        {
+            var resolver = new DependencyResolver
+            {
+                CurrentDirectory = AppContext.BaseDirectory
+            };
+
+            resolver.ConfigureServices(services =>
+            {
+                var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
+                var configuration = configService.GetConfiguration(GetType().Assembly);
+
+                services.AddSingleton<SharedService>();
+                var connectionString = configuration.GetConnectionString("Default");
+
+                _output.WriteLine("ConnectionString: {0}", connectionString);
+
+                // Register DbContext class
+                services.AddDbContext<TestContext>(options =>
+                {
+                    options.UseSqlServer(connectionString, options =>
+                    {
+                        options.MigrationsHistoryTable("__EFTestMigrationsHistory", "Contents");
+                    });
+                });
+                services.AddTestTenantMismatch<TenantInfo>();
+
+                services.AddMediatR(options =>
+                {
+                    options.RegisterServicesFromAssemblyContaining(typeof(EFTest));
+                });
+
+                services.AddSingleton(provider => _output);
+
+                services.AddLogging(builder =>
+                {
+                    builder.ClearProviders()
+                    .AddTestOutputLogger()
+                    .AddConfiguration(configuration.GetSection("Logging"));
+                });
+
+            });
+
+            await resolver.ServiceProvider.TenantInvokeAsync(async context =>
+            {
+                var dbContext = context.RequestServices.GetRequiredService<TestContext>();
+                dbContext.TenantInfo.Should().BeNull();
+                var crossTenantContent = await dbContext.Set<CrossTenantContent>().FirstOrDefaultAsync();
+            });
+
+        }
     }
 
 }
