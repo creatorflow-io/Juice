@@ -3,14 +3,12 @@ using Finbuckle.MultiTenant;
 using Finbuckle.MultiTenant.Abstractions;
 using Finbuckle.MultiTenant.EntityFrameworkCore;
 using Juice.EF.MultiTenant;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Juice.MultiTenant.EF.Extensions
 {
-    
-    public static class CrossTenantEntityTypeBuilderExtensions
+
+    public static class MultiTenantEntityTypeBuilderExtensions
     {
         private class ExpressionVariableScope
         {
@@ -22,6 +20,9 @@ namespace Juice.MultiTenant.EF.Extensions
             return builder.Metadata.GetQueryFilter();
         }
         /// <summary>
+        /// <para>***</para>
+        /// NOTE: Use <see cref="IsMultiTenant" /> with <see cref="SharingType.Tenant"/> to mark an entity as cross-tenant instead.
+        /// <para/>
         /// Adds MultiTenant support for an entity. Call <see cref="IsMultiTenant" /> after
         /// <see cref="EntityTypeBuilder.HasQueryFilter" /> to merge query filters. It is recommended
         /// to query the entries that have matched tenant first then fallback to non-tenant entries.
@@ -48,7 +49,7 @@ namespace Juice.MultiTenant.EF.Extensions
             if (builder.Metadata.IsMultiTenant())
                 return new MultiTenantEntityTypeBuilder(builder);
 
-            builder.HasAnnotation(Finbuckle.MultiTenant.EntityFrameworkCore.Constants.MultiTenantAnnotationName, true);
+            builder.HasAnnotation(Finbuckle.MultiTenant.EntityFrameworkCore.Constants.MultiTenantAnnotationName, entitySharingType);
 
             try
             {
@@ -88,6 +89,7 @@ namespace Juice.MultiTenant.EF.Extensions
             var contextMemberAccessExp = Expression.MakeMemberAccess(scopeConstantExp, contextMemberInfo);
             var contextTenantInfoExp = Expression.Property(contextMemberAccessExp, nameof(IMultiTenantDbContext.TenantInfo));
             var tenantInfoIsNullExp = Expression.Equal(contextTenantInfoExp, Expression.Constant(null, typeof(ITenantInfo)));
+            var tenantInfoIsNotNullExp = Expression.Not(tenantInfoIsNullExp);
             var tenantInfoIdExp = Expression.Property(contextTenantInfoExp, nameof(ITenantInfo.Id));
             var contextExp = Expression.Condition(
                 tenantInfoIsNullExp,
@@ -97,22 +99,22 @@ namespace Juice.MultiTenant.EF.Extensions
 
             var predicate = entitySharingType switch
             {
-                // (EF.Property<string>(e, "TenantId") == TenantInfo.Id'
-                // OR EF.Property<string>(e, "TenantId") == null
+                // (EF.Property<string>(e, "TenantId") == TenantInfo.Id
+                // OR ( EF.Property<string>(e, "TenantId") == null
                 // OR EF.Property<string>(e, "TenantId") == '')
                 SharingType.Tenant => Expression.OrElse(
                     Expression.Equal(entityExp, contextExp),
                     Expression.OrElse(
                         Expression.Equal(entityExp, Expression.Constant(null)),
                         Expression.Equal(entityExp, Expression.Constant("")))),
-                // (EF.Property<string>(e, "TenantId") == TenantInfo.Id'
+                // (EF.Property<string>(e, "TenantId") == TenantInfo.Id
                 // OR TenantInfo.Id == null OR TenantInfo.Id == ''
                 SharingType.Global => Expression.OrElse(
                     Expression.Equal(entityExp, contextExp),
                     Expression.OrElse(
                         Expression.Equal(contextExp, Expression.Constant(null)),
                         Expression.Equal(contextExp, Expression.Constant("")))),
-                // (EF.Property<string>(e, "TenantId") == TenantInfo.Id'
+                // (EF.Property<string>(e, "TenantId") == TenantInfo.Id
                 // OR (
                 //      (EF.Property<string>(e, "TenantId") == null OR EF.Property<string>(e, "TenantId") == '')
                 //      AND (TenantInfo.Id == null OR TenantInfo.Id == '')
@@ -141,74 +143,9 @@ namespace Juice.MultiTenant.EF.Extensions
             // set the filter
             builder.HasQueryFilter(lambdaExp);
 
-            // TODO: Legacy code for Identity types. Should be covered by adjustUniqueIndexes etc in the future.
-            Type clrType = builder.Metadata.ClrType;
-            if (clrType != null && clrType.IsGenericType)
-            {
-                if (clrType.GetGenericTypeDefinition() ==(typeof(IdentityUser<>)))
-                {
-                    UpdateIdentityUserIndex(builder);
-                }
-
-                if (clrType.GetGenericTypeDefinition() == (typeof(IdentityRole<>)))
-                {
-                    UpdateIdentityRoleIndex(builder);
-                }
-
-                // This is a special case that should still occur.
-                // Note the index below is not unique;
-                if (clrType.GetGenericTypeDefinition() == (typeof(IdentityUserLogin<>)))
-                {
-                    UpdateIdentityUserLoginPrimaryKey(builder);
-                    AddIdentityUserLoginIndex(builder);
-                }
-            }
-
             return new MultiTenantEntityTypeBuilder(builder);
 
         }
 
-        private static void UpdateIdentityUserIndex(this EntityTypeBuilder builder)
-        {
-            builder.RemoveIndex("NormalizedUserName");
-            builder.HasIndex("NormalizedUserName", "TenantId").HasDatabaseName("UserNameIndex").IsUnique();
-        }
-
-        private static void UpdateIdentityRoleIndex(this EntityTypeBuilder builder)
-        {
-            builder.RemoveIndex("NormalizedName");
-            builder.HasIndex("NormalizedName", "TenantId").HasDatabaseName("RoleNameIndex").IsUnique();
-        }
-
-        private static void UpdateIdentityUserLoginPrimaryKey(this EntityTypeBuilder builder)
-        {
-            var pk = builder.Metadata.FindPrimaryKey();
-
-            // Remove the key if it exists.
-            if (pk != null)
-            {
-                builder.Metadata.RemoveKey(pk.Properties);
-            }
-
-            // Create a new ID and a unique index to replace the old pk.
-            builder.Property<string>("Id").ValueGeneratedOnAdd();
-        }
-
-        private static void AddIdentityUserLoginIndex(this EntityTypeBuilder builder)
-        {
-            builder.HasIndex("LoginProvider", "ProviderKey", "TenantId").IsUnique();
-        }
-
-        private static void RemoveIndex(this EntityTypeBuilder builder, string propName)
-        {
-            var prop = builder.Metadata.FindProperty(propName);
-            var index = prop is null ? null : builder.Metadata.FindIndex(prop);
-
-            // Remove the index if one is found.
-            if (index != null)
-            {
-                builder.Metadata.RemoveIndex(index);
-            }
-        }
     }
 }

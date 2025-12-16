@@ -2,6 +2,7 @@
 using Finbuckle.MultiTenant.Abstractions;
 using Finbuckle.MultiTenant.EntityFrameworkCore;
 using Juice.EF;
+using Juice.EF.MultiTenant.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -11,9 +12,9 @@ namespace Juice.MultiTenant.EF
     {
         #region Finbuckle
         public virtual ITenantInfo? TenantInfo { get; internal set; }
-        public virtual TenantMismatchMode TenantMismatchMode { get; set; } = TenantMismatchMode.Throw;
+        public abstract TenantMismatchMode TenantMismatchMode { get; set; }
 
-        public virtual TenantNotSetMode TenantNotSetMode { get; set; } = TenantNotSetMode.Throw;
+        public abstract TenantNotSetMode TenantNotSetMode { get; set; }
         #endregion
 
         /// <summary>
@@ -43,13 +44,13 @@ namespace Juice.MultiTenant.EF
 
         public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default(CancellationToken))
         {
-            this.EnforceMultiTenant();
+            this.EnforceTenantPolicies();
             return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
         }
 
         public override int SaveChanges(bool acceptAllChangesOnSuccess)
         {
-            this.EnforceMultiTenant();
+            this.EnforceTenantPolicies();
             return base.SaveChanges(acceptAllChangesOnSuccess);
         }
 

@@ -13,7 +13,15 @@ namespace Juice.EF.Tests.Infrastructure
         public const string SCHEMA = "Contents";
         public override string? User => "test-user";
 
+        public override Finbuckle.MultiTenant.EntityFrameworkCore.TenantMismatchMode TenantMismatchMode { get; set; } = Finbuckle.MultiTenant.EntityFrameworkCore.TenantMismatchMode.Throw;
+        public override Finbuckle.MultiTenant.EntityFrameworkCore.TenantNotSetMode TenantNotSetMode { get; set; } = Finbuckle.MultiTenant.EntityFrameworkCore.TenantNotSetMode.Overwrite;
+
         public TestContext(IServiceProvider serviceProvider, DbContextOptions<TestContext> options) : base(options)
+        {
+            ConfigureServices(serviceProvider);
+        }
+
+        protected TestContext(IServiceProvider serviceProvider, DbContextOptions options): base(options)
         {
             ConfigureServices(serviceProvider);
         }
@@ -64,7 +72,41 @@ namespace Juice.EF.Tests.Infrastructure
             {
                 entity.ToTable(nameof(CrossTenantContent), SCHEMA);
 
-                entity.IsCrossTenant();
+                entity.IsMultiTenant(MultiTenant.SharingType.None);
+            });
+        }
+    }
+
+    public class TenantSharedTestContext : TestContext
+    {
+        public TenantSharedTestContext(IServiceProvider serviceProvider, DbContextOptions<TenantSharedTestContext> options)
+            : base(serviceProvider, options)
+        {
+        }
+
+        protected override void ConfigureModel(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<CrossTenantContent>(entity =>
+            {
+                entity.ToTable(nameof(CrossTenantContent), SCHEMA);
+
+                entity.IsMultiTenant(MultiTenant.SharingType.Tenant);
+            });
+        }
+    }
+
+    public class GlobalSharedTestContext : TestContext
+    {
+        public GlobalSharedTestContext(IServiceProvider serviceProvider, DbContextOptions<GlobalSharedTestContext> options)
+            : base(serviceProvider, options)
+        {
+        }
+        protected override void ConfigureModel(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<CrossTenantContent>(entity =>
+            {
+                entity.ToTable(nameof(CrossTenantContent), SCHEMA);
+                entity.IsMultiTenant(MultiTenant.SharingType.Global);
             });
         }
     }

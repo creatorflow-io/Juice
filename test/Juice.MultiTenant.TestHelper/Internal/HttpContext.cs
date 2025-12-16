@@ -8,10 +8,11 @@ namespace Juice.MultiTenant.TestHelper.Internal
     internal class MyHttpContext : HttpContext
     {
         private readonly IServiceProvider _serviceProvider;
-        private CancellationTokenSource _abortedCts = new CancellationTokenSource();
-        public MyHttpContext(IServiceProvider serviceProvider)
+        private CancellationTokenSource _abortedCts = new();
+        public MyHttpContext(IServiceProvider serviceProvider, string? tenantIdentifier)
         {
             _serviceProvider = serviceProvider;
+            Items["__TenantIdentifier"] = tenantIdentifier;
         }
 
         public override IFeatureCollection Features => throw new NotImplementedException();

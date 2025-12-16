@@ -1,6 +1,7 @@
 ﻿using Finbuckle.MultiTenant;
 using Finbuckle.MultiTenant.Abstractions;
 using Juice.MultiTenant;
+using Microsoft.AspNetCore.Http;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
@@ -61,15 +62,15 @@ namespace Microsoft.Extensions.DependencyInjection
                 })
                 .WithStaticStrategy(identifier);
         }
-
+        
         /// <summary>
-        /// Add a mismatched tenant for testing, return a builder for further configuration
+        /// Add multiple tenants for testing, return a builder for further configuration
         /// </summary>
         /// <typeparam name="TTenant"></typeparam>
         /// <param name="services"></param>
-        /// <param name="identifier"></param>
+        /// <param name="identifiers"></param>
         /// <returns></returns>
-        public static MultiTenantBuilder<TTenant> AddTestTenantMismatch<TTenant>(this IServiceCollection services)
+        public static MultiTenantBuilder<TTenant> AddTestTenants<TTenant>(this IServiceCollection services, params string[] identifiers)
             where TTenant : class, ITenantInfo, ITenant, new()
         {
             return services
@@ -77,12 +78,23 @@ namespace Microsoft.Extensions.DependencyInjection
                 .AddTenantServices()
                 .WithInMemoryStore(options =>
                 {
-                    var tenant = new TTenant();
-                    (tenant as ITenantInfo).Id = "tenant-A";
-                    (tenant as ITenantInfo).Identifier = "tenant-A";
-                    options.Tenants.Add(tenant);
+                    foreach (var identifier in identifiers)
+                    {
+                        var tenant = new TTenant();
+                        (tenant as ITenantInfo).Id = identifier;
+                        (tenant as ITenantInfo).Identifier = identifier;
+                        options.Tenants.Add(tenant);
+                    }
                 })
-                .WithStaticStrategy("tenant-B");
+                .WithDelegateStrategy((context) =>
+                {
+                    if(context is HttpContext httpContext)
+                    {
+                        var identifier = httpContext.Items["__TenantIdentifier"] as string;
+                        return Task.FromResult<string?>(identifier);
+                    }
+                    return Task.FromResult<string?>(null);
+                });
         }
     }
 }
