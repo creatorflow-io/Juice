@@ -1,4 +1,5 @@
-﻿using Juice.MediatR;
+﻿using Juice.Extensions.Redis;
+using Juice.MediatR;
 using Juice.MediatR.RequestManager.Redis;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -17,7 +18,7 @@ namespace Microsoft.Extensions.DependencyInjection
         public static IServiceCollection AddRedisMediatorRequestManager(this IServiceCollection services,
             Action<RedisOptions> configure)
         {
-            services.Configure(configure);
+            services.TryAddRedisConnectionProvider<RequestManager>(configure);
 
             services.TryAddScoped<IRequestManager, RequestManager>();
             services.TryAddScoped(typeof(IRequestManager<>), typeof(RequestManager<>));

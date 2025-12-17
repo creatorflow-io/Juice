@@ -1,4 +1,4 @@
-﻿using Juice.MediatR;
+﻿using Juice.Extensions.Redis;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
@@ -7,31 +7,17 @@ namespace Juice.MediatR.RequestManager.Redis
 {
     public class RequestManager : IRequestManager
     {
-        private RedisOptions _configuration;
-        /// <summary>  
-        /// The lazy connection.  
-        /// </summary>  
-        private Lazy<ConnectionMultiplexer> lazyConnection;
-
         /// <summary>  
         /// Gets the connection.  
         /// </summary>  
         /// <value>The connection.</value>  
-        public ConnectionMultiplexer Connection => lazyConnection.Value;
+        protected IRedisConnectionProvider ConnectionProvider { get; set; }
 
         private readonly ILogger _logger;
-        public RequestManager(ILogger<RequestManager> logger, IOptions<RedisOptions> options)
+        public RequestManager(ILogger<RequestManager> logger, IRedisConnectionProvider<RequestManager> redisConnectionProvider)
         {
             _logger = logger;
-            _configuration = options.Value;
-            if (string.IsNullOrEmpty(_configuration.ConnectionString))
-            {
-                throw new ArgumentException("Redis connection string is not configured.");
-            }
-            lazyConnection = new Lazy<ConnectionMultiplexer>(() =>
-            {
-                return ConnectionMultiplexer.Connect(_configuration.ConnectionString);
-            });
+            ConnectionProvider = redisConnectionProvider;
         }
 
         private string GetKey<T>(Guid id)
@@ -43,10 +29,11 @@ namespace Juice.MediatR.RequestManager.Redis
             where T : IBaseRequest
         {
             var key = GetKey<T>(id);
+            var connection = await ConnectionProvider.GetConnectionAsync();
 
             if (success)
             {
-                await Connection.GetDatabase().StringSetAsync(key, DateTimeOffset.Now.ToString(), default, When.Exists);
+                await connection.GetDatabase().StringSetAsync(key, DateTimeOffset.Now.ToString(), default, When.Exists);
             }
             else
             {
@@ -61,7 +48,7 @@ namespace Juice.MediatR.RequestManager.Redis
 
                 try
                 {
-                    var res = Connection.GetDatabase().ScriptEvaluate(lua_script,
+                    var res = connection.GetDatabase().ScriptEvaluate(lua_script,
                                                                new RedisKey[] { key },
                                                                new RedisValue[] { "" });
                     var ok = (bool)res;
@@ -76,17 +63,21 @@ namespace Juice.MediatR.RequestManager.Redis
                 }
             }
         }
+
         public async ValueTask<bool> TryCreateRequestForCommandAsync<T>(Guid id)
             where T : IBaseRequest
         {
             var key = GetKey<T>(id);
-            var flag = await Connection.GetDatabase().StringSetAsync(key, "", TimeSpan.FromMinutes(15), When.NotExists);
+            var connection = await ConnectionProvider.GetConnectionAsync();
+
+            var flag = await connection.GetDatabase().StringSetAsync(key, "", TimeSpan.FromMinutes(15), When.NotExists);
             return flag;
         }
     }
     public class RequestManager<T> : RequestManager, IRequestManager<T>
     {
-        public RequestManager(ILogger<RequestManager> logger, IOptions<RedisOptions> options) : base(logger, options)
+        public RequestManager(ILogger<RequestManager> logger, IRedisConnectionProvider<RequestManager> redisConnectionProvider)
+            : base(logger, redisConnectionProvider)
         {
         }
     }
