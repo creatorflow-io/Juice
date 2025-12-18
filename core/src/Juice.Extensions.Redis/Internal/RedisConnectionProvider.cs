@@ -23,6 +23,7 @@ namespace Juice.Extensions.Redis.Internal
             RedisOptions options,
             ILogger logger)
         {
+            options.Validate();
             _options = options;
             _logger = logger;
         }
@@ -87,9 +88,9 @@ namespace Juice.Extensions.Redis.Internal
                 ServiceName = _options.SentinelMasterName,
                 Password = _options.Password,
                 AbortOnConnectFail = false,
-                AllowAdmin = _logger.IsEnabled(LogLevel.Debug) // Allow admin commands in debug mode for inspection
+                AllowAdmin = _options.AllowAdmin || _logger.IsEnabled(LogLevel.Debug) // Allow admin commands in debug mode for inspection
             };
-
+            
             return masterOptions;
         }
 

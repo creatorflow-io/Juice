@@ -39,7 +39,7 @@ namespace Juice.MediatR.Tests
 
                 services.AddRedisMediatorRequestManager(options =>
                 {
-                    options.ConnectionString = configuration.GetConnectionString("Redis");
+                    options.UseDirectConnect(configuration.GetConnectionString("Redis"));
                 });
 
                 services.AddSingleton(provider => _testOutput);
@@ -79,9 +79,7 @@ namespace Juice.MediatR.Tests
 
                 services.AddRedisMediatorRequestManager(options =>
                 {
-                    options.SentinelMasterName = configuration["Redis:SentinelMasterName"];
-                    options.Password = configuration["Redis:Password"];
-                    options.ConnectionString = configuration.GetConnectionString("RedisSentinel");
+                    options.UseSentinelConnect(configuration.GetConnectionString("RedisSentinel"), configuration.GetSection("Redis"));
                 });
 
                 services.AddSingleton(provider => _testOutput);
