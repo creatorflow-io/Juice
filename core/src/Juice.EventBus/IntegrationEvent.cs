@@ -1,21 +1,7 @@
-﻿using Newtonsoft.Json;
-
-namespace Juice.EventBus
+﻿namespace Juice.EventBus
 {
-    public record IntegrationEvent
+    public abstract record IntegrationEvent
     {
-        public IntegrationEvent()
-        {
-
-        }
-
-        [JsonConstructor]
-        public IntegrationEvent(Guid id, DateTime creationDate)
-        {
-            Id = id;
-            CreationDate = creationDate;
-        }
-
         public Guid Id { get; init; } = Guid.NewGuid();
 
         public DateTime CreationDate { get; init; } = DateTime.UtcNow;

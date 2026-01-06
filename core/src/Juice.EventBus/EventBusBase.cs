@@ -14,7 +14,7 @@ namespace Juice.EventBus
             Logger = logger;
         }
 
-        public abstract ValueTask PublishAsync(IntegrationEvent @event, string? tenantId);
+        public abstract ValueTask PublishAsync(IntegrationEvent @event, string? tenantId, CancellationToken cancellationToken);
 
         public virtual ValueTask SubscribeAsync<T, TH>(string? key = default)
             where T : IntegrationEvent

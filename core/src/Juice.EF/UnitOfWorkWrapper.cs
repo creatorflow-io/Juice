@@ -12,12 +12,14 @@ namespace Juice.EF
 
         public bool HasActiveTransaction => _unitOfWork.HasActiveTransaction;
 
-        public Task<IOperationResult<T>> AddAndSaveAsync<T>(T entity, CancellationToken token = default)
+        public bool IsManagedTransaction => _unitOfWork.IsManagedTransaction;
+
+        public ValueTask AddAsync<T>(T entity, CancellationToken token = default)
             where T : class
-            => _unitOfWork.AddAndSaveAsync(entity, token);
-        public Task<IOperationResult> AddAndSaveAsync<T>(IEnumerable<T> entities, CancellationToken token = default)
+            => _unitOfWork.AddAsync(entity, token);
+        public ValueTask AddRangeAsync<T>(IEnumerable<T> entities, CancellationToken token = default)
             where T : class
-            => _unitOfWork.AddAndSaveAsync(entities, token);
+            => _unitOfWork.AddRangeAsync(entities, token);
         public Task<IOperationResult> DeleteAsync<T>(T entity, CancellationToken token = default)
             where T : class
             => _unitOfWork.DeleteAsync(entity, token);
@@ -27,13 +29,12 @@ namespace Juice.EF
         public IQueryable<T> Query<T>()
             where T : class
             => _unitOfWork.Query<T>();
-        public Task<IOperationResult> UpdateAsync<T>(T entity, CancellationToken token = default)
-            where T : class
-            => _unitOfWork.UpdateAsync(entity, token);
-
+     
         public Task<bool> CommitTransactionAsync(Guid transactionId, CancellationToken token = default)
             => _unitOfWork.CommitTransactionAsync(transactionId, token);
         public Task<int> SaveChangesAsync(CancellationToken token = default)
             => _unitOfWork.SaveChangesAsync(token);
+        public void BeginManageTransaction(Guid transactionId)
+            => _unitOfWork.BeginManageTransaction(transactionId);
     }
 }

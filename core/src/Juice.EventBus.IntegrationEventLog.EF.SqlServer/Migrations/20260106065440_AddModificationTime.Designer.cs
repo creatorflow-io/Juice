@@ -4,6 +4,7 @@ using Juice.EventBus.IntegrationEventLog.EF;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Juice.EventBus.IntegrationEventLog.EF.SqlServer.Migrations
 {
     [DbContext(typeof(IntegrationEventLogContext))]
-    partial class IntegrationEventLogContextModelSnapshot : ModelSnapshot
+    [Migration("20260106065440_AddModificationTime")]
+    partial class AddModificationTime
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -50,19 +53,9 @@ namespace Juice.EventBus.IntegrationEventLog.EF.SqlServer.Migrations
 
                     b.Property<string>("TransactionId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("EventId");
-
-                    b.HasIndex("TimesSent")
-                        .HasDatabaseName("IX_Outbox_Poison")
-                        .HasFilter("[TimesSent] > 0");
-
-                    b.HasIndex("TransactionId");
-
-                    b.HasIndex("State", "ModificationTime", "TimesSent")
-                        .HasDatabaseName("IX_Outbox_Recovery")
-                        .HasFilter("[ModificationTime] IS NOT NULL");
 
                     b.ToTable("IntegrationEventLog", "EventBus");
                 });

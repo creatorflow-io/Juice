@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Juice.Domain;
@@ -13,6 +14,7 @@ using Juice.EventBus.Tests.Events;
 using Juice.EventBus.Tests.Handlers;
 using Juice.Extensions.DependencyInjection;
 using Juice.Integrations.EventBus;
+using Juice.MediatR;
 using Juice.Services;
 using Juice.XUnit;
 using Microsoft.EntityFrameworkCore;
@@ -40,7 +42,7 @@ namespace Juice.Integrations.Tests
         /// This test required EF Tests to create Contents.Content
         /// </summary>
         /// <returns></returns>
-        [IgnoreOnCIFact(DisplayName = "Test integration event service"), TestPriority(9)]
+        [IgnoreOnCIFact(DisplayName = "Integration event service should"), TestPriority(9)]
         public async Task IntegrationEventServiceTestAsync()
         {
             var resolver = new DependencyResolver
@@ -73,12 +75,13 @@ namespace Juice.Integrations.Tests
 
                 services.AddUnitOfWork<Content, TestContext>();
 
+                services.AddIntegrationEventLogDbContext("SqlServer", configuration, schema);
+
                 services.AddDefaultStringIdGenerator();
 
                 services
                     .AddIntegrationEventService()
-                    .AddIntegrationEventLog()
-                    .RegisterContext<TestContext>(_testSchema1);
+                    .AddIntegrationEventLog();
 
                 services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"));
 
@@ -97,9 +100,7 @@ namespace Juice.Integrations.Tests
             var context = scope.ServiceProvider.GetRequiredService<TestContext>();
             var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork<Content>>();
 
-            var logContextFactory = scope.ServiceProvider.GetRequiredService<Func<TestContext, IntegrationEventLogContext>>();
-
-            var logContext = logContextFactory(context);
+            var logContext = scope.ServiceProvider.GetRequiredService<IntegrationEventLogContext>();
 
             await logContext.MigrateAsync();
 
@@ -122,17 +123,26 @@ namespace Juice.Integrations.Tests
                 // Achieving atomicity between original catalog database operation and the IntegrationEventLog thanks to a local transaction
                 using (logger.BeginScope($"Exec Command: CreateContent"))
                 {
-                    logger.LogInformation("----- Created transaction {TransactionId} for {CommandName}", transaction.TransactionId,
-                        "CreateContent");
-
-                    #region business
-                    await unitOfWork.AddAndSaveAsync(content);
-                    #endregion
-                    await integrationEventService.AddAndSaveEventAsync(evt);
+                    await unitOfWork.AddAsync(content);
+                    await integrationEventService.AddEventAsync(evt);
                 }
+                await integrationEventService.SaveEventsAsync(transaction.TransactionId);
+                await unitOfWork.CommitTransactionAsync(transaction.TransactionId);
             });
+
+            var logEntries = await logContext.IntegrationEventLogs
+                .Where(e => e.TransactionId == transactionId.ToString())
+                .ToListAsync();
+            logEntries.Should().HaveCount(1);
+            var logEntry = logEntries.First();
+            logger.LogInformation("Integration Event Log Entry: {EventId}, {EventType}, {State}, {TimesSent}",
+                logEntry.EventId, logEntry.EventTypeShortName, logEntry.State, logEntry.TimesSent);
+            logEntry.DeserializeJsonContent(typeof(ContentPublishedIntegrationEvent));
+            logEntry.IntegrationEvent.Should().NotBeNull();
+            logEntry.IntegrationEvent!.Id.Should().Be(logEntry.EventId);
+
             await integrationEventService.PublishEventsThroughEventBusAsync(transactionId);
-            if(sharedService.Handlers.Count == 0)
+            if (sharedService.Handlers.Count == 0)
             {
                 await Task.Delay(3000);
             }
@@ -143,5 +153,68 @@ namespace Juice.Integrations.Tests
             await eventBus.CloseAsync();
         }
 
+
+        [IgnoreOnCIFact(DisplayName = "Transaction behavior should"), TestPriority(10)]
+        public async Task IntegrationEventService_TransactionBehaviorTestAsync()
+        {
+            var resolver = new DependencyResolver
+            {
+                CurrentDirectory = AppContext.BaseDirectory
+            };
+            var schema = _testSchema1;
+            resolver.ConfigureServices(services =>
+            {
+                services.AddSingleton(provider => _testOutput);
+                var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
+                var configuration = configService.GetConfiguration(GetType().Assembly);
+                services.AddLogging(builder =>
+                {
+                    builder.ClearProviders()
+                    .AddTestOutputLogger()
+                    .AddConfiguration(configuration.GetSection("Logging"));
+                });
+                // Register DbContext class
+                services.AddDbContext<TestContext>(builder =>
+                {
+                    var connectionString = configuration.GetConnectionString("Default");
+                    builder.UseSqlServer(connectionString);
+                });
+                services.AddUnitOfWork<Content, TestContext>();
+
+                services.AddDefaultStringIdGenerator();
+                services
+                    .AddIntegrationEventService()
+                    .AddIntegrationEventLog();
+
+                services.AddMediatR(cfg =>
+                {
+                    cfg.RegisterServicesFromAssembly(typeof(CreateContentCommandHandler).Assembly);
+                });
+
+                services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"));
+                services.AddTransient<ContentPublishedIntegrationEventHandler>();
+                services.AddSingleton<HandledService>();
+            });
+
+            var sharedService = resolver.ServiceProvider.GetRequiredService<HandledService>();
+            var eventBus = resolver.ServiceProvider.GetRequiredService<IEventBus>();
+
+            await eventBus.SubscribeAsync<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler>();
+
+            using var scope = resolver.ServiceProvider.CreateScope();
+
+            var result = await scope.ServiceProvider.GetRequiredService<IMediator>()
+                .Send(new CreateContentCommand());
+            result.Succeeded.Should().BeTrue();
+
+            if (sharedService.Handlers.Count == 0)
+            {
+                await Task.Delay(3000);
+            }
+            sharedService.Handlers.Should().Contain(nameof(ContentPublishedIntegrationEventHandler));
+
+            await eventBus.UnsubscribeAsync<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler>();
+            await eventBus.CloseAsync();
+        }
     }
 }

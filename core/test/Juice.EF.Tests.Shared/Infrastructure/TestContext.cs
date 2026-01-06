@@ -4,33 +4,37 @@ using Juice.EF.Tests.Domain;
 using Microsoft.EntityFrameworkCore;
 using Juice.MultiTenant.EF;
 using Juice.EF.Extensions;
+using Juice.EventBus.IntegrationEventLog.EF;
 
 namespace Juice.EF.Tests.Infrastructure
 {
 
-    public class TestContext : MultiTenantDbContext
+    public class TestContext : MultiTenantDbContext, IIntegrationEventLogDbContext
     {
-        public const string SCHEMA = "Contents";
         public override string? User => "test-user";
 
         public override Finbuckle.MultiTenant.EntityFrameworkCore.TenantMismatchMode TenantMismatchMode { get; set; } = Finbuckle.MultiTenant.EntityFrameworkCore.TenantMismatchMode.Throw;
         public override Finbuckle.MultiTenant.EntityFrameworkCore.TenantNotSetMode TenantNotSetMode { get; set; } = Finbuckle.MultiTenant.EntityFrameworkCore.TenantNotSetMode.Overwrite;
 
+        public DbSet<IntegrationEventLogEntry> IntegrationEventLogs { get; set; }
+
         public TestContext(IServiceProvider serviceProvider, DbContextOptions<TestContext> options) : base(options)
         {
             ConfigureServices(serviceProvider);
+            Schema = "Contents";
         }
 
         protected TestContext(IServiceProvider serviceProvider, DbContextOptions options): base(options)
         {
             ConfigureServices(serviceProvider);
+            Schema = "Contents";
         }
 
         protected override void ConfigureModel(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Content>(entity =>
             {
-                entity.ToTable(nameof(Content), SCHEMA);
+                entity.ToTable(nameof(Content), Schema);
 
                 entity.IsExpandable(this);
                 //entity.IsAuditable();
@@ -70,10 +74,12 @@ namespace Juice.EF.Tests.Infrastructure
 
             modelBuilder.Entity<CrossTenantContent>(entity =>
             {
-                entity.ToTable(nameof(CrossTenantContent), SCHEMA);
+                entity.ToTable(nameof(CrossTenantContent), Schema);
 
                 entity.IsMultiTenant(MultiTenant.SharingType.None);
             });
+
+            new IntegrationEventLogEntityTypeConfiguration(Schema).Configure(modelBuilder.Entity<IntegrationEventLogEntry>());
         }
     }
 
@@ -88,10 +94,11 @@ namespace Juice.EF.Tests.Infrastructure
         {
             modelBuilder.Entity<CrossTenantContent>(entity =>
             {
-                entity.ToTable(nameof(CrossTenantContent), SCHEMA);
+                entity.ToTable(nameof(CrossTenantContent), Schema);
 
                 entity.IsMultiTenant(MultiTenant.SharingType.Tenant);
             });
+            new IntegrationEventLogEntityTypeConfiguration(Schema).Configure(modelBuilder.Entity<IntegrationEventLogEntry>());
         }
     }
 
@@ -105,9 +112,11 @@ namespace Juice.EF.Tests.Infrastructure
         {
             modelBuilder.Entity<CrossTenantContent>(entity =>
             {
-                entity.ToTable(nameof(CrossTenantContent), SCHEMA);
+                entity.ToTable(nameof(CrossTenantContent), Schema);
                 entity.IsMultiTenant(MultiTenant.SharingType.Global);
             });
+
+            new IntegrationEventLogEntityTypeConfiguration(Schema).Configure(modelBuilder.Entity<IntegrationEventLogEntry>());
         }
     }
 }

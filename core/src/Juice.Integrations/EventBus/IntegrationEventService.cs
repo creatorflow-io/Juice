@@ -1,9 +1,7 @@
-﻿using Juice.EF.Extensions;
-using Juice.EventBus;
-using Juice.EventBus.IntegrationEventLog.EF;
+﻿using Juice.EventBus;
+using Juice.EventBus.IntegrationEventLog;
 using Juice.MultiTenant;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 
 namespace Juice.Integrations.EventBus
@@ -12,69 +10,93 @@ namespace Juice.Integrations.EventBus
     internal class IntegrationEventService<TContext> : IIntegrationEventService<TContext>
         where TContext : DbContext
     {
-        private IIntegrationEventLogService<TContext> _eventLogService;
-        public TContext DomainContext { get; }
+        private readonly IIntegrationEventRepository _eventLogService;
         private readonly ILogger _logger;
         private readonly IEventBus _eventBus;
         private readonly ITenantAccessor? _tenantAccessor;
-        public IntegrationEventService(IIntegrationEventLogService<TContext> eventLogService
-            , TContext domainContext
+        private readonly IList<IntegrationEvent> _events = [];
+
+        public IntegrationEventService(IIntegrationEventRepository<TContext> eventLogService
             , IEventBus eventBus
             , ILogger<IntegrationEventService<TContext>> logger
             , ITenantAccessor? tenantAccessor = default)
         {
             _eventLogService = eventLogService;
-            DomainContext = domainContext;
             _logger = logger;
             _eventBus = eventBus;
             _tenantAccessor = tenantAccessor;
         }
 
-        public async Task AddAndSaveEventAsync(IntegrationEvent evt, IDbContextTransaction? transaction = default)
+        public ValueTask AddEventAsync(IntegrationEvent evt)
+        {
+            if (_logger.IsEnabled(LogLevel.Debug)) {
+                _logger.LogDebug("----- Adding {EventType} integration events to repository", evt.GetType());
+            }
+            _events.Add(evt);
+            return ValueTask.CompletedTask;
+        }
+
+        public async ValueTask SaveEventsAsync(Guid? transactionId)
         {
             if (_logger.IsEnabled(LogLevel.Debug))
             {
-                _logger.LogDebug("----- Enqueuing integration event {IntegrationEventId} to repository ({@IntegrationEvent})", evt.Id, evt);
+                _logger.LogDebug("----- Saving {Count} integration events", _events.Count);
             }
-            transaction = transaction ?? DomainContext.GetCurrentTransaction();
-            if (transaction == null)
-            {
-                throw new Exception($"{typeof(TContext).Name} does not have an active transaction");
-            }
-            _eventLogService.EnsureAssociatedConnection(DomainContext);
-            await _eventLogService.SaveEventAsync(evt, transaction);
+            await _eventLogService.SaveEventsAsync(transactionId ?? Guid.Empty, [.. _events]);
+            _events.Clear();
         }
-        public async Task PublishEventsThroughEventBusAsync(Guid transactionId)
-        {
-            var pendingLogEvents = await _eventLogService.RetrieveEventLogsPendingToPublishAsync(transactionId);
 
-            foreach (var logEvt in pendingLogEvents)
+        public async ValueTask PublishEventsThroughEventBusAsync(Guid transactionId, CancellationToken cancellationToken)
+        {
+            var pendingEvents = await _eventLogService.RetrieveEventsPendingToPublishAsync(transactionId, cancellationToken);
+
+            await PublishEventsThroughEventBusAsync(pendingEvents, cancellationToken);
+        }
+
+        public async ValueTask PublishEventsThroughEventBusAsync(int maxEvents, int maxRetries, CancellationToken cancellationToken = default)
+        {
+            if (maxEvents <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(maxEvents));
+            }
+            var pendingEvents = await _eventLogService.RetrieveEventsPendingToPublishAsync(maxEvents, maxRetries, cancellationToken);
+
+            await PublishEventsThroughEventBusAsync(pendingEvents, cancellationToken);
+        }
+
+        private async Task PublishEventsThroughEventBusAsync(IEnumerable<IntegrationEvent> events, CancellationToken cancellationToken)
+        {
+            foreach (var evt in events)
             {
                 if (_logger.IsEnabled(LogLevel.Debug))
                 {
-                    _logger.LogDebug("----- Publishing integration event: {IntegrationEventId} - ({@IntegrationEvent})", logEvt.EventId, logEvt.IntegrationEvent);
+                    _logger.LogDebug("----- Publishing integration event: {IntegrationEventId} - ({@IntegrationEvent})", evt.Id, evt);
                 }
                 try
                 {
-                    await _eventLogService.MarkEventAsInProgressAsync(logEvt.EventId);
-                    if (logEvt.IntegrationEvent is null)
-                    {
-                        _logger.LogError("Integration event is null. EventId: {IntegrationEventId}", logEvt.EventId);
-                        await _eventLogService.MarkEventAsFailedAsync(logEvt.EventId);
-                        continue;
-                    }
-                    await _eventBus.PublishAsync(logEvt.IntegrationEvent, _tenantAccessor?.Tenant?.Id);
-                    await _eventLogService.MarkEventAsPublishedAsync(logEvt.EventId);
+                    await _eventLogService.MarkEventAsInProgressAsync(evt.Id, cancellationToken);
+                    await _eventBus.PublishAsync(evt, _tenantAccessor?.Tenant?.Id, cancellationToken);
+                    await _eventLogService.MarkEventAsPublishedAsync(evt.Id, cancellationToken);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    // do NOT mark failed
+                    // do NOT mark published
+                    _logger.LogInformation(
+                        "Publishing integration event {EventId} canceled.", evt.Id);
+
+                    throw; // allow host to stop correctly
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "ERROR publishing integration event: {IntegrationEventId}. TenantId: {tenantId}, TenantIdentifier: {tenantIdentifier}. {Message}",
-                        logEvt.EventId, _tenantAccessor?.Tenant?.Id, _tenantAccessor?.Tenant?.Identifier, ex.Message);
-                    _logger.LogTrace(ex, "ERROR publishing integration event: {IntegrationEventId}. {Trace}", logEvt.EventId, ex.StackTrace);
-                    await _eventLogService.MarkEventAsFailedAsync(logEvt.EventId);
+                        evt.Id, _tenantAccessor?.Tenant?.Id, _tenantAccessor?.Tenant?.Identifier, ex.Message);
+                    _logger.LogTrace(ex, "ERROR publishing integration event: {IntegrationEventId}. {Trace}", evt.Id, ex.StackTrace);
+                    await _eventLogService.MarkEventAsFailedAsync(evt.Id, cancellationToken);
                 }
             }
         }
+
     }
 
     internal class IntegrationEventService<TContext, TEventBus> : IntegrationEventService<TContext>, IIntegrationEventService<TContext, TEventBus>
@@ -82,12 +104,11 @@ namespace Juice.Integrations.EventBus
         where TEventBus : IEventBus
     {
         
-        public IntegrationEventService(IIntegrationEventLogService<TContext> eventLogService
-            , TContext domainContext
+        public IntegrationEventService(IIntegrationEventRepository<TContext> eventLogService
             , TEventBus eventBus
             , ILogger<IntegrationEventService<TContext, TEventBus>> logger
             , ITenantAccessor? tenantAccessor = default
-            ) : base(eventLogService, domainContext, eventBus, logger, tenantAccessor)
+            ) : base(eventLogService, eventBus, logger, tenantAccessor)
         {
         }
 

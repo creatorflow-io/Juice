@@ -10,7 +10,8 @@
         /// </summary>
         /// <param name="event"></param>
         /// <param name="tenantId"></param>
-        ValueTask PublishAsync(IntegrationEvent @event, string? tenantId = default);
+        /// <param name="cancellationToken"></param>
+        ValueTask PublishAsync(IntegrationEvent @event, string? tenantId = default, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// SubscribeAsync an <see cref="IntegrationEvent"/> with specified <see cref="IIntegrationEventHandler{T}"/>

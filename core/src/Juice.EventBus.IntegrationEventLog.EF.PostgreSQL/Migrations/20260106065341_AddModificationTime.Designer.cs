@@ -3,6 +3,7 @@ using System;
 using Juice.EventBus.IntegrationEventLog.EF;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Juice.EventBus.IntegrationEventLog.EF.PostgreSQL.Migrations
 {
     [DbContext(typeof(IntegrationEventLogContext))]
-    partial class IntegrationEventLogContextModelSnapshot : ModelSnapshot
+    [Migration("20260106065341_AddModificationTime")]
+    partial class AddModificationTime
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -37,8 +40,7 @@ namespace Juice.EventBus.IntegrationEventLog.EF.PostgreSQL.Migrations
 
                     b.Property<string>("EventTypeName")
                         .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("ModificationTime")
                         .HasColumnType("timestamp with time zone");
@@ -51,20 +53,9 @@ namespace Juice.EventBus.IntegrationEventLog.EF.PostgreSQL.Migrations
 
                     b.Property<string>("TransactionId")
                         .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("text");
 
                     b.HasKey("EventId");
-
-                    b.HasIndex("TimesSent")
-                        .HasDatabaseName("IX_IntegrationEventLog_Poison")
-                        .HasFilter("[TimesSent] > 0");
-
-                    b.HasIndex("TransactionId");
-
-                    b.HasIndex("State", "ModificationTime", "TimesSent")
-                        .HasDatabaseName("IX_IntegrationEventLog_Recovery")
-                        .HasFilter("[ModificationTime] IS NOT NULL");
 
                     b.ToTable("IntegrationEventLog", "EventBus");
                 });

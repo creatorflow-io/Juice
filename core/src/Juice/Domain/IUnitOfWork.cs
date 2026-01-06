@@ -8,7 +8,20 @@ namespace Juice.Domain
     /// </summary>
     public interface IUnitOfWork
     {
+        /// <summary>
+        /// Gets a value indicating whether the current transaction is managed by the framework or infrastructure.
+        /// </summary>
+        bool IsManagedTransaction { get; }
+        /// <summary>
+        /// Gets a value indicating whether there is an active transaction associated with the current context.
+        /// </summary>
         bool HasActiveTransaction { get; }
+
+        /// <summary>
+        /// Begin a managed transaction
+        /// </summary>
+        /// <param name="transactionId"></param>
+        void BeginManageTransaction(Guid transactionId);
 
         /// <summary>
         /// Commit transaction with specified id
@@ -25,33 +38,23 @@ namespace Juice.Domain
         /// <returns></returns>
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
         /// <summary>
-        /// Add entity to context and save changes
+        /// Add entity to the context (in memory)
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="entity"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        Task<IOperationResult<T>> AddAndSaveAsync<T>(T entity, CancellationToken cancellationToken = default)
+        ValueTask AddAsync<T>(T entity, CancellationToken cancellationToken = default)
             where T : class;
 
         /// <summary>
-        /// Add entities to context and save changes
+        /// Add entities to the context (in memory)
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="entities"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        Task<IOperationResult> AddAndSaveAsync<T>(IEnumerable<T> entities, CancellationToken cancellationToken = default)
-            where T : class;
-
-        /// <summary>
-        /// Update entity in context and save changes
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="entity"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        Task<IOperationResult> UpdateAsync<T>(T entity, CancellationToken cancellationToken = default)
+        ValueTask AddRangeAsync<T>(IEnumerable<T> entities, CancellationToken cancellationToken = default)
             where T : class;
 
         /// <summary>

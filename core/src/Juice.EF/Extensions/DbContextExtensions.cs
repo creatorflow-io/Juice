@@ -1,5 +1,6 @@
 ﻿using Juice.Domain;
 using Juice.Domain.Events;
+using Juice.MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata;
@@ -520,6 +521,37 @@ namespace Juice.EF.Extensions
             catch (Exception ex)
             {
                 return OperationResult.Failed(ex);
+            }
+        }
+        #endregion
+
+        #region DBContext
+        internal static async Task DispatchEventsAsync(this DbContext context, IMediator? mediator, ILogger? logger)
+        {
+            if (mediator == null)
+            {
+                return;
+            }
+            // skip managed transaction
+            if (context is IUnitOfWork { IsManagedTransaction : true })
+            {
+                return;
+            }
+            await mediator.DispatchDomainEventsAsync(context, true);
+            await mediator.DispatchAuditEventsAsync(context as IAuditableDbContext, true, logger);
+            await mediator.DispatchDataChangeEventsAsync(context as IAuditableDbContext, true, logger);
+        }
+
+        public static void ClearEvents(this DbContext context) {
+            context.ChangeTracker
+                .Entries<IAggregateRoot<INotification>>()
+                .Where(x => x.Entity.DomainEvents != null && x.Entity.DomainEvents.Any())
+                .ToList().ForEach(e => e.Entity.ClearDomainEvents());
+
+            if (context is IAuditableDbContext auditableDbContext)
+            {
+                auditableDbContext.PendingAuditEntries?.Clear();
+                auditableDbContext.PendingDataEvents?.Clear();
             }
         }
         #endregion

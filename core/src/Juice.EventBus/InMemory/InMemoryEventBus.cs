@@ -20,7 +20,7 @@ namespace Juice.EventBus
             _scopeFactory = scopeFactory;
         }
 
-        public override ValueTask PublishAsync(IntegrationEvent @event, string? tenantId = default)
+        public override ValueTask PublishAsync(IntegrationEvent @event, string? tenantId = default, CancellationToken cancellationToken = default)
         {
             var eventName = @event.GetEventKey();
             if(tenantId != null && @event is IMultiTenantIntegrationEvent _t && _t.TenantId != null && !_t.TenantId.Equals(tenantId, StringComparison.OrdinalIgnoreCase))

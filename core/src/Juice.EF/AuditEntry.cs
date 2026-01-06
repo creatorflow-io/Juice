@@ -6,7 +6,7 @@ namespace Juice.EF
     /// <summary>
     /// Temporary store for audit entries
     /// </summary>
-    public class AuditEntry
+    public record AuditEntry
     {
         public AuditEntry(EntityEntry entry, string? table, DataEvent? dataEvent)
         {
@@ -21,7 +21,7 @@ namespace Juice.EF
         /// Get data event of the audit entry
         /// </summary>
         public DataEvent? AuditEvent(Type eventType)
-            => _dataEvent!=null ? _dataEvent.CreateAuditEvent(eventType, Entity?.GetType(), CreateRecord()) : null;
+            => _dataEvent != null ? _dataEvent.CreateAuditEvent(eventType, Entity?.GetType(), CreateRecord()) : null;
 
         public bool HasDataEvent => _dataEvent != null;
         public string? EventType => _dataEvent?.Name;

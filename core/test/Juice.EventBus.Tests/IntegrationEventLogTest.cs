@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Juice.EF;
 using Juice.EF.Tests.Domain;
 using Juice.EF.Tests.Infrastructure;
+using Juice.EventBus.IntegrationEventLog;
 using Juice.EventBus.IntegrationEventLog.EF;
 using Juice.EventBus.RabbitMQ;
 using Juice.EventBus.Tests.Events;
@@ -50,7 +51,7 @@ namespace Juice.EventBus.Tests
 
                 // Register DbContext class
 
-                services.AddTestEventLogContext("SqlServer", configuration, schema);
+                services.AddIntegrationEventLogDbContext("SqlServer", configuration, schema);
 
                 services.AddSingleton(provider => _testOutput);
 
@@ -93,7 +94,7 @@ namespace Juice.EventBus.Tests
                 // Register DbContext class
 
 
-                services.AddTestEventLogContext("PostgreSQL", configuration, schema);
+                services.AddIntegrationEventLogDbContext("PostgreSQL", configuration, schema);
 
                 services.AddSingleton(provider => _testOutput);
 
@@ -158,8 +159,7 @@ namespace Juice.EventBus.Tests
 
                 services.AddDefaultStringIdGenerator();
 
-                services.AddIntegrationEventLog()
-                   .RegisterContext<TestContext>(TestSchema1);
+                services.AddIntegrationEventLog();
 
                 services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"));
 
@@ -177,7 +177,7 @@ namespace Juice.EventBus.Tests
                 using var scope = resolver.ServiceProvider.CreateScope();
                 var context = scope.ServiceProvider.GetRequiredService<TestContext>();
 
-                var eventLogService = scope.ServiceProvider.GetRequiredService<IIntegrationEventLogService<TestContext>>();
+                var integrationEventRepository = scope.ServiceProvider.GetRequiredService<IIntegrationEventRepository<TestContext>>();
 
                 var idGenerator = scope.ServiceProvider.GetRequiredService<IStringIdGenerator>();
 
@@ -193,29 +193,27 @@ namespace Juice.EventBus.Tests
 
                 logger.LogInformation("----- IntegrationEventLogTest - Saving changes and integrationEvent: {IntegrationEventId}", evt.Id);
 
-                eventLogService.EnsureAssociatedConnection(context);
-
                 //Use of an EF Core resiliency strategy when using multiple DbContexts within an explicit BeginTransaction():
                 //See: https://docs.microsoft.com/en-us/ef/core/miscellaneous/connection-resiliency            
                 await ResilientTransaction.New(context).ExecuteAsync(async (transaction) =>
                 {
                     // Achieving atomicity between original catalog database operation and the IntegrationEventLog thanks to a local transaction
-                    await context.SaveChangesAsync();
-                    await eventLogService.SaveEventAsync(evt, transaction);
+                    await integrationEventRepository.SaveEventsAsync(transaction.TransactionId, evt);
+                    await transaction.CommitAsync();
                 });
 
                 try
                 {
                     logger.LogInformation("----- Publishing integration event: {IntegrationEventId_published} from {AppName} - ({@IntegrationEvent})", evt.Id, nameof(IntegrationEventLogTest), evt);
 
-                    await eventLogService.MarkEventAsInProgressAsync(evt.Id);
+                    await integrationEventRepository.MarkEventAsInProgressAsync(evt.Id);
                     await eventBus.PublishAsync(evt);
-                    await eventLogService.MarkEventAsPublishedAsync(evt.Id);
+                    await integrationEventRepository.MarkEventAsPublishedAsync(evt.Id);
                 }
                 catch (Exception ex)
                 {
                     logger.LogError(ex, "ERROR Publishing integration event: {IntegrationEventId} from {AppName} - ({@IntegrationEvent})", evt.Id, nameof(IntegrationEventLogTest), evt);
-                    await eventLogService.MarkEventAsFailedAsync(evt.Id);
+                    await integrationEventRepository.MarkEventAsFailedAsync(evt.Id);
                 }
 
                 await Task.Delay(3000);
@@ -252,7 +250,7 @@ namespace Juice.EventBus.Tests
 
                 // Register DbContext class
 
-                services.AddTestEventLogContext("PostgreSQL", configuration, schema);
+                services.AddIntegrationEventLogDbContext("PostgreSQL", configuration, schema);
 
             });
 

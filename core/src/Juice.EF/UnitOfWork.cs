@@ -13,11 +13,28 @@ namespace Juice.EF
 
         #region UnitOfWork
 
+        private bool _isManagedTransaction = false;
+        public virtual bool IsManagedTransaction
+            => _isManagedTransaction && HasActiveTransaction;
+
         public virtual bool HasActiveTransaction
             => Database.CurrentTransaction != null
             && Database.CurrentTransaction.TransactionId != _commitedTransactionId;
 
         private Guid? _commitedTransactionId;
+
+        public void BeginManageTransaction(Guid transactionId)
+        {
+            if(Database.CurrentTransaction == null)
+            {
+                throw new InvalidOperationException("There is no active transaction");
+            }   
+            if (transactionId != Database.CurrentTransaction.TransactionId)
+            {
+                throw new InvalidOperationException($"Transaction {transactionId} is not current");
+            }
+            _isManagedTransaction = true;
+        }
 
         public virtual async Task<bool> CommitTransactionAsync(Guid transactionId, CancellationToken token = default)
         {
@@ -32,13 +49,12 @@ namespace Juice.EF
 
             try
             {
-                await SaveChangesAsync(token);
                 await transaction.CommitAsync(token);
                 await OnTransactionCommittedAsync();
                 _commitedTransactionId = transaction.TransactionId;
                 return true;
             }
-            catch
+            catch 
             {
                 await transaction.RollbackAsync();
                 throw;
@@ -47,13 +63,17 @@ namespace Juice.EF
 
         protected virtual Task OnTransactionCommittedAsync() => Task.CompletedTask;
 
-        public virtual Task<IOperationResult<T>> AddAndSaveAsync<T>(T entity, CancellationToken token = default)
+        async ValueTask IUnitOfWork.AddAsync<T>(T entity, CancellationToken token)
             where T : class
-            => this.AddAndSaveInternalAsync(entity, token);
+        {
+            await this.AddAsync(entity, token);
+        }
 
-        public virtual Task<IOperationResult> AddAndSaveAsync<T>(IEnumerable<T> entities, CancellationToken token = default)
+        async ValueTask IUnitOfWork.AddRangeAsync<T>(IEnumerable<T> entities, CancellationToken token)
             where T : class
-            => this.AddAndSaveInternalAsync(entities, token);
+        {
+            await this.AddRangeAsync(entities, token);
+        }
 
         public virtual Task<IOperationResult> DeleteAsync<T>(T entity, CancellationToken token = default)
             where T : class

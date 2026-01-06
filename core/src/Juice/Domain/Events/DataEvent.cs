@@ -2,8 +2,9 @@
 
 namespace Juice.Domain.Events
 {
-    public class DataEvent : INotification
+    public record DataEvent : INotification
     {
+        public Guid EventId { get; private set; } = Guid.NewGuid();
         public DataEvent(string name)
         {
             Validator.ThrowIfNullOrWhiteSpace(name, nameof(name));
@@ -21,9 +22,14 @@ namespace Juice.Domain.Events
             AuditRecord = record;
             return this;
         }
+
+        public void SetEventId(Guid eventId)
+        {
+            EventId = eventId;
+        }
     }
 
-    public class DataEvent<T> : DataEvent
+    public record DataEvent<T> : DataEvent
     {
         public DataEvent(string name) : base(name)
         {
@@ -41,21 +47,21 @@ namespace Juice.Domain.Events
     }
 
     #region Data events
-    public class DataInserted<T> : DataEvent<T>
+    public record DataInserted<T> : DataEvent<T>
     {
         public DataInserted() : base(nameof(DataEvents.Inserted))
         {
         }
     }
 
-    public class DataModified<T> : DataEvent<T>
+    public record DataModified<T> : DataEvent<T>
     {
         public DataModified() : base(nameof(DataEvents.Modified))
         {
         }
     }
 
-    public class DataDeleted<T> : DataEvent<T>
+    public record DataDeleted<T> : DataEvent<T>
     {
         public DataDeleted() : base(nameof(DataEvents.Deleted))
         {
@@ -73,43 +79,47 @@ namespace Juice.Domain.Events
     {
         public static DataEvent CreateAuditEvent(this DataEvent dataEvent, Type eventType, Type? entityType, AuditRecord record)
         {
-            if (eventType.IsGenericType && entityType != null)
+            DataEvent factory(Type et, Type? entt, AuditRecord rec)
             {
-                eventType = eventType.MakeGenericType(entityType);
+                if (et.IsGenericType && entt != null)
+                {
+                    et = et.MakeGenericType(entt);
+                }
+                var ctor = et.GetConstructor(new[] { typeof(string) });
+                if (ctor != null)
+                {
+                    return ((AuditEvent)ctor.Invoke(new object[] { dataEvent.Name })).SetAuditRecord(rec);
+                }
+                else
+                {
+                    ctor = et.GetConstructor(new Type[0]);
+                    return ((AuditEvent)ctor!.Invoke(new object[0])).SetAuditRecord(rec);
+                }
             }
-            var constructor = eventType.GetConstructor(new[] { typeof(string) });
-            if (constructor != null)
-            {
-                return ((AuditEvent)constructor.Invoke(new object[] { dataEvent.Name })).SetAuditRecord(record);
-            }
-            else
-            {
-                constructor = eventType.GetConstructor(new Type[0]);
-                return ((AuditEvent)constructor!.Invoke(new object[0])).SetAuditRecord(record);
-            }
+            var @event = factory(eventType, entityType, record);
+            return @event;
         }
 
-        public static DataEvent CreateDataEvent(this DataEvent dataEvent, Type eventType, object entity)
+        public static DataEvent CreateDataEvent(this DataEvent dataEvent, Type eventType, object entity, AuditRecord? auditRecord = default)
         {
-            if (eventType.IsGenericType)
+            DataEvent factory(Type et, object ent)
             {
-                eventType = eventType.MakeGenericType(entity.GetType());
+                if (et.IsGenericType)
+                {
+                    et = et.MakeGenericType(ent.GetType());
+                }
+                var ctor = et.GetConstructor(new[] { typeof(string) });
+                if (ctor != null)
+                {
+                    return ((DataEvent)ctor.Invoke(new object[] { dataEvent.Name })).SetEntity(ent);
+                }
+                else
+                {
+                    ctor = et.GetConstructor(new Type[0]);
+                    return ((DataEvent)ctor!.Invoke(new object[0])).SetEntity(ent);
+                }
             }
-            var constructor = eventType.GetConstructor(new[] { typeof(string) });
-            if (constructor != null)
-            {
-                return ((DataEvent)constructor.Invoke(new object[] { dataEvent.Name })).SetEntity(entity);
-            }
-            else
-            {
-                constructor = eventType.GetConstructor(new Type[0]);
-                return ((DataEvent)constructor!.Invoke(new object[0])).SetEntity(entity);
-            }
-        }
-
-        public static DataEvent CreateDataEvent(this DataEvent dataEvent, Type eventType, object entity, AuditRecord? auditRecord)
-        {
-            var @event = dataEvent.CreateDataEvent(eventType, entity);
+            var @event = factory(eventType, entity);
             if (auditRecord != null)
             {
                 return @event.SetAuditRecord(auditRecord);

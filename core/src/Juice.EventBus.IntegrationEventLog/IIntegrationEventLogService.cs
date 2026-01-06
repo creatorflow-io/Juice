@@ -1,26 +1,22 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
-
-namespace Juice.EventBus.IntegrationEventLog.EF
+﻿
+namespace Juice.EventBus.IntegrationEventLog
 {
     public interface IIntegrationEventLogService : IDisposable
     {
-        IntegrationEventLogContext LogContext { get; }
-
         /// <summary>
         /// Use to process pending events
         /// </summary>
         /// <param name="transactionId"></param>
         /// <returns></returns>
-        Task<IEnumerable<IntegrationEventLogEntry>> RetrieveEventLogsPendingToPublishAsync(Guid transactionId);
+        Task<IEnumerable<IntegrationEvent>> RetrieveEventLogsPendingToPublishAsync(Guid? transactionId);
 
         /// <summary>
         /// Save an integration event within a same transaction with domain DBContext
         /// </summary>
         /// <param name="event"></param>
-        /// <param name="transaction"></param>
+        /// <param name="transactionId"></param>
         /// <returns></returns>
-        Task SaveEventAsync(IntegrationEvent @event, IDbContextTransaction transaction);
+        Task AddEventAsync(IntegrationEvent @event, Guid transactionId);
 
         /// <summary>
         /// Change event state after publish it to the service bus
@@ -44,16 +40,8 @@ namespace Juice.EventBus.IntegrationEventLog.EF
         Task MarkEventAsFailedAsync(Guid eventId);
 
     }
-    public interface IIntegrationEventLogService<out TContext> : IIntegrationEventLogService
-        where TContext : DbContext
+    public interface IIntegrationEventLogService<out T> : IIntegrationEventLogService
     {
-        /// <summary>
-        /// Ensure event log context has an associated connection with input <c>T</c> context.
-        /// <para>Throw <see cref="ArgumentException"/> if input context has not same type with <c>TContext</c></para>
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="context"></param>
-        void EnsureAssociatedConnection<T>(T context) where T : DbContext;
     }
 
 }

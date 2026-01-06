@@ -27,8 +27,9 @@ namespace Juice.EventBus.IntegrationEventLog.EF
         public string EventTypeShortName => EventTypeName.Split('.').Last();
         [NotMapped]
         public IntegrationEvent? IntegrationEvent { get; private set; }
-        public EventState State { get; set; }
-        public int TimesSent { get; set; }
+        public EventState State { get; private set; }
+        public int TimesSent { get; private set; }
+        public DateTime? ModificationTime { get; private set; }
         public DateTime CreationTime { get; private set; }
         public string Content { get; private set; }
         public string TransactionId { get; private set; }
@@ -41,6 +42,16 @@ namespace Juice.EventBus.IntegrationEventLog.EF
             }
             IntegrationEvent = JsonConvert.DeserializeObject(Content, type) as IntegrationEvent;
             return this;
+        }
+
+        public void UpdateState(EventState state)
+        {
+            if (state == EventState.InProgress)
+            {
+                TimesSent++;
+            }
+            State = state;
+            ModificationTime = DateTime.UtcNow;
         }
     }
 }

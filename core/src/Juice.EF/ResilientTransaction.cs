@@ -29,40 +29,6 @@ namespace Juice.EF
                 using (_logger?.BeginScope(CreateLogScope(transaction.TransactionId)))
                 {
                     await action(transaction);
-
-                    // commit transaction if needed
-                    if (_context is IUnitOfWork unitOfWork)
-                    {
-                        if (unitOfWork.HasActiveTransaction)
-                        {
-                            if (_logger?.IsEnabled(LogLevel.Debug) ?? false)
-                            {
-                                _logger.LogDebug("----- Committing transaction {TransactionId}", transaction.TransactionId);
-                            }
-
-                            await unitOfWork.CommitTransactionAsync(transaction.TransactionId, token);
-
-                            if (_logger?.IsEnabled(LogLevel.Debug) ?? false)
-                            {
-                                _logger.LogDebug("----- Transaction {TransactionId} committed", transaction.TransactionId);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if (_logger?.IsEnabled(LogLevel.Debug) ?? false)
-                        {
-                            _logger.LogDebug("----- Committing transaction {TransactionId}", transaction.TransactionId);
-                        }
-
-                        await transaction.CommitAsync();
-
-                        if (_logger?.IsEnabled(LogLevel.Debug) ?? false)
-                        {
-                            _logger.LogDebug("----- Transaction {TransactionId} committed", transaction.TransactionId);
-                        }
-                    }
-
                 }
                 return transaction.TransactionId;
             });

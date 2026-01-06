@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 namespace Juice.EF
 {
 
-    public abstract partial class DbContextBase: UnitOfWork,
+    public abstract partial class DbContextBase : UnitOfWork,
         ISchemaDbContext, IAuditableDbContext
     {
         #region Schema context
@@ -57,7 +57,7 @@ namespace Juice.EF
         public DbContextBase(DbContextOptions options)
             : base(options)
         {
-            
+
         }
 
         public virtual void ConfigureServices(IServiceProvider serviceProvider)
@@ -84,7 +84,7 @@ namespace Juice.EF
 
             _options = serviceProvider.GetService(typeof(DbOptions<>).MakeGenericType(GetType())) as DbOptions;
             Schema = _options?.Schema;
-            if(_options?.EnableTimeTracking ?? false)
+            if (_options?.EnableTimeTracking ?? false)
             {
                 TimeTracker = serviceProvider.GetService<ITimeTracker>();
             }
@@ -106,7 +106,7 @@ namespace Juice.EF
         }
 
 
-        private HashSet<EntityEntry> _pendingRefreshEntities = new HashSet<EntityEntry>();
+        private HashSet<EntityEntry> _pendingRefreshEntities = [];
 
         private void ProcessingRefreshEntries(HashSet<EntityEntry>? entities)
         {
@@ -125,21 +125,12 @@ namespace Juice.EF
             }
         }
 
-        private void ProcessingChanges()
-        {
-            if (!this.HasActiveTransaction)
-            {
-                _mediator.DispatchDataChangeEventsAsync(this, _logger).GetAwaiter().GetResult();
-            }
-        }
-
         public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default(CancellationToken))
         {
             this.TrackingChanges(_logger);
 
             try
             {
-                await _mediator.DispatchDomainEventsAsync(this);
                 if (_options != null && _options.JsonPropertyBehavior == JsonPropertyBehavior.UpdateALL)
                 {
                     return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
@@ -157,7 +148,7 @@ namespace Juice.EF
             }
             finally
             {
-                ProcessingChanges();
+                await this.DispatchEventsAsync(_mediator, _logger);
             }
         }
 
@@ -166,7 +157,6 @@ namespace Juice.EF
             this.TrackingChanges(_logger);
             try
             {
-                _mediator.DispatchDomainEventsAsync(this).GetAwaiter().GetResult();
                 if (_options != null && _options.JsonPropertyBehavior == JsonPropertyBehavior.UpdateALL)
                 {
                     return base.SaveChanges(acceptAllChangesOnSuccess);
@@ -184,19 +174,27 @@ namespace Juice.EF
             }
             finally
             {
-                ProcessingChanges();
+                this.DispatchEventsAsync(_mediator, _logger).GetAwaiter().GetResult();
             }
         }
 
         #region UnitOfWork
-        protected override async Task OnTransactionCommittedAsync()
+
+        public override async Task<bool> CommitTransactionAsync(Guid transactionId, CancellationToken token = default)
         {
-            if (_pendingRefreshEntities != null)
+            try
             {
-                await _pendingRefreshEntities.RefreshEntriesAsync();
+                return await base.CommitTransactionAsync(transactionId, token);
             }
-            await _mediator.DispatchDataChangeEventsAsync(this, _logger);
+            finally
+            {
+                if (_pendingRefreshEntities != null)
+                {
+                    await _pendingRefreshEntities.RefreshEntriesAsync();
+                }
+            }
         }
+
         #endregion
 
         public override void Dispose()

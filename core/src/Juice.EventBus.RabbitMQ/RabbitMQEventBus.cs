@@ -422,7 +422,7 @@ namespace Juice.EventBus.RabbitMQ
         #endregion
 
         #region Init producer channel
-        private async ValueTask<IChannel?> CreateProducerChannelAsync()
+        private async ValueTask<IChannel?> CreateProducerChannelAsync(CancellationToken ct)
         {
             if (!_persistentConnection.IsConnected && !await _persistentConnection.TryConnectAsync())
             {
@@ -432,13 +432,14 @@ namespace Juice.EventBus.RabbitMQ
             var channel = await _persistentConnection.CreateChannelAsync();
             if (channel == null) { return null; }
             await channel.ExchangeDeclareAsync(exchange: _exchange,
-                                    type: _exchangeType);
+                                    type: _exchangeType,
+                                    cancellationToken: ct);
             return channel;
         }
         #endregion
 
         #region Publish outgoing event
-        public async ValueTask PublishAsync(IntegrationEvent @event, string? tenantId = default)
+        public async ValueTask PublishAsync(IntegrationEvent @event, string? tenantId = default, CancellationToken cancellationToken = default)
         {
             await Task.Yield();
             ArgumentNullException.ThrowIfNull(@event);
@@ -471,11 +472,11 @@ namespace Juice.EventBus.RabbitMQ
                 WriteIndented = true
             });
 
-            await policy.Execute(async () =>
+            await policy.Execute(async (ct) =>
             {
                 if (_producerChannel == null)
                 {
-                    _producerChannel = await CreateProducerChannelAsync();
+                    _producerChannel = await CreateProducerChannelAsync(ct);
                     if (_producerChannel == null) { throw new InvalidOperationException("RabbitMQ producer channel cannot be initialized"); }
                 }
                 var properties = new BasicProperties
@@ -501,8 +502,9 @@ namespace Juice.EventBus.RabbitMQ
                     routingKey: eventName,
                     mandatory: true,
                     basicProperties: properties,
-                    body: body);
-            });
+                    body: body,
+                    cancellationToken: ct);
+            }, cancellationToken);
         }
 
         #endregion

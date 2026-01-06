@@ -1,5 +1,6 @@
 ﻿using Juice.EF;
 using Juice.EF.Migrations;
+using Juice.EventBus.IntegrationEventLog;
 using Juice.EventBus.IntegrationEventLog.EF;
 using Juice.EventBus.IntegrationEventLog.EF.FeatureBuilder;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +15,7 @@ namespace Microsoft.Extensions.DependencyInjection
         public static IIntegrationEventLogBuilder AddIntegrationEventLog(this IServiceCollection services)
         {
             services.AddIntegrationEventTypesService();
-            services.TryAdd(ServiceDescriptor.Scoped(typeof(IIntegrationEventLogService<>), typeof(IntegrationEventLogService<>)));
+            services.TryAdd(ServiceDescriptor.Scoped(typeof(IIntegrationEventRepository<>), typeof(IntegrationEventRepository<>)));
 
             return new IntegrationEventLogBuilder(services);
         }
@@ -26,14 +27,14 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <param name="builder"></param>
         /// <param name="schema"></param>
         /// <returns></returns>
-        public static IIntegrationEventLogBuilder RegisterContext<TContext>(this IIntegrationEventLogBuilder builder,
-            string? schema = default)
-            where TContext : DbContext
-        {
-            builder.Services.RegisterContext<TContext>(schema);
+        //public static IIntegrationEventLogBuilder RegisterContext<TContext>(this IIntegrationEventLogBuilder builder,
+        //    string? schema = default)
+        //    where TContext : DbContext
+        //{
+        //    builder.Services.RegisterContext<TContext>(schema);
 
-            return builder;
-        }
+        //    return builder;
+        //}
 
         /// <summary>
         /// Registering <c>Func{TContext, IntegrationEventLogContext}</c> as IntegrationEventLogContext factory
@@ -42,56 +43,55 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <param name="services"></param>
         /// <param name="schema"></param>
         /// <returns></returns>
-        public static IServiceCollection RegisterContext<TContext>(this IServiceCollection services,
-            string? schema = default)
-            where TContext : DbContext
-        {
-            services.TryAddScoped<Func<TContext, IntegrationEventLogContext>>(provider => (TContext context) =>
-            {
-                var providerName = context.Database.ProviderName;
-                var dbOptions = new DbOptions<IntegrationEventLogContext> { Schema = schema };
-                var optionsBuilder = new DbContextOptionsBuilder<IntegrationEventLogContext>();
+        //public static IServiceCollection RegisterContext<TContext>(this IServiceCollection services,
+        //    string? schema = default)
+        //    where TContext : DbContext
+        //{
+        //    services.TryAddScoped<Func<TContext, IntegrationEventLogContext>>(provider => (TContext context) =>
+        //    {
+        //        var providerName = context.Database.ProviderName;
+        //        var dbOptions = new DbOptions<IntegrationEventLogContext> { Schema = schema };
+        //        var optionsBuilder = new DbContextOptionsBuilder<IntegrationEventLogContext>();
 
-                switch (providerName)
-                {
-                    case "Microsoft.EntityFrameworkCore.SqlServer":
-                        optionsBuilder.UseSqlServer(context.Database.GetDbConnection(), x =>
-                        {
-                            x.MigrationsHistoryTable("__EFEventLogMigrationsHistory", schema);
-                            x.MigrationsAssembly("Juice.EventBus.IntegrationEventLog.EF.SqlServer");
-                        });
-                        break;
-                    case "Npgsql.EntityFrameworkCore.PostgreSQL":
-                        AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
-                        optionsBuilder.UseNpgsql(context.Database.GetDbConnection(), x =>
-                        {
-                            x.MigrationsHistoryTable("__EFEventLogMigrationsHistory", schema);
-                            x.MigrationsAssembly("Juice.EventBus.IntegrationEventLog.EF.PostgreSQL");
-                        });
-                        break;
-                    default:
-                        throw new NotSupportedException($"Unsupported provider: {providerName}");
-                }
+        //        switch (providerName)
+        //        {
+        //            case "Microsoft.EntityFrameworkCore.SqlServer":
+        //                optionsBuilder.UseSqlServer(context.Database.GetDbConnection(), x =>
+        //                {
+        //                    x.MigrationsHistoryTable("__EFEventLogMigrationsHistory", schema);
+        //                    x.MigrationsAssembly("Juice.EventBus.IntegrationEventLog.EF.SqlServer");
+        //                });
+        //                break;
+        //            case "Npgsql.EntityFrameworkCore.PostgreSQL":
+        //                AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+        //                optionsBuilder.UseNpgsql(context.Database.GetDbConnection(), x =>
+        //                {
+        //                    x.MigrationsHistoryTable("__EFEventLogMigrationsHistory", schema);
+        //                    x.MigrationsAssembly("Juice.EventBus.IntegrationEventLog.EF.PostgreSQL");
+        //                });
+        //                break;
+        //            default:
+        //                throw new NotSupportedException($"Unsupported provider: {providerName}");
+        //        }
 
-                optionsBuilder.ReplaceService<IMigrationsAssembly, DbSchemaAwareMigrationAssembly>()
-                ;
-                return new IntegrationEventLogContext(dbOptions, optionsBuilder.Options);
-            });
+        //        optionsBuilder.ReplaceService<IMigrationsAssembly, DbSchemaAwareMigrationAssembly>()
+        //        ;
+        //        return new IntegrationEventLogContext(dbOptions, optionsBuilder.Options);
+        //    });
 
-            return services;
-        }
+        //    return services;
+        //}
 
 
         /// <summary>
-        /// Registering <c>Func{TContext, IntegrationEventLogContext}</c> as IntegrationEventLogContext factory
-        /// to create <see cref="IntegrationEventLogContext"/> from TContext
+        /// Registering IntegrationEventLogContext with specified provider for migrations purposes
         /// </summary>
         /// <param name="services"></param>
         /// <param name="provider"></param>
         /// <param name="configuration"></param>
         /// <param name="schema"></param>
         /// <returns></returns>
-        public static IServiceCollection AddTestEventLogContext(this IServiceCollection services, string provider,
+        public static IServiceCollection AddIntegrationEventLogDbContext(this IServiceCollection services, string provider,
             IConfiguration configuration,
             string? schema = default)
         {
