@@ -1,5 +1,6 @@
-﻿using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+﻿using System.Net;
+using Juice.Extensions.Options;
+using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 
 namespace Juice.Extensions.Redis.Internal
@@ -14,7 +15,7 @@ namespace Juice.Extensions.Redis.Internal
         private IConnectionMultiplexer? _master;
 
         public RedisConnectionProvider(
-            IOptions<RedisOptions> options,
+            IOptionsProvider<IRedisConnectionProvider, RedisOptions> options,
             ILogger<RedisConnectionProvider> logger): this(options.Value, logger)
         {
         }
@@ -23,7 +24,6 @@ namespace Juice.Extensions.Redis.Internal
             RedisOptions options,
             ILogger logger)
         {
-            options.Validate();
             _options = options;
             _logger = logger;
         }
@@ -38,26 +38,22 @@ namespace Juice.Extensions.Redis.Internal
                     return _master;
                 }
 
-                if (string.IsNullOrEmpty(_options.ConnectionString))
-                {
-                    throw new InvalidOperationException(
-                        "Redis connection string is not configured.");
-                }
+                var options = CreateMasterOptions();
 
-                if(!_options.UseSentinel)
+                if (!IsSentinel(options))
                 {
                     _master?.Dispose();
-                    _master = await ConnectionMultiplexer.ConnectAsync(_options.ConnectionString);
+                    _master = await ConnectionMultiplexer.ConnectAsync(options);
 
                     _logger.LogInformation(
                         "Connected to Redis master via Connection String.");
                     return _master;
                 }
 
-                _sentinel ??= await ConnectionMultiplexer.SentinelConnectAsync(_options.ConnectionString!);
+                _sentinel ??= await ConnectionMultiplexer.SentinelConnectAsync(options);
 
                 _master?.Dispose();
-                _master =   _sentinel.GetSentinelMasterConnection(CreateMasterOptions());
+                _master = _sentinel.GetSentinelMasterConnection(options);
                 _logger.LogInformation("Connected to Redis master via Sentinel");
 
                 if (_logger.IsEnabled(LogLevel.Debug))
@@ -80,18 +76,24 @@ namespace Juice.Extensions.Redis.Internal
             }
         }
 
-
         private ConfigurationOptions CreateMasterOptions()
         {
-            var masterOptions = new ConfigurationOptions
-            {
-                ServiceName = _options.SentinelMasterName,
-                Password = _options.Password,
-                AbortOnConnectFail = false,
-                AllowAdmin = _options.AllowAdmin || _logger.IsEnabled(LogLevel.Debug) // Allow admin commands in debug mode for inspection
-            };
-            
-            return masterOptions;
+            var options = ConfigurationOptions.Parse(_options.ConnectionString!);
+
+            options.AllowAdmin = options.AllowAdmin
+                || (_logger.IsEnabled(LogLevel.Debug) && IsSentinel(options)); // Allow admin commands in debug mode for inspection
+            return options;
+        }
+
+        private static bool IsSentinel(ConfigurationOptions options)
+        {
+            return
+                options.ServiceName != null ||
+                options.CommandMap == CommandMap.Sentinel ||
+                options.EndPoints.Any(ep =>
+                    ep is IPEndPoint ip && ip.Port == 26379 ||
+                    ep is DnsEndPoint dns && dns.Port == 26379
+                );
         }
 
         public async ValueTask DisposeAsync()
@@ -106,7 +108,7 @@ namespace Juice.Extensions.Redis.Internal
     internal class RedisConnectionProvider<T> : RedisConnectionProvider, IRedisConnectionProvider<T>
     {
         public RedisConnectionProvider(
-            IOptions<RedisOptions<T>> options,
+            IOptionsProvider<IRedisConnectionProvider<T>, RedisOptions> options,
             ILogger<RedisConnectionProvider> logger)
             : base(options.Value, logger)
         {

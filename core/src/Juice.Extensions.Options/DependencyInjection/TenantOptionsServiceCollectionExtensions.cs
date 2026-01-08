@@ -1,5 +1,6 @@
 ﻿using Juice.Extensions.Configuration;
 using Juice.Extensions.Options;
+using Juice.Extensions.Options.Internal;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 

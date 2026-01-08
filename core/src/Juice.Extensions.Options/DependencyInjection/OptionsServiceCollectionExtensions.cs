@@ -1,4 +1,5 @@
 ﻿using Juice.Extensions.Options;
+using Juice.Extensions.Options.Internal;
 using Microsoft.Extensions.Configuration;
 
 namespace Microsoft.Extensions.DependencyInjection

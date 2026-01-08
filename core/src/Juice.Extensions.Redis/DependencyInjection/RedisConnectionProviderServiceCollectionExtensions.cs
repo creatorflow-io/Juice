@@ -1,5 +1,6 @@
 ﻿using Juice.Extensions.Redis;
 using Juice.Extensions.Redis.Internal;
+using StackExchange.Redis;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
@@ -20,7 +21,7 @@ namespace Microsoft.Extensions.DependencyInjection
             {
                 return services;
             }
-            services.Configure<RedisOptions<T>>(configure);
+            services.Configure<IRedisConnectionProvider<T>, RedisOptions>(configure);
             services.AddSingleton<IRedisConnectionProvider<T>, RedisConnectionProvider<T>>();
             return services;
         }
@@ -38,7 +39,7 @@ namespace Microsoft.Extensions.DependencyInjection
             {
                 return services;
             }
-            services.Configure(configure);
+            services.Configure<IRedisConnectionProvider, RedisOptions>(configure);
             services.AddSingleton<IRedisConnectionProvider, RedisConnectionProvider>();
             return services;
         }

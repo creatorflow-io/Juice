@@ -2,13 +2,13 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
-namespace Juice.Extensions.Options
+namespace Juice.Extensions.Options.Internal
 {
     /// <summary>
     /// Implementation for <see cref="IOptionsMutable{T}"/>, use registerd <see cref="IOptionsMutableStore"/> to save change
     /// </summary>
     /// <typeparam name="T"></typeparam>
-	public class OptionsMutable<T> : IOptionsMutable<T> where T : class, new()
+	internal class OptionsMutable<T> : IOptionsMutable<T> where T : class, new()
     {
         private readonly IOptionsMonitor<T> _options;
         private readonly string _section;
@@ -54,7 +54,7 @@ namespace Juice.Extensions.Options
         {
             try
             {
-                T sectionObject = Value;
+                var sectionObject = Value;
                 applyChanges(sectionObject);
                 await _store.UpdateAsync(_section, sectionObject);
                 _updatedValue = sectionObject;

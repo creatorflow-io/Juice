@@ -4,7 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace Juice.Extensions.Options
+namespace Juice.Extensions.Options.Internal
 {
     internal class TenantOptionsMutable<T> : IOptionsMutable<T>
         where T : class, new()

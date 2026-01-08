@@ -12,4 +12,8 @@
         <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="$(MicrosoftExtensionsVersion)" />
         <PackageReference Include="StackExchange.Redis" Version="$(RedisVersion)" />
     </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Juice.Extensions.Options\Juice.Extensions.Options.csproj" />
+    </ItemGroup>
 </Project>
