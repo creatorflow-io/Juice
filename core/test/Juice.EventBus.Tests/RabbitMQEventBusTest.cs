@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using Finbuckle.MultiTenant;
 using FluentAssertions;
-using Juice.EventBus.Tests.Events;
+using Juice.EF.Tests.Events;
 using Juice.EventBus.Tests.Handlers;
 using Juice.Extensions.DependencyInjection;
 using Juice.XUnit;

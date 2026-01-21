@@ -4,19 +4,19 @@ using Juice.EF.Tests.Domain;
 using Microsoft.EntityFrameworkCore;
 using Juice.MultiTenant.EF;
 using Juice.EF.Extensions;
-using Juice.EventBus.IntegrationEventLog.EF;
+using Juice.EventBus.Transactional.EF;
 
 namespace Juice.EF.Tests.Infrastructure
 {
 
-    public class TestContext : MultiTenantDbContext, IIntegrationEventLogDbContext
+    public class TestContext : MultiTenantDbContext, IOutboxContext
     {
         public override string? User => "test-user";
 
         public override Finbuckle.MultiTenant.EntityFrameworkCore.TenantMismatchMode TenantMismatchMode { get; set; } = Finbuckle.MultiTenant.EntityFrameworkCore.TenantMismatchMode.Throw;
         public override Finbuckle.MultiTenant.EntityFrameworkCore.TenantNotSetMode TenantNotSetMode { get; set; } = Finbuckle.MultiTenant.EntityFrameworkCore.TenantNotSetMode.Overwrite;
 
-        public DbSet<IntegrationEventLogEntry> IntegrationEventLogs { get; set; }
+        public DbSet<OutboxEvent> Outbox { get; set; }
 
         public TestContext(IServiceProvider serviceProvider, DbContextOptions<TestContext> options) : base(options)
         {
@@ -79,7 +79,7 @@ namespace Juice.EF.Tests.Infrastructure
                 entity.IsMultiTenant(MultiTenant.SharingType.None);
             });
 
-            new IntegrationEventLogEntityTypeConfiguration(Schema).Configure(modelBuilder.Entity<IntegrationEventLogEntry>());
+            new OutboxEntityTypeConfiguration(Schema).Configure(modelBuilder.Entity<OutboxEvent>());
         }
     }
 
@@ -98,7 +98,7 @@ namespace Juice.EF.Tests.Infrastructure
 
                 entity.IsMultiTenant(MultiTenant.SharingType.Tenant);
             });
-            new IntegrationEventLogEntityTypeConfiguration(Schema).Configure(modelBuilder.Entity<IntegrationEventLogEntry>());
+            new OutboxEntityTypeConfiguration(Schema).Configure(modelBuilder.Entity<OutboxEvent>());
         }
     }
 
@@ -116,7 +116,7 @@ namespace Juice.EF.Tests.Infrastructure
                 entity.IsMultiTenant(MultiTenant.SharingType.Global);
             });
 
-            new IntegrationEventLogEntityTypeConfiguration(Schema).Configure(modelBuilder.Entity<IntegrationEventLogEntry>());
+            new OutboxEntityTypeConfiguration(Schema).Configure(modelBuilder.Entity<OutboxEvent>());
         }
     }
 }

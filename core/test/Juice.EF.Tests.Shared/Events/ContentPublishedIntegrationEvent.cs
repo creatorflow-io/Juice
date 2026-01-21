@@ -1,6 +1,6 @@
-﻿using System;
+﻿using Juice.EventBus;
 
-namespace Juice.EventBus.Tests.Events
+namespace Juice.EF.Tests.Events
 {
     public record ContentPublishedIntegrationEvent : IntegrationEvent, IMultiTenantIntegrationEvent
     {

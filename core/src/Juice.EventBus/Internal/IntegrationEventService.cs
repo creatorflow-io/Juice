@@ -1,33 +1,33 @@
-﻿using Juice.EventBus;
-using Juice.EventBus.IntegrationEventLog;
+﻿using Juice.Measurement;
 using Juice.MultiTenant;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace Juice.Integrations.EventBus
+namespace Juice.EventBus.Internal
 {
-
     internal class IntegrationEventService<TContext> : IIntegrationEventService<TContext>
-        where TContext : DbContext
     {
-        private readonly IIntegrationEventRepository _eventLogService;
+        private readonly IOutboxRepository _eventLogService;
         private readonly ILogger _logger;
         private readonly IEventBus _eventBus;
         private readonly ITenantAccessor? _tenantAccessor;
-        private readonly IList<IntegrationEvent> _events = [];
+        private readonly ITimeTracker? _timeTracker;
+        private readonly IList<IIntegrationEvent> _events = [];
 
-        public IntegrationEventService(IIntegrationEventRepository<TContext> eventLogService
+        public IntegrationEventService(IOutboxRepository<TContext> eventLogService
             , IEventBus eventBus
             , ILogger<IntegrationEventService<TContext>> logger
-            , ITenantAccessor? tenantAccessor = default)
+            , ITenantAccessor? tenantAccessor = default
+            , ITimeTracker? timeTracker = default
+            )
         {
             _eventLogService = eventLogService;
             _logger = logger;
             _eventBus = eventBus;
             _tenantAccessor = tenantAccessor;
+            _timeTracker = timeTracker;
         }
 
-        public ValueTask AddEventAsync(IntegrationEvent evt)
+        public ValueTask AddEventAsync(IIntegrationEvent evt)
         {
             if (_logger.IsEnabled(LogLevel.Debug)) {
                 _logger.LogDebug("----- Adding {EventType} integration events to repository", evt.GetType());
@@ -42,6 +42,7 @@ namespace Juice.Integrations.EventBus
             {
                 _logger.LogDebug("----- Saving {Count} integration events", _events.Count);
             }
+            _timeTracker?.BeginScope("Saving integration events");
             await _eventLogService.SaveEventsAsync(transactionId ?? Guid.Empty, [.. _events]);
             _events.Clear();
         }
@@ -64,7 +65,7 @@ namespace Juice.Integrations.EventBus
             await PublishEventsThroughEventBusAsync(pendingEvents, cancellationToken);
         }
 
-        private async Task PublishEventsThroughEventBusAsync(IEnumerable<IntegrationEvent> events, CancellationToken cancellationToken)
+        private async Task PublishEventsThroughEventBusAsync(IEnumerable<IIntegrationEvent> events, CancellationToken cancellationToken)
         {
             foreach (var evt in events)
             {
@@ -92,7 +93,7 @@ namespace Juice.Integrations.EventBus
                     _logger.LogError(ex, "ERROR publishing integration event: {IntegrationEventId}. TenantId: {tenantId}, TenantIdentifier: {tenantIdentifier}. {Message}",
                         evt.Id, _tenantAccessor?.Tenant?.Id, _tenantAccessor?.Tenant?.Identifier, ex.Message);
                     _logger.LogTrace(ex, "ERROR publishing integration event: {IntegrationEventId}. {Trace}", evt.Id, ex.StackTrace);
-                    await _eventLogService.MarkEventAsFailedAsync(evt.Id, cancellationToken);
+                    await _eventLogService.MarkEventAsFailedAsync(evt.Id, ex.Message, cancellationToken);
                 }
             }
         }
@@ -100,11 +101,10 @@ namespace Juice.Integrations.EventBus
     }
 
     internal class IntegrationEventService<TContext, TEventBus> : IntegrationEventService<TContext>, IIntegrationEventService<TContext, TEventBus>
-        where TContext : DbContext
         where TEventBus : IEventBus
     {
         
-        public IntegrationEventService(IIntegrationEventRepository<TContext> eventLogService
+        public IntegrationEventService(IOutboxRepository<TContext> eventLogService
             , TEventBus eventBus
             , ILogger<IntegrationEventService<TContext, TEventBus>> logger
             , ITenantAccessor? tenantAccessor = default

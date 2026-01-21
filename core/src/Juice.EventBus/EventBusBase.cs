@@ -14,10 +14,11 @@ namespace Juice.EventBus
             Logger = logger;
         }
 
-        public abstract ValueTask PublishAsync(IntegrationEvent @event, string? tenantId, CancellationToken cancellationToken);
+        public abstract ValueTask PublishAsync<T>(T @event, string? tenantId, CancellationToken cancellationToken)
+            where T: IIntegrationEvent;
 
         public virtual ValueTask SubscribeAsync<T, TH>(string? key = default)
-            where T : IntegrationEvent
+            where T : IIntegrationEvent
             where TH : IIntegrationEventHandler<T>
         {
             var eventName = key ?? SubsManager.GetDefaultEventKey<T>();
@@ -28,7 +29,7 @@ namespace Juice.EventBus
         }
 
         public virtual ValueTask UnsubscribeAsync<T, TH>(string? key = default)
-            where T : IntegrationEvent
+            where T : IIntegrationEvent
             where TH : IIntegrationEventHandler<T>
         {
             var eventName = SubsManager.GetDefaultEventKey<T>();

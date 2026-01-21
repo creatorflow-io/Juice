@@ -59,10 +59,6 @@ namespace Juice.EventBus.IntegrationEventLog.EF.PostgreSQL.Migrations
 
                     b.HasKey("EventId");
 
-                    b.HasIndex("TimesSent")
-                        .HasDatabaseName("IX_IntegrationEventLog_Poison")
-                        .HasFilter("[TimesSent] > 0");
-
                     b.HasIndex("TransactionId");
 
                     b.HasIndex("State", "ModificationTime", "TimesSent")

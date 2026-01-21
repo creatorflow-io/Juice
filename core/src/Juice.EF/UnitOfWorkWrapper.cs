@@ -12,12 +12,11 @@ namespace Juice.EF
 
         public bool HasActiveTransaction => _unitOfWork.HasActiveTransaction;
 
-        public bool IsManagedTransaction => _unitOfWork.IsManagedTransaction;
-
-        public ValueTask AddAsync<T>(T entity, CancellationToken token = default)
+        public bool IsManaged => _unitOfWork.IsManaged;
+        public Task AddAsync<T>(T entity, CancellationToken token = default)
             where T : class
             => _unitOfWork.AddAsync(entity, token);
-        public ValueTask AddRangeAsync<T>(IEnumerable<T> entities, CancellationToken token = default)
+        public Task AddRangeAsync<T>(IEnumerable<T> entities, CancellationToken token = default)
             where T : class
             => _unitOfWork.AddRangeAsync(entities, token);
         public Task<IOperationResult> DeleteAsync<T>(T entity, CancellationToken token = default)
@@ -34,7 +33,7 @@ namespace Juice.EF
             => _unitOfWork.CommitTransactionAsync(transactionId, token);
         public Task<int> SaveChangesAsync(CancellationToken token = default)
             => _unitOfWork.SaveChangesAsync(token);
-        public void BeginManageTransaction(Guid transactionId)
-            => _unitOfWork.BeginManageTransaction(transactionId);
+        public void BeginManage()
+            => _unitOfWork.BeginManage();
     }
 }

@@ -1,7 +1,7 @@
 ﻿
-namespace Juice.EventBus.IntegrationEventLog
+namespace Juice.EventBus
 {
-    public interface IIntegrationEventRepository : IDisposable
+    public interface IOutboxRepository : IDisposable
     {
         /// <summary>
         /// Retrieves the collection of integration events that are pending publication for the specified transaction.
@@ -9,9 +9,9 @@ namespace Juice.EventBus.IntegrationEventLog
         /// <param name="transactionId">The identifier of the transaction for which to retrieve pending integration events.</param>
         /// <param name="cancellationToken">A token to monitor for cancellation requests. The operation is canceled if the token is triggered.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains an enumerable collection of <see
-        /// cref="IntegrationEvent"/> instances that have not yet been published. If no events are pending, the
+        /// cref="IIntegrationEvent"/> instances that have not yet been published. If no events are pending, the
         /// collection is empty.</returns>
-        ValueTask<IEnumerable<IntegrationEvent>> RetrieveEventsPendingToPublishAsync(Guid transactionId, CancellationToken cancellationToken = default);
+        ValueTask<IEnumerable<IIntegrationEvent>> RetrieveEventsPendingToPublishAsync(Guid transactionId, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Asynchronously retrieves a collection of integration events that are pending publication.
@@ -20,9 +20,9 @@ namespace Juice.EventBus.IntegrationEventLog
         /// <param name="tryLimit"></param>
         /// <param name="cancellationToken">A token to monitor for cancellation requests. The operation is canceled if the token is triggered.</param>
         /// <returns>A <see cref="ValueTask{TResult}"/> that represents the asynchronous operation. The result contains an
-        /// enumerable of <see cref="IntegrationEvent"/> instances that are pending publication. The collection will be
+        /// enumerable of <see cref="IIntegrationEvent"/> instances that are pending publication. The collection will be
         /// empty if no events are pending.</returns>
-        ValueTask<IEnumerable<IntegrationEvent>> RetrieveEventsPendingToPublishAsync(int take, int tryLimit, CancellationToken cancellationToken = default);
+        ValueTask<IEnumerable<IIntegrationEvent>> RetrieveEventsPendingToPublishAsync(int take, int tryLimit, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Save an integration event within a same transaction with domain DBContext
@@ -30,7 +30,7 @@ namespace Juice.EventBus.IntegrationEventLog
         /// <param name="event"></param>
         /// <param name="transactionId"></param>
         /// <returns></returns>
-        ValueTask SaveEventsAsync(Guid transactionId, params IntegrationEvent[] @event);
+        ValueTask SaveEventsAsync(Guid transactionId, params IIntegrationEvent[] @event);
 
         /// <summary>
         /// Change event state after publish it to the service bus
@@ -52,12 +52,13 @@ namespace Juice.EventBus.IntegrationEventLog
         /// Change event state on failure publising
         /// </summary>
         /// <param name="eventId"></param>
+        /// <param name="error"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask MarkEventAsFailedAsync(Guid eventId, CancellationToken cancellationToken = default);
+        ValueTask MarkEventAsFailedAsync(Guid eventId, string error, CancellationToken cancellationToken = default);
 
     }
-    public interface IIntegrationEventRepository<out T> : IIntegrationEventRepository
+    public interface IOutboxRepository<T> : IOutboxRepository
     {
     }
 

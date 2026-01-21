@@ -319,12 +319,12 @@ namespace Juice.EventBus.RabbitMQ
                     try
                     {
                         handled = true;
-                        await (Task)concreteType.GetMethod(nameof(IIntegrationEventHandler<IntegrationEvent>.HandleAsync))!.Invoke(handler, new object[] { integrationEvent! })!;
+                        await (Task)concreteType.GetMethod(nameof(IIntegrationEventHandler<IIntegrationEvent>.HandleAsync))!.Invoke(handler, new object[] { integrationEvent! })!;
                         ok = true;
                     }
                     catch (Exception ex)
                     {
-                        var eventId = integrationEvent != null ? ((IntegrationEvent)integrationEvent).Id : Guid.Empty;
+                        var eventId = integrationEvent != null ? ((IIntegrationEvent)integrationEvent).Id : Guid.Empty;
                         Logger.LogError(ex, "{handler} failed to handle event: {EventName}, eventId: {eventId}", handler.GetGenericTypeName(), eventName, eventId);
                         if (Logger.IsEnabled(LogLevel.Trace))
                         {
@@ -345,7 +345,7 @@ namespace Juice.EventBus.RabbitMQ
 
         #region Subscribe/UnSubscribe
         public async ValueTask SubscribeAsync<T, TH>(string? key = default)
-            where T : IntegrationEvent
+            where T : IIntegrationEvent
             where TH : IIntegrationEventHandler<T>
         {
             await SubsManager.AddSubscriptionAsync<T, TH>(key);
@@ -408,7 +408,7 @@ namespace Juice.EventBus.RabbitMQ
         }
 
         public virtual ValueTask UnsubscribeAsync<T, TH>(string? key = default)
-            where T : IntegrationEvent
+            where T : IIntegrationEvent
             where TH : IIntegrationEventHandler<T>
         {
             var eventName = SubsManager.GetDefaultEventKey<T>();
@@ -439,7 +439,8 @@ namespace Juice.EventBus.RabbitMQ
         #endregion
 
         #region Publish outgoing event
-        public async ValueTask PublishAsync(IntegrationEvent @event, string? tenantId = default, CancellationToken cancellationToken = default)
+        public async ValueTask PublishAsync<T>(T @event, string? tenantId = default, CancellationToken cancellationToken = default)
+            where T : IIntegrationEvent
         {
             await Task.Yield();
             ArgumentNullException.ThrowIfNull(@event);

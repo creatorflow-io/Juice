@@ -1,4 +1,5 @@
 ﻿using Juice.EventBus;
+using Juice.EventBus.Internal;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 

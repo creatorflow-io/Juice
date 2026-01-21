@@ -1,9 +1,10 @@
 ﻿using Juice.EF;
+using Juice.EventBus.Transactional.EF;
 using Microsoft.EntityFrameworkCore;
 
 namespace Juice.EventBus.IntegrationEventLog.EF
 {
-    public class IntegrationEventLogContext : DbContext, ISchemaDbContext, IIntegrationEventLogDbContext
+    public class IntegrationEventLogContext : DbContext, ISchemaDbContext, IOutboxContext
     {
         public string? Schema { get; private set; }
 
@@ -13,11 +14,11 @@ namespace Juice.EventBus.IntegrationEventLog.EF
             Schema = dbOptions.Schema;
         }
 
-        public DbSet<IntegrationEventLogEntry> IntegrationEventLogs { get; set; }
+        public DbSet<OutboxEvent> Outbox { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
-            new IntegrationEventLogEntityTypeConfiguration(Schema).Configure(builder.Entity<IntegrationEventLogEntry>());
+            new IntegrationEventLogEntityTypeConfiguration(Schema).Configure(builder.Entity<OutboxEvent>());
         }
     }
 }

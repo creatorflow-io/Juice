@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Juice.EF;
 using Juice.EF.Tests.Domain;
+using Juice.EF.Tests.Events;
 using Juice.EF.Tests.Infrastructure;
-using Juice.EventBus.IntegrationEventLog;
 using Juice.EventBus.IntegrationEventLog.EF;
-using Juice.EventBus.RabbitMQ;
-using Juice.EventBus.Tests.Events;
 using Juice.EventBus.Tests.Handlers;
 using Juice.Extensions.DependencyInjection;
 using Juice.Services;
@@ -51,7 +50,7 @@ namespace Juice.EventBus.Tests
 
                 // Register DbContext class
 
-                services.AddIntegrationEventLogDbContext("SqlServer", configuration, schema);
+                services.AddIntegrationEventLogMigrationContext("SqlServer", configuration, schema);
 
                 services.AddSingleton(provider => _testOutput);
 
@@ -94,7 +93,7 @@ namespace Juice.EventBus.Tests
                 // Register DbContext class
 
 
-                services.AddIntegrationEventLogDbContext("PostgreSQL", configuration, schema);
+                services.AddIntegrationEventLogMigrationContext("PostgreSQL", configuration, schema);
 
                 services.AddSingleton(provider => _testOutput);
 
@@ -121,7 +120,7 @@ namespace Juice.EventBus.Tests
         }
 
         /// <summary>
-        /// This test required EF Tests to create Contents.Content
+        /// This test required EF Tests to create Contents.Payload
         /// </summary>
         /// <returns></returns>
         [IgnoreOnCIFact(DisplayName = "Test event log service"), TestPriority(9)]
@@ -159,13 +158,16 @@ namespace Juice.EventBus.Tests
 
                 services.AddDefaultStringIdGenerator();
 
-                services.AddIntegrationEventLog();
+                services.AddOutboxRepository()
+                    .UseIntegrationEventLog<TestContext>();
 
                 services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"));
 
                 services.AddTransient<ContentPublishedIntegrationEventHandler>();
                 services.AddSingleton<HandledService>();
             });
+
+            typeof(ContentPublishedIntegrationEvent).IsAssignableTo(typeof(IIntegrationEvent)).Should().BeTrue();
 
             var logger = resolver.ServiceProvider.GetRequiredService<ILogger<IntegrationEventLogTest>>();
 
@@ -177,7 +179,7 @@ namespace Juice.EventBus.Tests
                 using var scope = resolver.ServiceProvider.CreateScope();
                 var context = scope.ServiceProvider.GetRequiredService<TestContext>();
 
-                var integrationEventRepository = scope.ServiceProvider.GetRequiredService<IIntegrationEventRepository<TestContext>>();
+                var integrationEventRepository = scope.ServiceProvider.GetRequiredService<IOutboxRepository<TestContext>>();
 
                 var idGenerator = scope.ServiceProvider.GetRequiredService<IStringIdGenerator>();
 
@@ -213,7 +215,7 @@ namespace Juice.EventBus.Tests
                 catch (Exception ex)
                 {
                     logger.LogError(ex, "ERROR Publishing integration event: {IntegrationEventId} from {AppName} - ({@IntegrationEvent})", evt.Id, nameof(IntegrationEventLogTest), evt);
-                    await integrationEventRepository.MarkEventAsFailedAsync(evt.Id);
+                    await integrationEventRepository.MarkEventAsFailedAsync(evt.Id, ex.Message);
                 }
 
                 await Task.Delay(3000);
@@ -250,12 +252,12 @@ namespace Juice.EventBus.Tests
 
                 // Register DbContext class
 
-                services.AddIntegrationEventLogDbContext("PostgreSQL", configuration, schema);
+                services.AddIntegrationEventLogMigrationContext("PostgreSQL", configuration, schema);
 
             });
 
             var dbContext = resolver.ServiceProvider.GetRequiredService<IntegrationEventLogContext>();
-            var eventLogEntry = await dbContext.IntegrationEventLogs.FirstOrDefaultAsync();
+            var eventLogEntry = await dbContext.Outbox.FirstOrDefaultAsync();
 
             if (eventLogEntry != null)
             {

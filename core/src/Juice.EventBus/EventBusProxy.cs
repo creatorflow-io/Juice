@@ -5,7 +5,7 @@ namespace Juice.EventBus
 
     internal class EventBusProxy<T> : DispatchProxy
     {
-        private IEventBus _eventBus;
+        private IEventBus? _eventBus;
 
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
         {

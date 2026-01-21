@@ -532,8 +532,12 @@ namespace Juice.EF.Extensions
             {
                 return;
             }
-            // skip managed transaction
-            if (context is IUnitOfWork { IsManagedTransaction : true })
+            if(logger?.IsEnabled(LogLevel.Debug) ?? false)
+            {
+                logger?.LogDebug("[DispatchEventsAsync] DbContext {0} is managed: {1}", context.GetType().Name, context is IUnitOfWork { IsManaged: true });
+            }
+            // skip because the events will be dispatched by the outer behavior or infrastructure
+            if (context is IUnitOfWork { IsManaged : true })
             {
                 return;
             }

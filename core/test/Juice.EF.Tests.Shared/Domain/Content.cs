@@ -1,13 +1,15 @@
 ﻿using System;
 using Juice.Domain;
 using Juice.Domain.Attributes;
+using Juice.EF.Tests.Domain.Events;
+using Juice.MediatR;
 
 namespace Juice.EF.Tests.Domain
 {
     [Notice(EntityStates.Created | EntityStates.Modified)]
-    public class Content : DynamicAuditEntity<Guid>
+    public class Content : DynamicAuditEntity<Guid>, IAggregateRoot<INotification>
     {
-        public Content(string code, string name): base(Guid.NewGuid(), name)
+        public Content(string code, string name) : base(Guid.NewGuid(), name)
         {
             Name = name;
             Code = code;
@@ -23,5 +25,14 @@ namespace Juice.EF.Tests.Domain
         public string? AlternativeCreatedUser { get; private set; }
         [UpdateUserInfoAttribute(EntityStates.Modified)]
         public string? AlternativeModifiedUser { get; private set; }
+
+        public IList<INotification> DomainEvents { get; } = [];
+
+        public void ChangeName(string name)
+        {
+            Validator.ThrowIfNullOrWhiteSpace(name);
+            this.AddDomainEvent(new ContentNameChangedEvent(this, Name, name));
+            Name = name;
+        }
     }
 }

@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Finbuckle.MultiTenant.Abstractions;
-using Juice.EventBus.Tests.Events;
+using Juice.EF.Tests.Events;
 using Microsoft.Extensions.Logging;
 
 namespace Juice.EventBus.Tests.Handlers

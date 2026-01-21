@@ -20,7 +20,7 @@ namespace Juice.EventBus
             _scopeFactory = scopeFactory;
         }
 
-        public override ValueTask PublishAsync(IntegrationEvent @event, string? tenantId = default, CancellationToken cancellationToken = default)
+        public override ValueTask PublishAsync<T>(T @event, string? tenantId = default, CancellationToken cancellationToken = default)
         {
             var eventName = @event.GetEventKey();
             if(tenantId != null && @event is IMultiTenantIntegrationEvent _t && _t.TenantId != null && !_t.TenantId.Equals(tenantId, StringComparison.OrdinalIgnoreCase))
@@ -55,7 +55,7 @@ namespace Juice.EventBus
             return ValueTask.CompletedTask;
         }
 
-        protected virtual async Task ProcessingEventAsync(string eventName, IntegrationEvent @event, string? tenantId)
+        protected virtual async Task ProcessingEventAsync(string eventName, IIntegrationEvent @event, string? tenantId)
         {
             using (Logger.BeginScope($"Processing integration event: {eventName} {@event.Id}"))
             {

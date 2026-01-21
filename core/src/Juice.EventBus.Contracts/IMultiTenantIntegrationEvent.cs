@@ -1,7 +1,7 @@
 ﻿
 namespace Juice.EventBus
 {
-    public interface IMultiTenantIntegrationEvent
+    public interface IMultiTenantIntegrationEvent: IIntegrationEvent
     {
         string? TenantId { get; }
     }

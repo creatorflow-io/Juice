@@ -1,7 +1,4 @@
-﻿using Juice.EventBus;
-using Microsoft.EntityFrameworkCore;
-
-namespace Juice.Integrations.EventBus
+﻿namespace Juice.EventBus
 {
     public interface IIntegrationEventService
     {
@@ -10,7 +7,7 @@ namespace Juice.Integrations.EventBus
         /// </summary>
         /// <param name="evt"></param>
         /// <returns></returns>
-        ValueTask AddEventAsync(IntegrationEvent evt);
+        ValueTask AddEventAsync(IIntegrationEvent evt);
 
         /// <summary>
         /// Persists all pending events associated with the specified transaction to the underlying event store
@@ -41,13 +38,11 @@ namespace Juice.Integrations.EventBus
 
     }
     public interface IIntegrationEventService<out TContext> : IIntegrationEventService
-        where TContext : DbContext
     {
 
     }
 
     public interface IIntegrationEventService<out TContext, out TEventBus>: IIntegrationEventService<TContext>
-        where TContext : DbContext
         where TEventBus : IEventBus
     {
     }

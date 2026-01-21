@@ -13,9 +13,8 @@ namespace Juice.EF
 
         #region UnitOfWork
 
-        private bool _isManagedTransaction = false;
-        public virtual bool IsManagedTransaction
-            => _isManagedTransaction && HasActiveTransaction;
+        private bool _isManaged = false;
+        public virtual bool IsManaged => _isManaged;
 
         public virtual bool HasActiveTransaction
             => Database.CurrentTransaction != null
@@ -23,17 +22,9 @@ namespace Juice.EF
 
         private Guid? _commitedTransactionId;
 
-        public void BeginManageTransaction(Guid transactionId)
+        public void BeginManage()
         {
-            if(Database.CurrentTransaction == null)
-            {
-                throw new InvalidOperationException("There is no active transaction");
-            }   
-            if (transactionId != Database.CurrentTransaction.TransactionId)
-            {
-                throw new InvalidOperationException($"Transaction {transactionId} is not current");
-            }
-            _isManagedTransaction = true;
+            _isManaged = true;
         }
 
         public virtual async Task<bool> CommitTransactionAsync(Guid transactionId, CancellationToken token = default)
@@ -43,7 +34,7 @@ namespace Juice.EF
                 return false;
             }
             var transaction = Database.CurrentTransaction;
-            if (transaction == null) { throw new ArgumentNullException(nameof(transaction)); }
+            if (transaction == null) { throw new InvalidOperationException("DbContext has not active transaction"); }
 
             if (transaction.TransactionId != transactionId) { throw new InvalidOperationException($"Transaction {transaction.TransactionId} is not current"); }
 
@@ -63,17 +54,14 @@ namespace Juice.EF
 
         protected virtual Task OnTransactionCommittedAsync() => Task.CompletedTask;
 
-        async ValueTask IUnitOfWork.AddAsync<T>(T entity, CancellationToken token)
+        async Task IUnitOfWork.AddAsync<T>(T entity, CancellationToken token)
             where T : class
         {
             await this.AddAsync(entity, token);
         }
 
-        async ValueTask IUnitOfWork.AddRangeAsync<T>(IEnumerable<T> entities, CancellationToken token)
-            where T : class
-        {
-            await this.AddRangeAsync(entities, token);
-        }
+        Task IUnitOfWork.AddRangeAsync<T>(IEnumerable<T> entities, CancellationToken token)
+            where T : class => this.AddRangeAsync(entities, token);
 
         public virtual Task<IOperationResult> DeleteAsync<T>(T entity, CancellationToken token = default)
             where T : class

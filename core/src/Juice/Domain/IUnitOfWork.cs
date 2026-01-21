@@ -9,19 +9,18 @@ namespace Juice.Domain
     public interface IUnitOfWork
     {
         /// <summary>
-        /// Gets a value indicating whether the current transaction is managed by the framework or infrastructure.
+        /// Gets a value indicating whether the current context is managed by the framework or infrastructure.
         /// </summary>
-        bool IsManagedTransaction { get; }
+        bool IsManaged { get; }
         /// <summary>
         /// Gets a value indicating whether there is an active transaction associated with the current context.
         /// </summary>
         bool HasActiveTransaction { get; }
 
         /// <summary>
-        /// Begin a managed transaction
+        /// Begin manage context from outside
         /// </summary>
-        /// <param name="transactionId"></param>
-        void BeginManageTransaction(Guid transactionId);
+        void BeginManage();
 
         /// <summary>
         /// Commit transaction with specified id
@@ -37,6 +36,7 @@ namespace Juice.Domain
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+
         /// <summary>
         /// Add entity to the context (in memory)
         /// </summary>
@@ -44,7 +44,7 @@ namespace Juice.Domain
         /// <param name="entity"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask AddAsync<T>(T entity, CancellationToken cancellationToken = default)
+        Task AddAsync<T>(T entity, CancellationToken cancellationToken = default)
             where T : class;
 
         /// <summary>
@@ -54,7 +54,7 @@ namespace Juice.Domain
         /// <param name="entities"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask AddRangeAsync<T>(IEnumerable<T> entities, CancellationToken cancellationToken = default)
+        Task AddRangeAsync<T>(IEnumerable<T> entities, CancellationToken cancellationToken = default)
             where T : class;
 
         /// <summary>

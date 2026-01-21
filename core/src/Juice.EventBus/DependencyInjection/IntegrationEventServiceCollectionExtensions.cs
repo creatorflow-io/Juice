@@ -1,4 +1,5 @@
-﻿using Juice.Integrations.EventBus;
+﻿using Juice.EventBus;
+using Juice.EventBus.Internal;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Microsoft.Extensions.DependencyInjection

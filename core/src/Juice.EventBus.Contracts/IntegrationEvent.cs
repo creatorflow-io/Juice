@@ -1,6 +1,6 @@
 ﻿namespace Juice.EventBus
 {
-    public abstract record IntegrationEvent
+    public abstract record IntegrationEvent: IIntegrationEvent
     {
         public Guid Id { get; init; } = Guid.NewGuid();
 

@@ -22,25 +22,32 @@ namespace Juice.EventBus.IntegrationEventLog.EF.SqlServer.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("Juice.EventBus.IntegrationEventLog.EF.IntegrationEventLogEntry", b =>
+            modelBuilder.Entity("Juice.EventBus.Transactional.EF.OutboxEvent", b =>
                 {
                     b.Property<Guid>("EventId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreationTime")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("EventTypeName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
 
-                    b.Property<DateTime?>("ModificationTime")
-                        .HasColumnType("datetime2");
+                    b.Property<string>("LastError")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("Content");
+
+                    b.Property<DateTime?>("ProcessedOn")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("ModificationTime");
 
                     b.Property<int>("State")
                         .HasColumnType("int");
@@ -50,18 +57,15 @@ namespace Juice.EventBus.IntegrationEventLog.EF.SqlServer.Migrations
 
                     b.Property<string>("TransactionId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.HasKey("EventId");
 
-                    b.HasIndex("TimesSent")
-                        .HasDatabaseName("IX_Outbox_Poison")
-                        .HasFilter("[TimesSent] > 0");
-
                     b.HasIndex("TransactionId");
 
-                    b.HasIndex("State", "ModificationTime", "TimesSent")
-                        .HasDatabaseName("IX_Outbox_Recovery")
+                    b.HasIndex("State", "ProcessedOn", "TimesSent")
+                        .HasDatabaseName("IX_IntegrationEventLog_Recovery")
                         .HasFilter("[ModificationTime] IS NOT NULL");
 
                     b.ToTable("IntegrationEventLog", "EventBus");

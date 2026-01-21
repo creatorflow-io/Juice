@@ -9,7 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Juice.EF\Juice.EF.csproj" />
-    <ProjectReference Include="..\Juice.EventBus\Juice.EventBus.csproj" />
+    <ProjectReference Include="..\Juice.EventBus.Transactional.EF\Juice.EventBus.Transactional.EF.csproj" />
   </ItemGroup>
 
   <ItemGroup>

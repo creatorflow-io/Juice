@@ -1,4 +1,4 @@
-﻿namespace Juice.EventBus.IntegrationEventLog.EF
+﻿namespace Juice.EventBus.Transactional.EF
 {
     public enum EventState
     {

@@ -28,7 +28,7 @@ namespace Juice.EventBus
         public void Clear() => _handlers.Clear();
 
         public async ValueTask AddSubscriptionAsync<T, TH>(string? key)
-            where T : IntegrationEvent
+            where T : IIntegrationEvent
             where TH : IIntegrationEventHandler<T>
         {
             var eventName = key ?? this.GetDefaultEventKey<T>();
@@ -66,7 +66,7 @@ namespace Juice.EventBus
 
         public async ValueTask RemoveSubscriptionAsync<T, TH>(string? key)
             where TH : IIntegrationEventHandler<T>
-            where T : IntegrationEvent
+            where T : IIntegrationEvent
         {
             var eventName = key ?? this.GetDefaultEventKey<T>();
             var handlerToRemove = await FindSubscriptionToRemoveAsync(eventName, typeof(TH));

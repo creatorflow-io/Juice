@@ -1,17 +1,21 @@
-﻿using Juice.EF.Tests.Infrastructure;
-using Juice.Integrations.EventBus;
+﻿using System;
+using Juice.EF.Tests.Infrastructure;
+using Juice.EventBus;
 using Juice.Integrations.MediatR.Behaviors;
 using Juice.MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace Juice.Integrations.Tests
 {
-    internal class ContentTransactionBehavior : TransactionBehavior<CreateContentCommand, IOperationResult, TestContext>
+    internal class ContentTransactionBehavior<TRequest, TResponse>
+        : TransactionBehavior<TRequest, TResponse, TestContext>
+        where TRequest : IRequest<TResponse>, IContentCommand
     {
         public ContentTransactionBehavior(TestContext dbContext,
             IIntegrationEventService<TestContext> integrationEventService,
             IMediator mediator,
-            ILogger<ContentTransactionBehavior> logger) : base(dbContext, integrationEventService, mediator, logger)
+            ILogger<ContentTransactionBehavior<TRequest, TResponse>> logger)
+            : base(dbContext, integrationEventService, mediator, logger)
         {
         }
     }

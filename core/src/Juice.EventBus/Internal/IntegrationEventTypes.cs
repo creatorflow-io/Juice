@@ -1,4 +1,4 @@
-﻿namespace Juice.EventBus
+﻿namespace Juice.EventBus.Internal
 {
     public class IntegrationEventTypes
     {

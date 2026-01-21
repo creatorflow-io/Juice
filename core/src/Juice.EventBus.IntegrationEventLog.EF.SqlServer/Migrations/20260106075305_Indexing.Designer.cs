@@ -40,7 +40,7 @@ namespace Juice.EventBus.IntegrationEventLog.EF.SqlServer.Migrations
 
                     b.Property<string>("EventTypeName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<DateTime?>("ModificationTime")
                         .HasColumnType("datetime2");
@@ -53,18 +53,14 @@ namespace Juice.EventBus.IntegrationEventLog.EF.SqlServer.Migrations
 
                     b.Property<string>("TransactionId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("nvarchar(64)");
 
                     b.HasKey("EventId");
-
-                    b.HasIndex("TimesSent")
-                        .HasDatabaseName("IX_Outbox_Poison")
-                        .HasFilter("[TimesSent] > 0");
 
                     b.HasIndex("TransactionId");
 
                     b.HasIndex("State", "ModificationTime", "TimesSent")
-                        .HasDatabaseName("IX_Outbox_Recovery")
+                        .HasDatabaseName("IX_IntegrationEventLog_Recovery")
                         .HasFilter("[ModificationTime] IS NOT NULL");
 
                     b.ToTable("IntegrationEventLog", "EventBus");

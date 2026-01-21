@@ -1,16 +1,17 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Juice.EventBus.Transactional.EF;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Juice.EventBus.IntegrationEventLog.EF
 {
-    public class IntegrationEventLogEntityTypeConfiguration : IEntityTypeConfiguration<IntegrationEventLogEntry>
+    internal class IntegrationEventLogEntityTypeConfiguration : IEntityTypeConfiguration<OutboxEvent>
     {
         private readonly string? Schema;
         public IntegrationEventLogEntityTypeConfiguration(string? schema = null)
         {
             Schema = schema;
         }
-        public void Configure(EntityTypeBuilder<IntegrationEventLogEntry> builder)
+        public void Configure(EntityTypeBuilder<OutboxEvent> builder)
         {
             builder.ToTable("IntegrationEventLog", Schema);
 
@@ -19,11 +20,15 @@ namespace Juice.EventBus.IntegrationEventLog.EF
             builder.Property(e => e.EventId)
                 .IsRequired();
 
-            builder.Property(e => e.Content)
+            builder.Property(e => e.Payload)
+                .HasColumnName("Content")
                 .IsRequired();
 
             builder.Property(e => e.CreationTime)
                 .IsRequired();
+
+            builder.Property(e => e.ProcessedOn)
+                .HasColumnName("ModificationTime");
 
             builder.Property(e => e.State)
                 .IsRequired();
@@ -35,6 +40,9 @@ namespace Juice.EventBus.IntegrationEventLog.EF
                 .HasMaxLength(256)
                 .IsRequired();
 
+            builder.Property(e => e.LastError)
+                .HasMaxLength(LengthConstants.ShortDescriptionLength);
+
             builder.Property(e => e.TransactionId)
                 .HasMaxLength(64);
 
@@ -42,9 +50,9 @@ namespace Juice.EventBus.IntegrationEventLog.EF
                 ;
 
             builder.HasIndex(
-                nameof(IntegrationEventLogEntry.State),
-                nameof(IntegrationEventLogEntry.ModificationTime),
-                nameof(IntegrationEventLogEntry.TimesSent)
+                nameof(OutboxEvent.State),
+                nameof(OutboxEvent.ProcessedOn),
+                nameof(OutboxEvent.TimesSent)
                 )
                 .HasDatabaseName("IX_IntegrationEventLog_Recovery")
                 .HasFilter("[ModificationTime] IS NOT NULL")

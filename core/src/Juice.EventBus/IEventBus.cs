@@ -6,30 +6,32 @@
     public interface IEventBus
     {
         /// <summary>
-        /// Publish <see cref="IntegrationEvent"/> to implemented broker like RabbitMQ, ServiceBus...
+        /// Publish <see cref="IIntegrationEvent"/> to implemented broker like RabbitMQ, ServiceBus...
         /// </summary>
         /// <param name="event"></param>
         /// <param name="tenantId"></param>
         /// <param name="cancellationToken"></param>
-        ValueTask PublishAsync(IntegrationEvent @event, string? tenantId = default, CancellationToken cancellationToken = default);
+        ValueTask PublishAsync<T>(T @event,
+            string? tenantId = default, CancellationToken cancellationToken = default)
+            where T: IIntegrationEvent;
 
         /// <summary>
-        /// SubscribeAsync an <see cref="IntegrationEvent"/> with specified <see cref="IIntegrationEventHandler{T}"/>
+        /// SubscribeAsync an <see cref="IIntegrationEvent"/> with specified <see cref="IIntegrationEventHandler{T}"/>
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <typeparam name="TH"></typeparam>
         ValueTask SubscribeAsync<T, TH>(string? key = default)
-            where T : IntegrationEvent
+            where T : IIntegrationEvent
             where TH : IIntegrationEventHandler<T>;
 
         /// <summary>
-        /// SubscribeAsync an <see cref="IntegrationEvent"/> with specified <see cref="IIntegrationEventHandler{T}"/>
+        /// SubscribeAsync an <see cref="IIntegrationEvent"/> with specified <see cref="IIntegrationEventHandler{T}"/>
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <typeparam name="TH"></typeparam>
         ValueTask UnsubscribeAsync<T, TH>(string? key = default)
             where TH : IIntegrationEventHandler<T>
-            where T : IntegrationEvent;
+            where T : IIntegrationEvent;
 
         /// <summary>
         /// Destroy the event bus

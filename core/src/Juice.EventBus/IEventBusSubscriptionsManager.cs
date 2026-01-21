@@ -7,12 +7,12 @@
         event EventHandler<string> OnEventRemoved;
 
         ValueTask AddSubscriptionAsync<T, TH>(string? key)
-           where T : IntegrationEvent
+           where T : IIntegrationEvent
            where TH : IIntegrationEventHandler<T>;
 
         ValueTask RemoveSubscriptionAsync<T, TH>(string? key)
              where TH : IIntegrationEventHandler<T>
-             where T : IntegrationEvent;
+             where T : IIntegrationEvent;
 
         ValueTask<bool> HasSubscriptionsForEventAsync(string eventName);
         /// <summary>

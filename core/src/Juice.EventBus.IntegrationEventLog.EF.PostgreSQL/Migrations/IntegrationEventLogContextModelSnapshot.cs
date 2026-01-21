@@ -22,15 +22,11 @@ namespace Juice.EventBus.IntegrationEventLog.EF.PostgreSQL.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("Juice.EventBus.IntegrationEventLog.EF.IntegrationEventLogEntry", b =>
+            modelBuilder.Entity("Juice.EventBus.Transactional.EF.OutboxEvent", b =>
                 {
                     b.Property<Guid>("EventId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
-
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<DateTime>("CreationTime")
                         .HasColumnType("timestamp with time zone");
@@ -40,8 +36,18 @@ namespace Juice.EventBus.IntegrationEventLog.EF.PostgreSQL.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
-                    b.Property<DateTime?>("ModificationTime")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<string>("LastError")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("Content");
+
+                    b.Property<DateTime?>("ProcessedOn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ModificationTime");
 
                     b.Property<int>("State")
                         .HasColumnType("integer");
@@ -56,13 +62,9 @@ namespace Juice.EventBus.IntegrationEventLog.EF.PostgreSQL.Migrations
 
                     b.HasKey("EventId");
 
-                    b.HasIndex("TimesSent")
-                        .HasDatabaseName("IX_IntegrationEventLog_Poison")
-                        .HasFilter("[TimesSent] > 0");
-
                     b.HasIndex("TransactionId");
 
-                    b.HasIndex("State", "ModificationTime", "TimesSent")
+                    b.HasIndex("State", "ProcessedOn", "TimesSent")
                         .HasDatabaseName("IX_IntegrationEventLog_Recovery")
                         .HasFilter("[ModificationTime] IS NOT NULL");
 

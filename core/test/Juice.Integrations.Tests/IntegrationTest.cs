@@ -6,14 +6,14 @@ using Juice.Domain;
 using Juice.EF;
 using Juice.EF.Extensions;
 using Juice.EF.Tests.Domain;
+using Juice.EF.Tests.EventHandlers;
+using Juice.EF.Tests.Events;
 using Juice.EF.Tests.Infrastructure;
 using Juice.EventBus;
-using Juice.EventBus.IntegrationEventLog.EF;
 using Juice.EventBus.Tests;
-using Juice.EventBus.Tests.Events;
 using Juice.EventBus.Tests.Handlers;
 using Juice.Extensions.DependencyInjection;
-using Juice.Integrations.EventBus;
+using Juice.Measurement;
 using Juice.MediatR;
 using Juice.Services;
 using Juice.XUnit;
@@ -21,6 +21,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -39,11 +40,13 @@ namespace Juice.Integrations.Tests
         }
 
         /// <summary>
-        /// This test required EF Tests to create Contents.Content
+        /// This test required EF Tests to create Contents.Payload
         /// </summary>
         /// <returns></returns>
-        [IgnoreOnCIFact(DisplayName = "Integration event service should"), TestPriority(9)]
-        public async Task IntegrationEventServiceTestAsync()
+        [IgnoreOnCITheory(DisplayName = "Integration event service should"), TestPriority(9)]
+        [InlineData("SqlServer")]
+        [InlineData("PostgreSQL")]
+        public async Task IntegrationEventServiceTestAsync(string provider)
         {
             var resolver = new DependencyResolver
             {
@@ -67,21 +70,17 @@ namespace Juice.Integrations.Tests
                 });
 
                 // Register DbContext class
-                services.AddDbContext<TestContext>(builder =>
-                {
-                    var connectionString = configuration.GetConnectionString("Default");
-                    builder.UseSqlServer(connectionString);
-                });
+                services.AddTestDbContext(configuration, provider);
 
                 services.AddUnitOfWork<Content, TestContext>();
 
-                services.AddIntegrationEventLogDbContext("SqlServer", configuration, schema);
+                services.AddIntegrationEventLogMigrationContext("SqlServer", configuration, schema);
 
                 services.AddDefaultStringIdGenerator();
 
                 services
                     .AddIntegrationEventService()
-                    .AddIntegrationEventLog();
+                    .AddOutboxRepository();
 
                 services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"));
 
@@ -100,9 +99,7 @@ namespace Juice.Integrations.Tests
             var context = scope.ServiceProvider.GetRequiredService<TestContext>();
             var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork<Content>>();
 
-            var logContext = scope.ServiceProvider.GetRequiredService<IntegrationEventLogContext>();
-
-            await logContext.MigrateAsync();
+            await context.MigrateAsync();
 
             var integrationEventService = scope.ServiceProvider.GetRequiredService<IIntegrationEventService<TestContext>>();
 
@@ -130,16 +127,16 @@ namespace Juice.Integrations.Tests
                 await unitOfWork.CommitTransactionAsync(transaction.TransactionId);
             });
 
-            var logEntries = await logContext.IntegrationEventLogs
+            var logEntries = await context.Outbox
                 .Where(e => e.TransactionId == transactionId.ToString())
                 .ToListAsync();
             logEntries.Should().HaveCount(1);
             var logEntry = logEntries.First();
             logger.LogInformation("Integration Event Log Entry: {EventId}, {EventType}, {State}, {TimesSent}",
                 logEntry.EventId, logEntry.EventTypeShortName, logEntry.State, logEntry.TimesSent);
-            logEntry.DeserializeJsonContent(typeof(ContentPublishedIntegrationEvent));
-            logEntry.IntegrationEvent.Should().NotBeNull();
-            logEntry.IntegrationEvent!.Id.Should().Be(logEntry.EventId);
+            var contentPublishedEvent = JsonConvert.DeserializeObject<ContentPublishedIntegrationEvent>(logEntry.Payload);
+            contentPublishedEvent.Should().NotBeNull();
+            contentPublishedEvent!.Id.Should().Be(logEntry.EventId);
 
             await integrationEventService.PublishEventsThroughEventBusAsync(transactionId);
             if (sharedService.Handlers.Count == 0)
@@ -154,8 +151,10 @@ namespace Juice.Integrations.Tests
         }
 
 
-        [IgnoreOnCIFact(DisplayName = "Transaction behavior should"), TestPriority(10)]
-        public async Task IntegrationEventService_TransactionBehaviorTestAsync()
+        [IgnoreOnCITheory(DisplayName = "Transaction behavior should"), TestPriority(10)]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task TransactionBehaviorTestAsync(bool sameContext)
         {
             var resolver = new DependencyResolver
             {
@@ -182,38 +181,169 @@ namespace Juice.Integrations.Tests
                 services.AddUnitOfWork<Content, TestContext>();
 
                 services.AddDefaultStringIdGenerator();
-                services
+                var builder = services
                     .AddIntegrationEventService()
-                    .AddIntegrationEventLog();
+                    .AddOutboxRepository();
+
+                if (!sameContext)
+                {
+                    builder.UseIntegrationEventLog<TestContext>();
+                }
 
                 services.AddMediatR(cfg =>
                 {
                     cfg.RegisterServicesFromAssembly(typeof(CreateContentCommandHandler).Assembly);
+                    cfg.RegisterServicesFromAssembly(typeof(ContentNameChangedEventHandler).Assembly, true);
                 });
 
                 services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"));
                 services.AddTransient<ContentPublishedIntegrationEventHandler>();
+                services.AddTransient<ContentNameChangedIntegrationEventHandler>();
                 services.AddSingleton<HandledService>();
+
+                services.AddExecutionTimeMeasurement();
             });
 
             var sharedService = resolver.ServiceProvider.GetRequiredService<HandledService>();
             var eventBus = resolver.ServiceProvider.GetRequiredService<IEventBus>();
 
             await eventBus.SubscribeAsync<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler>();
+            await eventBus.SubscribeAsync<ContentNameChangedIntegrationEvent, ContentNameChangedIntegrationEventHandler>();
 
-            using var scope = resolver.ServiceProvider.CreateScope();
-
-            var result = await scope.ServiceProvider.GetRequiredService<IMediator>()
-                .Send(new CreateContentCommand());
-            result.Succeeded.Should().BeTrue();
-
-            if (sharedService.Handlers.Count == 0)
+            // warm up
+            using (var s = resolver.ServiceProvider.CreateScope())
             {
-                await Task.Delay(3000);
+                var context = s.ServiceProvider.GetRequiredService<TestContext>();
+                var check = await context.Set<Content>().AnyAsync();
+                var integrationEventRepo = s.ServiceProvider.GetRequiredService<IOutboxRepository<TestContext>>();
+                var tracker = s.ServiceProvider.GetRequiredService<ITimeTracker>();
+                tracker.BeginScope("Saving integration events");
+                await integrationEventRepo.SaveEventsAsync(default);
+                _testOutput.WriteLine(tracker.ToString());
             }
+            Guid? contentId = null;
+            using (var scope = resolver.ServiceProvider.CreateScope())
+            {
+                var timeTracker = scope.ServiceProvider.GetRequiredService<ITimeTracker>();
+                var result = await scope.ServiceProvider.GetRequiredService<IMediator>()
+                    .Send(new CreateContentCommand());
+                result.Succeeded.Should().BeTrue();
+                contentId = result.DataValue;
+                _testOutput.WriteLine(timeTracker.ToString());
+            }
+            using (var scope = resolver.ServiceProvider.CreateScope())
+            {
+                var changeResult = await scope.ServiceProvider.GetRequiredService<IMediator>()
+                .Send(new ChangeContentNameCommand(contentId.Value, "Updated name " + DateTimeOffset.Now.ToString()));
+                if(!changeResult.Succeeded)
+                {
+                    _testOutput.WriteLine(changeResult.Message);
+                }
+                changeResult.Succeeded.Should().BeTrue();
+            }
+            await Task.Delay(3000);
             sharedService.Handlers.Should().Contain(nameof(ContentPublishedIntegrationEventHandler));
 
             await eventBus.UnsubscribeAsync<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler>();
+            await eventBus.UnsubscribeAsync<ContentNameChangedIntegrationEvent, ContentNameChangedIntegrationEventHandler>();
+            await eventBus.CloseAsync();
+        }
+
+        [IgnoreOnCITheory(DisplayName = "Transaction behavior + repository"), TestPriority(10)]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task TransactionBehaviorWithRepositoryAsync(bool sameContext)
+        {
+            var resolver = new DependencyResolver
+            {
+                CurrentDirectory = AppContext.BaseDirectory
+            };
+            var schema = _testSchema1;
+            resolver.ConfigureServices(services =>
+            {
+                services.AddSingleton(provider => _testOutput);
+                var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
+                var configuration = configService.GetConfiguration(GetType().Assembly);
+                services.AddLogging(builder =>
+                {
+                    builder.ClearProviders()
+                    .AddTestOutputLogger()
+                    .AddConfiguration(configuration.GetSection("Logging"));
+                });
+                // Register DbContext class
+                services.AddDbContext<TestContext>(builder =>
+                {
+                    var connectionString = configuration.GetConnectionString("Default");
+                    builder.UseSqlServer(connectionString);
+                });
+                services.AddUnitOfWork<Content, TestContext>();
+                services.AddScoped<ContentRepository>();
+                services.AddDefaultStringIdGenerator();
+                var builder = services
+                    .AddIntegrationEventService()
+                    .AddOutboxRepository();
+
+                if (!sameContext)
+                {
+                    builder.UseIntegrationEventLog<TestContext>();
+                }
+
+                services.AddMediatR(cfg =>
+                {
+                    cfg.RegisterServicesFromAssembly(typeof(CreateContentCommandHandler).Assembly);
+                    cfg.RegisterServicesFromAssembly(typeof(ContentNameChangedEventHandler).Assembly, true);
+                });
+
+                services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"));
+                services.AddTransient<ContentPublishedIntegrationEventHandler>();
+                services.AddTransient<ContentNameChangedIntegrationEventHandler>();
+                services.AddSingleton<HandledService>();
+
+                services.AddExecutionTimeMeasurement();
+            });
+
+            var sharedService = resolver.ServiceProvider.GetRequiredService<HandledService>();
+            var eventBus = resolver.ServiceProvider.GetRequiredService<IEventBus>();
+
+            await eventBus.SubscribeAsync<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler>();
+            await eventBus.SubscribeAsync<ContentNameChangedIntegrationEvent, ContentNameChangedIntegrationEventHandler>();
+
+            // warm up
+            using (var s = resolver.ServiceProvider.CreateScope())
+            {
+                var context = s.ServiceProvider.GetRequiredService<TestContext>();
+                var check = await context.Set<Content>().AnyAsync();
+                var integrationEventRepo = s.ServiceProvider.GetRequiredService<IOutboxRepository<TestContext>>();
+                var tracker = s.ServiceProvider.GetRequiredService<ITimeTracker>();
+                tracker.BeginScope("Saving integration events");
+                await integrationEventRepo.SaveEventsAsync(default);
+                _testOutput.WriteLine(tracker.ToString());
+            }
+            Guid? contentId = null;
+            using (var scope = resolver.ServiceProvider.CreateScope())
+            {
+                var timeTracker = scope.ServiceProvider.GetRequiredService<ITimeTracker>();
+                var result = await scope.ServiceProvider.GetRequiredService<IMediator>()
+                    .Send(new CreateContent1Command());
+                result.Succeeded.Should().BeTrue();
+                contentId = result.DataValue;
+                _testOutput.WriteLine(timeTracker.ToString());
+            }
+            using (var scope = resolver.ServiceProvider.CreateScope())
+            {
+                var changeResult = await scope.ServiceProvider.GetRequiredService<IMediator>()
+                    .Send(new ChangeContentName1Command(contentId.Value, "Updated name " + DateTimeOffset.Now.ToString()));
+                if (!changeResult.Succeeded)
+                {
+                    _testOutput.WriteLine(changeResult.Message);
+                }
+                changeResult.Succeeded.Should().BeTrue();
+            }
+            await Task.Delay(3000);
+            sharedService.Handlers.Should().Contain(nameof(ContentPublishedIntegrationEventHandler));
+
+            await eventBus.UnsubscribeAsync<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler>();
+            await eventBus.UnsubscribeAsync<ContentNameChangedIntegrationEvent, ContentNameChangedIntegrationEventHandler>();
             await eventBus.CloseAsync();
         }
     }

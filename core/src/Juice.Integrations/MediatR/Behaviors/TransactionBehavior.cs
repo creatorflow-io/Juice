@@ -2,13 +2,100 @@
 using Juice.EF;
 using Juice.EF.Extensions;
 using Juice.EventBus;
-using Juice.Integrations.EventBus;
 using Juice.MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Juice.Integrations.MediatR.Behaviors
 {
+    /// <summary>
+    /// ┌──────────────────────────────────────────────────────────────────────────┐
+    /// │                        MEDIATR TRANSACTION FLOW                          │
+    /// │      (TransactionBehavior + Handler + UnitOfWork + Outbox + Publish)     │
+    /// └──────────────────────────────────────────────────────────────────────────┘
+    ///
+    /// ┌───────────────┐
+    /// │   MediatR     │
+    /// │ Send(Command) │
+    /// └───────┬───────┘
+    ///         │
+    ///         v
+    /// ┌──────────────────────────────┐
+    /// │ TransactionBehavior          │
+    /// │ (Pipeline Behavior)          │
+    /// └──────────────┬───────────────┘
+    ///                │
+    ///                │ HasActiveTransaction ?
+    ///                ├───────────────────────────────────────────────────────────┐
+    ///                │ Yes                                                       │
+    ///                │   -> just call next() and return response                 │
+    ///                │      the Transaction is managed by outer behavior         │
+    ///                │ No                                                        
+    ///                v                                                           
+    /// ┌─────────────────────────────────────────────────────────────────────────┐
+    /// │ 1) UnitOfWork BeginManage() notice context will be managed by behavior  │
+    /// └─────────────────────────────────────────────────────────────────────────┘
+    ///                |
+    ///                v
+    /// ┌─────────────────────────────────────────────────────────────────────────┐
+    /// │ 2) next() executes Command Handler (BUSINESS OUTSIDE TRANSACTION)       │
+    /// │    - Validate / Compute                                                 │
+    /// │    - Change Aggregate                                                   │
+    /// │    - Raise Domain Events                                                │
+    /// └─────────────────────────────────────────────────────────────────────────┘
+    ///                │
+    ///                v
+    /// ┌─────────────────────────────────────────────────────────────────────────┐
+    /// │ 3) Begin TransactionContext via ExecutionStrategy / ResilientTransaction│
+    /// │    - UnitOfWork(DbContext#1) BeginTransaction()                         │
+    /// └─────────────────────────────────────────────────────────────────────────┘
+    ///                │
+    ///                v
+    /// ┌─────────────────────────────────────────────────────────────────────────┐
+    /// │ 5) SaveChanges #1 (Persist Domain Entity)                               │
+    /// │    - INSERT Content                                                     │
+    /// │    - Generated IDs ready (for audit/data events)                        │
+    /// └─────────────────────────────────────────────────────────────────────────┘
+    ///                │
+    ///                v
+    /// ┌─────────────────────────────────────────────────────────────────────────┐
+    /// │ 6) Dispatch Events (in-process)                                         │
+    /// │    - DispatchDomainEvents                                               │
+    /// │    - DispatchAuditEvents                                                │
+    /// │    - DispatchDataChangeEvents                                           │
+    /// └─────────────────────────────────────────────────────────────────────────┘
+    ///                │
+    ///                v
+    /// ┌─────────────────────────────────────────────────────────────────────────┐
+    /// │ 7) Save Outbox in the same DbContext as IOutboxContext                  │
+    /// |    or using DbContext#2 (IntegrationEventLog)                           │
+    /// │    - DbContext#2 uses SAME DbConnection, DbTransaction as DbContext#1   │
+    /// └─────────────────────────────────────────────────────────────────────────┘
+    ///                │
+    ///                v
+    /// ┌─────────────────────────────────────────────────────────────────────────┐
+    /// │ 8) CommitTransaction(txId)                                              │
+    /// │    - commit only after outbox persisted                                 │
+    /// │    - ClearEvents()                                                      │
+    /// └─────────────────────────────────────────────────────────────────────────┘
+    ///                │
+    ///                v
+    /// ┌─────────────────────────────────────────────────────────────────────────┐
+    /// │ 9) Publish Integration Events (AFTER COMMIT)                            │
+    /// │    - Query Outbox by TransactionId + State=NotPublished                 │
+    /// │    - Mark InProgress                                                    │
+    /// │    - Publish to EventBus (RabbitMQ)                                     │
+    /// │    - Mark Published / Failed + update TimesSent / ModificationTime      │
+    /// └─────────────────────────────────────────────────────────────────────────┘
+    ///                │
+    ///                v
+    /// ┌─────────────────────────────────────────────────────────────────────────┐
+    /// │ 10) Return Response (MediatR pipeline completes)                        │
+    /// └─────────────────────────────────────────────────────────────────────────┘
+    /// </summary>
+    /// <typeparam name="TRequest"></typeparam>
+    /// <typeparam name="TResponse"></typeparam>
+    /// <typeparam name="TContext"></typeparam>
     public abstract class TransactionBehavior<TRequest, TResponse, TContext>
         : IPipelineBehavior<TRequest, TResponse>
         where TRequest : IRequest<TResponse>
@@ -46,7 +133,7 @@ namespace Juice.Integrations.MediatR.Behaviors
                 if (_dbContext.HasActiveTransaction)
                 {
                     _logger.LogDebug("DbContext has active transaction");
-
+                    // The transaction is managed by outer behavior
                     return await next.Invoke(request, cancellationToken);
                 }
                 using var _ = _logger.BeginScope($"Exec Command: {typeName}");
@@ -56,12 +143,14 @@ namespace Juice.Integrations.MediatR.Behaviors
                     _logger.LogDebug("----- Command data {CommandName} ({@Command})", typeName, request);
                 }
 
+                // Notice DbContext will be managed by behavior
+                _dbContext.BeginManage();
+
                 var response = await next.Invoke(request, cancellationToken);
                 _?.Dispose();
 
                 var transactionId = await ResilientTransaction.New(_dbContext, _logger).ExecuteAsync(async (transaction) =>
                 {
-                    _dbContext.BeginManageTransaction(transaction.TransactionId);
                     await _dbContext.SaveChangesAsync(cancellationToken);
                     await _mediator.DispatchDomainEventsAsync(_dbContext, false);
                     await _mediator.DispatchAuditEventsAsync(_dbContext as IAuditableDbContext, false, _logger);

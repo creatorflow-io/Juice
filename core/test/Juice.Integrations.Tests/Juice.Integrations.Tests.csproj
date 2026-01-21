@@ -24,6 +24,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Juice.Integrations\Juice.Integrations.csproj" />
+    <ProjectReference Include="..\Juice.EF.Tests.PostgreSQL\Juice.EF.Tests.PostgreSQL.csproj" />
+    <ProjectReference Include="..\Juice.EF.Tests.SqlServer\Juice.EF.Tests.SqlServer.csproj" />
     <ProjectReference Include="..\Juice.EF.Tests\Juice.EF.Tests.csproj" />
     <ProjectReference Include="..\Juice.EventBus.Tests\Juice.EventBus.Tests.csproj" />
   </ItemGroup>

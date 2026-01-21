@@ -1,13 +1,11 @@
-﻿using System.Threading;
-using System.Threading.Tasks;
-using Juice.Domain.Events;
+﻿using Juice.Domain.Events;
 using Juice.EF.Tests.Domain;
+using Juice.EF.Tests.Events;
 using Juice.EF.Tests.Infrastructure;
-using Juice.EventBus.Tests.Events;
-using Juice.Integrations.EventBus;
+using Juice.EventBus;
 using Juice.MediatR;
 
-namespace Juice.Integrations.Tests
+namespace Juice.EF.Tests.EventHandlers
 {
     internal class ContentInsertedEventHandler : INotificationHandler<DataInserted<Content>>
     {

@@ -10,6 +10,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Juice.EF\Juice.EF.csproj" />
     <ProjectReference Include="..\Juice.EventBus\Juice.EventBus.csproj" />
+    <ProjectReference Include="..\Juice.Measurement\Juice.Measurement.csproj" />
     <ProjectReference Include="..\Juice.MediatR\Juice.MediatR.csproj" />
   </ItemGroup>
 

@@ -101,6 +101,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mediator.Benchmarks", "core
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.Extensions.Redis", "core\src\Juice.Extensions.Redis\Juice.Extensions.Redis.csproj", "{EC888A50-8291-4128-8BA9-B10F0D8F677A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.EventBus.Contracts", "core\src\Juice.EventBus.Contracts\Juice.EventBus.Contracts.csproj", "{50CA72BF-AB1D-497B-B723-66F8ED3C2907}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.EventBus.Transactional.EF", "core\src\Juice.EventBus.Transactional.EF\Juice.EventBus.Transactional.EF.csproj", "{F6286642-97D3-49AE-B914-E4EA03F1FEC1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -255,6 +259,14 @@ Global
 		{EC888A50-8291-4128-8BA9-B10F0D8F677A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EC888A50-8291-4128-8BA9-B10F0D8F677A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EC888A50-8291-4128-8BA9-B10F0D8F677A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{50CA72BF-AB1D-497B-B723-66F8ED3C2907}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{50CA72BF-AB1D-497B-B723-66F8ED3C2907}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{50CA72BF-AB1D-497B-B723-66F8ED3C2907}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{50CA72BF-AB1D-497B-B723-66F8ED3C2907}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F6286642-97D3-49AE-B914-E4EA03F1FEC1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F6286642-97D3-49AE-B914-E4EA03F1FEC1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F6286642-97D3-49AE-B914-E4EA03F1FEC1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F6286642-97D3-49AE-B914-E4EA03F1FEC1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -298,6 +310,8 @@ Global
 		{5CEAF4AC-9F48-657C-97C6-D13C6AFE628D} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{B8C5B233-A469-C769-951D-0A7047E523ED} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{EC888A50-8291-4128-8BA9-B10F0D8F677A} = {9E4FFBBB-2E8E-4463-B502-260D502D43E1}
+		{50CA72BF-AB1D-497B-B723-66F8ED3C2907} = {9E4FFBBB-2E8E-4463-B502-260D502D43E1}
+		{F6286642-97D3-49AE-B914-E4EA03F1FEC1} = {9E4FFBBB-2E8E-4463-B502-260D502D43E1}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DD654E02-538D-4E29-A098-413DEBAE4D98}
