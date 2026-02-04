@@ -1,55 +1,43 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Juice.MediatR.RequestManager.EF
 {
     internal class RequestManagerBase : IRequestManagerBase
     {
         private ClientRequestContextBase _context;
-        public RequestManagerBase(ClientRequestContextBase context)
+        private readonly ILogger _logger;
+        private readonly IResponseSerializer _serializer;
+        public RequestManagerBase(ClientRequestContextBase context, ILogger logger, IResponseSerializer serializer)
         {
             _context = context;
+            _logger = logger;
+            _serializer = serializer;
         }
 
-        public async ValueTask TryCompleteRequestAsync<T>(Guid id, bool success)
+        public async ValueTask TryCompleteRequestAsync<T>(Guid id, bool success, object? result)
             where T : IBaseRequest
         {
             try
             {
-                var request = await _context.ClientRequests.FindAsync(id, typeof(T).Name);
-                if (request != null)
-                {
-                    if (success)
-                    {
-                        request.MarkAsDone();
-                    }
-                    else
-                    {
-                        request.MarkAsFailed();
-                    }
-                    await _context.SaveChangesAsync();
-                }
+                var res = _serializer.SerializeResponse(result);
+                await _context.ClientRequests.Where(r => r.Id == id && r.Name == typeof(T).Name)
+                    .ExecuteUpdateAsync(r =>
+                        r.SetProperty(r => r.State,
+                        success ? RequestState.Processed : RequestState.ProcessedFailed)
+                        .SetProperty(r => r.CompletedTime, DateTimeOffset.Now)
+                        .SetProperty(r => r.Result, res)
+                        );
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
+                _logger.LogError(ex, "Error completing request {RequestId} for command {CommandName}", id, typeof(T).Name);
             }
         }
 
         public async ValueTask<bool> TryCreateRequestForCommandAsync<T>(Guid id)
             where T : IBaseRequest
         {
-            // retry failed or interupted conmmands
-            if (await _context.ClientRequests.AnyAsync(r => r.Id == id
-                && r.Name == typeof(T).Name
-                && (r.State == RequestState.ProcessedFailed
-                || (r.State == RequestState.New && r.Time < DateTimeOffset.Now.AddSeconds(-15)))))
-            {
-                return true;
-            }
-            if (await _context.ClientRequests.AnyAsync(r => r.Id == id && r.Name == typeof(T).Name))
-            {
-                return false;
-            }
             try
             {
                 _context.ClientRequests.Add(new ClientRequest(id, typeof(T).Name));
@@ -58,22 +46,41 @@ namespace Juice.MediatR.RequestManager.EF
             }
             catch (DbUpdateException)
             {
-                return false;
+                return await TryRetryAsync(id, typeof(T).Name);
             }
         }
-    }
 
-    internal class RequestManager : RequestManagerBase, IRequestManager
-    {
-        public RequestManager(ClientRequestContext context) : base(context)
+        private async Task<bool> TryRetryAsync(Guid id, string commandName)
         {
+            var updated = await _context.ClientRequests
+                                .Where(r => r.Id == id
+                                         && r.Name == commandName
+                                         && r.State == RequestState.ProcessedFailed)
+                                .ExecuteUpdateAsync(s => s
+                                    .SetProperty(r => r.State, RequestState.New)
+                                    .SetProperty(r => r.Time, DateTimeOffset.UtcNow));
+
+            return updated == 1;
+        }
+
+        public async ValueTask<TR?> GetCachedResultAsync<T, TR>(Guid id)
+            where T : IBaseRequest
+        {
+            var res = await _context.ClientRequests
+                        .Where(r => r.Id == id && r.State == RequestState.Processed)
+                        .Select(r => r.Result)
+                        .FirstOrDefaultAsync();
+            return _serializer.DeserializeResponse<TR>(res);
         }
     }
 
-    internal class RequestManager<TContext> : RequestManagerBase, IRequestManager<TContext>
+    internal class RequestManager(ClientRequestContext context, ILogger<RequestManager> logger, IResponseSerializer serializer)
+        : RequestManagerBase(context, logger, serializer), IRequestManager
     {
-        public RequestManager(ClientRequestContext<TContext> context) : base(context)
-        {
-        }
+    }
+
+    internal class RequestManager<TContext>(ClientRequestContext<TContext> context, ILogger<RequestManager<TContext>> logger, IResponseSerializer serializer)
+        : RequestManagerBase(context, logger, serializer), IRequestManager<TContext>
+    {
     }
 }

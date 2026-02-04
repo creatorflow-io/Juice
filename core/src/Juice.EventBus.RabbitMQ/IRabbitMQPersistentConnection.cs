@@ -5,9 +5,10 @@ namespace Juice.EventBus.RabbitMQ
     public interface IRabbitMQPersistentConnection
         : IDisposable
     {
+        string Name { get; }
         bool IsConnected { get; }
 
-        ValueTask<bool> TryConnectAsync();
+        ValueTask<bool> TryConnectAsync(CancellationToken cancellationToken = default);
 
         ValueTask DisconnectAsync();
 

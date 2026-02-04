@@ -1,4 +1,4 @@
-﻿namespace Juice.EventBus
+﻿namespace Juice.EventBus.Extensions
 {
     public static class GenericTypeExtensions
     {

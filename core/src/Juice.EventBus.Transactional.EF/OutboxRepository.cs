@@ -1,10 +1,8 @@
-﻿using System.Reflection;
-using Juice.EF.Extensions;
-using Juice.EventBus.Internal;
+﻿using Juice.EF.Extensions;
+using Juice.EventBus.Delivery;
 using Juice.Measurement;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
-using Newtonsoft.Json;
 
 namespace Juice.EventBus.Transactional.EF
 {
@@ -14,11 +12,9 @@ namespace Juice.EventBus.Transactional.EF
         private TContext _domainContext;
         private IOutboxContext _outboxContext;
 
-        private IntegrationEventTypes _eventTypes;
-
         private ITimeTracker? _timeTracker;
 
-        public OutboxRepository(TContext context, IntegrationEventTypes eventTypes,
+        public OutboxRepository(TContext context,
             ITimeTracker? timeTracker = default,
             Func<TContext, IOutboxContext>? factory = null)
         {
@@ -28,29 +24,10 @@ namespace Juice.EventBus.Transactional.EF
                 throw new ArgumentNullException(nameof(factory), $"When {typeof(TContext).FullName} does not implement {nameof(IOutboxContext)}, a factory method must be provided to create {nameof(IOutboxContext)}.");
             }
 
-            _outboxContext = factory != null ? factory(context) : (IOutboxContext) context;
-
-            _eventTypes = eventTypes;
+            _outboxContext = factory != null ? factory(context) : (IOutboxContext)context;
 
             _timeTracker = timeTracker;
-
-            if (Assembly.GetEntryAssembly()?.FullName != null)
-            {
-                var types = Assembly.Load(Assembly.GetEntryAssembly()!.FullName!)
-                    .GetTypes()
-                    .Where(t => t.IsAssignableTo(typeof(IIntegrationEvent)))
-                    .ToList();
-                foreach (var type in types)
-                {
-                    _eventTypes.Register(type);
-                }
-            }
         }
-
-        /// <summary>
-        /// Ensure event log context has an associated connection with input <c>T</c> context.
-        /// <para>Throw <see cref="ArgumentException"/> if input context has not same type with <c>TContext</c></para>
-        /// </summary>
         private void EnsureAssociatedConnection()
         {
             // If the context is as same type as TContext, no action is needed
@@ -58,7 +35,7 @@ namespace Juice.EventBus.Transactional.EF
             {
                 return;
             }
-            
+
             var transaction = _domainContext.GetCurrentTransaction();
             if (transaction == null)
             {
@@ -80,98 +57,63 @@ namespace Juice.EventBus.Transactional.EF
                 throw new InvalidOperationException("Please verify that your DBContext is in same scope with IntegrationEventLogContext or call IIntegrationEventLogService.EnsureAssociatedConnection(your DBContext) before.", ex);
             }
         }
-
-        private IIntegrationEvent? GetEvent(OutboxEvent outbox)
+        public async ValueTask SaveEventsAsync(OutboxEvent[] @events, CancellationToken cancellationToken)
         {
-            var type = _eventTypes.EventTypes.Find(t => t.Name == outbox.EventTypeName.Split('.').Last());
-            if (type == null) { return default; }
-            return JsonConvert.DeserializeObject(outbox.Payload, type) as IIntegrationEvent;
-        }
-
-        public async ValueTask<IEnumerable<IIntegrationEvent>> RetrieveEventsPendingToPublishAsync(Guid transactionId, CancellationToken cancellationToken = default)
-        {
-            var tid = transactionId.ToString();
-
-            var result = await _outboxContext.Outbox
-            .AsNoTracking()
-            .Where(e => e.TransactionId == tid && e.State == EventState.NotPublished).ToListAsync(cancellationToken);
-
-            if (result != null && result.Any())
+            if(@events == null || @events.Length == 0)
             {
-                return result.OrderBy(o => o.CreationTime)
-                    .Select(e => GetEvent(e))
-                    .OfType<IIntegrationEvent>();
+                return;
             }
-
-            return [];
-        }
-
-        public async ValueTask<IEnumerable<IIntegrationEvent>> RetrieveEventsPendingToPublishAsync(int take, int tryLimit, CancellationToken cancellationToken = default)
-        {
-
-            var result = await _outboxContext.Outbox.AsNoTracking()
-                .Where(e =>
-                    e.State == EventState.NotPublished
-                    || ((e.State == EventState.InProgress || e.State == EventState.PublishedFailed)
-                        && e.ProcessedOn < DateTime.UtcNow.AddMinutes(-5)
-                        && e.TimesSent <= tryLimit)
-                 )
-                .OrderBy(e => e.ProcessedOn)
-                .Take(take)
-                .ToListAsync(cancellationToken);
-
-            if (result != null && result.Any())
-            {
-                return result.OrderBy(o => o.CreationTime)
-                    .Select(e => GetEvent(e))
-                    .OfType<IIntegrationEvent>();
-            }
-
-            return [];
-        }
-
-        public async ValueTask SaveEventsAsync(Guid transactionId, IIntegrationEvent[] @events)
-        {
             EnsureAssociatedConnection();
             _timeTracker?.Checkpoint("EnsureAssociatedConnection");
-
-            foreach (var @event in @events)
-            {
-                _eventTypes.Register(@event.GetType());
-                var eventLogEntry = new OutboxEvent {
-                    EventId = @event.Id,
-                    CreationTime = @event.CreationDate,
-                    EventTypeName = @event.GetType().FullName!,
-                    Payload = JsonConvert.SerializeObject(@event),
-                    TransactionId = transactionId.ToString()
-                };
-                _outboxContext.Outbox.Add(eventLogEntry);
-            }
-            await ((DbContext)_outboxContext).SaveChangesAsync();
+            await _outboxContext.Outbox.AddRangeAsync(@events, cancellationToken);
+            await ((DbContext)_outboxContext).SaveChangesAsync(cancellationToken);
             _timeTracker?.Checkpoint("SaveChanges");
         }
 
-        public ValueTask MarkEventAsPublishedAsync(Guid eventId, CancellationToken cancellationToken = default)
+        public async ValueTask MarkAsPublishedAsync(Guid deliveryId, CancellationToken cancellationToken = default)
         {
-            return UpdateEventStatusAsync(eventId, EventState.Published, default, cancellationToken);
+            var query = _outboxContext.OutboxDeliveries
+                .Where(ie => ie.DeliveryId == deliveryId && ie.State != DeliveryState.Published);
+            await query.ExecuteUpdateAsync(ie =>
+                ie.SetProperty(e => e.State, e => DeliveryState.Published)
+                  .SetProperty(e => e.ProcessedOn, e => DateTimeOffset.Now)
+                , cancellationToken);
         }
 
-        public ValueTask MarkEventAsInProgressAsync(Guid eventId, CancellationToken cancellationToken = default)
+        public async ValueTask<int> MarkAsInProgressAsync(Guid deliveryId, CancellationToken cancellationToken = default)
         {
-            return UpdateEventStatusAsync(eventId, EventState.InProgress, default, cancellationToken);
+            var query = _outboxContext.OutboxDeliveries
+                .Where(ie => ie.DeliveryId == deliveryId && (ie.State == DeliveryState.NotPublished || ie.State == DeliveryState.Failed));
+
+            return await query.ExecuteUpdateAsync(ie =>
+                ie.SetProperty(e => e.State, e => DeliveryState.InProgress)
+                  .SetProperty(e => e.ProcessedOn, e => DateTimeOffset.Now)
+                , cancellationToken);
         }
 
-        public ValueTask MarkEventAsFailedAsync(Guid eventId, string error, CancellationToken cancellationToken = default)
+        public async ValueTask MarkAsFailedAsync(Guid deliveryId, string error,
+            DateTimeOffset? nextAttempt,
+            CancellationToken cancellationToken = default)
         {
-            return UpdateEventStatusAsync(eventId, EventState.PublishedFailed, error, cancellationToken);
+            var query = _outboxContext.OutboxDeliveries
+                .Where(ie => ie.DeliveryId == deliveryId && ie.State != DeliveryState.Published && ie.State != DeliveryState.Skipped);
+            await query.ExecuteUpdateAsync(ie =>
+                ie.SetProperty(e => e.State, e => DeliveryState.Failed)
+                  .SetProperty(e => e.LastError, e => error)
+                  .SetProperty(e => e.NextAttemptOn, e => nextAttempt)
+                  .SetProperty(e => e.ProcessedOn, e => DateTimeOffset.Now)
+                , cancellationToken);
         }
 
-        private async ValueTask UpdateEventStatusAsync(Guid eventId, EventState state, string? error, CancellationToken cancellationToken)
+        public async ValueTask MarkAsSkippedAsync(Guid deliveryId, string reason, CancellationToken cancellationToken = default)
         {
-            var eventLogEntry = await _outboxContext.Outbox.SingleAsync(ie => ie.EventId == eventId);
-            eventLogEntry.UpdateState(state, error);
-
-            await ((DbContext)_outboxContext).SaveChangesAsync(cancellationToken);
+            var query = _outboxContext.OutboxDeliveries
+                .Where(ie => ie.DeliveryId == deliveryId && ie.State != DeliveryState.Published && ie.State != DeliveryState.Skipped);
+            await query.ExecuteUpdateAsync(ie =>
+                ie.SetProperty(e => e.State, e => DeliveryState.Skipped)
+                  .SetProperty(e => e.LastError, e => reason)
+                  .SetProperty(e => e.ProcessedOn, e => DateTimeOffset.Now)
+                , cancellationToken);
         }
 
         #region IDisposable Support
@@ -181,8 +123,6 @@ namespace Juice.EventBus.Transactional.EF
         {
             if (!disposedValue)
             {
-                _eventTypes = null!;
-
                 disposedValue = true;
             }
         }

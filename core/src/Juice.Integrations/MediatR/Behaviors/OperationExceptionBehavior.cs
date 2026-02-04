@@ -1,4 +1,4 @@
-﻿using Juice.EventBus;
+﻿using Juice.EventBus.Extensions;
 using Juice.MediatR;
 using Microsoft.Extensions.Logging;
 

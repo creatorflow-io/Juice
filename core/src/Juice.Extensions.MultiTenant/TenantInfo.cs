@@ -12,22 +12,25 @@ namespace Juice.Extensions.MultiTenant
             string id,
             string? identifier,
             string name,
-            JObject? properties,
-            string? ownerUser,
-            string? tenantClass)
+            JObject? properties = default,
+            string? ownerUser = default,
+            string? tier = default,
+            string? region = default)
         {
             Id = id;
             Name = name;
             Identifier = identifier;
             OwnerUser = ownerUser;
-            TenantClass = tenantClass;
+            Tier = tier;
             Properties = properties ?? [];
+            Region = region;
         }
 
         public string? Identifier { get; set; }
 
         public string? OwnerUser { get; private set; }
-        public string? TenantClass { get; private set; }
+        public string? Tier { get; private set; }
+        public string? Region { get; private set; }
 
         public string? Id { get; set; }
 

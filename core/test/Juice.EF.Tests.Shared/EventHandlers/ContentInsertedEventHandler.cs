@@ -2,7 +2,7 @@
 using Juice.EF.Tests.Domain;
 using Juice.EF.Tests.Events;
 using Juice.EF.Tests.Infrastructure;
-using Juice.EventBus;
+using Juice.EventBus.Transactional;
 using Juice.MediatR;
 
 namespace Juice.EF.Tests.EventHandlers

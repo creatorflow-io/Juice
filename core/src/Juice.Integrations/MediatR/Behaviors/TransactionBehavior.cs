@@ -1,7 +1,8 @@
 ﻿using Juice.Domain;
 using Juice.EF;
 using Juice.EF.Extensions;
-using Juice.EventBus;
+using Juice.EventBus.Extensions;
+using Juice.EventBus.Transactional;
 using Juice.MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -155,7 +156,7 @@ namespace Juice.Integrations.MediatR.Behaviors
                     await _mediator.DispatchDomainEventsAsync(_dbContext, false);
                     await _mediator.DispatchAuditEventsAsync(_dbContext as IAuditableDbContext, false, _logger);
                     await _mediator.DispatchDataChangeEventsAsync(_dbContext as IAuditableDbContext, false, _logger);
-                    await _integrationEventService.SaveEventsAsync(transaction.TransactionId);
+                    await _integrationEventService.SaveEventsAsync(transaction.TransactionId, cancellationToken);
 
                     // commit transaction if needed
                     if (!_dbContext.HasActiveTransaction)
@@ -175,18 +176,6 @@ namespace Juice.Integrations.MediatR.Behaviors
                     }
                     _dbContext.ClearEvents();
                 }, cancellationToken);
-
-                if (PublishIntegrationEvents && !cancellationToken.IsCancellationRequested)
-                {
-                    try
-                    {
-                        await _integrationEventService.PublishEventsThroughEventBusAsync(transactionId, cancellationToken);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "ERROR Publishing integration events for transaction {TransactionId}", transactionId);
-                    }
-                }
 
                 return response;
             }

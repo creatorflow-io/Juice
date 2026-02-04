@@ -6,6 +6,10 @@
 
         public DateTime CreationDate { get; init; } = DateTime.UtcNow;
 
+        public string? TenantId { get; init; }
+
+        public string? Domain { get; init; }
+
         public virtual string GetEventKey()
         {
             return GetType().Name;

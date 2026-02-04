@@ -1,12 +1,10 @@
-﻿using Juice;
-using Juice.EF;
+﻿using Juice.EF;
 using Juice.EF.Migrations;
 using Juice.MediatR;
 using Juice.MediatR.RequestManager.EF;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
@@ -16,17 +14,18 @@ namespace Microsoft.Extensions.DependencyInjection
         /// Add <see cref="IRequestManager"/> to deduplicating message events at the EventHandler level
         /// <see href="https://learn.microsoft.com/en-us/dotnet/architecture/microservices/multi-container-microservice-net-applications/subscribe-events#deduplicating-message-events-at-the-eventhandler-level"/>
         /// </summary>
-        /// <param name="services"></param>
+        /// <param name="builder"></param>
         /// <param name="configuration"></param>
         /// <param name="configureOptions"></param>
         /// <returns></returns>
         /// <exception cref="NotSupportedException"></exception>
-        public static IServiceCollection AddEFMediatorRequestManager(this IServiceCollection services, IConfiguration configuration,
+        public static MediatorBuilder AddEFRequestManager(this MediatorBuilder builder, IConfiguration configuration,
             Action<DbOptions>? configureOptions)
         {
-            if(services.Any(p => p.ServiceType == typeof(IRequestManager)))
+            var services = builder.Services;
+            if (services.Any(p => p.ServiceType == typeof(IRequestManager)))
             {
-                return services;
+                return builder;
             }
 
             services.AddScoped(p =>
@@ -81,21 +80,22 @@ namespace Microsoft.Extensions.DependencyInjection
             });
 
             services.AddScoped<IRequestManager, RequestManager>();
-            return services;
+            return builder;
         }
 
         /// <summary>
         /// Add <see cref="IRequestManager{T}"/> to deduplicating message events at the EventHandler level
         /// <see href="https://learn.microsoft.com/en-us/dotnet/architecture/microservices/multi-container-microservice-net-applications/subscribe-events#deduplicating-message-events-at-the-eventhandler-level"/>
         /// </summary>
-        /// <param name="services"></param>
+        /// <param name="builder"></param>
         /// <param name="configuration"></param>
         /// <param name="configureOptions"></param>
         /// <returns></returns>
         /// <exception cref="NotSupportedException"></exception>
-        public static IServiceCollection AddEFMediatorRequestManager<T>(this IServiceCollection services, IConfiguration configuration,
+        public static MediatorBuilder AddEFRequestManager<T>(this MediatorBuilder builder, IConfiguration configuration,
             Action<DbOptions> configureOptions)
         {
+            var services = builder.Services;
             services.AddDbOptions<ClientRequestContext<T>>(configureOptions);
 
             var dbOptions = services.BuildServiceProvider().GetRequiredService<DbOptions<ClientRequestContext<T>>>();
@@ -144,7 +144,7 @@ namespace Microsoft.Extensions.DependencyInjection
             });
 
             services.AddScoped<IRequestManager<T>, RequestManager<T>>();
-            return services;
+            return builder;
         }
     }
 }

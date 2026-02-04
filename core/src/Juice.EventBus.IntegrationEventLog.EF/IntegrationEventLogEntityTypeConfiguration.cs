@@ -1,17 +1,17 @@
-﻿using Juice.EventBus.Transactional.EF;
+﻿using Juice.EventBus.Transactional;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Juice.EventBus.IntegrationEventLog.EF
 {
-    internal class IntegrationEventLogEntityTypeConfiguration : IEntityTypeConfiguration<OutboxEvent>
+    internal class IntegrationEventLogEntityTypeConfiguration : IEntityTypeConfiguration<IntegrationEventLogEntry>
     {
         private readonly string? Schema;
         public IntegrationEventLogEntityTypeConfiguration(string? schema = null)
         {
             Schema = schema;
         }
-        public void Configure(EntityTypeBuilder<OutboxEvent> builder)
+        public void Configure(EntityTypeBuilder<IntegrationEventLogEntry> builder)
         {
             builder.ToTable("IntegrationEventLog", Schema);
 
@@ -50,9 +50,9 @@ namespace Juice.EventBus.IntegrationEventLog.EF
                 ;
 
             builder.HasIndex(
-                nameof(OutboxEvent.State),
-                nameof(OutboxEvent.ProcessedOn),
-                nameof(OutboxEvent.TimesSent)
+                nameof(IntegrationEventLogEntry.State),
+                nameof(IntegrationEventLogEntry.ProcessedOn),
+                nameof(IntegrationEventLogEntry.TimesSent)
                 )
                 .HasDatabaseName("IX_IntegrationEventLog_Recovery")
                 .HasFilter("[ModificationTime] IS NOT NULL")

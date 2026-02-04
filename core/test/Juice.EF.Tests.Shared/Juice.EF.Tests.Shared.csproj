@@ -22,6 +22,6 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\src\Juice.EF.MultiTenant\Juice.EF.MultiTenant.csproj" />
-      <ProjectReference Include="..\..\src\Juice.EventBus.IntegrationEventLog.EF\Juice.EventBus.IntegrationEventLog.EF.csproj" />
+      <ProjectReference Include="..\..\src\Juice.EventBus.Transactional.EF\Juice.EventBus.Transactional.EF.csproj" />
     </ItemGroup>
 </Project>

@@ -1,0 +1,238 @@
+﻿using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using FluentAssertions;
+using Juice.Domain;
+using Juice.EF;
+using Juice.EF.Extensions;
+using Juice.EF.Tests.Domain;
+using Juice.EF.Tests.EventHandlers;
+using Juice.EF.Tests.Events;
+using Juice.EF.Tests.Infrastructure;
+using Juice.EventBus.Delivery;
+using Juice.EventBus.Tests;
+using Juice.EventBus.Tests.Handlers;
+using Juice.Extensions.DependencyInjection;
+using Juice.Measurement;
+using Juice.MediatR;
+using Juice.Services;
+using Juice.XUnit;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using Xunit;
+using Xunit.Abstractions;
+
+namespace Juice.Integrations.Tests
+{
+    [TestCaseOrderer("Juice.XUnit.PriorityOrderer", "Juice.XUnit")]
+    public class TransactionBehaviorTest
+    {
+        private readonly string _testSchema1 = "Contents";
+
+        private readonly ITestOutputHelper _testOutput;
+        public TransactionBehaviorTest(ITestOutputHelper testOutput)
+        {
+            _testOutput = testOutput;
+            Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
+        }
+
+
+        [IgnoreOnCIFact(DisplayName = "Transaction behavior should"), TestPriority(10)]
+        public async Task TransactionBehaviorTestAsync()
+        {
+            var resolver = new DependencyResolver
+            {
+                CurrentDirectory = AppContext.BaseDirectory
+            };
+            var schema = _testSchema1;
+            resolver.ConfigureServices(services =>
+            {
+                services.AddSingleton(provider => _testOutput);
+                var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
+                var configuration = configService.GetConfiguration(GetType().Assembly);
+                services.AddLogging(builder =>
+                {
+                    builder.ClearProviders()
+                    .AddTestOutputLogger()
+                    .AddConfiguration(configuration.GetSection("Logging"));
+                });
+                // Register DbContext class
+                services.AddDbContext<TestContext>(builder =>
+                {
+                    var connectionString = configuration.GetConnectionString("Default");
+                    builder.UseSqlServer(connectionString);
+                });
+                services.AddUnitOfWork<Content, TestContext>();
+
+                services.AddDefaultStringIdGenerator();
+
+                var builder = services.AddTestEventBus(configuration)
+                    .AddDelivery(delivery =>
+                    {
+                        delivery.AddDeliveryProcessor<TestContext>("rabbitmq");
+                    })
+                     .AddRabbitMQ(cfg =>
+                     {
+                         cfg
+                         .AddConsumer("juice_eventbus_xunit_2", "rabbitmq", qcfg =>
+                         {
+                             qcfg.Subscribe<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler>();
+                             qcfg.Subscribe<ContentNameChangedIntegrationEvent, ContentNameChangedIntegrationEventHandler>();
+                         })
+                         ;
+                     });
+
+                services.AddMediatR(cfg =>
+                {
+                    cfg.RegisterServicesFromAssembly(typeof(CreateContentCommandHandler).Assembly);
+                    cfg.RegisterServicesFromAssembly(typeof(ContentNameChangedEventHandler).Assembly, true);
+                });
+
+                services.AddSingleton<HandledService>();
+
+                services.AddExecutionTimeMeasurement();
+            });
+
+            await resolver.ServiceProvider.RunHostedServicesAsync();
+
+            var sharedService = resolver.ServiceProvider.GetRequiredService<HandledService>();
+
+            // warm up
+            using (var s = resolver.ServiceProvider.CreateScope())
+            {
+                var context = s.ServiceProvider.GetRequiredService<TestContext>();
+                await context.MigrateAsync();
+                var check = await context.Set<Content>().AnyAsync();
+                var integrationEventRepo = s.ServiceProvider.GetRequiredService<IOutboxRepository<TestContext>>();
+                var tracker = s.ServiceProvider.GetRequiredService<ITimeTracker>();
+                tracker.BeginScope("Saving integration events");
+                await integrationEventRepo.SaveEventsAsync(Array.Empty<OutboxEvent>());
+                _testOutput.WriteLine(tracker.ToString());
+            }
+            Guid? contentId = null;
+            using (var scope = resolver.ServiceProvider.CreateScope())
+            {
+                var timeTracker = scope.ServiceProvider.GetRequiredService<ITimeTracker>();
+                var result = await scope.ServiceProvider.GetRequiredService<IMediator>()
+                    .Send(new CreateContentCommand());
+                result.Succeeded.Should().BeTrue();
+                contentId = result.DataValue;
+                _testOutput.WriteLine(timeTracker.ToString());
+            }
+            using (var scope = resolver.ServiceProvider.CreateScope())
+            {
+                var changeResult = await scope.ServiceProvider.GetRequiredService<IMediator>()
+                .Send(new ChangeContentNameCommand(contentId.Value, "Updated name " + DateTimeOffset.Now.ToString()));
+                if (!changeResult.Succeeded)
+                {
+                    _testOutput.WriteLine(changeResult.Message);
+                }
+                changeResult.Succeeded.Should().BeTrue();
+            }
+            await Waiter.WaitAsync(() => sharedService.Handlers.Count > 0, TimeSpan.FromSeconds(10), CancellationToken.None);
+            sharedService.Handlers.Should().Contain(nameof(ContentPublishedIntegrationEventHandler));
+
+        }
+
+        [IgnoreOnCIFact(DisplayName = "Transaction behavior + repository"), TestPriority(10)]
+        public async Task TransactionBehaviorWithRepositoryAsync()
+        {
+            var resolver = new DependencyResolver
+            {
+                CurrentDirectory = AppContext.BaseDirectory
+            };
+            var schema = _testSchema1;
+            resolver.ConfigureServices(services =>
+            {
+                services.AddSingleton(provider => _testOutput);
+                var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
+                var configuration = configService.GetConfiguration(GetType().Assembly);
+                services.AddLogging(builder =>
+                {
+                    builder.ClearProviders()
+                    .AddTestOutputLogger()
+                    .AddConfiguration(configuration.GetSection("Logging"));
+                });
+                // Register DbContext class
+                services.AddDbContext<TestContext>(builder =>
+                {
+                    var connectionString = configuration.GetConnectionString("Default");
+                    builder.UseSqlServer(connectionString);
+                });
+                services.AddUnitOfWork<Content, TestContext>();
+                services.AddScoped<ContentRepository>();
+                services.AddDefaultStringIdGenerator();
+
+                var builder = services.AddTestEventBus(configuration)
+                      .AddDelivery(delivery =>
+                      {
+                          delivery.AddDeliveryProcessor<TestContext>("rabbitmq")
+                          ;
+                      })
+                     .AddRabbitMQ(cfg =>
+                     {
+                         cfg
+                         .AddConsumer("juice_eventbus_xunit_1", "rabbitmq", qcfg =>
+                         {
+                             qcfg.Subscribe<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler>();
+                             qcfg.Subscribe<ContentNameChangedIntegrationEvent, ContentNameChangedIntegrationEventHandler>();
+                         })
+                         ;
+                     });
+
+                services.AddMediatR(cfg =>
+                {
+                    cfg.RegisterServicesFromAssembly(typeof(CreateContentCommandHandler).Assembly);
+                    cfg.RegisterServicesFromAssembly(typeof(ContentNameChangedEventHandler).Assembly, true);
+                });
+
+                services.AddSingleton<HandledService>();
+
+                services.AddExecutionTimeMeasurement();
+            });
+
+            await resolver.ServiceProvider.RunHostedServicesAsync();
+
+            var sharedService = resolver.ServiceProvider.GetRequiredService<HandledService>();
+
+            // warm up
+            using (var s = resolver.ServiceProvider.CreateScope())
+            {
+                var context = s.ServiceProvider.GetRequiredService<TestContext>();
+                var check = await context.Set<Content>().AnyAsync();
+                var integrationEventRepo = s.ServiceProvider.GetRequiredService<IOutboxRepository<TestContext>>();
+                var tracker = s.ServiceProvider.GetRequiredService<ITimeTracker>();
+                tracker.BeginScope("Saving integration events");
+                await integrationEventRepo.SaveEventsAsync(default);
+                _testOutput.WriteLine(tracker.ToString());
+            }
+            Guid? contentId = null;
+            using (var scope = resolver.ServiceProvider.CreateScope())
+            {
+                var timeTracker = scope.ServiceProvider.GetRequiredService<ITimeTracker>();
+                var result = await scope.ServiceProvider.GetRequiredService<IMediator>()
+                    .Send(new CreateContent1Command());
+                result.Succeeded.Should().BeTrue();
+                contentId = result.DataValue;
+                _testOutput.WriteLine(timeTracker.ToString());
+            }
+            using (var scope = resolver.ServiceProvider.CreateScope())
+            {
+                var changeResult = await scope.ServiceProvider.GetRequiredService<IMediator>()
+                    .Send(new ChangeContentName1Command(contentId.Value, "Updated name " + DateTimeOffset.Now.ToString()));
+                if (!changeResult.Succeeded)
+                {
+                    _testOutput.WriteLine(changeResult.Message);
+                }
+                changeResult.Succeeded.Should().BeTrue();
+            }
+            await Waiter.WaitAsync(() => sharedService.Handlers.Count > 0, TimeSpan.FromSeconds(10), CancellationToken.None);
+            sharedService.Handlers.Should().Contain(nameof(ContentPublishedIntegrationEventHandler));
+
+        }
+    }
+}

@@ -11,23 +11,36 @@ namespace Juice.Extensions.MultiTenant
     {
         private readonly IMultiTenantContextSetter _tenantContextSetter;
         private readonly IMultiTenantContextAccessor _tenantContextAccessor;
+        private readonly IMultiTenantStore<TTenant>[] _stores;
         private readonly ILoggerFactory _loggerFactory;
 
-        public FinbuckleTenantResolver(IMultiTenantContextSetter tenantContextSetter,
+        public FinbuckleTenantResolver(
+            IMultiTenantContextSetter tenantContextSetter,
             IMultiTenantContextAccessor tenantContextAccessor,
+            IEnumerable<IMultiTenantStore<TTenant>> stores,
             ILoggerFactory logger)
         {
             _tenantContextAccessor = tenantContextAccessor;
             _tenantContextSetter = tenantContextSetter;
+            _stores = [.. stores];
             _loggerFactory = logger;
         }
 
         public IDisposable Resolve(string? tenantId)
         {
-            var tenantInfo = new TTenant();
-            ((ITenantInfo)tenantInfo).Id = tenantId;
-            ((ITenantInfo)tenantInfo).Identifier = tenantId;
-            return Resolve(tenantInfo);
+            if (tenantId is null)
+            {
+                return Resolve((TTenant?)null);
+            }
+            foreach (var store in _stores)
+            {
+                var tenant = store.TryGetAsync(tenantId).GetAwaiter().GetResult();
+                if (tenant is not null)
+                {
+                    return Resolve(tenant);
+                }
+            }
+            return Resolve((TTenant?)null);
         }
 
         public IDisposable Resolve(TTenant? tenant)
@@ -39,11 +52,16 @@ namespace Juice.Extensions.MultiTenant
                 TenantInfo = tenant
             };
             var logger = _loggerFactory.CreateLogger<FinbuckleTenantResolver<TTenant>>();
-            logger.LogInformation("Resolved Tenant: {tenantId}",((ITenant?) tenant)?.Identifier);
+            logger.LogInformation("Resolved Tenant: {tenantIdentifier} {tenantId}",
+                _tenantContextAccessor.MultiTenantContext.TenantInfo?.Identifier,
+                _tenantContextAccessor.MultiTenantContext.TenantInfo?.Id);
             return new TenantScope(() =>
             {
-                logger.LogInformation("Disposed Tenant scope: {tenantId}", ((ITenant?)tenant)?.Identifier);
+                logger.LogInformation("Disposed Tenant scope: {tenantId}",
+                    _tenantContextAccessor.MultiTenantContext.TenantInfo?.Identifier);
                 _tenantContextSetter.MultiTenantContext = previousContext;
+                logger.LogInformation("Restored previous Tenant: {tenantId}",
+                    _tenantContextAccessor.MultiTenantContext?.TenantInfo?.Identifier);
             });
         }
 

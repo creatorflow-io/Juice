@@ -7,8 +7,4 @@
     <Description>SQLServer migrations assembly</Description>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Juice.EventBus.IntegrationEventLog.EF\Juice.EventBus.IntegrationEventLog.EF.csproj" />
-  </ItemGroup>
-
 </Project>

@@ -34,13 +34,16 @@ namespace Juice.MediatR.RequestManager.EF.PostgreSQL.Migrations
                     b.Property<DateTimeOffset?>("CompletedTime")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("Result")
+                        .HasColumnType("text");
+
                     b.Property<int>("State")
                         .HasColumnType("integer");
 
                     b.Property<DateTimeOffset>("Time")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasDefaultValue(new DateTimeOffset(new DateTime(2024, 8, 9, 13, 39, 54, 702, DateTimeKind.Unspecified).AddTicks(6080), new TimeSpan(0, 7, 0, 0, 0)));
+                        .HasDefaultValue(new DateTimeOffset(new DateTime(2026, 2, 2, 16, 6, 13, 865, DateTimeKind.Unspecified).AddTicks(1643), new TimeSpan(0, 7, 0, 0, 0)));
 
                     b.HasKey("Id", "Name");
 

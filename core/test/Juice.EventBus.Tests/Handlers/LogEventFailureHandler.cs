@@ -18,7 +18,7 @@ namespace Juice.EventBus.Tests.Handlers
         public async Task HandleAsync(LogEvent @event)
         {
             _logger.LogInformation("[X] Received {0} at {1}", @event.GetEventKey(), @event.CreationDate);
-            _handledService.HandledCount.AddOrUpdate(nameof(LogEventFailureHandler), 1, (key, value) => value + 1);
+            _handledService.Handle(nameof(LogEventFailureHandler), @event.Id);
             throw new InvalidOperationException("Simulated failure in LogEventFailureHandler");
         }
     }

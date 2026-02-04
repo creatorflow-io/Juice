@@ -75,7 +75,7 @@ namespace Juice.EF.Tests
                         {
                             new()
                             {
-                                Id = null,
+                                Id = "test-tenant-id",
                                 Identifier = "test-tenant",
                                 Name = "Test Tenant",
                             }
@@ -263,18 +263,22 @@ namespace Juice.EF.Tests
         {
             using var scope = ConfigureServices(provider).CreateScope();
             var serviceProvider = scope.ServiceProvider;
+            var logger = serviceProvider.GetRequiredService<ILogger<EFTest>>();
+
             var tenantResolver = serviceProvider.GetRequiredService<IScopedTenantResolver<Juice.Extensions.MultiTenant.TenantInfo>>();
-            using var tenantScope = tenantResolver.Resolve("test-tenant");
+
+            using var _ = tenantResolver.Resolve("test-tenant-id");
+            logger.LogInformation("Tenant scope resolved for 'test-tenant-id'");
 
             var tenantInfo = serviceProvider.GetRequiredService<IMultiTenantContextAccessor>().MultiTenantContext?.TenantInfo;
+
+            logger.LogInformation("Current tenant identifier: {tenant}", tenantInfo?.Identifier);
             tenantInfo.Should().NotBeNull();
             tenantInfo!.Identifier.Should().Be("test-tenant");
 
             var dbContext = serviceProvider.GetRequiredService<TestContext>();
 
             var idGenerator = serviceProvider.GetRequiredService<IStringIdGenerator>();
-
-            var logger = serviceProvider.GetRequiredService<ILogger<EFTest>>();
 
             var code1 = idGenerator.GenerateRandomId(6);
 

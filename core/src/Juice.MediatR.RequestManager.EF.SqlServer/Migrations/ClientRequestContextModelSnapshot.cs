@@ -34,13 +34,16 @@ namespace Juice.MediatR.RequestManager.EF.SqlServer.Migrations
                     b.Property<DateTimeOffset?>("CompletedTime")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<string>("Result")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("State")
                         .HasColumnType("int");
 
                     b.Property<DateTimeOffset>("Time")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetimeoffset")
-                        .HasDefaultValue(new DateTimeOffset(new DateTime(2024, 8, 9, 13, 32, 52, 898, DateTimeKind.Unspecified).AddTicks(6316), new TimeSpan(0, 7, 0, 0, 0)));
+                        .HasDefaultValue(new DateTimeOffset(new DateTime(2026, 2, 2, 16, 8, 18, 560, DateTimeKind.Unspecified).AddTicks(1029), new TimeSpan(0, 7, 0, 0, 0)));
 
                     b.HasKey("Id", "Name");
 

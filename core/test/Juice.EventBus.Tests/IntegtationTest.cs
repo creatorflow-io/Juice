@@ -43,38 +43,38 @@ namespace Juice.EventBus.Tests
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
 
-
-                services.RegisterRabbitMQEventBus(configuration.GetSection("RabbitMQ"),
-                    options =>
-                    {
-                        options.BrokerName = "topic.juice_bus";
-                        options.SubscriptionClientName = "juice_eventbus_test_events";
-                        options.ExchangeType = "topic";
-                    });
+                services.AddTestEventBus(configuration)
+                   .AddRabbitMQ(cfg => {
+                       cfg.AddConsumer("juice_eventbus_xunit_6", "rabbitmq", qcfg => {
+                           qcfg.Subscribe<LogEvent, LogEventHandler>("kernel.*");
+                       });
+                   });
 
                 services.AddSingleton<HandledService>();
-                services.AddTransient<LogEventHandler>();
             });
 
+            await resolver.ServiceProvider.RunHostedServicesAsync();
             using var scope = resolver.ServiceProvider.CreateScope();
             var eventBus = scope.ServiceProvider.GetRequiredService<IEventBus>();
             var handledService = scope.ServiceProvider.GetRequiredService<HandledService>();
 
-            await eventBus.SubscribeAsync<LogEvent, LogEventHandler>("kernel.*");
-
-            await eventBus.PublishAsync(new LogEvent { Facility = "auth", Serverty = LogLevel.Error });
+            var evt1 = new LogEvent { Facility = "auth", Serverty = LogLevel.Error };
+            await eventBus.PublishAsync(evt1);
             await Task.Delay(TimeSpan.FromSeconds(1));
 
-            handledService.Handlers.Should().BeEmpty();
+            handledService.HandledCount.Should().NotContainKey(evt1.Id.ToString());
 
-            await eventBus.PublishAsync(new LogEvent { Facility = "kernel", Serverty = LogLevel.Error });
-            await eventBus.PublishAsync(new LogEvent { Facility = "kernel", Serverty = LogLevel.Information });
+            var evt2 = new LogEvent { Facility = "kernel", Serverty = LogLevel.Error };
+            await eventBus.PublishAsync(evt2);
+            var evt3 = new LogEvent { Facility = "kernel", Serverty = LogLevel.Information };
+            await eventBus.PublishAsync(evt3);
 
-            await Task.Delay(TimeSpan.FromSeconds(1));
-            handledService.Handlers.Should().HaveCount(2);
-
-            await eventBus.UnsubscribeAsync<LogEvent, LogEventHandler>();
-            await eventBus.CloseAsync();
+            await Task.Delay(TimeSpan.FromSeconds(2));
+            handledService.Handlers.Should().Contain(nameof(LogEventHandler));
+            handledService.HandledCount.Should().ContainKey(evt2.Id.ToString());
+            handledService.HandledCount[evt2.Id.ToString()].Should().Be(1);
+            handledService.HandledCount.Should().ContainKey(evt3.Id.ToString());
+            handledService.HandledCount[evt3.Id.ToString()].Should().Be(1);
         }
 
     }

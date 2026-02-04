@@ -13,7 +13,6 @@
 
   <ItemGroup>
     <PackageReference Include="RabbitMQ.Client" Version="7.1.2" />
-    <PackageReference Include="Polly" Version="8.6.4" />
   </ItemGroup>
 
   <ItemGroup Label="AspNetCore">

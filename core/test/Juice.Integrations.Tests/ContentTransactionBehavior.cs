@@ -1,6 +1,6 @@
 ﻿using System;
 using Juice.EF.Tests.Infrastructure;
-using Juice.EventBus;
+using Juice.EventBus.Transactional;
 using Juice.Integrations.MediatR.Behaviors;
 using Juice.MediatR;
 using Microsoft.Extensions.Logging;

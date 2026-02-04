@@ -25,13 +25,10 @@ namespace Juice.EventBus.Tests.Handlers
         {
             await Task.Delay(200);
             _logger.LogInformation("[X] Received {0} at {1}. TenantInfo: {2}", @event.Message, @event.CreationDate, _tenantInfo?.Identifier);
-            if (_tenantInfo?.Identifier != null)
-            {
-                _handledService.ResolvedTenants.Add(_tenantInfo.Identifier);
-            }
+     
             if (_scopedService == null || !_scopedService.IsDisposed)
             {
-                _handledService.Handlers.Add(nameof(ContentPublishedIntegrationEventHandler));
+                _handledService.Handle(nameof(ContentPublishedIntegrationEventHandler), @event.Id, _tenantInfo?.Identifier);
                 _logger.LogInformation("Handled by {Handler}", nameof(ContentPublishedIntegrationEventHandler));
             }
         }

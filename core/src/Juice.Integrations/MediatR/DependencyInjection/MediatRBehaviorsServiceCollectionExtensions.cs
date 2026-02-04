@@ -5,9 +5,11 @@ namespace Microsoft.Extensions.DependencyInjection
 {
     public static class MediatRBehaviorsServiceCollectionExtensions
     {
-        public static IServiceCollection AddOperationExceptionBehavior(this IServiceCollection services)
+        public static MediatorBuilder AddOperationLoggingBehavior(this MediatorBuilder builder)
         {
-            return services.AddScoped(typeof(IPipelineBehavior<,>), typeof(OperationExceptionBehavior<,>));
+            builder.Services.AddScoped(typeof(IPipelineBehavior<,>), typeof(OperationExceptionBehavior<,>));
+            return builder;
         }
+
     }
 }

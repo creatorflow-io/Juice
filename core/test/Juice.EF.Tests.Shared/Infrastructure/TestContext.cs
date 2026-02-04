@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Juice.MultiTenant.EF;
 using Juice.EF.Extensions;
 using Juice.EventBus.Transactional.EF;
+using Juice.EventBus.Delivery;
 
 namespace Juice.EF.Tests.Infrastructure
 {
@@ -17,6 +18,7 @@ namespace Juice.EF.Tests.Infrastructure
         public override Finbuckle.MultiTenant.EntityFrameworkCore.TenantNotSetMode TenantNotSetMode { get; set; } = Finbuckle.MultiTenant.EntityFrameworkCore.TenantNotSetMode.Overwrite;
 
         public DbSet<OutboxEvent> Outbox { get; set; }
+        public DbSet<OutboxDelivery> OutboxDeliveries { get; set; }
 
         public TestContext(IServiceProvider serviceProvider, DbContextOptions<TestContext> options) : base(options)
         {
@@ -24,7 +26,7 @@ namespace Juice.EF.Tests.Infrastructure
             Schema = "Contents";
         }
 
-        protected TestContext(IServiceProvider serviceProvider, DbContextOptions options): base(options)
+        protected TestContext(IServiceProvider serviceProvider, DbContextOptions options) : base(options)
         {
             ConfigureServices(serviceProvider);
             Schema = "Contents";
@@ -80,6 +82,7 @@ namespace Juice.EF.Tests.Infrastructure
             });
 
             new OutboxEntityTypeConfiguration(Schema).Configure(modelBuilder.Entity<OutboxEvent>());
+            new OutboxDeliveryEntityTypeConfiguration(Schema).Configure(modelBuilder.Entity<OutboxDelivery>());
         }
     }
 
@@ -99,6 +102,7 @@ namespace Juice.EF.Tests.Infrastructure
                 entity.IsMultiTenant(MultiTenant.SharingType.Tenant);
             });
             new OutboxEntityTypeConfiguration(Schema).Configure(modelBuilder.Entity<OutboxEvent>());
+            new OutboxDeliveryEntityTypeConfiguration(Schema).Configure(modelBuilder.Entity<OutboxDelivery>());
         }
     }
 
@@ -117,6 +121,7 @@ namespace Juice.EF.Tests.Infrastructure
             });
 
             new OutboxEntityTypeConfiguration(Schema).Configure(modelBuilder.Entity<OutboxEvent>());
+            new OutboxDeliveryEntityTypeConfiguration(Schema).Configure(modelBuilder.Entity<OutboxDelivery>());
         }
     }
 }

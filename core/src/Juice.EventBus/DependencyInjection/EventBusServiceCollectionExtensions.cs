@@ -1,81 +1,116 @@
 ﻿using Juice.EventBus;
+using Juice.EventBus.Delivery;
+using Juice.EventBus.Dispatching;
 using Juice.EventBus.Internal;
+using Juice.EventBus.Publishing.Policies;
+using Juice.EventBus.Publishing.Policies.Internal;
+using Juice.EventBus.Subscriptions;
+using Juice.EventBus.Transactional;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+
 
 namespace Microsoft.Extensions.DependencyInjection
 {
     public static class EventBusServiceCollectionExtensions
     {
-        /// <summary>
-        /// </summary>
-        /// <param name="services"></param>
-        /// <param name="topicSupport"></param>
-        /// <returns></returns>
-        public static IServiceCollection RegisterInMemoryEventBus(this IServiceCollection services, bool topicSupport = true)
+        public static EventBusBuilder AddEventBus(this IServiceCollection services)
         {
-            services.AddIntegrationEventTypesService();
+            return new EventBusBuilder(services).AddDefaultServices();
+        }
+    }
 
-            services.AddSingleton<IEventBusSubscriptionsManager>(sp => {
+    public class EventBusBuilder
+    {
+        public IServiceCollection Services => _services;
+        private readonly IServiceCollection _services;
+        internal EventBusBuilder(IServiceCollection services)
+        {
+            _services = services;
+        }
+
+        public EventBusBuilder AddDefaultServices()
+        {
+            _services.TryAddSingleton<IEventSerializer, NewtonsoftSerializer>();
+            return this;
+        }
+
+        #region Consumer services
+        /// <summary>
+        /// Registers the default consumer-related services required for event bus integration.
+        /// </summary>
+        /// <remarks>This method adds the necessary services for event consumption, including the
+        /// integration event dispatcher and the in-memory event bus subscriptions manager, to the dependency injection
+        /// container. It is intended to be called during event bus policies to enable event handling
+        /// capabilities.</remarks>
+        /// <returns>The current <see cref="EventBusBuilder"/> instance, enabling method chaining.</returns>
+        public EventBusBuilder AddConsumerServices()
+        {
+            Services.TryAddTransient<IntegrationEventDispatcher>();
+            Services.TryAddSingleton<IEventBusSubscriptionsManager>(sp =>
+            {
                 var logger = sp.GetRequiredService<ILogger<InMemoryEventBusSubscriptionsManager>>();
-                return new InMemoryEventBusSubscriptionsManager(logger, topicSupport);
+                return new InMemoryEventBusSubscriptionsManager(logger, true);
             });
 
-            services.AddSingleton<IEventBus, InMemoryEventBus>();
+            return this;
+        }
+        #endregion
 
-            return services;
+        #region Outbox delivery
+
+        /// <summary>
+        /// Add outbox support for transactional event publishing.
+        /// </summary>
+        /// <param name="configure"></param>
+        /// <returns></returns>
+        public EventBusBuilder AddOutboxCore(Action<OutboxBuilder>? configure = default)
+        {
+            var outboxBuilder = new OutboxBuilder(_services);
+            configure?.Invoke(outboxBuilder);
+
+            outboxBuilder.AddDefaultServices();
+
+            return this;
         }
 
         /// <summary>
-        /// Register in-memory event bus for specific type <typeparamref name="T"/> as <see cref="IEventBus{T}"/> and <typeparamref name="T"/> if <typeparamref name="T"/> implements <see cref="IEventBus"/>.
+        /// Add delivery processing.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="services"></param>
-        /// <param name="topicSupport"></param>
+        /// <param name="configure"></param>
         /// <returns></returns>
-        public static IServiceCollection RegisterInMemoryEventBus<T>(this IServiceCollection services, bool topicSupport = true)
+        public EventBusBuilder AddDeliveryCore(Action<DeliveryBuilder>? configure = default)
         {
-            services.TryAddSingleton<IEventBus<T>>(sp =>
+            var deliveryBuilder = new DeliveryBuilder(_services);
+            configure?.Invoke(deliveryBuilder);
+
+            deliveryBuilder.BuildEventTypeRegistry();
+            return this;
+        }
+
+        #endregion
+
+        #region Producer services
+
+        /// <summary>
+        /// Add core services required for event publishing.
+        /// </summary>
+        /// <param name="policies">Configuration section for publishing policies.</param>
+        /// <returns></returns>
+        public EventBusBuilder AddProducerServices(IConfigurationSection policies)
+        {
+            _services.TryAddSingleton<IEventBus, CompositeEventPublisher>();
+
+            if (_services.Any(sd => sd.ServiceType == typeof(IEventPublishingPolicy)))
             {
-                var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
-                var logger = loggerFactory.CreateLogger<InMemoryEventBus<T>>();
-                var logger1 = loggerFactory.CreateLogger<InMemoryEventBusSubscriptionsManager>();
-                var subsManager = new InMemoryEventBusSubscriptionsManager(logger1, topicSupport);
-                var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
-                return new InMemoryEventBus<T>(subsManager, scopeFactory, logger);
-            });
-            if (typeof(T).IsAssignableTo(typeof(IEventBus)))
-            {
-                services.AddEventBusProxy<T>();
+                return this;
             }
-            return services;
+            _services.Configure<PublishingPolicyOptions>(policies);
+            _services.AddSingleton<IEventPublishingPolicy, DefaultEventPublishingPolicy>();
+            return this;
         }
 
-        /// <summary>
-        /// Register integration event types service.
-        /// </summary>
-        /// <param name="services"></param>
-        /// <returns></returns>
-        public static IServiceCollection AddIntegrationEventTypesService(this IServiceCollection services)
-        {
-            services.TryAddSingleton<IntegrationEventTypes>();
-            return services;
-        }
-
-        /// <summary>
-        /// Register event bus proxy for specific type.
-        /// </summary>
-        /// <typeparam name="TBus"></typeparam>
-        /// <param name="services"></param>
-        /// <returns></returns>
-        public static IServiceCollection AddEventBusProxy<TBus>(this IServiceCollection services)
-        {
-            if (!typeof(IEventBus).IsAssignableFrom(typeof(TBus)))
-            {
-                throw new InvalidOperationException($"Type {typeof(TBus).FullName} must implement IEventBus.");
-            }
-            services.TryAddSingleton(typeof(TBus), sp => EventBusProxy<TBus>.Create(sp.GetRequiredService<IEventBus<TBus>>())!);
-            return services;
-        }
+        #endregion
     }
 }

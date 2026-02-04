@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Juice.EventBus.Delivery;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Juice.EventBus.Transactional.EF
@@ -25,32 +26,23 @@ namespace Juice.EventBus.Transactional.EF
             builder.Property(e => e.CreationTime)
                 .IsRequired();
 
-            builder.Property(e => e.State)
-                .IsRequired();
+            builder.Property(e => e.TransactionId)
+                .HasMaxLength(64);
 
-            builder.Property(e => e.TimesSent)
-                .IsRequired();
+            builder.Property(e => e.TenantId)
+                .HasMaxLength(64);
 
             builder.Property(e => e.EventTypeName)
                 .HasMaxLength(256)
                 .IsRequired();
 
-            builder.Property(e => e.LastError)
-                .HasMaxLength(LengthConstants.ShortDescriptionLength);
-
-            builder.Property(e => e.TransactionId)
-                .HasMaxLength(64);
+            builder.HasMany(e => e.Deliveries)
+                .WithOne(d => d.OutboxEvent)
+                .HasForeignKey(d => d.EventId)
+                .IsRequired()
+                .OnDelete(DeleteBehavior.Cascade);
 
             builder.HasIndex(e => e.TransactionId)
-                ;
-
-            builder.HasIndex(
-                nameof(OutboxEvent.State),
-                nameof(OutboxEvent.ProcessedOn),
-                nameof(OutboxEvent.TimesSent)
-                )
-                .HasDatabaseName("IX_OutboxEvents_Recovery")
-                .HasFilter("[ProcessedOn] IS NOT NULL")
                 ;
         }
     }

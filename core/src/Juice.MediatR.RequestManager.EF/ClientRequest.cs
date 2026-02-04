@@ -21,17 +21,6 @@
         public DateTimeOffset Time { get; private set; }
         public RequestState State { get; private set; }
         public DateTimeOffset? CompletedTime { get; private set; }
-
-        public void MarkAsDone()
-        {
-            State = RequestState.Processed;
-            CompletedTime = DateTimeOffset.Now;
-        }
-
-        public void MarkAsFailed()
-        {
-            State = RequestState.ProcessedFailed;
-            CompletedTime = DateTimeOffset.Now;
-        }
+        public string? Result { get; private set; }
     }
 }

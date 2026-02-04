@@ -31,40 +31,48 @@ namespace Juice.MediatR.Tests
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
         }
 
-        [IgnoreOnCIFact(DisplayName = "Contents schema migration"), TestPriority(10)]
-        public async Task ContentsSchemaMigrationAsync()
+        private DependencyResolver ConfigureServices(string schema, string provider, Action<IServiceCollection>? configure = default)
         {
-
             var resolver = new DependencyResolver
             {
                 CurrentDirectory = AppContext.BaseDirectory
             };
-            var schema = ContentSchema;
-
             resolver.ConfigureServices(services =>
             {
                 var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
                 var configuration = configService.GetConfiguration(GetType().Assembly);
-
                 // Register DbContext class
-
-                services.AddEFMediatorRequestManager(configuration, options =>
+                services.AddMediatR(cfg =>
                 {
-                    options.DatabaseProvider = "SqlServer";
-                    options.Schema = schema;
-                    options.ConnectionName = "SqlServerConnection";
+                    cfg.RegisterServicesFromAssemblyContaining<IdentifiedCommandTest>();
+                    cfg.AddEFRequestManager(configuration, options =>
+                    {
+                        options.DatabaseProvider = provider;
+                        options.Schema = schema;
+                        options.ConnectionName = provider == "SqlServer" ? "SqlServerConnection" : "PostgreConnection";
+                    });
                 });
-
-                services.AddSingleton(provider => _testOutput);
-
                 services.AddLogging(builder =>
                 {
                     builder.ClearProviders()
-                    .AddTestOutputLogger()
+                    .AddTestOutputLogger(_testOutput)
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
 
+                services.AddDefaultStringIdGenerator();
+
+                services.AddSingleton<SharedService>();
+
+                configure?.Invoke(services);
             });
+            return resolver;
+        }
+
+        [IgnoreOnCIFact(DisplayName = "Contents schema migration"), TestPriority(10)]
+        public async Task ContentsSchemaMigrationAsync()
+        {
+            var schema = ContentSchema;
+            var resolver = ConfigureServices(schema, "SqlServer");
 
             var context = resolver.ServiceProvider.GetRequiredService<ClientRequestContext>();
             var pendingMigrations = await context.Database.GetPendingMigrationsAsync();
@@ -83,36 +91,8 @@ namespace Juice.MediatR.Tests
         [IgnoreOnCIFact(DisplayName = "Cms schema migration"), TestPriority(9)]
         public async Task CmsSchemaMigrationAsync()
         {
-            var resolver = new DependencyResolver
-            {
-                CurrentDirectory = AppContext.BaseDirectory
-            };
             var schema = CmsSchema;
-
-            resolver.ConfigureServices(services =>
-            {
-                var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
-                var configuration = configService.GetConfiguration(GetType().Assembly);
-
-                // Register DbContext class
-
-                services.AddEFMediatorRequestManager(configuration, options =>
-                {
-                    options.DatabaseProvider = "PostgreSQL";
-                    options.Schema = schema;
-                    options.ConnectionName = "PostgreConnection";
-                });
-
-                services.AddSingleton(provider => _testOutput);
-
-                services.AddLogging(builder =>
-                {
-                    builder.ClearProviders()
-                    .AddTestOutputLogger()
-                    .AddConfiguration(configuration.GetSection("Logging"));
-                });
-
-            });
+            var resolver = ConfigureServices(schema, "PostgreSQL");
 
             var context = resolver.ServiceProvider.GetRequiredService<ClientRequestContext>();
             var pendingMigrations = await context.Database.GetPendingMigrationsAsync();
@@ -128,27 +108,13 @@ namespace Juice.MediatR.Tests
         [IgnoreOnCIFact(DisplayName = "Test RequestManager"), TestPriority(1)]
         public async Task RequestManagerTestAsync()
         {
-            var resolver = new DependencyResolver
-            {
-                CurrentDirectory = AppContext.BaseDirectory
-            };
 
             var schema = CmsSchema;
 
-            resolver.ConfigureServices(services =>
+            var resolver = ConfigureServices(schema, "PostgreSQL", services =>
             {
-
-                services.AddSingleton(provider => _testOutput);
-
                 var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
                 var configuration = configService.GetConfiguration(GetType().Assembly);
-
-                services.AddLogging(builder =>
-                {
-                    builder.ClearProviders()
-                    .AddTestOutputLogger()
-                    .AddConfiguration(configuration.GetSection("Logging"));
-                });
 
                 // Register DbContext class
                 services.AddScoped(provider =>
@@ -157,15 +123,6 @@ namespace Juice.MediatR.Tests
                     var builder = new DbContextOptionsBuilder<TestContext>();
                     builder.UseSqlServer(connectionString);
                     return new TestContext(provider, builder.Options);
-                });
-
-                services.AddDefaultStringIdGenerator();
-
-                services.AddEFMediatorRequestManager(configuration, options =>
-                {
-                    options.DatabaseProvider = "PostgreSQL";
-                    options.Schema = schema;
-                    options.ConnectionName = "PostgreConnection";
                 });
             });
 
@@ -177,260 +134,219 @@ namespace Juice.MediatR.Tests
 
             var id = Guid.NewGuid();
 
-            var ok = await requestManager.TryCreateRequestForCommandAsync<Request>(id);
+            try
+            {
+                var ok = await requestManager.TryCreateRequestForCommandAsync<Request>(id);
 
-            Assert.True(ok);
+                Assert.True(ok);
 
-            await requestManager.TryCompleteRequestAsync<Request>(id, true);
-
+                await requestManager.TryCompleteRequestAsync<Request>(id, true);
+            }
+            finally
+            {
+                // Ensure cleanup in case something failed earlier
+                await CleanupRequestAsync(resolver.ServiceProvider, id);
+            }
         }
 
         [IgnoreOnCIFact(DisplayName = "IRequest should handle once"), TestPriority(2)]
         public async Task Request_should_be_handleAsync()
         {
-            var resolver = new DependencyResolver
-            {
-                CurrentDirectory = AppContext.BaseDirectory
-            };
 
             var schema = CmsSchema;
 
-            resolver.ConfigureServices(services =>
-            {
-
-                services.AddSingleton(provider => _testOutput);
-
-                var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
-                var configuration = configService.GetConfiguration(GetType().Assembly);
-
-                services.AddLogging(builder =>
-                {
-                    builder.ClearProviders()
-                    .AddTestOutputLogger()
-                    .AddConfiguration(configuration.GetSection("Logging"));
-                });
-
-                services.AddMediatR(options =>
-                {
-                    options.RegisterServicesFromAssemblyContaining<RequestHandler>();
-                });
-
-                services.AddDefaultStringIdGenerator();
-                services.AddSingleton<SharedService>();
-
-                services.AddEFMediatorRequestManager(configuration, options =>
-                {
-                    options.DatabaseProvider = "PostgreSQL";
-                    options.Schema = schema;
-                    options.ConnectionName = "PostgreConnection";
-                });
-            });
+            var resolver = ConfigureServices(schema, "PostgreSQL");
 
             var logger = resolver.ServiceProvider.GetRequiredService<ILogger<IdentifiedCommandTest>>();
             var request = new Request(Guid.NewGuid());
             var irequest = new IdentifiedCommand<Request>(request, Guid.NewGuid());
 
             logger.LogInformation("Request Id: {Id}", request.Id);
-            Parallel.For(0, 3, async i =>
+
+            try
             {
-                using var scope = resolver.ServiceProvider.CreateScope();
-                var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-                await mediator.Send(irequest);
-            });
-            await Task.Delay(1000);
-            var sharedService = resolver.ServiceProvider.GetRequiredService<SharedService>();
-            sharedService.HandledServices.Count(x => x == nameof(RequestHandler)).Should().Be(1);
-            sharedService.HandledServices.Count(x => x == nameof(RequestIdentifiedCommandHandler)).Should().Be(2);
+                await SimulateConcurrentRequestsAsync(resolver.ServiceProvider, irequest, 3);
+
+                var sharedService = resolver.ServiceProvider.GetRequiredService<SharedService>();
+                sharedService.HandledServices.Count(x => x == nameof(RequestHandler)).Should().Be(1);
+                sharedService.HandledServices.Count(x => x == nameof(RequestIdentifiedCommandHandler)).Should().Be(3);
+            }
+            finally
+            {
+                // cleanup request records created during the test
+                await CleanupRequestAsync(resolver.ServiceProvider, irequest.Id);
+            }
         }
 
         [IgnoreOnCIFact(DisplayName = "IRequest<T> should handle once"), TestPriority(2)]
         public async Task Request_with_result_should_be_handleAsync()
         {
-            var resolver = new DependencyResolver
-            {
-                CurrentDirectory = AppContext.BaseDirectory
-            };
 
             var schema = CmsSchema;
-
-            resolver.ConfigureServices(services =>
-            {
-
-                services.AddSingleton(provider => _testOutput);
-
-                var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
-                var configuration = configService.GetConfiguration(GetType().Assembly);
-
-                services.AddLogging(builder =>
-                {
-                    builder.ClearProviders()
-                    .AddTestOutputLogger()
-                    .AddConfiguration(configuration.GetSection("Logging"));
-                });
-
-                services.AddMediatR(options =>
-                {
-                    options.RegisterServicesFromAssemblyContaining<RequestHandler>();
-                });
-
-                services.AddDefaultStringIdGenerator();
-                services.AddSingleton<SharedService>();
-
-                services.AddEFMediatorRequestManager(configuration, options =>
-                {
-                    options.DatabaseProvider = "PostgreSQL";
-                    options.Schema = schema;
-                    options.ConnectionName = "PostgreConnection";
-                });
-            });
+            var resolver = ConfigureServices(schema, "PostgreSQL");
 
             var logger = resolver.ServiceProvider.GetRequiredService<ILogger<IdentifiedCommandTest>>();
             var request = new RequestWithResult(Guid.NewGuid());
             var irequest = new IdentifiedCommand<RequestWithResult, string>(request, Guid.NewGuid());
 
             logger.LogInformation("Request Id: {Id}", request.Id);
-            Parallel.For(0, 3, async i =>
+
+            try
             {
-                using var scope = resolver.ServiceProvider.CreateScope();
-                var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-                await mediator.Send(irequest);
-            });
-            await Task.Delay(1000);
-            var sharedService = resolver.ServiceProvider.GetRequiredService<SharedService>();
-            sharedService.HandledServices.Count(x => x == nameof(RequestWithResultHandler)).Should().Be(1);
-            sharedService.HandledServices.Count(x => x == nameof(RequestWithResultIdentifiedCommandHandler)).Should().Be(2);
+                await SimulateConcurrentRequestsAsync(resolver.ServiceProvider, irequest, 3);
+
+                var sharedService = resolver.ServiceProvider.GetRequiredService<SharedService>();
+                sharedService.HandledServices.Count(x => x == nameof(RequestWithResultHandler)).Should().Be(1);
+                sharedService.HandledServices.Count(x => x == nameof(RequestWithResultIdentifiedCommandHandler)).Should().Be(3);
+            }
+            finally
+            {
+                await CleanupRequestAsync(resolver.ServiceProvider, irequest.Id);
+            }
         }
 
         [IgnoreOnCIFact(DisplayName = "IRequest<IOperationResult> should handle once"), TestPriority(2)]
         public async Task Operation_should_be_handleAsync()
         {
-            var resolver = new DependencyResolver
-            {
-                CurrentDirectory = AppContext.BaseDirectory
-            };
 
             var schema = CmsSchema;
-
-            resolver.ConfigureServices(services =>
-            {
-
-                services.AddSingleton(provider => _testOutput);
-
-                var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
-                var configuration = configService.GetConfiguration(GetType().Assembly);
-
-                services.AddLogging(builder =>
-                {
-                    builder.ClearProviders()
-                    .AddTestOutputLogger()
-                    .AddConfiguration(configuration.GetSection("Logging"));
-                });
-
-                services.AddMediatR(options =>
-                {
-                    options.RegisterServicesFromAssemblyContaining<RequestHandler>();
-                });
-
-                services.AddDefaultStringIdGenerator();
-                services.AddSingleton<SharedService>();
-
-                services.AddEFMediatorRequestManager<TestContext>(configuration, options =>
-                {
-                    options.DatabaseProvider = "PostgreSQL";
-                    options.Schema = schema;
-                    options.ConnectionName = "PostgreConnection";
-                });
-            });
+            var resolver = ConfigureServices(schema, "PostgreSQL");
 
             var logger = resolver.ServiceProvider.GetRequiredService<ILogger<IdentifiedCommandTest>>();
             var request = new Operation(Guid.NewGuid());
             var irequest = new IdentifiedCommand<Operation, IOperationResult>(request, Guid.NewGuid());
 
             logger.LogInformation("Request Id: {Id}", request.Id);
-            Parallel.For(0, 3, async i =>
+            try
             {
-                using var scope = resolver.ServiceProvider.CreateScope();
-                var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-                try
-                {
-                    await mediator.Send(irequest);
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, ex.Message);
-                }
-            });
-            await Task.Delay(1000);
-            var sharedService = resolver.ServiceProvider.GetRequiredService<SharedService>();
-            sharedService.HandledServices.Count(x => x == nameof(OperationHandler)).Should().Be(1);
-            sharedService.HandledServices.Count(x => x == nameof(OperationIdentifiedCommandHandler)).Should().Be(2);
+                await SimulateConcurrentRequestsAsync(resolver.ServiceProvider, irequest, 3);
+                var sharedService = resolver.ServiceProvider.GetRequiredService<SharedService>();
+                sharedService.HandledServices.Count(x => x == nameof(OperationHandler)).Should().Be(1);
+                sharedService.HandledServices.Count(x => x == nameof(OperationIdentifiedCommandHandler)).Should().Be(3);
+            }
+            finally
+            {
+                await CleanupRequestAsync(resolver.ServiceProvider, irequest.Id);
+            }
         }
 
         [IgnoreOnCIFact(DisplayName = "IRequest<IOperationResult<T>> should handle once"), TestPriority(2)]
         public async Task Operation_with_result_should_be_handleAsync()
         {
-            var resolver = new DependencyResolver
-            {
-                CurrentDirectory = AppContext.BaseDirectory
-            };
-
             var schema = CmsSchema;
 
-            resolver.ConfigureServices(services =>
+            var resolver = ConfigureServices(schema, "PostgreSQL", services =>
             {
-
-                services.AddSingleton(provider => _testOutput);
-
                 var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
                 var configuration = configService.GetConfiguration(GetType().Assembly);
 
-                services.AddLogging(builder =>
-                {
-                    builder.ClearProviders()
-                    .AddTestOutputLogger()
-                    .AddConfiguration(configuration.GetSection("Logging"));
-                });
-
-                services.AddMediatR(options =>
-                {
-                    options.RegisterServicesFromAssemblyContaining(typeof(IdentifiedCommand<>));
-                });
-
-                services.AddDefaultStringIdGenerator();
-                services.AddSingleton<SharedService>();
-
                 services.AddIdentifiedCommandHandler<OperationWithResult, IOperationResult<string>, OperationWithResultHandler, OperationWithResultIdentifiedCommandHandler>();
 
-                services.AddEFMediatorRequestManager(configuration, options =>
-                {
-                    options.DatabaseProvider = "PostgreSQL";
-                    options.Schema = schema;
-                    options.ConnectionName = "PostgreConnection";
-                });
             });
 
-            var logger = resolver.ServiceProvider.GetRequiredService<ILogger<IdentifiedCommandTest>>();
+
             var request = new OperationWithResult(Guid.NewGuid());
             var irequest = new IdentifiedCommand<OperationWithResult, IOperationResult<string>>(request, Guid.NewGuid());
 
-            logger.LogInformation("Request Id: {Id}", request.Id);
-            Parallel.For(0, 3, async i =>
+            var responses = await SimulateConcurrentRequestsAsync(resolver.ServiceProvider, irequest, 3);
+            try
             {
-                using var scope = resolver.ServiceProvider.CreateScope();
-                var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-                try
+                foreach (var response in responses)
                 {
-                    await mediator.Send(irequest);
+                    if(response is null)
+                    {
+                        _testOutput.WriteLine("No cached result found. The request maybe executing in other thread.");
+                        continue;
+                    }
+                    _testOutput.WriteLine("Response: Succeeded={0}, Data={1}", response.Succeeded, response.Data);
+                    response.Succeeded.Should().BeTrue();
+                    response.Data.Should().Be("Hello World");
                 }
-                catch (Exception ex)
+                var sharedService = resolver.ServiceProvider.GetRequiredService<SharedService>();
+                sharedService.HandledServices.Count(x => x == nameof(OperationWithResultHandler)).Should().Be(1);
+                sharedService.HandledServices.Count(x => x == nameof(OperationWithResultIdentifiedCommandHandler)).Should().Be(3);
+            }
+            finally
+            {
+                await CleanupRequestAsync(resolver.ServiceProvider, irequest.Id);
+            }
+        }
+
+        private async Task CleanupRequestAsync(IServiceProvider serviceProvider, Guid requestId)
+        {
+            var context = serviceProvider.GetRequiredService<ClientRequestContext>();
+            await context.ClientRequests
+                 .Where(r => r.Id == requestId)
+                 .ExecuteDeleteAsync();
+        }
+
+        private async Task SimulateConcurrentRequestsAsync<TRequest>(IServiceProvider serviceProvider, TRequest request, int n)
+            where TRequest : IRequest
+        {
+            var logger = serviceProvider.GetRequiredService<ILogger<IdentifiedCommandTest>>();
+
+            var barrier = new Barrier(n); // Synchronize n threads
+            var tasks = new List<Task>();
+
+            // Act - simulate truly concurrent requests
+            for (var i = 0; i < n; i++)
+            {
+                tasks.Add(Task.Run(async () =>
                 {
-                    logger.LogError(ex, "Error");
-                }
-            });
-            await Task.Delay(1000);
-            var sharedService = resolver.ServiceProvider.GetRequiredService<SharedService>();
-            sharedService.HandledServices.Count(x => x == nameof(OperationWithResultHandler)).Should().Be(1);
-            sharedService.HandledServices.Count(x => x == nameof(OperationWithResultIdentifiedCommandHandler)).Should().Be(2);
+                    barrier.SignalAndWait(); // Wait for all threads to be ready
+                    using var scope = serviceProvider.CreateScope();
+                    var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+                    try
+                    {
+                        await mediator.Send(request);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex.Message);
+                        logger.LogError(ex.StackTrace);
+                    }
+                }));
+            }
+
+            await Task.WhenAll(tasks);
+            await Task.Delay(1000); // Allow for async completion
+        }
+
+        private async Task<TResponse?[]> SimulateConcurrentRequestsAsync<TResponse>(IServiceProvider serviceProvider, IRequest<TResponse> request, int n)
+        {
+            var logger = serviceProvider.GetRequiredService<ILogger<IdentifiedCommandTest>>();
+
+            var barrier = new Barrier(n); // Synchronize n threads
+            var tasks = new List<Task>();
+
+            // Act - simulate truly concurrent requests
+            var responses = new List<TResponse?>();
+            for (var i = 0; i < n; i++)
+            {
+                tasks.Add(Task.Run(async () =>
+                {
+                    barrier.SignalAndWait(); // Wait for all threads to be ready
+                    using var scope = serviceProvider.CreateScope();
+                    var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+                    try
+                    {
+                        var response = await mediator.Send(request);
+                        lock (responses)
+                        {
+                            responses.Add(response);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex.Message);
+                        logger.LogError(ex.StackTrace);
+                    }
+                }));
+            }
+
+            await Task.WhenAll(tasks);
+            await Task.Delay(1000); // Allow for async completion
+            return responses.ToArray();
         }
 
         #region request
@@ -453,19 +369,13 @@ namespace Juice.MediatR.Tests
 
         private class RequestIdentifiedCommandHandler : IdentifiedCommandHandler<Request>
         {
-            private readonly SharedService _sharedService;
             public RequestIdentifiedCommandHandler(IMediator mediator, IRequestManager requestManager,
                 ILogger<RequestIdentifiedCommandHandler> logger, SharedService sharedService)
                 : base(mediator, requestManager, logger)
             {
-                _sharedService = sharedService;
+                sharedService.HandledServices.Add(nameof(RequestIdentifiedCommandHandler));
             }
 
-            protected override ValueTask<IOperationResult> CreateResultForDuplicatedRequestAsync(Request message)
-            {
-                _sharedService.HandledServices.Add(nameof(RequestIdentifiedCommandHandler));
-                return ValueTask.FromResult(OperationResult.Success);
-            }
             protected override (string IdProperty, string CommandId) ExtractDebugInfo(Request command)
                 => (nameof(command.Id), command.Id.ToString());
         }
@@ -491,17 +401,15 @@ namespace Juice.MediatR.Tests
 
         private class RequestWithResultIdentifiedCommandHandler : IdentifiedCommandHandler<RequestWithResult, string>
         {
-            private readonly SharedService _sharedService;
             public RequestWithResultIdentifiedCommandHandler(IMediator mediator, IRequestManager requestManager,
                 ILogger<RequestWithResultIdentifiedCommandHandler> logger, SharedService sharedService)
                 : base(mediator, requestManager, logger)
             {
-                _sharedService = sharedService;
+                sharedService.HandledServices.Add(nameof(RequestWithResultIdentifiedCommandHandler));
             }
 
             protected override ValueTask<string> CreateResultForDuplicatedRequestAsync(RequestWithResult message)
             {
-                _sharedService.HandledServices.Add(nameof(RequestWithResultIdentifiedCommandHandler));
                 return ValueTask.FromResult("Duplicated operation");
             }
 
@@ -535,18 +443,11 @@ namespace Juice.MediatR.Tests
 
         private class OperationIdentifiedCommandHandler : IdentifiedCommandHandler<Operation, IOperationResult>
         {
-            private readonly SharedService _sharedService;
-            public OperationIdentifiedCommandHandler(IMediator mediator, IRequestManager<TestContext> requestManager,
+            public OperationIdentifiedCommandHandler(IMediator mediator, IRequestManager requestManager,
                 ILogger<OperationIdentifiedCommandHandler> logger, SharedService sharedService)
                 : base(mediator, requestManager, logger)
             {
-                _sharedService = sharedService;
-            }
-
-            protected override ValueTask<IOperationResult> CreateResultForDuplicatedRequestAsync(Operation command)
-            {
-                _sharedService.HandledServices.Add(nameof(OperationIdentifiedCommandHandler));
-                return ValueTask.FromResult(OperationResult.Success);
+                sharedService.HandledServices.Add(nameof(OperationIdentifiedCommandHandler));
             }
 
             protected override (string IdProperty, string CommandId) ExtractDebugInfo(Operation command)
@@ -578,27 +479,17 @@ namespace Juice.MediatR.Tests
 
         private class OperationWithResultIdentifiedCommandHandler : IdentifiedCommandHandler<OperationWithResult, IOperationResult<string>>
         {
-            private readonly SharedService _sharedService;
             public OperationWithResultIdentifiedCommandHandler(IMediator mediator, IRequestManager requestManager,
                 ILogger<OperationWithResultIdentifiedCommandHandler> logger, SharedService sharedService)
                 : base(mediator, requestManager, logger)
             {
-                _sharedService = sharedService;
+                sharedService.HandledServices.Add(nameof(OperationWithResultIdentifiedCommandHandler));
             }
 
-            protected override ValueTask<IOperationResult<string>> CreateResultForDuplicatedRequestAsync(OperationWithResult message)
-            {
-                _sharedService.HandledServices.Add(nameof(OperationWithResultIdentifiedCommandHandler));
-                return ValueTask.FromResult(OperationResult.Result("Duplicated operation"));
-            }
             protected override (string IdProperty, string CommandId) ExtractDebugInfo(OperationWithResult command)
                 => (nameof(command.Id), command.Id.ToString());
         }
         #endregion
 
-        private class SharedService
-        {
-            public List<string> HandledServices { get; } = new List<string>();
-        }
     }
 }

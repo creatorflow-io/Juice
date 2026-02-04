@@ -12,6 +12,7 @@ namespace Microsoft.Extensions.DependencyInjection
             services.TryAddTransient<IMediator, Mediator>();
             var builder = new MediatorBuilder(services);
             buildAction?.Invoke(builder);
+            services.TryAddSingleton<IResponseSerializer, NewtonsoftSerializer>();
             return services;
         }
     }
@@ -24,23 +25,26 @@ namespace Microsoft.Extensions.DependencyInjection
             Services = services ?? throw new ArgumentNullException(nameof(services));
         }
 
-        public void RegisterServicesFromAssemblyContaining<T>(bool? includeNonPublicTypes = default)
+        public MediatorBuilder RegisterServicesFromAssemblyContaining<T>(bool? includeNonPublicTypes = default)
         {
             var assembly = typeof(T).Assembly;
             RegisterServicesFromAssemblyInternal(assembly, includeNonPublicTypes ?? assembly == Assembly.GetCallingAssembly());
+            return this;
         }
 
-        public void RegisterServicesFromAssemblyContaining(Type type, bool? includeNonPublicTypes = default)
+        public MediatorBuilder RegisterServicesFromAssemblyContaining(Type type, bool? includeNonPublicTypes = default)
         {
             if (type == null) throw new ArgumentNullException(nameof(type));
             var assembly = type.Assembly;
             RegisterServicesFromAssemblyInternal(assembly, includeNonPublicTypes ?? assembly == Assembly.GetCallingAssembly());
+            return this;
         }
 
-        public void RegisterServicesFromAssembly(Assembly assembly, bool? includeNonPublicTypes = default)
+        public MediatorBuilder RegisterServicesFromAssembly(Assembly assembly, bool? includeNonPublicTypes = default)
         {
             if (assembly == null) throw new ArgumentNullException(nameof(assembly));
             RegisterServicesFromAssemblyInternal(assembly, includeNonPublicTypes ?? assembly == Assembly.GetCallingAssembly());
+            return this;
         }
 
         private void RegisterServicesFromAssemblyInternal(Assembly assembly, bool includeNonPublicTypes)

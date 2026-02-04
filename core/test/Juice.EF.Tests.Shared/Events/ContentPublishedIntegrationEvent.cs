@@ -2,7 +2,7 @@
 
 namespace Juice.EF.Tests.Events
 {
-    public record ContentPublishedIntegrationEvent : IntegrationEvent, IMultiTenantIntegrationEvent
+    public record ContentPublishedIntegrationEvent : IntegrationEvent
     {
         public ContentPublishedIntegrationEvent(string message)
         {
@@ -12,6 +12,5 @@ namespace Juice.EF.Tests.Events
 
         public string Message { get; init; }
 
-        public string? TenantId { get; init; }
     }
 }

@@ -1,5 +1,5 @@
-﻿using Juice.MediatR.Extensions;
-using Juice.MediatR.Internal;
+﻿using System.Diagnostics;
+using Juice.MediatR.Extensions;
 using Microsoft.Extensions.Logging;
 
 namespace Juice.MediatR
@@ -20,59 +20,6 @@ namespace Juice.MediatR
             _logger = logger ?? throw new System.ArgumentNullException(nameof(logger));
         }
 
-        protected async Task<R> DispatchAsync(T command, Guid messageId, CancellationToken cancellationToken)
-        {
-
-            var commandName = command.GetGenericTypeName();
-
-            var (idProperty, commandId) = ExtractDebugInfo(command);
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                _logger.LogDebug(
-                    "----- Sending command: {CommandName} - {IdProperty}: {CommandId} ({@Command})",
-                    commandName,
-                    idProperty ?? "ExtractDebugInfo not implemented",
-                    commandId ?? "ExtractDebugInfo not implemented",
-                    command);
-            }
-
-            // Send the embeded business command to mediator so it runs its related CommandHandler 
-            var result =
-                command is IRequest<R> requestWithResult ? await _mediator.Send(requestWithResult, cancellationToken)
-                : command is IRequest request ? await SendWrapperAsync(request, cancellationToken)
-                : throw new InvalidOperationException($"Command {commandName} does not implement IRequest<R>, IRequest<IOperationResult<R>> or IRequest");
-            ;
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                _logger.LogDebug(
-                    "----- Command result: {@Result} - {CommandName} - {IdProperty}: {CommandId} ({@Command})",
-                    result,
-                    commandName,
-                    idProperty ?? "ExtractDebugInfo not implemented",
-                    commandId ?? "ExtractDebugInfo not implemented",
-                    command);
-            }
-            return result;
-        }
-
-        private async ValueTask<R> SendWrapperAsync(IRequest command, CancellationToken cancellationToken)
-        {
-            if (!typeof(R).IsAssignableTo(typeof(IOperationResult)))
-            {
-                throw new InvalidOperationException($"Command {command.GetGenericTypeName()} does not implement IRequest<R> or IRequest<IOperationResult<R>>. Unable to convert void result to {typeof(R).Name}");
-            }
-            try
-            {
-                await _mediator.Send(command, cancellationToken);
-                return (R)Convert.ChangeType(new OperationResult { Succeeded = true }, typeof(R));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error sending command: {CommandName}", command.GetGenericTypeName());
-                return (R)Convert.ChangeType(new OperationResult { Message = ex.Message }, typeof(R));
-            }
-        }
-
         /// <summary>
         /// Extracts debug information from the command to be used in logging
         /// </summary>
@@ -80,13 +27,6 @@ namespace Juice.MediatR
         /// <returns></returns>
         protected virtual (string? IdProperty, string? CommandId) ExtractDebugInfo(T command)
             => (default, default);
-
-
-        /// <summary>
-        /// Creates the result value to return if a previous request was found
-        /// </summary>
-        /// <returns></returns>
-        protected abstract ValueTask<R> CreateResultForDuplicatedRequestAsync(T command);
 
     }
 
@@ -110,6 +50,32 @@ namespace Juice.MediatR
 
         }
 
+        protected async Task DispatchAsync(TRequest command, CancellationToken cancellationToken)
+        {
+            var (idProperty, commandId) = ExtractDebugInfo(command);
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "----- Sending command: {CommandName} - {IdProperty}: {CommandId} ({@Command})",
+                    command.GetGenericTypeName(),
+                    idProperty ?? "ExtractDebugInfo not implemented",
+                    commandId ?? "ExtractDebugInfo not implemented",
+                    command);
+            }
+
+            // Send the embeded business command to mediator so it runs its related CommandHandler 
+            await _mediator.Send(command, cancellationToken);
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "----- Command sent: {CommandName} - {IdProperty}: {CommandId} ({@Command})",
+                    command.GetGenericTypeName(),
+                    idProperty ?? "ExtractDebugInfo not implemented",
+                    commandId ?? "ExtractDebugInfo not implemented",
+                    command);
+            }
+        }
 
         /// <summary>
         /// This method handles the command. It just ensures that no other request exists with the same ID, and if this is the case
@@ -124,16 +90,11 @@ namespace Juice.MediatR
             var created = await _requestManager.TryCreateRequestForCommandAsync<TRequest>(message.Id);
             if (!created)
             {
-                var result = await CreateResultForDuplicatedRequestAsync(message.Command);
-                if (!result.Succeeded)
-                {
-                    throw new Exception($"Request for {message.Command.GetGenericTypeName()} failed. {result.Message}");
-                }
                 return;
             }
             try
             {
-                await DispatchAsync(message.Command, message.Id, cancellationToken);
+                await DispatchAsync(message.Command, cancellationToken);
                 await _requestManager.TryCompleteRequestAsync<TRequest>(message.Id, true);
             }
             catch (Exception)
@@ -164,6 +125,56 @@ namespace Juice.MediatR
 
         }
 
+        protected async Task<TResponse> DispatchAsync(TRequest command, CancellationToken cancellationToken)
+        {
+            var (idProperty, commandId) = ExtractDebugInfo(command);
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "----- Sending command: {CommandName} - {IdProperty}: {CommandId} ({@Command})",
+                    command.GetGenericTypeName(),
+                    idProperty ?? "ExtractDebugInfo not implemented",
+                    commandId ?? "ExtractDebugInfo not implemented",
+                    command);
+            }
+
+            // Send the embeded business command to mediator so it runs its related CommandHandler 
+            var result = await _mediator.Send(command, cancellationToken);
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "----- Command result: {@Result} - {CommandName} - {IdProperty}: {CommandId} ({@Command})",
+                    result,
+                    command.GetGenericTypeName(),
+                    idProperty ?? "ExtractDebugInfo not implemented",
+                    commandId ?? "ExtractDebugInfo not implemented",
+                    command);
+            }
+            return result;
+        }
+
+
+        /// <summary>
+        /// Creates the result value to return if a previous request was found but no cached result was stored.
+        /// </summary>
+        /// <returns></returns>
+        protected virtual ValueTask<TResponse> CreateResultForDuplicatedRequestAsync(TRequest command)
+        {
+            return ValueTask.FromResult<TResponse>(default!);
+        }
+
+
+        protected virtual async Task<TResponse> HandleDuplicatedRequestAsync(TRequest command, Guid requestId)
+        {
+            var result = await _requestManager.GetCachedResultAsync<TRequest, TResponse>(requestId);
+            if (result is not null)
+            {
+                return result;
+            }
+            // It means that no cached result was stored, so we create a default one
+            return await CreateResultForDuplicatedRequestAsync(command);
+        }
+
         /// <summary>
         /// This method handles the command. It just ensures that no other request exists with the same ID, and if this is the case
         /// just enqueues the original inner command.
@@ -173,16 +184,20 @@ namespace Juice.MediatR
         /// <returns>Return value of inner command or default value if request same ID was found</returns>
         public async ValueTask<TResponse> Handle(IdentifiedCommand<TRequest, TResponse> message, CancellationToken cancellationToken)
         {
-
+            var stopwatch = Stopwatch.StartNew();
+            var commandName = message.Command.GetGenericTypeName();
+            MediatorMetrics.IncrementIdentifiedCommandReceived(commandName);
             var created = await _requestManager.TryCreateRequestForCommandAsync<TRequest>(message.Id);
             if (!created)
             {
-                return await CreateResultForDuplicatedRequestAsync(message.Command);
+                MediatorMetrics.IncrementIdentifiedCommandDuplicated(commandName);
+                return await HandleDuplicatedRequestAsync(message.Command, message.Id);
             }
             try
             {
-                var result = await DispatchAsync(message.Command, message.Id, cancellationToken);
-                await _requestManager.TryCompleteRequestAsync<TRequest>(message.Id, true);
+                var result = await DispatchAsync(message.Command, cancellationToken);
+                await _requestManager.TryCompleteRequestAsync<TRequest>(message.Id, true, result);
+                MediatorMetrics.IncrementIdentifiedCommandProcessed(commandName);
                 return result;
             }
             catch (Exception)
@@ -190,7 +205,11 @@ namespace Juice.MediatR
                 await _requestManager.TryCompleteRequestAsync<TRequest>(message.Id, false);
                 throw;
             }
+            finally
+            {
+                stopwatch.Stop();
+                MediatorMetrics.RecordIdentifiedCommandLatency(commandName, stopwatch.Elapsed);
+            }
         }
-
     }
 }

@@ -41,7 +41,7 @@ public sealed class Mediator : IMediator
             throw new InvalidOperationException($"Multiple handlers registered for {requestType.Name}");
         }
         var handler = handlers[0]!;
-        // Resolve behaviors
+        // ResolveAsync behaviors
         var behaviorType = typeof(IPipelineBehavior<>).MakeGenericType(requestType);
         var behaviors = (IEnumerable<object>)_provider.GetServices(behaviorType);
 
@@ -94,7 +94,7 @@ public sealed class Mediator : IMediator
 
     private Func<IRequest<TResponse>, CancellationToken, ValueTask<TResponse>> BuildResponseInvoker<TResponse>(Type requestType)
     {
-        // Resolve handler
+        // ResolveAsync handler
         var handlerType = typeof(IRequestHandler<,>).MakeGenericType(requestType, typeof(TResponse));
         var handlers = _provider.GetServices(handlerType).ToArray();
         if (handlers.Length == 0)
@@ -107,7 +107,7 @@ public sealed class Mediator : IMediator
         }
         var handler = handlers[0]!;
 
-        // Resolve behaviors
+        // ResolveAsync behaviors
         var behaviorType = typeof(IPipelineBehavior<,>).MakeGenericType(requestType, typeof(TResponse));
         var behaviors = (IEnumerable<object>)_provider.GetServices(behaviorType);
 
@@ -159,7 +159,7 @@ public sealed class Mediator : IMediator
 
     private Func<IStreamRequest<TResponse>, CancellationToken, IAsyncEnumerable<TResponse>> BuildStreamInvoker<TResponse>(Type requestType)
     {
-        // Resolve handler
+        // ResolveAsync handler
         var handlerType = typeof(IStreamRequestHandler<,>).MakeGenericType(requestType, typeof(TResponse));
         var handlers = _provider.GetServices(handlerType).ToArray();
         if (handlers.Length == 0)
@@ -171,7 +171,7 @@ public sealed class Mediator : IMediator
             throw new InvalidOperationException($"Multiple handlers registered for {requestType.Name}");
         }
         var handler = handlers[0]!;
-        // Resolve behaviors
+        // ResolveAsync behaviors
         var behaviorType = typeof(IStreamPipelineBehavior<,>).MakeGenericType(requestType, typeof(TResponse));
         var behaviors = (IEnumerable<object>)_provider.GetServices(behaviorType);
         var method = GetType()
@@ -220,10 +220,10 @@ public sealed class Mediator : IMediator
     private Func<TNotification, CancellationToken, ValueTask> BuildNotificationInvoker<TNotification>(Type notificationType)
         where TNotification : INotification
     {
-        // Resolve handlers
+        // ResolveAsync handlers
         var handlerType = typeof(INotificationHandler<>).MakeGenericType(notificationType);
         var handlers = (IEnumerable<object>)_provider.GetServices(handlerType);
-        // Resolve behaviors
+        // ResolveAsync behaviors
         var behaviorType = typeof(INotificationPipelineBehavior<>).MakeGenericType(notificationType);
         var behaviors = (IEnumerable<object>)_provider.GetServices(behaviorType);
 

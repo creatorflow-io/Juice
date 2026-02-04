@@ -161,12 +161,22 @@ namespace Microsoft.Extensions.Logging
     public static class TestOutputLoggerExtensions
     {
         public static ILoggingBuilder AddTestOutputLogger(
-            this ILoggingBuilder builder)
+            this ILoggingBuilder builder,
+            ITestOutputHelper? outputHelper = default)
         {
             builder.AddConfiguration();
 
-            builder.Services.TryAddEnumerable(
-                ServiceDescriptor.Singleton<ILoggerProvider, TestOutputLoggerProvider>());
+            if (outputHelper is null)
+            {
+                builder.Services.TryAddEnumerable(
+                    ServiceDescriptor.Singleton<ILoggerProvider, TestOutputLoggerProvider>());
+            }
+            else
+            {
+                builder.Services.TryAddEnumerable(
+                    ServiceDescriptor.Singleton<ILoggerProvider, TestOutputLoggerProvider>(sp
+                        => new TestOutputLoggerProvider(outputHelper)));
+            }
 
             LoggerProviderOptions.RegisterProviderOptions
                 <TestOutputLoggerOptions, TestOutputLoggerProvider>(builder.Services);
@@ -176,9 +186,10 @@ namespace Microsoft.Extensions.Logging
 
         public static ILoggingBuilder AddTestOutputLogger(
             this ILoggingBuilder builder,
-            Action<TestOutputLoggerOptions> configure)
+            Action<TestOutputLoggerOptions> configure,
+            ITestOutputHelper? outputHelper = default)
         {
-            builder.AddTestOutputLogger();
+            builder.AddTestOutputLogger(outputHelper);
             builder.Services.Configure(configure);
 
             return builder;

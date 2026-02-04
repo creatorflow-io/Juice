@@ -2,7 +2,6 @@
 using Juice.EF.Migrations;
 using Juice.EventBus.IntegrationEventLog.EF;
 using Juice.EventBus.Transactional.EF;
-using Juice.EventBus.Transactional.EF.FeatureBuilder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
@@ -21,7 +20,7 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <param name="builder"></param>
         /// <param name="schema"></param>
         /// <returns></returns>
-        public static IOutboxEventBuilder UseIntegrationEventLog<TContext>(this IOutboxEventBuilder builder,
+        public static OutboxBuilder UseIntegrationEventLog<TContext>(this OutboxBuilder builder,
             string? schema = default)
             where TContext : DbContext
         {

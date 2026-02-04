@@ -6,10 +6,11 @@ namespace Juice.MultiTenant
     /// </summary>
     public interface ITenant : IDynamic
     {
-        public string? Id { get; }
-        public string? Name { get; }
+        string? Id { get; }
+        string? Name { get; }
         string? Identifier { get; }
-        public string? OwnerUser { get; }
-        public string? TenantClass { get; }
+        string? OwnerUser { get; }
+        string? Tier { get; }
+        string? Region { get; }
     }
 }

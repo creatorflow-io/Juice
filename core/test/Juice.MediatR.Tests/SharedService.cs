@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
+using System.Collections.Generic;
 
 namespace Juice.MediatR.Tests
 {
@@ -59,6 +60,9 @@ namespace Juice.MediatR.Tests
                 _behaviorCount = 0;
             }
         }
+
+        public ConcurrentBag<string> HandledServices { get; } = [];
+
     }
 
 }

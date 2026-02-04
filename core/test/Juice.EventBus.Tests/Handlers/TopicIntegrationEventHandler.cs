@@ -19,7 +19,7 @@ namespace Juice.EventBus.Tests.Handlers
         {
             await Task.Delay(200);
             _logger.LogInformation("[X] Received {0} at {1}", @event.GetEventKey(), @event.CreationDate);
-            _handledService.Handlers.Add(nameof(TopicIntegrationEventHandler));
+            _handledService.Handle(nameof(TopicIntegrationEventHandler), @event.Id);
         }
     }
 
@@ -38,7 +38,7 @@ namespace Juice.EventBus.Tests.Handlers
         {
             await Task.Delay(200);
             _logger.LogInformation("[X] Received {0} at {1}", @event.GetEventKey(), @event.CreationDate);
-            _handledService.Handlers.Add(nameof(TopicIntegrationEventHandler1));
+            _handledService.Handle(nameof(TopicIntegrationEventHandler1), @event.Id);
         }
     }
 }

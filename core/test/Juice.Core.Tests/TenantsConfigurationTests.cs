@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Finbuckle.MultiTenant;
 using FluentAssertions;
 using Juice.Extensions.Configuration;
-using Juice.Extensions.MultiTenant;
 using Juice.Extensions.Options;
 using Juice.MultiTenant;
 using Juice.XUnit;
