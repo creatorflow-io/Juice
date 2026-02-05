@@ -23,11 +23,8 @@ namespace Juice.Core.Tests
         [Fact(DisplayName = "Tenant should be resolved in scope")]
         public async Task TenantShouldResolveAsync()
         {
-            var serviceProvider = DependencyResolver.Create(services =>
+            var serviceProvider = DependencyResolver.Create((services, configuration) =>
             {
-                var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
-                var configuration = configService.GetConfiguration(GetType().Assembly);
-
                 services.AddLogging(builder =>
                 {
                     builder.ClearProviders()

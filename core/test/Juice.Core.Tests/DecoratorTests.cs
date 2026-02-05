@@ -23,7 +23,7 @@ namespace Juice.Core.Tests
         [Fact]
         public void Service_by_instanceAsync()
         {
-            var dependencyResolver = DependencyResolver.Create(services =>
+            var dependencyResolver = DependencyResolver.Create((services, configuration) =>
             {
                 services.AddSingleton(_output);
 
@@ -45,7 +45,7 @@ namespace Juice.Core.Tests
         [Fact]
         public void Services_by_instanceAsync()
         {
-            var dependencyResolver = DependencyResolver.Create(services =>
+            var dependencyResolver = DependencyResolver.Create((services, configuration) =>
             {
                 services.AddSingleton(_output);
 
@@ -70,7 +70,7 @@ namespace Juice.Core.Tests
         [Fact]
         public void Service_by_factoryAsync()
         {
-            var dependencyResolver = DependencyResolver.Create(services =>
+            var dependencyResolver = DependencyResolver.Create((services, configuration) =>
             {
                 services.AddSingleton(_output);
 
@@ -92,7 +92,7 @@ namespace Juice.Core.Tests
         [Fact]
         public void Services_by_factoryAsync()
         {
-            var dependencyResolver = DependencyResolver.Create(services =>
+            var dependencyResolver = DependencyResolver.Create((services, configuration) =>
             {
                 services.AddSingleton(_output);
 
@@ -117,7 +117,7 @@ namespace Juice.Core.Tests
         [Fact]
         public void Service_by_typeAsync()
         {
-            var dependencyResolver = DependencyResolver.Create(services =>
+            var dependencyResolver = DependencyResolver.Create((services, configuration) =>
             {
                 services.AddSingleton(_output);
 
@@ -139,7 +139,7 @@ namespace Juice.Core.Tests
         [Fact]
         public void Services_by_typeAsync()
         {
-            var dependencyResolver = DependencyResolver.Create(services =>
+            var dependencyResolver = DependencyResolver.Create((services, configuration) =>
             {
                 services.AddSingleton(_output);
 

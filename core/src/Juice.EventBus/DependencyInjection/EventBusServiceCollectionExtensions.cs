@@ -15,9 +15,12 @@ namespace Microsoft.Extensions.DependencyInjection
 {
     public static class EventBusServiceCollectionExtensions
     {
-        public static EventBusBuilder AddEventBus(this IServiceCollection services)
+        public static EventBusBuilder AddEventBus(this IServiceCollection services, Action<EventBusBuilder>? configure = default)
         {
-            return new EventBusBuilder(services).AddDefaultServices();
+            var builder = new EventBusBuilder(services);
+            configure?.Invoke(builder);
+            builder.AddDefaultServices();
+            return builder;
         }
     }
 

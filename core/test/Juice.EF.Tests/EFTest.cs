@@ -39,11 +39,8 @@ namespace Juice.EF.Tests
         }
 
         private DependencyResolver ConfigureServices(string provider)
-            => DependencyResolver.Create(services =>
+            => DependencyResolver.Create((services, configuration) =>
             {
-                var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
-                var configuration = configService.GetConfiguration(GetType().Assembly);
-
                 services.AddSingleton<SharedService>();
 
                 // Register DbContext class

@@ -12,13 +12,8 @@ namespace Juice.MediatR.RequestManager.EF.Migrations
         {
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
            
-            return DependencyResolver.Create(services =>
+            return DependencyResolver.Create((services, configuration) =>
             {
-
-                // Register DbContext class
-                var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
-
-                var configuration = configService.GetConfiguration(args);
 
                 var provider = configuration.GetSection("Provider").Get<string>() ?? "SqlServer";
 

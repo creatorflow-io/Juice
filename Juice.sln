@@ -99,6 +99,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.EventBus.Contracts", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.EventBus.Transactional.EF", "core\src\Juice.EventBus.Transactional.EF\Juice.EventBus.Transactional.EF.csproj", "{F6286642-97D3-49AE-B914-E4EA03F1FEC1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.EventBus.Transactional.Migrations", "core\src\Juice.EventBus.Transactional.Migrations\Juice.EventBus.Transactional.Migrations.csproj", "{C10E8688-3577-4875-9800-E4D8641034EE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.EventBus.Transactional.Migrations.SqlServer", "core\src\Juice.EventBus.Transactional.Migrations.SqlServer\Juice.EventBus.Transactional.Migrations.SqlServer.csproj", "{6DC04C26-066E-8F22-214A-47A11D6125DE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.EventBus.Transactional.Migrations.PostgreSQL", "core\src\Juice.EventBus.Transactional.Migrations.PostgreSQL\Juice.EventBus.Transactional.Migrations.PostgreSQL.csproj", "{DA838A17-B2FD-45C6-8821-0B5B61A19FC1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -249,6 +255,18 @@ Global
 		{F6286642-97D3-49AE-B914-E4EA03F1FEC1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F6286642-97D3-49AE-B914-E4EA03F1FEC1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F6286642-97D3-49AE-B914-E4EA03F1FEC1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C10E8688-3577-4875-9800-E4D8641034EE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C10E8688-3577-4875-9800-E4D8641034EE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C10E8688-3577-4875-9800-E4D8641034EE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C10E8688-3577-4875-9800-E4D8641034EE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6DC04C26-066E-8F22-214A-47A11D6125DE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6DC04C26-066E-8F22-214A-47A11D6125DE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6DC04C26-066E-8F22-214A-47A11D6125DE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6DC04C26-066E-8F22-214A-47A11D6125DE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DA838A17-B2FD-45C6-8821-0B5B61A19FC1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DA838A17-B2FD-45C6-8821-0B5B61A19FC1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DA838A17-B2FD-45C6-8821-0B5B61A19FC1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DA838A17-B2FD-45C6-8821-0B5B61A19FC1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -291,6 +309,9 @@ Global
 		{EC888A50-8291-4128-8BA9-B10F0D8F677A} = {9E4FFBBB-2E8E-4463-B502-260D502D43E1}
 		{50CA72BF-AB1D-497B-B723-66F8ED3C2907} = {9E4FFBBB-2E8E-4463-B502-260D502D43E1}
 		{F6286642-97D3-49AE-B914-E4EA03F1FEC1} = {9E4FFBBB-2E8E-4463-B502-260D502D43E1}
+		{C10E8688-3577-4875-9800-E4D8641034EE} = {9E4FFBBB-2E8E-4463-B502-260D502D43E1}
+		{6DC04C26-066E-8F22-214A-47A11D6125DE} = {9E4FFBBB-2E8E-4463-B502-260D502D43E1}
+		{DA838A17-B2FD-45C6-8821-0B5B61A19FC1} = {9E4FFBBB-2E8E-4463-B502-260D502D43E1}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DD654E02-538D-4E29-A098-413DEBAE4D98}
