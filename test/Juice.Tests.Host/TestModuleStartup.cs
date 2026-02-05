@@ -39,14 +39,13 @@ namespace Juice.Tests.Host
             services.AddTransient<LogEventHandler>();
 
             services.AddEventBus()
-                  .AddConsumerServices()
+                  .AddConsumerServices(cfg => {
+                      cfg.Subscribe<LogEvent, LogEventHandler>();
+                  })
                   .AddRabbitMQ(cfg =>
                   {
                       cfg.AddConnection("rabbitmq", configuration.GetSection("Juice:EventBus:Connections:RabbitMQ"));
-                      cfg.AddConsumer("juice_eventbus_xunit_host", "rabbitmq", qcfg =>
-                      {
-                          qcfg.Subscribe<LogEvent, LogEventHandler>();
-                      });
+                      cfg.AddConsumer("juice_eventbus_xunit_host", "rabbitmq");
                   });
 
         }

@@ -65,8 +65,6 @@ namespace Juice.EventBus.Tests
                                     .BindQueue("juice_eventbus_xunit_4", "x.logs", "kernel.*")
                                     .DeclareQueue("juice_eventbus_xunit_host")
                                     .BindQueue("juice_eventbus_xunit_host", "x.logs", "kernel.*")
-                                    .DeclareQueue("juice_eventbus_xunit_5")
-                                    .BindQueue("juice_eventbus_xunit_5", "x.logs", "kernel.*")
                                     .DeclareQueue("juice_eventbus_xunit_6")
                                     .BindQueue("juice_eventbus_xunit_6", "x.logs", "kernel.*")
                                     ;
@@ -281,11 +279,14 @@ namespace Juice.EventBus.Tests
                 });
                 services.AddHttpContextAccessor();
                 services.AddTestEventBus(configuration)
+                    .AddConsumerServices(cfg =>
+                    {
+                        cfg.Subscribe<LogEvent, LogEventFailureHandler>("kernel.*");
+                    })
                     .AddRabbitMQ(cfg =>
                     {
                         cfg.AddConsumer("juice_eventbus_xunit_4", "rabbitmq", qcfg =>
                         {
-                            qcfg.Subscribe<LogEvent, LogEventFailureHandler>("kernel.*");
                             qcfg.WithDeadLetterExchange("x.logs.retry");
                         });
                     });

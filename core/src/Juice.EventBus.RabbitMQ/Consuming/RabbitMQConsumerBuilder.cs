@@ -60,7 +60,7 @@ namespace Juice.EventBus.RabbitMQ.Consuming
             if (string.IsNullOrWhiteSpace(_endpoint.ConnectionName))
                 throw new InvalidOperationException($"Consumer Connection is required.");
 
-            var subsManager = sp.GetRequiredService<IEventBusSubscriptionsManager>();
+            var subsManager = sp.GetRequiredService<ISubscriptionsManager>();
 
             foreach (var descriptor in _subscriptions)
             {

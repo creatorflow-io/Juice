@@ -45,17 +45,30 @@ namespace Microsoft.Extensions.DependencyInjection
         /// container. It is intended to be called during event bus policies to enable event handling
         /// capabilities.</remarks>
         /// <returns>The current <see cref="EventBusBuilder"/> instance, enabling method chaining.</returns>
-        public EventBusBuilder AddConsumerServices()
+        public EventBusBuilder AddConsumerServices(Action<SubscriptionBuilder>? subscription = default)
         {
             Services.TryAddTransient<IntegrationEventDispatcher>();
-            Services.TryAddSingleton<IEventBusSubscriptionsManager>(sp =>
+            Services.TryAddSingleton<ISubscriptionsManager>(sp =>
             {
-                var logger = sp.GetRequiredService<ILogger<InMemoryEventBusSubscriptionsManager>>();
-                return new InMemoryEventBusSubscriptionsManager(logger, true);
+                var logger = sp.GetRequiredService<ILogger<InMemorySubscriptionsManager>>();
+                var providers = sp.GetServices<ISubscriptionsProvider>();
+                return new InMemorySubscriptionsManager(providers, logger, true);
             });
 
+            var subscriptionBuilder = new SubscriptionBuilder();
+            subscription?.Invoke(subscriptionBuilder);
+            if (subscriptionBuilder.HasSubscriptions)
+            {
+                foreach (var descriptor in subscriptionBuilder.Subscriptions)
+                {
+                    Services.TryAddTransient(descriptor.HandlerType);
+                }
+                Services.AddSingleton(sp =>
+                    subscriptionBuilder.Build());
+            }
             return this;
         }
+
         #endregion
 
         #region Outbox delivery

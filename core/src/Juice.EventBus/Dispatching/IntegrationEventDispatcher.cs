@@ -1,5 +1,4 @@
 ﻿using Juice.EventBus.Extensions;
-using Juice.EventBus.Subscriptions;
 using Juice.MultiTenant;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -8,24 +7,20 @@ namespace Juice.EventBus.Dispatching
 {
     public sealed class IntegrationEventDispatcher
     {
-        private readonly IEventBusSubscriptionsManager _subscriptionsManager;
         private readonly ILogger _logger;
         private readonly IServiceScopeFactory _scopeFactory;
         public IntegrationEventDispatcher(
-            IEventBusSubscriptionsManager subscriptionsManager,
             ILogger<IntegrationEventDispatcher> logger,
             IServiceScopeFactory scopeFactory)
         {
-            _subscriptionsManager = subscriptionsManager;
             _logger = logger;
             _scopeFactory = scopeFactory;
         }
         public async Task<(bool Handled, bool Succeeded)> DispatchAsync(
-            IIntegrationEvent evt, EventDispatchContext context, CancellationToken ct)
+            IIntegrationEvent evt, EventDispatchContext context)
         {
             var eventName = context.EventName ?? evt.GetType().Name;
             var eventId = evt.Id;
-            var subscriptions = await _subscriptionsManager.GetHandlersForEventAsync(eventName);
             var concreteType = typeof(IIntegrationEventHandler<>).MakeGenericType(evt.GetType());
             using var scope = _scopeFactory.CreateScope();
             var tenantResolver = scope.ServiceProvider.GetService<IScopedTenantResolver>();
@@ -33,21 +28,21 @@ namespace Juice.EventBus.Dispatching
             if(_logger.IsEnabled(LogLevel.Debug))
             {
                 _logger.LogDebug("Dispatching event: {EventName}, eventId: {eventId} to {HandlerCount} handlers for tenant: {TenantId}"
-                    ,eventName, eventId, subscriptions.Count(), context.TenantId);
+                    ,eventName, eventId, context.Handlers.Count(), context.TenantId);
             }
             bool ok = false, handled = false;
-            foreach (var subscription in subscriptions)
+            foreach (var handlerType in context.Handlers)
             {
-                if (!subscription.HandlerType.IsAssignableTo(concreteType))
+                if (!handlerType.IsAssignableTo(concreteType))
                 {
-                    _logger.LogWarning("Type {typeName} not assignable to {concreteType}", subscription.HandlerType.Name, concreteType.Name);
+                    _logger.LogWarning("Type {typeName} not assignable to {concreteType}", handlerType.Name, concreteType.Name);
 
                     continue;
                 }
-                var handler = scope.ServiceProvider.GetService(subscription.HandlerType);
+                var handler = scope.ServiceProvider.GetService(handlerType);
                 if (handler == null)
                 {
-                    _logger.LogWarning("Type {typeName} not registered as a service", subscription.HandlerType.Name);
+                    _logger.LogWarning("Type {typeName} not registered as a service", handlerType.Name);
 
                     continue;
                 }

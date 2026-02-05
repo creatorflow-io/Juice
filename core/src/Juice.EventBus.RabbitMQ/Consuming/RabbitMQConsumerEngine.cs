@@ -4,7 +4,6 @@ using Juice.EventBus.RabbitMQ.Policies;
 using Juice.EventBus.Subscriptions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
@@ -19,17 +18,19 @@ namespace Juice.EventBus.RabbitMQ.Consuming
         private string _queueName = default!;
         private ushort _qosPrefetchCount = 1;
 
-        private readonly IEventBusSubscriptionsManager _subscriptionsManager;
+        private readonly ISubscriptionsManager _subscriptionsManager;
         private readonly IntegrationEventDispatcher _dispatcher;
         private readonly IRetryPolicyProvider? _retryPolicyProvider;
+        private readonly IEventSerializer _eventSerializer;
         private readonly ILogger _logger;
         private readonly IServiceProvider _keyedService;
         private DeadLetterConfig? _deadLetterConfig;
 
         public RabbitMQConsumerEngine(
             IServiceProvider keyedService,
-            IEventBusSubscriptionsManager subscriptionsManager,
+            ISubscriptionsManager subscriptionsManager,
             IntegrationEventDispatcher dispatcher,
+            IEventSerializer eventSerializer,
             ILogger<RabbitMQConsumerEngine> logger,
             IRetryPolicyProvider? retryPolicyProvider = default
             )
@@ -37,6 +38,7 @@ namespace Juice.EventBus.RabbitMQ.Consuming
             _retryPolicyProvider = retryPolicyProvider;
             _dispatcher = dispatcher;
             _subscriptionsManager = subscriptionsManager;
+            _eventSerializer = eventSerializer;
             _logger = logger;
             _keyedService = keyedService;
         }
@@ -233,34 +235,29 @@ namespace Juice.EventBus.RabbitMQ.Consuming
             string eventName, string message)
         {
             using var _ = _logger.BeginScope($"Processing integration event: {eventName}");
-            if (await _subscriptionsManager.HasSubscriptionsForEventAsync(eventName))
+
+            var eventType = await _subscriptionsManager.GetEventTypeByNameAsync(eventName);
+            if (eventType == null)
             {
-                var eventType = await _subscriptionsManager.GetEventTypeByNameAsync(eventName);
-                if (eventType == null)
-                {
-                    _logger.LogWarning("No event type found for event: {EventName}", eventName);
-                    return (false, false);
-                }
-
-                if (JsonConvert.DeserializeObject(message, eventType) is not IIntegrationEvent integrationEvent)
-                {
-                    _logger.LogWarning("Failed to deserialize message to {eventType}", eventType.Name);
-                    return (false, false);
-                }
-
-                var tenantId = eventArgs.BasicProperties.Headers?.GetHeaderString("x-tenant-id");
-
-                return await _dispatcher.DispatchAsync(integrationEvent, new EventDispatchContext
-                {
-                    EventName = eventName,
-                    TenantId = tenantId
-                }, CancellationToken.None);
-            }
-            else
-            {
-                _logger.LogDebug("No subscription for RabbitMQ event: {EventName}", eventName);
+                _logger.LogWarning("No event type found for event: {EventName}", eventName);
                 return (false, false);
             }
+            var integrationEvent = _eventSerializer.Deserialize(message, eventType);
+            if (integrationEvent == null)
+            {
+                _logger.LogWarning("Failed to deserialize message to {eventType}", eventType.Name);
+                return (false, false);
+            }
+
+            var handlers = await _subscriptionsManager.GetHandlersForEventAsync(eventName);
+
+            var tenantId = eventArgs.BasicProperties.Headers?.GetHeaderString("x-tenant-id");
+
+            return await _dispatcher.DispatchAsync(integrationEvent, new EventDispatchContext(handlers)
+            {
+                EventName = eventName,
+                TenantId = tenantId
+            });
         }
 
         private async Task RetryAsync(BasicDeliverEventArgs eventArgs,

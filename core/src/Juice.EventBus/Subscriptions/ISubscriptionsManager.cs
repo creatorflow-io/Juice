@@ -1,6 +1,6 @@
 ﻿namespace Juice.EventBus.Subscriptions
 {
-    public interface IEventBusSubscriptionsManager
+    public interface ISubscriptionsManager
     {
         bool IsEmpty { get; }
 
@@ -15,13 +15,7 @@
         /// <param name="eventName"></param>
         /// <returns></returns>
         ValueTask<Type?> GetEventTypeByNameAsync(string eventName);
-        ValueTask<IEnumerable<SubscriptionInfo>> GetHandlersForEventAsync(string eventName);
-        string GetDefaultEventKey(Type type);
+        ValueTask<IEnumerable<Type>> GetHandlersForEventAsync(string eventName);
     }
 
-    public static class EventBusSubscriptionsManagerExtensions
-    {
-        public static string GetDefaultEventKey<T>(this IEventBusSubscriptionsManager subscriptionsManager)
-            => subscriptionsManager.GetDefaultEventKey(typeof(T));
-    }
 }
