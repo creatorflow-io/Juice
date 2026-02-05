@@ -17,8 +17,6 @@ namespace Juice.EventBus.Subscriptions
 
         private readonly ILogger _logger;
 
-        public event EventHandler<string>? OnEventRemoved;
-
         private Guid _guid = Guid.NewGuid();
 
         private bool _topicSupported;

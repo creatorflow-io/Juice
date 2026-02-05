@@ -18,7 +18,7 @@ namespace Juice.EventBus.RabbitMQ.Consuming
         private string _queueName = default!;
         private ushort _qosPrefetchCount = 1;
 
-        private readonly ISubscriptionsManager _subscriptionsManager;
+        private ISubscriptionsManager _subscriptionsManager = default!;
         private readonly IntegrationEventDispatcher _dispatcher;
         private readonly IRetryPolicyProvider? _retryPolicyProvider;
         private readonly IEventSerializer _eventSerializer;
@@ -28,7 +28,6 @@ namespace Juice.EventBus.RabbitMQ.Consuming
 
         public RabbitMQConsumerEngine(
             IServiceProvider keyedService,
-            ISubscriptionsManager subscriptionsManager,
             IntegrationEventDispatcher dispatcher,
             IEventSerializer eventSerializer,
             ILogger<RabbitMQConsumerEngine> logger,
@@ -37,17 +36,20 @@ namespace Juice.EventBus.RabbitMQ.Consuming
         {
             _retryPolicyProvider = retryPolicyProvider;
             _dispatcher = dispatcher;
-            _subscriptionsManager = subscriptionsManager;
             _eventSerializer = eventSerializer;
             _logger = logger;
             _keyedService = keyedService;
         }
 
-        public async Task<bool> StartAsync(RabbitMQConsumerEndpoint endpoint, CancellationToken cancellationToken)
+        public async Task<bool> StartAsync(RabbitMQConsumerEndpoint endpoint,
+            ISubscriptionsManager subscriptionsManager,
+            CancellationToken cancellationToken)
         {
             _persistentConnection = _keyedService.GetKeyedService<IRabbitMQPersistentConnection>(endpoint.ConnectionName)
                 ?? throw new InvalidOperationException($"RabbitMQ connection with name '{endpoint.ConnectionName}' is not registered.");
             _queueName = endpoint.Queue;
+
+            _subscriptionsManager = subscriptionsManager;
 
             _qosPrefetchCount = endpoint.QosPrefetchCount;
 

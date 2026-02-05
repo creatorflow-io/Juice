@@ -10,20 +10,26 @@ namespace Juice.EventBus.RabbitMQ.Consuming
         internal record SubscriptionDescriptor(string? Route, Type EventType, Type HandlerType);
 
         private readonly IServiceCollection _services;
+        private readonly EventBusBuilder _eventBus;
 
         private readonly List<SubscriptionDescriptor> _subscriptions = [];
         private readonly RabbitMQConsumerEndpoint _endpoint;
 
-        internal RabbitMQConsumerBuilder(string connectionName, string queue, IServiceCollection services)
+        private readonly string _serviceKey;
+
+        internal RabbitMQConsumerBuilder(string connectionName, string queue, EventBusBuilder eventBus)
         {
             _endpoint = new() { Queue = queue, ConnectionName = connectionName };
-            _services = services;
+            _serviceKey = $"{connectionName}:{queue}";
+            _services = eventBus.Services;
+            _eventBus = eventBus;
             AddRequiredServices();
         }
 
         private void AddRequiredServices()
         {
             _services.TryAddTransient<RabbitMQConsumerEngine>();
+            _eventBus.AddConsumerServices(_serviceKey);
         }
 
         public RabbitMQConsumerBuilder ConfigureQos(ushort prefetchCount)
@@ -44,6 +50,13 @@ namespace Juice.EventBus.RabbitMQ.Consuming
             return this;
         }
 
+        /// <summary>
+        /// Subscribe to an integration event with a specific handler for this consumer.
+        /// </summary>
+        /// <typeparam name="TEvent"></typeparam>
+        /// <typeparam name="THandler"></typeparam>
+        /// <param name="route"></param>
+        /// <returns></returns>
         public RabbitMQConsumerBuilder Subscribe<TEvent, THandler>(string? route = default)
             where TEvent : IIntegrationEvent
             where THandler : class, IIntegrationEventHandler<TEvent>
@@ -60,7 +73,7 @@ namespace Juice.EventBus.RabbitMQ.Consuming
             if (string.IsNullOrWhiteSpace(_endpoint.ConnectionName))
                 throw new InvalidOperationException($"Consumer Connection is required.");
 
-            var subsManager = sp.GetRequiredService<ISubscriptionsManager>();
+            var subsManager = sp.GetRequiredKeyedService<ISubscriptionsManager>(_serviceKey);
 
             foreach (var descriptor in _subscriptions)
             {
@@ -69,7 +82,7 @@ namespace Juice.EventBus.RabbitMQ.Consuming
             var engine = sp.GetRequiredService<RabbitMQConsumerEngine>();
             var logger = sp.GetRequiredService<ILogger<RabbitMQConsumerHostedService>>();
 
-            return new RabbitMQConsumerHostedService(engine, _endpoint, logger);
+            return new RabbitMQConsumerHostedService(engine, _endpoint, subsManager, logger);
         }
 
     }

@@ -40,24 +40,35 @@ namespace Microsoft.Extensions.DependencyInjection
         }
 
         #region Consumer services
+
         /// <summary>
-        /// Registers the default consumer-related services required for event bus integration.
+        /// Add core services required for event consuming.
         /// </summary>
-        /// <remarks>This method adds the necessary services for event consumption, including the
-        /// integration event dispatcher and the in-memory event bus subscriptions manager, to the dependency injection
-        /// container. It is intended to be called during event bus policies to enable event handling
-        /// capabilities.</remarks>
-        /// <returns>The current <see cref="EventBusBuilder"/> instance, enabling method chaining.</returns>
-        public EventBusBuilder AddConsumerServices(Action<SubscriptionBuilder>? subscription = default)
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public EventBusBuilder AddConsumerServices(string key)
         {
             Services.TryAddTransient<IntegrationEventDispatcher>();
-            Services.TryAddSingleton<ISubscriptionsManager>(sp =>
+            Services.TryAddKeyedSingleton<ISubscriptionsManager>(key, (sp, k) =>
             {
-                var logger = sp.GetRequiredService<ILogger<InMemorySubscriptionsManager>>();
+                var logger = sp.GetRequiredService<ILoggerFactory>()
+                    .CreateLogger(typeof(InMemorySubscriptionsManager).Name + $"[{k}]");
                 var providers = sp.GetServices<ISubscriptionsProvider>();
                 return new InMemorySubscriptionsManager(providers, logger, true);
             });
 
+            return this;
+        }
+
+        /// <summary>
+        /// Add core services required for event consuming and register global event subscriptions.
+        /// </summary>
+        /// <param name="subscription"></param>
+        /// <returns></returns>
+        public EventBusBuilder AddConsumerServices(Action<SubscriptionBuilder>? subscription)
+        {
+            Services.TryAddTransient<IntegrationEventDispatcher>();
+            
             var subscriptionBuilder = new SubscriptionBuilder();
             subscription?.Invoke(subscriptionBuilder);
             if (subscriptionBuilder.HasSubscriptions)

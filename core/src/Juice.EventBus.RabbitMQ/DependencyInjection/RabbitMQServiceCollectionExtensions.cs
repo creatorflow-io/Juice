@@ -21,7 +21,7 @@ namespace Microsoft.Extensions.DependencyInjection
         public static EventBusBuilder AddRabbitMQ(this EventBusBuilder builder,
             Action<RabbitMQEventBusBuilder> configure)
         {
-            var rabbitMQBuilder = new RabbitMQEventBusBuilder(builder.Services);
+            var rabbitMQBuilder = new RabbitMQEventBusBuilder(builder);
             configure(rabbitMQBuilder);
             return builder;
         }
@@ -29,11 +29,14 @@ namespace Microsoft.Extensions.DependencyInjection
 
     public sealed class RabbitMQEventBusBuilder
     {
+        private readonly EventBusBuilder _eventBus;
         private readonly IServiceCollection _services;
+        private readonly HashSet<string> _registeredQueues = new();
 
-        internal RabbitMQEventBusBuilder(IServiceCollection services)
+        internal RabbitMQEventBusBuilder(EventBusBuilder eventBus)
         {
-            _services = services;
+            _services = eventBus.Services;
+            _eventBus = eventBus;
         }
 
         /// <summary>
@@ -96,7 +99,11 @@ namespace Microsoft.Extensions.DependencyInjection
              string queueName, string connectionName,
             Action<RabbitMQConsumerBuilder>? configure = default)
         {
-            var queueBuilder = new RabbitMQConsumerBuilder(connectionName, queueName, _services);
+            if(!_registeredQueues.Add($"{connectionName}:{queueName}"))
+            {
+                throw new InvalidOperationException($"A consumer for the queue '{queueName}' and connection '{connectionName}' has already been registered.");
+            }
+            var queueBuilder = new RabbitMQConsumerBuilder(connectionName, queueName, _eventBus);
             configure?.Invoke(queueBuilder);
 
             // register a hosted service to run the queue consumer

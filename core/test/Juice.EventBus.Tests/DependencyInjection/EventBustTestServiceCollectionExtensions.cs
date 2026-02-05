@@ -16,7 +16,6 @@ namespace Microsoft.Extensions.DependencyInjection
         {
             return services.AddEventBus()
                     .AddProducerServices(configuration.GetSection("Juice:EventBus:PublishingPolicies"))
-                    .AddConsumerServices()
                     .AddOutbox()
                     .AddDelivery(delivery =>
                     {

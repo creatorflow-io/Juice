@@ -4,8 +4,6 @@
     {
         bool IsEmpty { get; }
 
-        event EventHandler<string> OnEventRemoved;
-
         void AddSubscription(Type eventType, Type handlerType, string? key = default);
 
         ValueTask<bool> HasSubscriptionsForEventAsync(string eventName);

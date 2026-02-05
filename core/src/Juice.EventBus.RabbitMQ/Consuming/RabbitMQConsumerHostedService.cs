@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Hosting;
+﻿using Juice.EventBus.Subscriptions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace Juice.EventBus.RabbitMQ.Consuming
@@ -8,15 +9,18 @@ namespace Juice.EventBus.RabbitMQ.Consuming
         private readonly RabbitMQConsumerEngine _engine;
         private readonly RabbitMQConsumerEndpoint _endpoint;
         private readonly ILogger<RabbitMQConsumerHostedService> _logger;
+        private readonly ISubscriptionsManager _subscriptionsManager;
 
         public RabbitMQConsumerHostedService(
             RabbitMQConsumerEngine engine,
             RabbitMQConsumerEndpoint endpoint,
+            ISubscriptionsManager subscriptionsManager,
             ILogger<RabbitMQConsumerHostedService> logger)
         {
             _engine = engine;
             _endpoint = endpoint;
             _logger = logger;
+            _subscriptionsManager = subscriptionsManager;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -34,7 +38,7 @@ namespace Juice.EventBus.RabbitMQ.Consuming
                await _engine.StopAsync();
             });
 
-            var ok = await _engine.StartAsync(_endpoint, stoppingToken);
+            var ok = await _engine.StartAsync(_endpoint, _subscriptionsManager, stoppingToken);
             if (!ok) {
                 _logger.LogError(
                     "[RabbitMQ:{Queue}] HostedService failed to start the consumer engine",

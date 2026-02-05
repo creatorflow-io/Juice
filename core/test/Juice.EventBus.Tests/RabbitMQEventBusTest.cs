@@ -129,17 +129,19 @@ namespace Juice.EventBus.Tests
                 services.AddHttpContextAccessor();
 
                 services.AddTestEventBus(configuration)
+                    .AddConsumerServices(cfg =>
+                    {
+                        cfg.Subscribe<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler>();
+                        cfg.Subscribe<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler1>();
+                    })
                     .AddRabbitMQ(cfg =>
                     {
                         cfg
                         .AddConsumer("juice_eventbus_xunit_7", "rabbitmq", qcfg =>
                         {
-                            qcfg.Subscribe<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler>();
-                            qcfg.Subscribe<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler1>();
+                            
                         })
-                        .AddConsumer("juice_eventbus_xunit_5", "rabbitmq", qcfg =>
-                        {
-                        })
+                        .AddConsumer("juice_eventbus_xunit_5", "rabbitmq")
                         ;
                     });
 
@@ -279,14 +281,11 @@ namespace Juice.EventBus.Tests
                 });
                 services.AddHttpContextAccessor();
                 services.AddTestEventBus(configuration)
-                    .AddConsumerServices(cfg =>
-                    {
-                        cfg.Subscribe<LogEvent, LogEventFailureHandler>("kernel.*");
-                    })
                     .AddRabbitMQ(cfg =>
                     {
                         cfg.AddConsumer("juice_eventbus_xunit_4", "rabbitmq", qcfg =>
                         {
+                            qcfg.Subscribe<LogEvent, LogEventFailureHandler>("kernel.*");
                             qcfg.WithDeadLetterExchange("x.logs.retry");
                         });
                     });
@@ -342,6 +341,7 @@ namespace Juice.EventBus.Tests
                            })
                            .AddConsumer("juice_eventbus_xunit_5", "rabbitmq", qcfg =>
                            {
+                               qcfg.Subscribe<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler>();
                            });
                     });
                 services.AddSingleton<HandledService>();
