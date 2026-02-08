@@ -1,22 +1,20 @@
 ﻿using Juice.EF.Tests.Domain.Events;
-using Juice.EF.Tests.Events;
 using Juice.EF.Tests.Infrastructure;
-using Juice.EventBus.Transactional;
 using Juice.MediatR;
+using Juice.Messaging.Outbox;
 
 namespace Juice.EF.Tests.EventHandlers
 {
     internal class ContentNameChangedEventHandler : INotificationHandler<ContentNameChangedEvent>
     {
-        private readonly IIntegrationEventService<TestContext> _integration;
-        public ContentNameChangedEventHandler(IIntegrationEventService<TestContext> integration)
+        private readonly IOutboxService<TestContext> _integration;
+        public ContentNameChangedEventHandler(IOutboxService<TestContext> integration)
         {
             _integration = integration;
         }
         public async ValueTask Handle(ContentNameChangedEvent notification, CancellationToken cancellationToken = default)
         {
-            await _integration.AddEventAsync(new ContentNameChangedIntegrationEvent(notification.ContentId,
-                notification.OriginalName, notification.Name));
+            await _integration.AddEventAsync(notification);
         }
     }
 }

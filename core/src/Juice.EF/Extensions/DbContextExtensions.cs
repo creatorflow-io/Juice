@@ -179,7 +179,7 @@ namespace Juice.EF.Extensions
                             var eventType = context.DataEventType(nameof(DataEvents.Inserted));
                             if (eventType != null)
                             {
-                                context.PendingDataEvents.Add(DataEvents.Inserted.CreateDataEvent(eventType, entry.Entity));
+                                context.PendingDataEvents.Add(DataEvents.Inserted.CreateDataEvent(eventType, entry.Entity, context.TenantId));
                                 dataEventsCount++;
                             }
                         }
@@ -234,7 +234,7 @@ namespace Juice.EF.Extensions
                             var eventType = context.DataEventType(nameof(DataEvents.Modified));
                             if (eventType != null)
                             {
-                                context.PendingDataEvents.Add(DataEvents.Modified.CreateDataEvent(eventType, entry.Entity, auditEntry?.CreateRecord()));
+                                context.PendingDataEvents.Add(DataEvents.Modified.CreateDataEvent(eventType, entry.Entity, context.TenantId, auditEntry?.CreateRecord()));
                                 dataEventsCount++;
                             }
                         }
@@ -250,7 +250,7 @@ namespace Juice.EF.Extensions
                             var eventType = context.DataEventType(nameof(DataEvents.Deleted));
                             if (eventType != null)
                             {
-                                context.PendingDataEvents.Add(DataEvents.Modified.CreateDataEvent(eventType, entry.Entity));
+                                context.PendingDataEvents.Add(DataEvents.Modified.CreateDataEvent(eventType, entry.Entity, context.TenantId));
                                 dataEventsCount++;
                             }
                         }

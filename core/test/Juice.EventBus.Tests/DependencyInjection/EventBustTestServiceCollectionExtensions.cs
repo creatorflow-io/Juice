@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Juice.EF.Tests.Events;
+using Juice.Messaging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -12,20 +13,21 @@ namespace Microsoft.Extensions.DependencyInjection
 {
     internal static class EventBustTestServiceCollectionExtensions
     {
-        public static EventBusBuilder AddTestEventBus(this IServiceCollection services, IConfiguration configuration)
+        public static MessagingBuilder AddTestMessaging(this IServiceCollection services, IConfiguration configuration)
         {
-            return services.AddEventBus()
-                    .AddProducerServices(configuration.GetSection("Juice:EventBus:PublishingPolicies"))
-                    .AddOutbox()
-                    .AddDelivery(delivery =>
+            return services
+                .AddMessaging()
+                .AddPublishingPolicies(configuration.GetSection("Juice:EventBus:PublishingPolicies"))
+                .AddOutbox()
+                .AddIdempotencyRedis(redis => redis.ConnectionString = configuration.GetConnectionString("RedisSentinel"))
+                .AddDelivery(delivery =>
+                {
+                    delivery.AddDeliveryPolicies(configuration.GetSection("Juice:EventBus:DeliveryPolicies"));
+                    delivery.ConfigureEventTypeRegistry(cfg =>
                     {
-                        delivery.AddDeliveryPolicies(configuration.GetSection("Juice:EventBus:DeliveryPolicies"));
-                        delivery.ConfigureEventTypeRegistry(cfg =>
-                        {
-                            cfg.RegisterEventsFromAssembly(typeof(ContentPublishedIntegrationEvent).Assembly);
-                        });
-                    })
-                    .AddRabbitMQ(cfg =>
+                        cfg.RegisterEventsFromAssembly(typeof(ContentPublishedIntegrationEvent).Assembly);
+                    });
+                    delivery.EventBus.AddRabbitMQ(cfg =>
                     {
                         cfg
                         .AddConnection(name: "rabbitmq", configuration.GetSection("Juice:EventBus:Connections:RabbitMQ"))
@@ -36,8 +38,8 @@ namespace Microsoft.Extensions.DependencyInjection
                         })
                         .AddProducer("rabbitmq1", "rabbitmq1")
                         ;
-                    })
-                    ;
+                    });
+                });
         }
 
         public static async Task<int> RunHostedServicesAsync(this IServiceProvider serviceProvider)

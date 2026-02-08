@@ -21,6 +21,7 @@ namespace Juice.EF
 
         #region Auditable context
 
+        public virtual string? TenantId { get; protected set; }
         public virtual Type? AuditEventType => typeof(AuditEvent<>);
         public virtual Type? DataEventType(string name)
         {

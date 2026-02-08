@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Xunit;
 using System.Threading;
-using Juice.EventBus.Delivery.Policies;
+using Juice.Messaging.Outbox.Delivery;
 
 namespace Juice.EventBus.Tests
 {
@@ -36,10 +36,11 @@ namespace Juice.EventBus.Tests
         {
             // Arrange
             var services = new ServiceCollection();
-            services.AddEventBus()
-                .AddDeliveryCore(delivery => {
+            services.AddMessaging()
+                .AddDelivery(delivery => {
                     delivery.AddDeliveryPolicies(configuration.GetSection("Juice:EventBus:DeliveryPolicies"));
-                });
+                })
+                ;
             
             var provider = services.BuildServiceProvider();
             var resolver = provider.GetRequiredService<IDeliveryPolicyResolver>();

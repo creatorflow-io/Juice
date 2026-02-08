@@ -23,6 +23,10 @@ namespace Microsoft.Extensions.DependencyInjection
                 };
 
                 var connectionString = configuration.GetConnectionString(connectionName);
+                if (string.IsNullOrEmpty(connectionString))
+                {
+                    throw new InvalidOperationException($"Connection string '{connectionName}' is not found.");
+                }
 
                 var builder = new DbContextOptionsBuilder<TestContext>();
                 switch (provider)

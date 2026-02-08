@@ -17,6 +17,7 @@ namespace Juice.MultiTenant.EF
         public abstract TenantNotSetMode TenantNotSetMode { get; set; }
         #endregion
 
+        public override string? TenantId => TenantInfo?.Id;
         /// <summary>
         /// Please call <c>Create(IServiceProvider serviceProvider)</c> directly in your constructor
         /// <para>or inside <c>IDbContextFactory.CreateDbContext()</c> if you are using PooledDbContextFactory</para>

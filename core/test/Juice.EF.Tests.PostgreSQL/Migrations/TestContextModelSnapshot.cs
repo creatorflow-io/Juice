@@ -117,7 +117,7 @@ namespace Juice.EF.Tests.PostgreSQL.Migrations
                     b.HasAnnotation("Finbuckle:MultiTenant", SharingType.None);
                 });
 
-            modelBuilder.Entity("Juice.EventBus.Delivery.OutboxDelivery", b =>
+            modelBuilder.Entity("Juice.Messaging.Outbox.OutboxDelivery", b =>
                 {
                     b.Property<Guid>("DeliveryId")
                         .ValueGeneratedOnAdd()
@@ -185,23 +185,29 @@ namespace Juice.EF.Tests.PostgreSQL.Migrations
                     b.ToTable("OutboxDeliveries", "Contents");
                 });
 
-            modelBuilder.Entity("Juice.EventBus.Delivery.OutboxEvent", b =>
+            modelBuilder.Entity("Juice.Messaging.Outbox.OutboxEvent", b =>
                 {
                     b.Property<Guid>("EventId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime>("CreationTime")
-                        .HasColumnType("timestamp without time zone");
+                    b.Property<DateTimeOffset>("CreationTime")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("EventTypeName")
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
-                    b.Property<string>("Payload")
+                    b.Property<string>("Headers")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("{}");
+
+                    b.Property<byte[]>("PayloadBytes")
+                        .IsRequired()
+                        .HasColumnType("bytea");
 
                     b.Property<string>("TenantId")
                         .HasMaxLength(64)
@@ -218,9 +224,9 @@ namespace Juice.EF.Tests.PostgreSQL.Migrations
                     b.ToTable("OutboxEvents", "Contents");
                 });
 
-            modelBuilder.Entity("Juice.EventBus.Delivery.OutboxDelivery", b =>
+            modelBuilder.Entity("Juice.Messaging.Outbox.OutboxDelivery", b =>
                 {
-                    b.HasOne("Juice.EventBus.Delivery.OutboxEvent", "OutboxEvent")
+                    b.HasOne("Juice.Messaging.Outbox.OutboxEvent", "OutboxEvent")
                         .WithMany("Deliveries")
                         .HasForeignKey("EventId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -229,7 +235,7 @@ namespace Juice.EF.Tests.PostgreSQL.Migrations
                     b.Navigation("OutboxEvent");
                 });
 
-            modelBuilder.Entity("Juice.EventBus.Delivery.OutboxEvent", b =>
+            modelBuilder.Entity("Juice.Messaging.Outbox.OutboxEvent", b =>
                 {
                     b.Navigation("Deliveries");
                 });

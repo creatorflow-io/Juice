@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Juice.Integrations\Juice.Integrations.csproj" />
+    <ProjectReference Include="..\..\src\Juice.MediatR.Behaviors\Juice.MediatR.Behaviors.csproj" />
     <ProjectReference Include="..\Juice.EF.Tests.PostgreSQL\Juice.EF.Tests.PostgreSQL.csproj" />
     <ProjectReference Include="..\Juice.EF.Tests.SqlServer\Juice.EF.Tests.SqlServer.csproj" />
     <ProjectReference Include="..\Juice.EF.Tests\Juice.EF.Tests.csproj" />

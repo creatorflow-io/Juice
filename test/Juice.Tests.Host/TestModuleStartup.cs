@@ -41,12 +41,17 @@ namespace Juice.Tests.Host
             services.AddEventBus()
                   .AddRabbitMQ(cfg =>
                   {
+                      cfg.Messaging.AddIdempotencyEF(configuration, options =>
+                      {
+                          options.Schema = "App";
+                          options.DatabaseProvider = "PostgreSQL";
+                          options.ConnectionName = "PostgreConnection";
+                      });
                       cfg.AddConnection("rabbitmq", configuration.GetSection("Juice:EventBus:Connections:RabbitMQ"));
-                      cfg.AddConsumer("juice_eventbus_xunit_host", "rabbitmq", consumer => {
+                      cfg.AddConsumer("rabbitmq.x.host", "juice_eventbus_xunit_host", "rabbitmq", consumer => {
                           consumer.Subscribe<LogEvent, LogEventHandler>();
                       });
                   });
-
         }
 
     }

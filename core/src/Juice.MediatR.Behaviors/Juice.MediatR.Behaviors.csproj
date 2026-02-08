@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>$(AppTargetFramework)</TargetFrameworks>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Juice.EF\Juice.EF.csproj" />
+      <ProjectReference Include="..\Juice.MediatR\Juice.MediatR.csproj" />
+      <ProjectReference Include="..\Juice.Messaging\Juice.Messaging.csproj" />
+    </ItemGroup>
+
+</Project>

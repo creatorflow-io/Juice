@@ -2,7 +2,7 @@
 
 namespace Juice.MediatR
 {
-    internal static class MediatorMetrics
+    public static class MediatorMetrics
     {
         private static readonly Meter Meter = new(
             name: "delivery.metrics",
@@ -17,7 +17,7 @@ namespace Juice.MediatR
                 description: "Total identified command received");
 
         public static void IncrementIdentifiedCommandReceived(string commandName)
-            {
+        {
             IdentifiedCommandReceivedCounter.Add(
                 1,
                 new KeyValuePair<string, object?>("command", commandName));
@@ -32,7 +32,7 @@ namespace Juice.MediatR
                 description: "Total identified command duplicates");
 
         public static void IncrementIdentifiedCommandDuplicated(string commandName)
-            {
+        {
             IdentifiedCommandDuplicatedCounter.Add(
                 1,
                 new KeyValuePair<string, object?>("command", commandName));
@@ -46,8 +46,23 @@ namespace Juice.MediatR
                 "identified_commands_processed",
                 description: "Total identified command processed");
         public static void IncrementIdentifiedCommandProcessed(string commandName)
-            {
+        {
             IdentifiedCommandProcessedCounter.Add(
+                1,
+                new KeyValuePair<string, object?>("command", commandName));
+        }
+
+        ///<summary>
+        /// identified_commands_failed
+        /// </summary>
+        private static readonly Counter<long> IdentifiedCommandFailedCounter =
+            Meter.CreateCounter<long>(
+                "identified_commands_failed",
+                description: "Total identified command failed");
+
+        public static void IncrementIdentifiedCommandFailed(string commandName)
+        {
+            IdentifiedCommandFailedCounter.Add(
                 1,
                 new KeyValuePair<string, object?>("command", commandName));
         }

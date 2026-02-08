@@ -9,8 +9,10 @@ using Juice.EF.Tests.Events;
 using Juice.EventBus.Publishing;
 using Juice.EventBus.Tests.Handlers;
 using Juice.Extensions.DependencyInjection;
+using Juice.Messaging;
 using Juice.MultiTenant;
 using Juice.XUnit;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
@@ -128,22 +130,26 @@ namespace Juice.EventBus.Tests
 
                 services.AddHttpContextAccessor();
 
-                services.AddTestEventBus(configuration)
-                    .AddConsumerServices(cfg =>
+                services.AddTestMessaging(configuration);
+
+                services.AddEventBus()
+                .AddPublishingServices()
+                .AddConsumerServices(cfg =>
+                {
+                    cfg.Subscribe<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler>();
+                    cfg.Subscribe<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler1>();
+                })
+                .AddRabbitMQ(cfg =>
+                {
+                    cfg.Messaging.AddIdempotencyRedis(redis => redis.ConnectionString = configuration.GetConnectionString("RedisSentinel"));
+                    cfg
+                    .AddConsumer("rabbitmq.x.unit.integration.7", "juice_eventbus_xunit_7", "rabbitmq", qcfg =>
                     {
-                        cfg.Subscribe<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler>();
-                        cfg.Subscribe<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler1>();
+
                     })
-                    .AddRabbitMQ(cfg =>
-                    {
-                        cfg
-                        .AddConsumer("juice_eventbus_xunit_7", "rabbitmq", qcfg =>
-                        {
-                            
-                        })
-                        .AddConsumer("juice_eventbus_xunit_5", "rabbitmq")
-                        ;
-                    });
+                    .AddConsumer("rabbitmq.x.unit.integration.5", "juice_eventbus_xunit_5", "rabbitmq")
+                    ;
+                });
 
                 services.AddScoped<ScopedService>();
                 services.AddSingleton<HandledService>();
@@ -159,6 +165,7 @@ namespace Juice.EventBus.Tests
             var tenantResolver = serviceProvider.GetRequiredService<IScopedTenantResolver>();
             var tenantAccessor = serviceProvider.GetRequiredService<ITenantAccessor>();
 
+            MessageContextHelper.InitMessageContext();
             try
             {
                 // wait for pending messages to be processed
@@ -192,12 +199,12 @@ namespace Juice.EventBus.Tests
 
                 handledService.ResolvedTenants.Should().Contain("tenant-b");
 
-                handledService.HandledCount.TryGetValue(evt1.Id.ToString(), out var count1).Should().BeTrue();
+                handledService.HandledCount.TryGetValue(evt1.MessageId.ToString(), out var count1).Should().BeTrue();
                 count1.Should().Be(2);
 
-                handledService.HandledCount.TryGetValue(evt2.Id.ToString(), out var _).Should().BeFalse();
+                handledService.HandledCount.TryGetValue(evt2.MessageId.ToString(), out var _).Should().BeFalse();
 
-                handledService.HandledCount.TryGetValue(evt3.Id.ToString(), out var count3).Should().BeTrue();
+                handledService.HandledCount.TryGetValue(evt3.MessageId.ToString(), out var count3).Should().BeTrue();
                 count3.Should().Be(2);
             }
             finally
@@ -224,12 +231,15 @@ namespace Juice.EventBus.Tests
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
                 services.AddHttpContextAccessor();
-                services.AddTestEventBus(configuration)
+                services.AddTestMessaging(configuration);
+
+                services.AddEventBus()
+                    .AddPublishingServices()
                     .AddRabbitMQ(cfg =>
                     {
                         cfg
                         .AddRetryPolicies(configuration.GetSection("Juice:EventBus:RabbitMQ:RetryPolicies"))
-                        .AddConsumer("juice_eventbus_xunit_3", "rabbitmq", qcfg =>
+                        .AddConsumer("rabbitmq.x.unit.integration.3", "juice_eventbus_xunit_3", "rabbitmq", qcfg =>
                         {
                             qcfg.Subscribe<LogEvent, LogEventFailureHandler>("kernel.*");
                         });
@@ -239,7 +249,7 @@ namespace Juice.EventBus.Tests
             });
             var serviceProvider = resolver.ServiceProvider;
             await serviceProvider.RunHostedServicesAsync();
-
+            MessageContextHelper.InitMessageContext();
             var eventBus = serviceProvider.GetRequiredService<IEventBus>();
             var handledService = serviceProvider.GetRequiredService<HandledService>();
             try
@@ -250,11 +260,11 @@ namespace Juice.EventBus.Tests
                 var evt = new LogEvent { Facility = "kernel", Serverty = LogLevel.Error };
                 await eventBus.PublishAsync(evt);
 
-                await Waiter.WaitAsync(() => handledService.GetHandledEventCount(evt.Id) >= 4, TimeSpan.FromSeconds(5));
+                await Waiter.WaitAsync(() => handledService.GetHandledEventCount(evt.MessageId) >= 4, TimeSpan.FromSeconds(5));
 
                 handledService.Handlers.Should().Contain(nameof(LogEventFailureHandler));
-                handledService.HandledCount[evt.Id.ToString()].Should().Be(4);
-                _output.WriteLine($"Handled count: {handledService.HandledCount[evt.Id.ToString()]}");
+                handledService.HandledCount[evt.MessageId.ToString()].Should().Be(4);
+                _output.WriteLine($"Handled count: {handledService.HandledCount[evt.MessageId.ToString()]}");
             }
             finally
             {
@@ -280,10 +290,12 @@ namespace Juice.EventBus.Tests
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
                 services.AddHttpContextAccessor();
-                services.AddTestEventBus(configuration)
+                services.AddTestMessaging(configuration);
+                services.AddEventBus()
+                    .AddPublishingServices()
                     .AddRabbitMQ(cfg =>
                     {
-                        cfg.AddConsumer("juice_eventbus_xunit_4", "rabbitmq", qcfg =>
+                        cfg.AddConsumer("rabbitmq.x.unit.integration.4", "juice_eventbus_xunit_4", "rabbitmq", qcfg =>
                         {
                             qcfg.Subscribe<LogEvent, LogEventFailureHandler>("kernel.*");
                             qcfg.WithDeadLetterExchange("x.logs.retry");
@@ -291,6 +303,7 @@ namespace Juice.EventBus.Tests
                     });
                 services.AddSingleton<HandledService>();
             });
+            MessageContextHelper.InitMessageContext();
             var serviceProvider = resolver.ServiceProvider;
             await serviceProvider.RunHostedServicesAsync();
 
@@ -303,9 +316,9 @@ namespace Juice.EventBus.Tests
                 handledService.Reset();
                 var evt = new LogEvent { Facility = "kernel", Serverty = LogLevel.Error };
                 await eventBus.PublishAsync(evt);
-                await Waiter.WaitAsync(() => handledService.HasHandledEvent(evt.Id));
+                await Waiter.WaitAsync(() => handledService.HasHandledEvent(evt.MessageId));
                 handledService.Handlers.Should().Contain(nameof(LogEventFailureHandler));
-                handledService.HandledCount[evt.Id.ToString()].Should().Be(1);
+                handledService.HandledCount[evt.MessageId.ToString()].Should().Be(1);
             }
             finally
             {
@@ -331,15 +344,17 @@ namespace Juice.EventBus.Tests
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
 
-                services.AddTestEventBus(configuration)
+                services.AddTestMessaging(configuration);
+
+                services.AddEventBus()
                     .AddRabbitMQ(cfg =>
                     {
                         cfg
-                           .AddConsumer("juice_eventbus_xunit_7", "rabbitmq", qcfg =>
+                           .AddConsumer("rabbitmq.x.unit.integration.7", "juice_eventbus_xunit_7", "rabbitmq", qcfg =>
                            {
                                qcfg.Subscribe<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler>();
                            })
-                           .AddConsumer("juice_eventbus_xunit_5", "rabbitmq", qcfg =>
+                           .AddConsumer("rabbitmq.x.unit.integration.5", "juice_eventbus_xunit_5", "rabbitmq", qcfg =>
                            {
                                qcfg.Subscribe<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler>();
                            });
@@ -349,11 +364,13 @@ namespace Juice.EventBus.Tests
             var serviceProvider = resolver.ServiceProvider;
 
             await serviceProvider.RunHostedServicesAsync();
+            MessageContextHelper.InitMessageContext();
 
-            var publisher = serviceProvider.GetKeyedService<IEventPublisher>("rabbitmq");
+            var publisher = serviceProvider.GetKeyedService<ITransportPublisher>("rabbitmq");
             publisher.Should().NotBeNull();
 
             var handledService = serviceProvider.GetRequiredService<HandledService>();
+            var serializer = serviceProvider.GetRequiredService<IMessageSerializer>();
             var count = 0;
             try
             {
@@ -377,9 +394,15 @@ namespace Juice.EventBus.Tests
                             count++;
                         }
                     }
-                    return publisher!.PublishAsync(evt, new PublishContext
+                    return publisher!.PublishAsync(serializer.SerializeToUtf8Bytes(evt), new PublishContext(evt.MessageId.ToString())
                     {
                         Destination = destination,
+                        Headers = new System.Collections.Generic.Dictionary<string, object?>
+                        {
+                            { "x-message-type", evt.GetType().Name },
+                            { "x-message-name", evt.EventName },
+                            { "x-correlation-id", MessageContext.Current.CorrelationId }
+                        }
                     }).AsTask();
                 });
 

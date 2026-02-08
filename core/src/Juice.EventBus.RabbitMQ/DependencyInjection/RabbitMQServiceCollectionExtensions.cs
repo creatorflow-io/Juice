@@ -3,6 +3,7 @@ using Juice.EventBus.RabbitMQ.Consuming;
 using Juice.EventBus.RabbitMQ.Infrastructure;
 using Juice.EventBus.RabbitMQ.Policies;
 using Juice.EventBus.RabbitMQ.Publishing;
+using Juice.Messaging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -32,6 +33,8 @@ namespace Microsoft.Extensions.DependencyInjection
         private readonly EventBusBuilder _eventBus;
         private readonly IServiceCollection _services;
         private readonly HashSet<string> _registeredQueues = new();
+        public MessagingBuilder Messaging => _eventBus.Messaging;
+        public EventBusBuilder EventBus => _eventBus;
 
         internal RabbitMQEventBusBuilder(EventBusBuilder eventBus)
         {
@@ -91,19 +94,21 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <summary>
         /// Add a RabbitMQ event consumer
         /// </summary>
+        /// <param name="key"></param>
         /// <param name="connectionName"></param>
         /// <param name="queueName"></param>
         /// <param name="configure"></param>
         /// <returns></returns>
         public RabbitMQEventBusBuilder AddConsumer(
+             string key,
              string queueName, string connectionName,
             Action<RabbitMQConsumerBuilder>? configure = default)
         {
-            if(!_registeredQueues.Add($"{connectionName}:{queueName}"))
+            if (!_registeredQueues.Add($"{connectionName}:{queueName}"))
             {
                 throw new InvalidOperationException($"A consumer for the queue '{queueName}' and connection '{connectionName}' has already been registered.");
             }
-            var queueBuilder = new RabbitMQConsumerBuilder(connectionName, queueName, _eventBus);
+            var queueBuilder = new RabbitMQConsumerBuilder(key, connectionName, queueName, _eventBus);
             configure?.Invoke(queueBuilder);
 
             // register a hosted service to run the queue consumer

@@ -118,7 +118,7 @@ namespace Juice.EF.Tests.SqlServer.Migrations
                     b.HasAnnotation("Finbuckle:MultiTenant", SharingType.None);
                 });
 
-            modelBuilder.Entity("Juice.EventBus.Delivery.OutboxDelivery", b =>
+            modelBuilder.Entity("Juice.Messaging.Outbox.OutboxDelivery", b =>
                 {
                     b.Property<Guid>("DeliveryId")
                         .ValueGeneratedOnAdd()
@@ -186,23 +186,29 @@ namespace Juice.EF.Tests.SqlServer.Migrations
                     b.ToTable("OutboxDeliveries", "Contents");
                 });
 
-            modelBuilder.Entity("Juice.EventBus.Delivery.OutboxEvent", b =>
+            modelBuilder.Entity("Juice.Messaging.Outbox.OutboxEvent", b =>
                 {
                     b.Property<Guid>("EventId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateTime>("CreationTime")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset>("CreationTime")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<string>("EventTypeName")
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
-                    b.Property<string>("Payload")
+                    b.Property<string>("Headers")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("nvarchar(max)")
+                        .HasDefaultValue("{}");
+
+                    b.Property<byte[]>("PayloadBytes")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)");
 
                     b.Property<string>("TenantId")
                         .HasMaxLength(64)
@@ -219,9 +225,9 @@ namespace Juice.EF.Tests.SqlServer.Migrations
                     b.ToTable("OutboxEvents", "Contents");
                 });
 
-            modelBuilder.Entity("Juice.EventBus.Delivery.OutboxDelivery", b =>
+            modelBuilder.Entity("Juice.Messaging.Outbox.OutboxDelivery", b =>
                 {
-                    b.HasOne("Juice.EventBus.Delivery.OutboxEvent", "OutboxEvent")
+                    b.HasOne("Juice.Messaging.Outbox.OutboxEvent", "OutboxEvent")
                         .WithMany("Deliveries")
                         .HasForeignKey("EventId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -230,7 +236,7 @@ namespace Juice.EF.Tests.SqlServer.Migrations
                     b.Navigation("OutboxEvent");
                 });
 
-            modelBuilder.Entity("Juice.EventBus.Delivery.OutboxEvent", b =>
+            modelBuilder.Entity("Juice.Messaging.Outbox.OutboxEvent", b =>
                 {
                     b.Navigation("Deliveries");
                 });

@@ -35,7 +35,7 @@ namespace Juice.Core.Tests
 
                 services.AddSingleton<ITestService>(new TestService());
                 services.Decorate<ITestService, TestServiceDecorator>();
-            });
+            }, default);
 
             var serviceProvider = dependencyResolver.ServiceProvider;
             var testService = serviceProvider.GetRequiredService<ITestService>();
@@ -58,7 +58,7 @@ namespace Juice.Core.Tests
                 services.AddSingleton<ITestService>(new TestService());
                 services.AddSingleton<ITestService>(new TestService2());
                 services.Decorate<ITestService, TestServiceDecorator>();
-            });
+            }, default);
 
             var serviceProvider = dependencyResolver.ServiceProvider;
             var testServices = serviceProvider.GetServices<ITestService>();
@@ -82,7 +82,7 @@ namespace Juice.Core.Tests
 
                 services.AddSingleton<ITestService>(sp => new TestService());
                 services.Decorate<ITestService, TestServiceDecorator>();
-            });
+            }, default);
 
             var serviceProvider = dependencyResolver.ServiceProvider;
             var testService = serviceProvider.GetRequiredService<ITestService>();
@@ -105,7 +105,7 @@ namespace Juice.Core.Tests
                 services.AddSingleton<ITestService>(sp => new TestService());
                 services.AddSingleton<ITestService>(sp => new TestService2());
                 services.Decorate<ITestService, TestServiceDecorator>();
-            });
+            }, default);
 
             var serviceProvider = dependencyResolver.ServiceProvider;
             var testServices = serviceProvider.GetServices<ITestService>();
@@ -129,7 +129,7 @@ namespace Juice.Core.Tests
 
                 services.AddSingleton<ITestService, TestService>();
                 services.Decorate<ITestService, TestServiceDecorator>();
-            });
+            }, default);
 
             var serviceProvider = dependencyResolver.ServiceProvider;
             var testService = serviceProvider.GetRequiredService<ITestService>();
@@ -152,7 +152,7 @@ namespace Juice.Core.Tests
                 services.AddSingleton<ITestService, TestService>();
                 services.AddSingleton<ITestService, TestService2>();
                 services.Decorate<ITestService, TestServiceDecorator>();
-            });
+            }, default);
 
             var serviceProvider = dependencyResolver.ServiceProvider;
             var testServices = serviceProvider.GetServices<ITestService>();

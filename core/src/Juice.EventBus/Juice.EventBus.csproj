@@ -25,7 +25,7 @@
     <ItemGroup>
       <ProjectReference Include="..\Juice.EventBus.Contracts\Juice.EventBus.Contracts.csproj" />
       <ProjectReference Include="..\Juice.Measurement\Juice.Measurement.csproj" />
-      <ProjectReference Include="..\Juice\Juice.csproj" />
+      <ProjectReference Include="..\Juice.Messaging\Juice.Messaging.csproj" />
     </ItemGroup>
 
 </Project>

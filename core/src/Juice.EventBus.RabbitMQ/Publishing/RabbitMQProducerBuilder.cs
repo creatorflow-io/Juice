@@ -32,7 +32,7 @@ namespace Juice.EventBus.RabbitMQ.Publishing
             return this;
         }
 
-        public IEventPublisher BuildPublisher(IServiceProvider sp)
+        public ITransportPublisher BuildPublisher(IServiceProvider sp)
         {
             if (string.IsNullOrWhiteSpace(_endpoint.Key))
             {

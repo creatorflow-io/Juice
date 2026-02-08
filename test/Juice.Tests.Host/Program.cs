@@ -1,10 +1,24 @@
 ﻿using Juice;
+using Juice.EF.Tests.Infrastructure;
 using Juice.EventBus;
 using Juice.Modular;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Caching.Distributed;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var configuration = new ConfigurationBuilder()
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddUserSecrets<Program>()
+    .AddCommandLine(args)
+    .Build();
+var provider = configuration
+    .GetSection("provider").Get<string>() ?? "SqlServer";
+
+builder.Services.AddOutboxMigrations<TestContext>(configuration, options=> {
+    options.DatabaseProvider = provider;
+    options.ConnectionName = provider == "PostgreSQL" ? "PostgreConnection" : "SqlServerConnection";
+});
 
 builder.AddDiscoveredModules();
 
@@ -70,7 +84,7 @@ public record LogEvent : IntegrationEvent
     public LogLevel Serverty { get; set; }
     public string? Facility { get; set; }
 
-    public override string GetEventKey() => (Facility + "." + Serverty).ToLower();
+    public override string EventName => (Facility + "." + Serverty).ToLower();
 }
 internal class LogEventHandler : IIntegrationEventHandler<LogEvent>
 {

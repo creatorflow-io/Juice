@@ -8,18 +8,20 @@ using Juice.EF.Tests.Domain;
 using Juice.EF.Tests.EventHandlers;
 using Juice.EF.Tests.Events;
 using Juice.EF.Tests.Infrastructure;
-using Juice.EventBus.Delivery;
 using Juice.EventBus.Tests;
 using Juice.EventBus.Tests.Handlers;
 using Juice.Extensions.DependencyInjection;
 using Juice.Measurement;
 using Juice.MediatR;
+using Juice.Messaging;
+using Juice.Messaging.Outbox;
 using Juice.Services;
 using Juice.XUnit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Polly;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -67,21 +69,22 @@ namespace Juice.Integrations.Tests
 
                 services.AddDefaultStringIdGenerator();
 
-                var builder = services.AddTestEventBus(configuration)
-                    .AddDelivery(delivery =>
-                    {
-                        delivery.AddDeliveryProcessor<TestContext>("rabbitmq");
-                    })
-                     .AddRabbitMQ(cfg =>
-                     {
-                         cfg
-                         .AddConsumer("juice_eventbus_xunit_2", "rabbitmq", qcfg =>
-                         {
-                             qcfg.Subscribe<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler>();
-                             qcfg.Subscribe<ContentNameChangedIntegrationEvent, ContentNameChangedIntegrationEventHandler>();
-                         })
-                         ;
-                     });
+                services.AddTestMessaging(configuration)
+                 .AddDelivery(delivery =>
+                 {
+                     delivery.AddDeliveryProcessor<TestContext>("rabbitmq");
+                 });
+                services.AddEventBus()
+                   .AddRabbitMQ(cfg =>
+                        {
+                            cfg
+                            .AddConsumer("rabbitmq.x.unit.integration.2", "juice_eventbus_xunit_2", "rabbitmq", qcfg =>
+                            {
+                                qcfg.Subscribe<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler>();
+                                qcfg.Subscribe<ContentNameChangedIntegrationEvent, ContentNameChangedIntegrationEventHandler>();
+                            })
+                            ;
+                        });
 
                 services.AddMediatR(cfg =>
                 {
@@ -95,6 +98,8 @@ namespace Juice.Integrations.Tests
             });
 
             await resolver.ServiceProvider.RunHostedServicesAsync();
+            
+            MessageContextHelper.InitMessageContext();
 
             var sharedService = resolver.ServiceProvider.GetRequiredService<HandledService>();
 
@@ -138,48 +143,41 @@ namespace Juice.Integrations.Tests
         [IgnoreOnCIFact(DisplayName = "Transaction behavior + repository"), TestPriority(10)]
         public async Task TransactionBehaviorWithRepositoryAsync()
         {
-            var resolver = new DependencyResolver
-            {
-                CurrentDirectory = AppContext.BaseDirectory
-            };
             var schema = _testSchema1;
-            resolver.ConfigureServices(services =>
+
+            var resolver = DependencyResolver.Create((services, configuration) =>
             {
-                services.AddSingleton(provider => _testOutput);
-                var configService = services.BuildServiceProvider().GetRequiredService<IConfigurationService>();
-                var configuration = configService.GetConfiguration(GetType().Assembly);
                 services.AddLogging(builder =>
                 {
                     builder.ClearProviders()
-                    .AddTestOutputLogger()
+                    .AddTestOutputLogger(_testOutput)
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
                 // Register DbContext class
-                services.AddDbContext<TestContext>(builder =>
-                {
-                    var connectionString = configuration.GetConnectionString("Default");
-                    builder.UseSqlServer(connectionString);
-                });
+                services.AddTestDbContext(configuration, "SqlServer");
                 services.AddUnitOfWork<Content, TestContext>();
                 services.AddScoped<ContentRepository>();
                 services.AddDefaultStringIdGenerator();
 
-                var builder = services.AddTestEventBus(configuration)
+                var builder = services.AddTestMessaging(configuration)
                       .AddDelivery(delivery =>
                       {
                           delivery.AddDeliveryProcessor<TestContext>("rabbitmq")
                           ;
-                      })
-                     .AddRabbitMQ(cfg =>
-                     {
-                         cfg
-                         .AddConsumer("juice_eventbus_xunit_1", "rabbitmq", qcfg =>
-                         {
-                             qcfg.Subscribe<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler>();
-                             qcfg.Subscribe<ContentNameChangedIntegrationEvent, ContentNameChangedIntegrationEventHandler>();
-                         })
-                         ;
-                     });
+                      });
+
+                services.AddEventBus()
+                    .AddRabbitMQ(cfg =>
+                    {
+                        cfg
+                        .AddConsumer("rabbitmq.x.unit.integration.1", "juice_eventbus_xunit_1", "rabbitmq", qcfg =>
+                        {
+                            qcfg.Subscribe<ContentPublishedIntegrationEvent, ContentPublishedIntegrationEventHandler>();
+                            qcfg.Subscribe<ContentNameChangedIntegrationEvent, ContentNameChangedIntegrationEventHandler>();
+                        })
+                        ;
+                    });
+
 
                 services.AddMediatR(cfg =>
                 {
@@ -190,12 +188,12 @@ namespace Juice.Integrations.Tests
                 services.AddSingleton<HandledService>();
 
                 services.AddExecutionTimeMeasurement();
-            });
+            }, default);
 
             await resolver.ServiceProvider.RunHostedServicesAsync();
 
             var sharedService = resolver.ServiceProvider.GetRequiredService<HandledService>();
-
+            MessageContextHelper.InitMessageContext();
             // warm up
             using (var s = resolver.ServiceProvider.CreateScope())
             {

@@ -68,9 +68,8 @@ namespace Juice.MediatR.Tests
             await Task.Delay(1000);
         }
 
-        private class NoticeA : INotification
+        private record NoticeA : Message, INotification
         {
-            public DateTimeOffset DateTime { get; } = DateTimeOffset.Now;
         }
 
         private class NoticeAHandler : INotificationHandler<NoticeA>
@@ -86,13 +85,12 @@ namespace Juice.MediatR.Tests
             {
                 await Task.Delay(200);
                 _logger.LogInformation("Notice created at {Created} and processed after {After} milliseconds. User: {User}",
-                    notification.DateTime, (DateTimeOffset.Now - notification.DateTime).TotalMilliseconds, _sharedService.User ?? "");
+                    notification.CreatedAt, (DateTimeOffset.Now - notification.CreatedAt).TotalMilliseconds, _sharedService.User ?? "");
             }
         }
 
-        private class CmdB : IRequest<int>
+        private record CmdB : Message, IRequest<int>
         {
-            public DateTimeOffset DateTime { get; } = DateTimeOffset.Now;
         }
         private class CmdBHandler : IRequestHandler<CmdB, int>
         {
@@ -104,7 +102,9 @@ namespace Juice.MediatR.Tests
             public async ValueTask<int> Handle(CmdB request, CancellationToken cancellationToken)
             {
                 await Task.Delay(200);
-                _logger.LogInformation("Command created at {Created} and processed after {After} milliseconds", request.DateTime, (DateTimeOffset.Now - request.DateTime).TotalMilliseconds);
+                _logger.LogInformation("Command created at {Created} and processed after {After} milliseconds",
+                    request.CreatedAt,
+                    (DateTimeOffset.Now - request.CreatedAt).TotalMilliseconds);
                 return 0;
             }
         }

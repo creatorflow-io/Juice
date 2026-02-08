@@ -40,10 +40,12 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\src\Juice.MediatR.RequestManager.EF.PostgreSQL\Juice.MediatR.RequestManager.EF.PostgreSQL.csproj" />
-        <ProjectReference Include="..\..\src\Juice.MediatR.RequestManager.EF.SqlServer\Juice.MediatR.RequestManager.EF.SqlServer.csproj" />
-        <ProjectReference Include="..\..\src\Juice.MediatR.RequestManager.Redis\Juice.MediatR.RequestManager.Redis.csproj" />
+        <ProjectReference Include="..\..\src\Juice.MediatR.Behaviors\Juice.MediatR.Behaviors.csproj" />
         <ProjectReference Include="..\..\src\Juice.MediatR\Juice.MediatR.csproj" />
+        <ProjectReference Include="..\..\src\Juice.Messaging.Idempotency.EF.PostgreSQL\Juice.Messaging.Idempotency.EF.PostgreSQL.csproj" />
+        <ProjectReference Include="..\..\src\Juice.Messaging.Idempotency.EF.SqlServer\Juice.Messaging.Idempotency.EF.SqlServer.csproj" />
+        <ProjectReference Include="..\..\src\Juice.Messaging.Idempotency.EF\Juice.Messaging.Idempotency.EF.csproj" />
+        <ProjectReference Include="..\..\src\Juice.Messaging.Idempotency.Redis\Juice.Messaging.Idempotency.Redis.csproj" />
         <ProjectReference Include="..\Juice.EF.Tests\Juice.EF.Tests.csproj" />
     </ItemGroup>
 

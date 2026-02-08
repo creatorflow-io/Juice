@@ -35,7 +35,7 @@ namespace Juice.EF
             var param = Expression.Parameter(typeof(T), "x");
             MemberExpression? id = null;
 
-            // Try to find the key property by [Key] attribute, or fallback to "Id" or "{TypeName}Id"
+            // Try to find the key property by [Key] attribute, or fallback to "MessageId" or "{TypeName}MessageId"
             var keyProp = (typeof(T).GetProperties()
                 .FirstOrDefault(p => p.GetCustomAttribute<KeyAttribute>() != null)
                 ?? typeof(T).GetProperty("Id")

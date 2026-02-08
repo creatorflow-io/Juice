@@ -9,7 +9,7 @@ namespace Juice.EF.MultiTenant.Extensions
         /// <summary>
         /// Enforce tenant rules:
         /// - Root tenant (TenantInfo == null): can add/modify/delete entities annotated <see cref="SharingType.Global"/> from any tenant; must NOT overwrite TenantId.
-        /// - Tenant (TenantInfo != null): can add/modify/delete entities only when TenantId == TenantInfo.Id.
+        /// - Tenant (TenantInfo != null): can add/modify/delete entities only when TenantId == TenantInfo.MessageId.
         /// </summary>
         public static void EnforceTenantPolicies<TContext>(this TContext context)
             where TContext : DbContext, IMultiTenantDbContext

@@ -24,11 +24,13 @@
     <ItemGroup>
         <ProjectReference Include="..\..\core\src\Juice.AspNetCore\Juice.AspNetCore.csproj" />
         <ProjectReference Include="..\..\core\src\Juice.EventBus.RabbitMQ\Juice.EventBus.RabbitMQ.csproj" />
-        <ProjectReference Include="..\..\core\src\Juice.EventBus.Transactional.Migrations.PostgreSQL\Juice.EventBus.Transactional.Migrations.PostgreSQL.csproj" />
-        <ProjectReference Include="..\..\core\src\Juice.EventBus.Transactional.Migrations.SqlServer\Juice.EventBus.Transactional.Migrations.SqlServer.csproj" />
-        <ProjectReference Include="..\..\core\src\Juice.EventBus.Transactional.Migrations\Juice.EventBus.Transactional.Migrations.csproj" />
-        <ProjectReference Include="..\..\core\src\Juice.MediatR.RequestManager.EF.PostgreSQL\Juice.MediatR.RequestManager.EF.PostgreSQL.csproj" />
-        <ProjectReference Include="..\..\core\src\Juice.MediatR.RequestManager.EF.SqlServer\Juice.MediatR.RequestManager.EF.SqlServer.csproj" />
+        <ProjectReference Include="..\..\core\src\Juice.Messaging.Idempotency.EF.PostgreSQL\Juice.Messaging.Idempotency.EF.PostgreSQL.csproj" />
+        <ProjectReference Include="..\..\core\src\Juice.Messaging.Idempotency.EF.SqlServer\Juice.Messaging.Idempotency.EF.SqlServer.csproj" />
+        <ProjectReference Include="..\..\core\src\Juice.Messaging.Idempotency.EF\Juice.Messaging.Idempotency.EF.csproj" />
+        <ProjectReference Include="..\..\core\src\Juice.Messaging.Outbox.Migrations.PostgreSQL\Juice.Messaging.Outbox.Migrations.PostgreSQL.csproj" />
+        <ProjectReference Include="..\..\core\src\Juice.Messaging.Outbox.Migrations.SqlServer\Juice.Messaging.Outbox.Migrations.SqlServer.csproj" />
+        <ProjectReference Include="..\..\core\test\Juice.EF.Tests.PostgreSQL\Juice.EF.Tests.PostgreSQL.csproj" />
+        <ProjectReference Include="..\..\core\test\Juice.EF.Tests.SqlServer\Juice.EF.Tests.SqlServer.csproj" />
         <ProjectReference Include="..\..\core\test\Juice.SimpleModule\Juice.SimpleModule.csproj" />
     </ItemGroup>
 

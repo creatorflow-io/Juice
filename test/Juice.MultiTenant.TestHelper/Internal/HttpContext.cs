@@ -29,7 +29,7 @@ namespace Juice.MultiTenant.TestHelper.Internal
         public override IDictionary<object, object?> Items { get; set; } = new Dictionary<object, object?>();
         public override IServiceProvider RequestServices { get => _serviceProvider; set => throw new NotImplementedException(); }
         public override CancellationToken RequestAborted { get => _abortedCts.Token; set { _abortedCts = CancellationTokenSource.CreateLinkedTokenSource(_abortedCts.Token, value); } }
-        public override string TraceIdentifier { get; set; } = new DefaultStringIdGenerator().GenerateUniqueId();
+        public override string TraceIdentifier { get; set; } = new StringIdGenerator().GenerateUniqueId();
         public override ISession Session { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
         public override void Abort() => _abortedCts.Cancel();

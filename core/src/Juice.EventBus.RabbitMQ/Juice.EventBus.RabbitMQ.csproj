@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Juice.EventBus\Juice.EventBus.csproj" />
+    <ProjectReference Include="..\Juice\Juice.csproj" />
   </ItemGroup>
 
   <ItemGroup>

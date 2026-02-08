@@ -6,17 +6,20 @@ namespace Juice.EventBus.RabbitMQ.Consuming
 {
     internal sealed class RabbitMQConsumerHostedService : BackgroundService
     {
+        private readonly string _serviceKey;
         private readonly RabbitMQConsumerEngine _engine;
         private readonly RabbitMQConsumerEndpoint _endpoint;
         private readonly ILogger<RabbitMQConsumerHostedService> _logger;
         private readonly ISubscriptionsManager _subscriptionsManager;
 
         public RabbitMQConsumerHostedService(
+            string serviceKey,
             RabbitMQConsumerEngine engine,
             RabbitMQConsumerEndpoint endpoint,
             ISubscriptionsManager subscriptionsManager,
             ILogger<RabbitMQConsumerHostedService> logger)
         {
+            _serviceKey = serviceKey;
             _engine = engine;
             _endpoint = endpoint;
             _logger = logger;
@@ -38,7 +41,7 @@ namespace Juice.EventBus.RabbitMQ.Consuming
                await _engine.StopAsync();
             });
 
-            var ok = await _engine.StartAsync(_endpoint, _subscriptionsManager, stoppingToken);
+            var ok = await _engine.StartAsync(_serviceKey, _endpoint, _subscriptionsManager, stoppingToken);
             if (!ok) {
                 _logger.LogError(
                     "[RabbitMQ:{Queue}] HostedService failed to start the consumer engine",

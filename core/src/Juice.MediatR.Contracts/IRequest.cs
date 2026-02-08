@@ -1,6 +1,6 @@
 ﻿namespace Juice.MediatR
 {
-    public interface IBaseRequest
+    public interface IBaseRequest : IMessage
     {
 
     }

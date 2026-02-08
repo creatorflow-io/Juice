@@ -78,7 +78,7 @@ namespace Juice.EF.Tests
                             }
                         };
                     });
-            });
+            }, default);
 
 
         [IgnoreOnCITheory(DisplayName = "DynamicEntity migration"), TestPriority(10)]
@@ -230,7 +230,7 @@ namespace Juice.EF.Tests
         {
             var serviceProvider = ConfigureServices("SqlServer").ServiceProvider;
             var mediator = serviceProvider.GetRequiredService<IMediator>();
-            var dataEvent = DataEvents.Inserted.CreateDataEvent(typeof(DataInserted<>), typeof(Content), new AuditRecord("TestTable"));
+            var dataEvent = DataEvents.Inserted.CreateDataEvent(typeof(DataInserted<>), typeof(Content), default, new AuditRecord("TestTable"));
 
             await mediator.Publish(dataEvent);
             await Task.Delay(1000);

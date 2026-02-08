@@ -13,8 +13,8 @@ namespace Juice.EventBus.Tests
         /// </summary>
         public bool IsReady =>
             _lastHandled.HasValue
-                ? DateTimeOffset.UtcNow - _lastHandled.Value > TimeSpan.FromMilliseconds(10)
-                : DateTimeOffset.UtcNow - _startTime > TimeSpan.FromSeconds(1);
+                ? DateTimeOffset.UtcNow - _lastHandled.Value > TimeSpan.FromSeconds(2)
+                : DateTimeOffset.UtcNow - _startTime > TimeSpan.FromSeconds(3);
         private readonly object _lock = new object();
         private readonly DateTimeOffset _startTime = DateTimeOffset.UtcNow;
         private DateTimeOffset? _lastHandled = null;

@@ -39,6 +39,7 @@
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\Juice.Extensions.Options\Juice.Extensions.Options.csproj" />
+        <ProjectReference Include="..\Juice.Messaging\Juice.Messaging.csproj" />
         <ProjectReference Include="..\Juice\Juice.csproj" />
     </ItemGroup>
 

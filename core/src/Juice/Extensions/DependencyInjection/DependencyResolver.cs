@@ -91,11 +91,20 @@ namespace Juice.Extensions.DependencyInjection
         public IServiceScope CreateScope() => ServiceProvider.CreateScope();
 
         public static DependencyResolver Create(Action<IServiceCollection, IConfiguration> config,
-            string[]? args = default,
+            string[]? args,
             string? currentDirectory = default)
         {
             var resolver = new DependencyResolver(currentDirectory);
             resolver.ConfigureServices(config, args, Assembly.GetCallingAssembly());
+            return resolver;
+        }
+
+        public static DependencyResolver Create(Action<IServiceCollection, IConfiguration> config,
+            Assembly? assembly,
+            string[]? args)
+        {
+            var resolver = new DependencyResolver(default);
+            resolver.ConfigureServices(config, args, assembly);
             return resolver;
         }
     }

@@ -3,7 +3,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Juice.EF
 {
-    internal class JsonConverter : ValueConverter<JObject, string>
+    public sealed class JsonConverter : ValueConverter<JObject, string>
     {
         public JsonConverter()
         : base(

@@ -4,11 +4,11 @@ namespace Juice.EventBus.RabbitMQ
 {
     internal static class DictionaryExtensions
     {
-        public static string? GetHeaderString(this IDictionary<string, object?> dictionary, string key)
+        public static string? GetHeaderString(this IDictionary<string, object?>? dictionary, string key)
         {
             if (dictionary == null)
             {
-                throw new ArgumentNullException(nameof(dictionary));
+                return default;
             }
             if (key == null)
             {
@@ -20,14 +20,14 @@ namespace Juice.EventBus.RabbitMQ
                         ? UTF8Encoding.UTF8.GetString(bytes)
                         : value?.ToString();
             }
-            return null;
+            return default;
         }
 
-        public static int? GetHeaderInt(this IDictionary<string, object?> dictionary, string key)
+        public static int? GetHeaderInt(this IDictionary<string, object?>? dictionary, string key)
         {
             if (dictionary == null)
             {
-                throw new ArgumentNullException(nameof(dictionary));
+                return default;
             }
             if (key == null)
             {

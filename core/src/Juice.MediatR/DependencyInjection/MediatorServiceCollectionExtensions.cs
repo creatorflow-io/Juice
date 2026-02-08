@@ -12,7 +12,6 @@ namespace Microsoft.Extensions.DependencyInjection
             services.TryAddTransient<IMediator, Mediator>();
             var builder = new MediatorBuilder(services);
             buildAction?.Invoke(builder);
-            services.TryAddSingleton<IResponseSerializer, NewtonsoftSerializer>();
             return services;
         }
     }

@@ -3,7 +3,7 @@
     /// <summary>
     /// Marker interface for notifications, default interface for parallel notifications.
     /// </summary>
-    public interface INotification
+    public interface INotification: IMessage
     {
     }
 

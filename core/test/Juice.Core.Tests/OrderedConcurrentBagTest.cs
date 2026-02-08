@@ -294,7 +294,7 @@ namespace Juice.Core.Tests
         {
             for (var i = 0; i < 3; i++)
             {
-                var key = new DefaultStringIdGenerator().GenerateRandomId(8);
+                var key = new StringIdGenerator().GenerateRandomId(8);
                 _output.WriteLine(key.ToUpper());
             }
         }

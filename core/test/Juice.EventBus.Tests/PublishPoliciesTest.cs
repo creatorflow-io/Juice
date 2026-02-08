@@ -1,10 +1,10 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Juice.EventBus.Publishing.Policies;
-using Juice.EventBus.Publishing.Policies.Internal;
+using Juice.Messaging.Policies.Internal;
 using Microsoft.Extensions.Options;
 using Xunit;
+using Juice.Messaging.Policies;
 
 namespace Juice.EventBus.Tests
 {

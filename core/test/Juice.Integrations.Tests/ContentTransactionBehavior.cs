@@ -1,8 +1,8 @@
 ﻿using System;
 using Juice.EF.Tests.Infrastructure;
-using Juice.EventBus.Transactional;
-using Juice.Integrations.MediatR.Behaviors;
 using Juice.MediatR;
+using Juice.MediatR.Behaviors;
+using Juice.Messaging.Outbox;
 using Microsoft.Extensions.Logging;
 
 namespace Juice.Integrations.Tests
@@ -12,7 +12,7 @@ namespace Juice.Integrations.Tests
         where TRequest : IRequest<TResponse>, IContentCommand
     {
         public ContentTransactionBehavior(TestContext dbContext,
-            IIntegrationEventService<TestContext> integrationEventService,
+            IOutboxService<TestContext> integrationEventService,
             IMediator mediator,
             ILogger<ContentTransactionBehavior<TRequest, TResponse>> logger)
             : base(dbContext, integrationEventService, mediator, logger)

@@ -26,6 +26,11 @@ public class MediatorBench
 }
 internal class Request : IRequest
 {
+    public Guid MessageId => throw new NotImplementedException();
+
+    public DateTimeOffset CreatedAt => throw new NotImplementedException();
+
+    public string? TenantId => throw new NotImplementedException();
 }
 internal class RequestHandler : IRequestHandler<Request>
 {

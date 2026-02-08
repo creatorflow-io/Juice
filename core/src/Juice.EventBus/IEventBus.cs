@@ -10,11 +10,11 @@ namespace Juice.EventBus
         ValueTask PublishAsync<T>(
             T @event, string? domain = default,
             CancellationToken ct = default)
-            where T : IIntegrationEvent;
+            where T : IMessage;
 
         ValueTask PublishAsync<T>(
            T @event, string publisherKey, PublishContext context,
            CancellationToken ct = default)
-           where T : IIntegrationEvent;
+           where T : IMessage;
     }
 }

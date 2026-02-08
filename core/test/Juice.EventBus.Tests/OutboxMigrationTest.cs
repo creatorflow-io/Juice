@@ -32,7 +32,7 @@ namespace Juice.EventBus.Tests
                     options.DatabaseProvider = provider;
                     options.Schema = "App";
                 });
-            });
+            }, default);
             await resolver.ServiceProvider.MigrateOutboxAsync<TestContext>();
             await Task.Delay(500);
         }

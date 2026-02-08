@@ -18,8 +18,8 @@ namespace Juice.EventBus.Tests.Handlers
         public async Task HandleAsync(LogEvent @event)
         {
             await Task.Delay(200);
-            _logger.LogInformation("[X] Received {0} at {1}", @event.GetEventKey(), @event.CreationDate);
-            _handledService.Handle(nameof(LogEventHandler), @event.Id);
+            _logger.LogInformation("[X] Received {0} at {1}", @event.EventName, @event.CreatedAt);
+            _handledService.Handle(nameof(LogEventHandler), @event.MessageId);
         }
     }
 }

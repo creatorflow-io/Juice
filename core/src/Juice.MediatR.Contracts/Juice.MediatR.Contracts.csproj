@@ -7,4 +7,8 @@
         <RootNamespace>Juice.MediatR</RootNamespace>
     </PropertyGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\Juice.Contracts\Juice.Contracts.csproj" />
+    </ItemGroup>
+
 </Project>

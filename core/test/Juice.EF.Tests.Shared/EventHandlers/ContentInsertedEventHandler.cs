@@ -2,15 +2,15 @@
 using Juice.EF.Tests.Domain;
 using Juice.EF.Tests.Events;
 using Juice.EF.Tests.Infrastructure;
-using Juice.EventBus.Transactional;
 using Juice.MediatR;
+using Juice.Messaging.Outbox;
 
 namespace Juice.EF.Tests.EventHandlers
 {
     internal class ContentInsertedEventHandler : INotificationHandler<DataInserted<Content>>
     {
-        private readonly IIntegrationEventService<TestContext> _integration;
-        public ContentInsertedEventHandler(IIntegrationEventService<TestContext> integration)
+        private readonly IOutboxService<TestContext> _integration;
+        public ContentInsertedEventHandler(IOutboxService<TestContext> integration)
         {
             _integration = integration;
         }
@@ -19,7 +19,7 @@ namespace Juice.EF.Tests.EventHandlers
             await _integration.AddEventAsync(new ContentPublishedIntegrationEvent($"Content {notification.Entity!.Code} was published")
             {
                 ContentId = notification.Entity!.Id,
-                Id = notification.EventId
+                MessageId = notification.MessageId
             });
         }
     }

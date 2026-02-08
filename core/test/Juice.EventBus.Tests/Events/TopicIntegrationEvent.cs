@@ -3,6 +3,6 @@ namespace Juice.EventBus.Tests.Events
 {
     public record TopicIntegrationEvent(string Key) : IntegrationEvent
     {
-        public override string GetEventKey() => Key;
+        public override string EventName => Key;
     }
 }

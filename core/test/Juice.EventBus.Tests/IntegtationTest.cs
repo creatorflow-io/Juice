@@ -43,16 +43,18 @@ namespace Juice.EventBus.Tests
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
 
-                services.AddTestEventBus(configuration)
+                services.AddTestMessaging(configuration);
+                services.AddEventBus()
+                    .AddPublishingServices()
                    .AddRabbitMQ(cfg => {
-                       cfg.AddConsumer("juice_eventbus_xunit_6", "rabbitmq", qcfg => {
+                       cfg.AddConsumer("rabbitmq.x.unit.integration.6", "juice_eventbus_xunit_6", "rabbitmq", qcfg => {
                            qcfg.Subscribe<LogEvent, LogEventHandler>("kernel.*");
                        });
                    });
 
                 services.AddSingleton<HandledService>();
             });
-
+            MessageContextHelper.InitMessageContext();
             await resolver.ServiceProvider.RunHostedServicesAsync();
             using var scope = resolver.ServiceProvider.CreateScope();
             var eventBus = scope.ServiceProvider.GetRequiredService<IEventBus>();
@@ -62,7 +64,7 @@ namespace Juice.EventBus.Tests
             await eventBus.PublishAsync(evt1);
             await Task.Delay(TimeSpan.FromSeconds(1));
 
-            handledService.HandledCount.Should().NotContainKey(evt1.Id.ToString());
+            handledService.HandledCount.Should().NotContainKey(evt1.MessageId.ToString());
 
             var evt2 = new LogEvent { Facility = "kernel", Serverty = LogLevel.Error };
             await eventBus.PublishAsync(evt2);
@@ -71,10 +73,10 @@ namespace Juice.EventBus.Tests
 
             await Task.Delay(TimeSpan.FromSeconds(2));
             handledService.Handlers.Should().Contain(nameof(LogEventHandler));
-            handledService.HandledCount.Should().ContainKey(evt2.Id.ToString());
-            handledService.HandledCount[evt2.Id.ToString()].Should().Be(1);
-            handledService.HandledCount.Should().ContainKey(evt3.Id.ToString());
-            handledService.HandledCount[evt3.Id.ToString()].Should().Be(1);
+            handledService.HandledCount.Should().ContainKey(evt2.MessageId.ToString());
+            handledService.HandledCount[evt2.MessageId.ToString()].Should().Be(1);
+            handledService.HandledCount.Should().ContainKey(evt3.MessageId.ToString());
+            handledService.HandledCount[evt3.MessageId.ToString()].Should().Be(1);
         }
 
     }

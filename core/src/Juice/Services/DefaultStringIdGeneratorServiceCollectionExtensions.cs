@@ -7,7 +7,7 @@ namespace Juice.Services
     {
         public static IServiceCollection AddDefaultStringIdGenerator(this IServiceCollection services)
         {
-            services.TryAddScoped<IStringIdGenerator, DefaultStringIdGenerator>();
+            services.TryAddScoped<IStringIdGenerator, StringIdGenerator>();
             return services;
         }
     }

@@ -2,9 +2,8 @@
 
 namespace Juice.Domain.Events
 {
-    public record DataEvent : INotification
+    public record DataEvent : Message, INotification
     {
-        public Guid EventId { get; private set; } = Guid.NewGuid();
         public DataEvent(string name)
         {
             Validator.ThrowIfNullOrWhiteSpace(name, nameof(name));
@@ -13,19 +12,24 @@ namespace Juice.Domain.Events
         public string Name { get; private set; }
 
         public virtual bool IsAudit => false;
-        public virtual DataEvent SetEntity(object entity) { return this; }
+        public object? Entity = default;
+        public virtual DataEvent SetEntity(object entity) {
+            Entity = entity;
+            return this;
+        }
 
         public AuditRecord? AuditRecord { get; protected set; }
+
+        public virtual DataEvent SetTenantId(string? tenantId)
+        {
+            TenantId = tenantId;
+            return this;
+        }
 
         public virtual DataEvent SetAuditRecord(AuditRecord record)
         {
             AuditRecord = record;
             return this;
-        }
-
-        public void SetEventId(Guid eventId)
-        {
-            EventId = eventId;
         }
     }
 
@@ -35,7 +39,7 @@ namespace Juice.Domain.Events
         {
         }
 
-        public T? Entity { get; protected set; }
+        public new T? Entity { get; protected set; }
 
         public override DataEvent SetEntity(object entity)
         {
@@ -77,7 +81,7 @@ namespace Juice.Domain.Events
 
     public static class DataEventExtensions
     {
-        public static DataEvent CreateAuditEvent(this DataEvent dataEvent, Type eventType, Type? entityType, AuditRecord record)
+        public static DataEvent CreateAuditEvent(this DataEvent dataEvent, Type eventType, Type? entityType, AuditRecord record, string? tenantId)
         {
             DataEvent factory(Type et, Type? entt, AuditRecord rec)
             {
@@ -88,19 +92,19 @@ namespace Juice.Domain.Events
                 var ctor = et.GetConstructor(new[] { typeof(string) });
                 if (ctor != null)
                 {
-                    return ((AuditEvent)ctor.Invoke(new object[] { dataEvent.Name })).SetAuditRecord(rec);
+                    return ((AuditEvent)ctor.Invoke(new object[] { dataEvent.Name })).SetAuditRecord(rec).SetTenantId(tenantId);
                 }
                 else
                 {
                     ctor = et.GetConstructor(new Type[0]);
-                    return ((AuditEvent)ctor!.Invoke(new object[0])).SetAuditRecord(rec);
+                    return ((AuditEvent)ctor!.Invoke(new object[0])).SetAuditRecord(rec).SetTenantId(tenantId);
                 }
             }
             var @event = factory(eventType, entityType, record);
             return @event;
         }
 
-        public static DataEvent CreateDataEvent(this DataEvent dataEvent, Type eventType, object entity, AuditRecord? auditRecord = default)
+        public static DataEvent CreateDataEvent(this DataEvent dataEvent, Type eventType, object entity, string? tenantId, AuditRecord? auditRecord = default)
         {
             DataEvent factory(Type et, object ent)
             {
@@ -111,12 +115,12 @@ namespace Juice.Domain.Events
                 var ctor = et.GetConstructor(new[] { typeof(string) });
                 if (ctor != null)
                 {
-                    return ((DataEvent)ctor.Invoke(new object[] { dataEvent.Name })).SetEntity(ent);
+                    return ((DataEvent)ctor.Invoke(new object[] { dataEvent.Name })).SetEntity(ent).SetTenantId(tenantId);
                 }
                 else
                 {
                     ctor = et.GetConstructor(new Type[0]);
-                    return ((DataEvent)ctor!.Invoke(new object[0])).SetEntity(ent);
+                    return ((DataEvent)ctor!.Invoke(new object[0])).SetEntity(ent).SetTenantId(tenantId);
                 }
             }
             var @event = factory(eventType, entity);

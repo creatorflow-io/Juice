@@ -46,7 +46,7 @@ namespace Juice.Core.Tests
                             }
                         };
                     });
-            }).ServiceProvider;
+            }, default).ServiceProvider;
             using var scope = serviceProvider.CreateScope();
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<ScopedTenantResolverTest>>();
             var tenantResolver = scope.ServiceProvider.GetRequiredService<IScopedTenantResolver<Juice.Extensions.MultiTenant.TenantInfo>>();

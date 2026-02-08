@@ -39,6 +39,12 @@
         <ProjectReference Include="..\..\..\test\Juice.Tests.Host\Juice.Tests.Host.csproj" />
         <ProjectReference Include="..\..\src\Juice.EventBus.RabbitMQ\Juice.EventBus.RabbitMQ.csproj" />
         <ProjectReference Include="..\..\src\Juice.Extensions.MultiTenant\Juice.Extensions.MultiTenant.csproj" />
+        <ProjectReference Include="..\..\src\Juice.Messaging.Idempotency.EF\Juice.Messaging.Idempotency.EF.csproj" />
+        <ProjectReference Include="..\..\src\Juice.Messaging.Idempotency.Redis\Juice.Messaging.Idempotency.Redis.csproj" />
+        <ProjectReference Include="..\..\src\Juice.Messaging.Outbox.Delivery\Juice.Messaging.Outbox.Delivery.csproj" />
+        <ProjectReference Include="..\..\src\Juice.Messaging.Outbox.EF\Juice.Messaging.Outbox.EF.csproj" />
+        <ProjectReference Include="..\..\src\Juice.Messaging.Outbox.Migrations.PostgreSQL\Juice.Messaging.Outbox.Migrations.PostgreSQL.csproj" />
+        <ProjectReference Include="..\..\src\Juice.Messaging.Outbox.Migrations.SqlServer\Juice.Messaging.Outbox.Migrations.SqlServer.csproj" />
         <ProjectReference Include="..\Juice.EF.Tests\Juice.EF.Tests.csproj" />
     </ItemGroup>
 

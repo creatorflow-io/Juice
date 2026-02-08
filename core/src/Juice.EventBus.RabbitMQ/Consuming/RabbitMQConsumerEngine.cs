@@ -2,6 +2,8 @@
 using Juice.EventBus.Dispatching;
 using Juice.EventBus.RabbitMQ.Policies;
 using Juice.EventBus.Subscriptions;
+using Juice.Messaging;
+using Juice.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
@@ -21,15 +23,16 @@ namespace Juice.EventBus.RabbitMQ.Consuming
         private ISubscriptionsManager _subscriptionsManager = default!;
         private readonly IntegrationEventDispatcher _dispatcher;
         private readonly IRetryPolicyProvider? _retryPolicyProvider;
-        private readonly IEventSerializer _eventSerializer;
+        private readonly IMessageSerializer _eventSerializer;
         private readonly ILogger _logger;
         private readonly IServiceProvider _keyedService;
         private DeadLetterConfig? _deadLetterConfig;
+        private string _serviceKey = default!;
 
         public RabbitMQConsumerEngine(
             IServiceProvider keyedService,
             IntegrationEventDispatcher dispatcher,
-            IEventSerializer eventSerializer,
+            IMessageSerializer eventSerializer,
             ILogger<RabbitMQConsumerEngine> logger,
             IRetryPolicyProvider? retryPolicyProvider = default
             )
@@ -41,10 +44,13 @@ namespace Juice.EventBus.RabbitMQ.Consuming
             _keyedService = keyedService;
         }
 
-        public async Task<bool> StartAsync(RabbitMQConsumerEndpoint endpoint,
+        public async Task<bool> StartAsync(
+            string serviceKey,
+            RabbitMQConsumerEndpoint endpoint,
             ISubscriptionsManager subscriptionsManager,
             CancellationToken cancellationToken)
         {
+            _serviceKey = serviceKey;
             _persistentConnection = _keyedService.GetKeyedService<IRabbitMQPersistentConnection>(endpoint.ConnectionName)
                 ?? throw new InvalidOperationException($"RabbitMQ connection with name '{endpoint.ConnectionName}' is not registered.");
             _queueName = endpoint.Queue;
@@ -85,26 +91,28 @@ namespace Juice.EventBus.RabbitMQ.Consuming
         private async Task Consumer_ReceivedAsync(object sender, BasicDeliverEventArgs eventArgs)
         {
             var headers = eventArgs.BasicProperties.Headers ?? new Dictionary<string, object?>();
-            var eventName = headers.GetHeaderString("x-original-routing-key") ?? eventArgs.RoutingKey;
+            var routingKey = headers.GetHeaderString("x-original-routing-key") ?? eventArgs.RoutingKey;
+
+
             var message = Encoding.UTF8.GetString(eventArgs.Body.Span);
 
             try
             {
                 if (_logger.IsEnabled(LogLevel.Debug))
                 {
-                    _logger.LogDebug("[{Queue}] Received event: {EventName} from {Broker}", _queueName, eventName, eventArgs.Exchange);
+                    _logger.LogDebug("[{Queue}] Received event: {EventName} from {Broker}", _queueName, routingKey, eventArgs.Exchange);
                 }
                 if (message.ToLowerInvariant().Contains("throw-fake-exception"))
                 {
                     throw new InvalidOperationException($"Fake exception requested: \"{message}\"");
                 }
 
-                var (processed, ok) = await ProcessingEventAsync(eventArgs, eventName, message);
+                var result = await ProcessingEventAsync(eventArgs, routingKey, message);
                 if (_consumerChannel == null)
                 {
                     return;
                 }
-                if (ok)
+                if (result == EventDispatchResult.Success || result == EventDispatchResult.Duplicated)
                 {
                     // Even on exception we take the message off the queue.
                     // in a REAL WORLD app this should be handled with a Dead Letter _defaultExchange (DLX). 
@@ -112,12 +120,12 @@ namespace Juice.EventBus.RabbitMQ.Consuming
                     await _consumerChannel.BasicAckAsync(eventArgs.DeliveryTag, multiple: false);
                     return;
                 }
-                if (!processed)
+                if (result == EventDispatchResult.NotHandled)
                 {
                     // No handler found for event or processing failed and no retries are allowed
                     if (_logger.IsEnabled(LogLevel.Debug))
                     {
-                        _logger.LogDebug("No handler processed RabbitMQ event: {EventName}", eventName);
+                        _logger.LogDebug("No handler processed RabbitMQ event: {EventName}", routingKey);
                     }
                     if (_deadLetterConfig?.Enabled == true)
                     {
@@ -143,7 +151,7 @@ namespace Juice.EventBus.RabbitMQ.Consuming
                     {
                         if (_logger.IsEnabled(LogLevel.Debug))
                         {
-                            _logger.LogDebug("Max processing retries reached for event: {EventName}, attempts: {Attempts}. Send to DLX.", eventName, attempts);
+                            _logger.LogDebug("Max processing retries reached for event: {EventName}, attempts: {Attempts}. Send to DLX.", routingKey, attempts);
                         }
                         await SendToDeadLetterQueueAsync(eventArgs,
                             retryPolicy?.IsMaxRetryReached == true
@@ -154,14 +162,14 @@ namespace Juice.EventBus.RabbitMQ.Consuming
                     {
                         if (_logger.IsEnabled(LogLevel.Debug))
                         {
-                            _logger.LogDebug("Max processing retries reached for event: {EventName}, attempts: {Attempts}. Send Nack.", eventName, attempts);
+                            _logger.LogDebug("Max processing retries reached for event: {EventName}, attempts: {Attempts}. Send Nack.", routingKey, attempts);
                         }
                         await _consumerChannel.BasicNackAsync(eventArgs.DeliveryTag, multiple: false, requeue: false);
                     }
                     return;
                 }
 
-                await RetryAsync(eventArgs, originalExchange, eventName, retryPolicy, attempts);
+                await RetryAsync(eventArgs, originalExchange, routingKey, retryPolicy, attempts);
                 #endregion
             }
             catch (Exception ex)
@@ -233,33 +241,51 @@ namespace Juice.EventBus.RabbitMQ.Consuming
 
         #region Processing
 
-        private async Task<(bool Handled, bool Ok)> ProcessingEventAsync(BasicDeliverEventArgs eventArgs,
-            string eventName, string message)
+        private async Task<EventDispatchResult> ProcessingEventAsync(BasicDeliverEventArgs eventArgs,
+            string routingKey, string message)
         {
-            using var _ = _logger.BeginScope($"Processing integration event: {eventName}");
+            using var _ = _logger.BeginScope($"Processing integration event: {routingKey}");
+            var headers = eventArgs.BasicProperties.Headers;
 
-            var eventType = await _subscriptionsManager.GetEventTypeByNameAsync(eventName);
+
+            var eventType = await _subscriptionsManager.GetEventTypeByNameAsync(routingKey);
             if (eventType == null)
             {
-                _logger.LogWarning("No event type found for event: {EventName}", eventName);
-                return (false, false);
+                _logger.LogWarning("No event type found for event: {EventName}", routingKey);
+                return EventDispatchResult.NotHandled;
             }
-            var integrationEvent = _eventSerializer.Deserialize(message, eventType);
+            var integrationEvent = _eventSerializer.Deserialize<IIntegrationEvent>(message, eventType);
             if (integrationEvent == null)
             {
                 _logger.LogWarning("Failed to deserialize message to {eventType}", eventType.Name);
-                return (false, false);
+                return EventDispatchResult.NotHandled;
             }
 
-            var handlers = await _subscriptionsManager.GetHandlersForEventAsync(eventName);
+            var correlationId = headers.GetHeaderString("x-correlation-id")
+                ?? eventArgs.BasicProperties.CorrelationId
+                ?? StringIdGenerator.Instance.GenerateUniqueId();
+            var messageId = headers.GetHeaderString("x-message-id")
+                ?? eventArgs.BasicProperties.MessageId
+                ?? integrationEvent.MessageId.ToString();
+
+            var handlers = await _subscriptionsManager.GetHandlersForEventAsync(routingKey);
 
             var tenantId = eventArgs.BasicProperties.Headers?.GetHeaderString("x-tenant-id");
-
-            return await _dispatcher.DispatchAsync(integrationEvent, new EventDispatchContext(handlers)
+            try
             {
-                EventName = eventName,
-                TenantId = tenantId
-            });
+                MessageContext.Initialize(
+                    correlationId: correlationId,
+                    causationId: messageId,
+                    executionId: StringIdGenerator.Instance.GenerateUniqueId(),
+                    source: _serviceKey
+                    );
+
+                return await _dispatcher.DispatchAsync(integrationEvent, new EventDispatchContext(handlers, routingKey, tenantId, _serviceKey));
+            }
+            finally
+            {
+                MessageContext.Clear();
+            }
         }
 
         private async Task RetryAsync(BasicDeliverEventArgs eventArgs,
@@ -338,5 +364,6 @@ namespace Juice.EventBus.RabbitMQ.Consuming
             await _consumerChannel.BasicAckAsync(eventArgs.DeliveryTag, multiple: false);
         }
         #endregion
+
     }
 }

@@ -2,6 +2,7 @@
 {
     public sealed record EventDispatchContext(
         IEnumerable<Type> Handlers,
-        string? EventName = null,
-        string? TenantId = null);
+        string EventName,
+        string? TenantId,
+        string Source);
 }

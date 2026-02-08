@@ -17,10 +17,10 @@ namespace Juice.EventBus.RabbitMQ.Consuming
 
         private readonly string _serviceKey;
 
-        internal RabbitMQConsumerBuilder(string connectionName, string queue, EventBusBuilder eventBus)
+        internal RabbitMQConsumerBuilder(string key, string connectionName, string queue, EventBusBuilder eventBus)
         {
             _endpoint = new() { Queue = queue, ConnectionName = connectionName };
-            _serviceKey = $"{connectionName}:{queue}";
+            _serviceKey = key;
             _services = eventBus.Services;
             _eventBus = eventBus;
             AddRequiredServices();
@@ -82,7 +82,7 @@ namespace Juice.EventBus.RabbitMQ.Consuming
             var engine = sp.GetRequiredService<RabbitMQConsumerEngine>();
             var logger = sp.GetRequiredService<ILogger<RabbitMQConsumerHostedService>>();
 
-            return new RabbitMQConsumerHostedService(engine, _endpoint, subsManager, logger);
+            return new RabbitMQConsumerHostedService(_serviceKey, engine, _endpoint, subsManager, logger);
         }
 
     }

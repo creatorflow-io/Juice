@@ -8,7 +8,7 @@ using RabbitMQ.Client.Exceptions;
 
 namespace Juice.EventBus.RabbitMQ.Publishing
 {
-    internal sealed class RabbitMQProducer : IEventPublisher, IAsyncDisposable
+    internal sealed class RabbitMQProducer : ITransportPublisher, IAsyncDisposable
     {
         public string Key { get; init; }
         private readonly IRabbitMQPersistentConnection _persistentConnection;
@@ -53,12 +53,9 @@ namespace Juice.EventBus.RabbitMQ.Publishing
 
         #region Publish outgoing event
 
-        public async ValueTask PublishAsync<T>(T @event, PublishContext? context = default,
+        public async ValueTask PublishAsync(byte[] payload, PublishContext context,
             CancellationToken cancellationToken = default)
-            where T : IIntegrationEvent
         {
-            ArgumentNullException.ThrowIfNull(@event);
-
             if (_disposedValue)
                 throw new ObjectDisposedException(nameof(RabbitMQProducer));
 
@@ -67,14 +64,8 @@ namespace Juice.EventBus.RabbitMQ.Publishing
                 throw new InvalidOperationException("RabbitMQ broker is not connected");
             }
 
-            // Validate tenant
-            var tenantId = context?.TenantId;
-            if (!string.IsNullOrEmpty(tenantId) && @event.TenantId != null
-                && !@event.TenantId.Equals(tenantId, StringComparison.OrdinalIgnoreCase))
-            {
-                throw new ArgumentException("TenantId is not match with event tenantId", nameof(tenantId));
-            }
-            tenantId ??= @event.TenantId;
+            var headers = context.Headers ?? new Dictionary<string, object?>();
+            var messageId = context.MessageId;
 
             var policy = Policy.Handle<BrokerUnreachableException>()
                 .Or<SocketException>()
@@ -85,13 +76,13 @@ namespace Juice.EventBus.RabbitMQ.Publishing
                     {
                         _logger.LogWarning(ex,
                             "Could not publish event: {EventId} after {Timeout}s ({ExceptionMessage})",
-                            @event.Id, $"{time.TotalSeconds:n1}", ex.Message);
+                            messageId, $"{time.TotalSeconds:n1}", ex.Message);
                     });
 
-            var eventName = @event.GetEventKey();
-
-            var body = JsonSerializer.SerializeToUtf8Bytes(@event, @event.GetType(),
-                new JsonSerializerOptions { WriteIndented = true });
+            var routingKey = headers.GetHeaderString("x-message-name")
+                ?? headers.GetHeaderString("x-message-type")
+                ?? throw new InvalidOperationException(
+                    "Missing required header 'x-message-name' or 'x-message-type' for routing key");
 
             await policy.Execute(async (ct) =>
             {
@@ -100,7 +91,8 @@ namespace Juice.EventBus.RabbitMQ.Publishing
 
                 IChannel? channel = null;
                 var exchange = context?.Destination ?? _defaultExchange;
-
+                headers["x-original-exchange"] = exchange;
+                headers["x-original-routing-key"] = routingKey;
                 try
                 {
                     channel = await _channelManager.RentAsync(exchange, ct);
@@ -108,29 +100,24 @@ namespace Juice.EventBus.RabbitMQ.Publishing
                     var properties = new BasicProperties
                     {
                         ContentType = "application/json",
-                        CorrelationId = @event.Id.ToString(),
-                        MessageId = Guid.NewGuid().ToString(),
+                        CorrelationId = headers.GetHeaderString("x-correlation-id"),
+                        MessageId = messageId,
                         Timestamp = new AmqpTimestamp(DateTimeOffset.UtcNow.ToUnixTimeSeconds()),
                         DeliveryMode = DeliveryModes.Persistent,
-                        Headers = new Dictionary<string, object?>()
-                        {
-                            { "x-tenant-id", tenantId ?? string.Empty },
-                            { "x-original-exchange", exchange },
-                            { "x-event-type", @event.GetType().FullName }
-                        }
+                        Headers = headers
                     };
 
                     if (_logger.IsEnabled(LogLevel.Debug))
                     {
                         _logger.LogDebug("Publishing event to {Exchange}: {EventId} {EventName}",
-                            exchange, @event.Id, eventName);
+                            exchange, messageId, routingKey);
                     }
                     await channel.BasicPublishAsync(
                         exchange: exchange,
-                        routingKey: eventName,
+                        routingKey: routingKey,
                         mandatory: true,
                         basicProperties: properties,
-                        body: body,
+                        body: payload,
                         cancellationToken: ct);
                 }
                 finally
@@ -139,6 +126,7 @@ namespace Juice.EventBus.RabbitMQ.Publishing
                 }
             }, cancellationToken);
         }
+
 
         #endregion
 
