@@ -81,7 +81,7 @@ namespace Juice.EF.Tests.Infrastructure
                 entity.IsMultiTenant(MultiTenant.SharingType.None);
             });
 
-            new OutboxEntityTypeConfiguration(Database.ProviderName, Schema).Configure(modelBuilder.Entity<OutboxEvent>());
+            new OutboxEntityTypeConfiguration(Schema).Configure(modelBuilder.Entity<OutboxEvent>());
             new OutboxDeliveryEntityTypeConfiguration(Schema).Configure(modelBuilder.Entity<OutboxDelivery>());
         }
     }
@@ -101,7 +101,7 @@ namespace Juice.EF.Tests.Infrastructure
 
                 entity.IsMultiTenant(MultiTenant.SharingType.Tenant);
             });
-            new OutboxEntityTypeConfiguration(Database.ProviderName, Schema).Configure(modelBuilder.Entity<OutboxEvent>());
+            new OutboxEntityTypeConfiguration(Schema).Configure(modelBuilder.Entity<OutboxEvent>());
             new OutboxDeliveryEntityTypeConfiguration(Schema).Configure(modelBuilder.Entity<OutboxDelivery>());
         }
     }
@@ -120,7 +120,7 @@ namespace Juice.EF.Tests.Infrastructure
                 entity.IsMultiTenant(MultiTenant.SharingType.Global);
             });
 
-            new OutboxEntityTypeConfiguration(Database.ProviderName, Schema).Configure(modelBuilder.Entity<OutboxEvent>());
+            new OutboxEntityTypeConfiguration(Schema).Configure(modelBuilder.Entity<OutboxEvent>());
             new OutboxDeliveryEntityTypeConfiguration(Schema).Configure(modelBuilder.Entity<OutboxDelivery>());
         }
     }
