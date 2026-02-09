@@ -34,8 +34,7 @@ namespace Juice.Messaging.Outbox.Migrations
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-            new OutboxEntityTypeConfiguration(_schema).Configure(modelBuilder.Entity<OutboxEvent>());
-            new OutboxDeliveryEntityTypeConfiguration(_schema).Configure(modelBuilder.Entity<OutboxDelivery>());
+            this.ConfigureOutbox(modelBuilder);
         }
     }
     public sealed class OutboxContext<T> : OutboxContext, IOutboxContext
