@@ -8,10 +8,8 @@ namespace Juice.Messaging.Outbox.EF
     public class OutboxEntityTypeConfiguration : IEntityTypeConfiguration<OutboxEvent>
     {
         private readonly string? schema;
-        private readonly string? providerName;
-        public OutboxEntityTypeConfiguration(string? provider, string? schema)
+        public OutboxEntityTypeConfiguration(string? schema)
         {
-            this.providerName = provider;
             this.schema = schema;
         }
         public void Configure(EntityTypeBuilder<OutboxEvent> builder)
@@ -56,15 +54,6 @@ namespace Juice.Messaging.Outbox.EF
                     .HasConversion(headerConverter)
                     .HasDefaultValue(new Dictionary<string, object?>());
 
-            if (providerName == "Npgsql.EntityFrameworkCore.PostgreSQL")
-            {
-                propertyBuilder.HasColumnType("text");
-            }
-            else if (providerName == "Microsoft.EntityFrameworkCore.SqlServer")
-            {
-                propertyBuilder
-                    .HasColumnType("nvarchar(max)");
-            }
         }
 
     }
