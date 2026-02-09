@@ -2,7 +2,7 @@
 
 namespace Juice.Domain.Events
 {
-    public record DataEvent : Message, INotification
+    public record DataEvent : MessageBase, INotification
     {
         public DataEvent(string name)
         {

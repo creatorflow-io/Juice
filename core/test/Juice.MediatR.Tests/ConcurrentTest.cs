@@ -68,7 +68,7 @@ namespace Juice.MediatR.Tests
             await Task.Delay(1000);
         }
 
-        private record NoticeA : Message, INotification
+        private record NoticeA : MessageBase, INotification
         {
         }
 
@@ -89,7 +89,7 @@ namespace Juice.MediatR.Tests
             }
         }
 
-        private record CmdB : Message, IRequest<int>
+        private record CmdB : MessageBase, IRequest<int>
         {
         }
         private class CmdBHandler : IRequestHandler<CmdB, int>

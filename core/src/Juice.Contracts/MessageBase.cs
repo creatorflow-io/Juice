@@ -1,6 +1,6 @@
 ﻿namespace Juice
 {
-    public abstract record Message : IMessage
+    public abstract record MessageBase : IMessage
     {
         public virtual Guid MessageId { get; init; } = Guid.NewGuid();
 
@@ -8,10 +8,10 @@
 
         public virtual string? TenantId { get; protected set; }
 
-        public Message()
+        public MessageBase()
         {
         }
-        public Message(Guid id)
+        public MessageBase(Guid id)
         {
             MessageId = id;
         }

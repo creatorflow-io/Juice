@@ -3,7 +3,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Juice.Integrations.Tests")]
 namespace Juice.EF.Tests.Domain.Events
 {
-    internal record ContentNameChangedEvent: Message, INotification
+    internal record ContentNameChangedEvent: MessageBase, INotification
     {
         public ContentNameChangedEvent(Content content, string originalName, string name)
         {

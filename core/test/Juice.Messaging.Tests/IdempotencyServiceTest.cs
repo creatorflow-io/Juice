@@ -619,7 +619,7 @@ local cursor = '0' repeat local res = redis.call('SCAN', cursor, 'MATCH', ARGV[1
 
         #region Test Helper Classes
 
-        private record TestRequest(Guid Id) : Message(Id), IMessage;
+        private record TestRequest(Guid Id) : MessageBase(Id), IMessage;
 
         private class ComplexTestResult
         {

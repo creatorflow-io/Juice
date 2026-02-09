@@ -388,7 +388,7 @@ namespace Juice.MediatR.Tests
 
         #region Test Request/Handler Definitions
 
-        private record Request(string IdempotencyKey) : Message, IRequest, IIdempotentRequest;
+        private record Request(string IdempotencyKey) : MessageBase, IRequest, IIdempotentRequest;
 
         private class RequestHandler : IRequestHandler<Request>
         {
@@ -404,7 +404,7 @@ namespace Juice.MediatR.Tests
             }
         }
 
-        private record RequestWithResult(string IdempotencyKey) : Message, IRequest<string>, IIdempotentRequest;
+        private record RequestWithResult(string IdempotencyKey) : MessageBase, IRequest<string>, IIdempotentRequest;
 
         private class RequestWithResultHandler : IRequestHandler<RequestWithResult, string>
         {
@@ -420,7 +420,7 @@ namespace Juice.MediatR.Tests
             }
         }
 
-        private record Operation(string IdempotencyKey) : Message, IRequest<IOperationResult>, IIdempotentRequest;
+        private record Operation(string IdempotencyKey) : MessageBase, IRequest<IOperationResult>, IIdempotentRequest;
 
         private class OperationHandler : IRequestHandler<Operation, IOperationResult>
         {
@@ -438,7 +438,7 @@ namespace Juice.MediatR.Tests
             }
         }
 
-        private record OperationWithResult(string IdempotencyKey) : Message, IRequest<IOperationResult<string>>, IIdempotentRequest;
+        private record OperationWithResult(string IdempotencyKey) : MessageBase, IRequest<IOperationResult<string>>, IIdempotentRequest;
 
         private class OperationWithResultHandler : IRequestHandler<OperationWithResult, IOperationResult<string>>
         {

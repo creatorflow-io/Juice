@@ -208,7 +208,7 @@ namespace Juice.MediatR.Tests
             }
         }
         #region Request
-        private record Request : Message, IRequest
+        private record Request : MessageBase, IRequest
         {
         }
         private class RequestHandler : IRequestHandler<Request>
@@ -257,7 +257,7 @@ namespace Juice.MediatR.Tests
         {
             public abstract string Response { get; set; }
         }
-        private record Cmd<TTask> : Message, IRequest<string>
+        private record Cmd<TTask> : MessageBase, IRequest<string>
             where TTask : MyTask, new()
         {
             public TTask Task { get; set; } = new TTask();
@@ -361,7 +361,7 @@ namespace Juice.MediatR.Tests
         }
         #endregion
         #region Notification
-        private record Notification : Message, INotification { }
+        private record Notification : MessageBase, INotification { }
         private class NotificationHandler(SharedService sharedService) : INotificationHandler<Notification>
         {
             public async ValueTask Handle(Notification notification, CancellationToken cancellationToken = default)
@@ -385,7 +385,7 @@ namespace Juice.MediatR.Tests
                 _shared.IncrementBehavior();
             }
         }
-        private record FireAndForgetNotification : Message, IFireAndForgetNotification
+        private record FireAndForgetNotification : MessageBase, IFireAndForgetNotification
         {
         }
         private class FireAndForgetNotificationHandler(SharedService sharedService) : INotificationHandler<FireAndForgetNotification>

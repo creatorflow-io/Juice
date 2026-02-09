@@ -3,7 +3,7 @@ using Juice.MediatR;
 
 namespace Juice.Integrations.Tests
 {
-    internal record CreateContent1Command: Message, IRequest<IOperationResult<Guid>>, IContentCommand
+    internal record CreateContent1Command: MessageBase, IRequest<IOperationResult<Guid>>, IContentCommand
     {
 
     }
