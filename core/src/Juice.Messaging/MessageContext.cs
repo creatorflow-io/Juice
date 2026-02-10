@@ -31,5 +31,12 @@ namespace Juice.Messaging
         {
             _current.Value = null;
         }
+
+        public static void InitializeTestContext()
+            => Initialize(
+                correlationId: Guid.NewGuid().ToString(),
+                causationId: null,
+                executionId: Guid.NewGuid().ToString(),
+                source: "test-source");
     }
 }

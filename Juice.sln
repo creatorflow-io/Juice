@@ -113,6 +113,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.Messaging.Idempotency
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.Messaging.Idempotency.EF.PostgreSQL", "core\src\Juice.Messaging.Idempotency.EF.PostgreSQL\Juice.Messaging.Idempotency.EF.PostgreSQL.csproj", "{2C470AC8-C80C-4EE7-B56B-892925C568BD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.Messaging.Idempotency.Caching", "core\src\Juice.Messaging.Idempotency.Caching\Juice.Messaging.Idempotency.Caching.csproj", "{0FB9F79F-9E84-222C-578F-7FD8D213D44B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -291,6 +293,10 @@ Global
 		{2C470AC8-C80C-4EE7-B56B-892925C568BD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2C470AC8-C80C-4EE7-B56B-892925C568BD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2C470AC8-C80C-4EE7-B56B-892925C568BD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0FB9F79F-9E84-222C-578F-7FD8D213D44B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0FB9F79F-9E84-222C-578F-7FD8D213D44B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0FB9F79F-9E84-222C-578F-7FD8D213D44B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0FB9F79F-9E84-222C-578F-7FD8D213D44B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -340,6 +346,7 @@ Global
 		{FF6B0279-0236-43D0-B452-2054AC130484} = {F0C1DDC9-295A-4DD8-AB19-3CE592CFA928}
 		{191110E3-9217-4F54-938B-1F3C5DAEF07A} = {9E4FFBBB-2E8E-4463-B502-260D502D43E1}
 		{2C470AC8-C80C-4EE7-B56B-892925C568BD} = {9E4FFBBB-2E8E-4463-B502-260D502D43E1}
+		{0FB9F79F-9E84-222C-578F-7FD8D213D44B} = {9E4FFBBB-2E8E-4463-B502-260D502D43E1}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DD654E02-538D-4E29-A098-413DEBAE4D98}

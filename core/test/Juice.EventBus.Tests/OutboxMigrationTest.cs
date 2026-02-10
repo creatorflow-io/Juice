@@ -1,18 +1,22 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Juice.EF.Tests.Infrastructure;
 using Juice.Extensions.DependencyInjection;
 using Juice.XUnit;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Juice.EventBus.Tests
 {
     public class OutboxMigrationTest
     {
+        private readonly ITestOutputHelper _output;
+        public OutboxMigrationTest(ITestOutputHelper output)
+        {
+            _output = output;
+        }
         [IgnoreOnCITheory]
         [InlineData("SqlServer")]
         [InlineData("PostgreSQL")]
@@ -20,6 +24,13 @@ namespace Juice.EventBus.Tests
         {
             var resolver = DependencyResolver.Create((services, configuration) =>
             {
+                services.AddLogging(builder =>
+                {
+                    builder.ClearProviders()
+                    .AddTestOutputLogger(_output)
+                    .AddConfiguration(configuration.GetSection("Logging"));
+                });
+
                 var connectionName = provider switch
                 {
                     "PostgreSQL" => "PostgreConnection",

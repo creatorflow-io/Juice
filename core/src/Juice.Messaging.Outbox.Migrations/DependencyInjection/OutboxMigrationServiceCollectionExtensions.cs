@@ -22,14 +22,14 @@ namespace Microsoft.Extensions.DependencyInjection
         public static async Task MigrateOutboxAsync<T>(this IHost host)
         {
             using var scope = host.Services.CreateScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<OutboxContext<T>>();
+            var dbContext = scope.ServiceProvider.GetRequiredKeyedService<OutboxContext>(typeof(T).Name);
             await dbContext.Database.MigrateAsync();
         }
 
         public static async Task MigrateOutboxAsync<T>(this IServiceProvider sp)
         {
             using var scope = sp.CreateScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<OutboxContext<T>>();
+            var dbContext = scope.ServiceProvider.GetRequiredKeyedService<OutboxContext>(typeof(T).Name);
             await dbContext.Database.MigrateAsync();
         }
     }
@@ -45,13 +45,13 @@ namespace Microsoft.Extensions.DependencyInjection
 
         internal void AddDbContext(IConfiguration configuration, Action<DbOptions>? configureOptions)
         {
-            _services.AddScoped(p =>
+            _services.AddKeyedScoped(typeof(T).Name, (p, key) =>
             {
-                var options = new DbOptions<OutboxContext<T>> { DatabaseProvider = "SqlServer" };
+                var options = new DbOptions<OutboxContext> { DatabaseProvider = "SqlServer" };
                 configureOptions?.Invoke(options);
                 return options;
             });
-            var dbOptions = _services.BuildServiceProvider().GetRequiredService<DbOptions<OutboxContext<T>>>();
+            var dbOptions = _services.BuildServiceProvider().GetRequiredKeyedService<DbOptions<OutboxContext>>(typeof(T).Name);
             var provider = dbOptions.DatabaseProvider;
             var schema = dbOptions.Schema;
             var connectionName = dbOptions.ConnectionName;
@@ -60,8 +60,9 @@ namespace Microsoft.Extensions.DependencyInjection
                 throw new ArgumentNullException(nameof(connectionName));
             }
 
-            _services.AddDbContext<OutboxContext<T>>(options =>
+            _services.AddKeyedScoped<OutboxContext>(typeof(T).Name, (sp, key) =>
             {
+                var options = new DbContextOptionsBuilder<OutboxContext>();
                 switch (provider)
                 {
                     case "PostgreSQL":
@@ -91,6 +92,8 @@ namespace Microsoft.Extensions.DependencyInjection
                 options
                     .ReplaceService<IMigrationsAssembly, DbSchemaAwareMigrationAssembly>()
                 ;
+
+                return new OutboxContext(options.Options, sp.GetRequiredKeyedService<DbOptions<OutboxContext>>(typeof(T).Name));
             });
         }
     }

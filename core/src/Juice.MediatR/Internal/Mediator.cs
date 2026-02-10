@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Reflection;
+using Juice.Measurement;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Juice.MediatR.Internal;
@@ -7,10 +8,12 @@ public sealed class Mediator : IMediator
 {
     // --- IMediator implementation ---
     private readonly IServiceProvider _provider;
+    private readonly ITimeTracker? _timeTracker = null;
     private readonly ConcurrentDictionary<Type, object> _cache = new();
     public Mediator(IServiceProvider provider)
     {
         _provider = provider;
+        _timeTracker = provider.GetService<ITimeTracker>();
     }
 
     #region Request

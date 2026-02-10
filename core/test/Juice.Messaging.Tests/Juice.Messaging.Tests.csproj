@@ -28,6 +28,7 @@
     </ItemGroup>
     <ItemGroup>
       <ProjectReference Include="..\..\..\test\Juice.XUnit\Juice.XUnit.csproj" />
+      <ProjectReference Include="..\..\src\Juice.Messaging.Idempotency.Caching\Juice.Messaging.Idempotency.Caching.csproj" />
       <ProjectReference Include="..\..\src\Juice.Messaging.Idempotency.EF.PostgreSQL\Juice.Messaging.Idempotency.EF.PostgreSQL.csproj" />
       <ProjectReference Include="..\..\src\Juice.Messaging.Idempotency.EF.SqlServer\Juice.Messaging.Idempotency.EF.SqlServer.csproj" />
       <ProjectReference Include="..\..\src\Juice.Messaging.Idempotency.EF\Juice.Messaging.Idempotency.EF.csproj" />

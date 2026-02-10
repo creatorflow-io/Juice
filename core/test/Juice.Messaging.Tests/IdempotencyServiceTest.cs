@@ -30,21 +30,30 @@ namespace Juice.Messaging.Tests
             var resolver = DependencyResolver.Create((services, configuration) =>
             {
                 var builder = services.AddMessaging();
-                if (provider == "Redis")
+                switch (provider)
                 {
-                    builder.AddIdempotencyRedis(options =>
-                    {
-                        options.ConnectionString = configuration.GetConnectionString("RedisSentinel");
-                    });
-                }
-                else
-                {
-                    builder.AddIdempotencyEF(configuration, options =>
-                    {
-                        options.DatabaseProvider = provider;
-                        options.ConnectionName = provider == "SqlServer" ? "SqlServerConnection" : "PostgreConnection";
-                        options.Schema = "App";
-                    });
+                    case "Redis":
+                        builder.AddIdempotencyRedis(options =>
+                        {
+                            options.ConnectionString = configuration.GetConnectionString("RedisSentinel");
+                        });
+                        break;
+                    case "SqlServer":
+                    case "PostgreSQL":
+                        builder.AddIdempotencyEF(configuration, options =>
+                        {
+                            options.DatabaseProvider = provider;
+                            options.ConnectionName = provider == "SqlServer" ? "SqlServerConnection" : "PostgreConnection";
+                            options.Schema = "App";
+                        });
+                        break;
+                    case "DistributedCache":
+                        builder.AddIdempotencyDistributedCache();
+                        services.AddDistributedMemoryCache();
+                        break;
+                    default:
+                        builder.AddIdempotencyInMemory();
+                        break;
                 }
 
                 services.AddLogging(builder =>
@@ -259,6 +268,8 @@ local cursor = '0' repeat local res = redis.call('SCAN', cursor, 'MATCH', ARGV[1
         [InlineData("Redis")]
         [InlineData("SqlServer")]
         [InlineData("PostgreSQL")]
+        [InlineData("InMemory")]
+        [InlineData("DistributedCache")]
         public async Task Should_Complete_Request_Successfully_Without_ResultAsync(string provider)
         {
             // Arrange
@@ -289,6 +300,8 @@ local cursor = '0' repeat local res = redis.call('SCAN', cursor, 'MATCH', ARGV[1
         [InlineData("Redis")]
         [InlineData("SqlServer")]
         [InlineData("PostgreSQL")]
+        [InlineData("InMemory")]
+        [InlineData("DistributedCache")]
         public async Task Should_Complete_Request_And_Cache_ResultAsync(string provider)
         {
             // Arrange
@@ -322,6 +335,8 @@ local cursor = '0' repeat local res = redis.call('SCAN', cursor, 'MATCH', ARGV[1
         [InlineData("Redis")]
         [InlineData("SqlServer")]
         [InlineData("PostgreSQL")]
+        [InlineData("InMemory")]
+        [InlineData("DistributedCache")]
         public async Task Should_Handle_Failed_Request_CompletionAsync(string provider)
         {
             // Arrange
@@ -356,6 +371,8 @@ local cursor = '0' repeat local res = redis.call('SCAN', cursor, 'MATCH', ARGV[1
         [InlineData("Redis")]
         [InlineData("SqlServer")]
         [InlineData("PostgreSQL")]
+        [InlineData("InMemory")]
+        [InlineData("DistributedCache")]
         public async Task Should_Retrieve_Cached_String_ResultAsync(string provider)
         {
             // Arrange
@@ -390,6 +407,8 @@ local cursor = '0' repeat local res = redis.call('SCAN', cursor, 'MATCH', ARGV[1
         [InlineData("Redis")]
         [InlineData("SqlServer")]
         [InlineData("PostgreSQL")]
+        [InlineData("InMemory")]
+        [InlineData("DistributedCache")]
         public async Task Should_Retrieve_Cached_IOperationResultAsync(string provider)
         {
             // Arrange
@@ -426,6 +445,8 @@ local cursor = '0' repeat local res = redis.call('SCAN', cursor, 'MATCH', ARGV[1
         [InlineData("Redis")]
         [InlineData("SqlServer")]
         [InlineData("PostgreSQL")]
+        [InlineData("InMemory")]
+        [InlineData("DistributedCache")]
         public async Task Should_Handle_Complex_Object_CachingAsync(string provider)
         {
             // Arrange
@@ -544,6 +565,8 @@ local cursor = '0' repeat local res = redis.call('SCAN', cursor, 'MATCH', ARGV[1
         [InlineData("Redis")]
         [InlineData("SqlServer")]
         [InlineData("PostgreSQL")]
+        [InlineData("InMemory")]
+        [InlineData("DistributedCache")]
         public async Task Should_Handle_Serialization_ErrorsAsync(string provider)
         {
             // Arrange

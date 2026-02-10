@@ -12,7 +12,7 @@ namespace Juice.Messaging.Outbox.Migrations
     /// <summary>
     /// Default Outbox DbContext implementation.
     /// </summary>
-    public class OutboxContext : DbContext, ISchemaDbContext, IOutboxContext
+    public sealed class OutboxContext : DbContext, ISchemaDbContext, IOutboxContext
     {
         private string? _schema;
         public DbSet<OutboxEvent> Outbox { get; set; }
@@ -26,22 +26,10 @@ namespace Juice.Messaging.Outbox.Migrations
             this._schema = dbOptions.Schema;
         }
 
-        protected OutboxContext(DbContextOptions options, DbOptions dbOptions) : base(options)
-        {
-            this._schema = dbOptions.Schema;
-        }
-
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
             this.ConfigureOutbox(modelBuilder);
-        }
-    }
-    public sealed class OutboxContext<T> : OutboxContext, IOutboxContext
-    {
-        public OutboxContext(DbContextOptions<OutboxContext<T>> options,
-            DbOptions<OutboxContext<T>> dbOptions) : base(options, dbOptions)
-        {
         }
     }
 

@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Juice.Contracts\Juice.Contracts.csproj" />
+    <ProjectReference Include="..\Juice.Measurement\Juice.Measurement.csproj" />
     <ProjectReference Include="..\Juice.MediatR.Contracts\Juice.MediatR.Contracts.csproj" />
   </ItemGroup>
 </Project>
