@@ -1,4 +1,5 @@
-﻿using Juice.Measurement;
+﻿using System.Text;
+using Juice.Measurement;
 using Juice.Messaging.Policies;
 using Juice.MultiTenant;
 using Microsoft.Extensions.Logging;
@@ -63,6 +64,13 @@ namespace Juice.Messaging.Outbox.Internal
                 if (routes.Count == 0)
                 {
                     continue;
+                }
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogDebug("----- Saving event {EventType}. Payload: {Payload}. PayloadBytes: {PlayloadBytes}",
+                        message.GetType().Name, _serializer.Serialize(message),
+                        Encoding.UTF8.GetString(_serializer.SerializeToUtf8Bytes(message))
+                        );
                 }
                 var ctx = MessageContext.Current;
                 events.Add(new OutboxEvent

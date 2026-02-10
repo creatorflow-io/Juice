@@ -1,6 +1,7 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
+using System.Text;
 using Juice.EventBus.Publishing;
-using Juice.Messaging.Outbox.Delivery.Registry;
 using Microsoft.Extensions.Logging;
 
 namespace Juice.Messaging.Outbox.Delivery.Processing
@@ -101,8 +102,8 @@ namespace Juice.Messaging.Outbox.Delivery.Processing
             if (_logger.IsEnabled(LogLevel.Debug))
             {
                 _logger.LogDebug(
-                    "Publishing outbox event {@log}",
-                    headers);
+                    "Publishing outbox event {@log}. Payload: {Payload}",
+                    headers, Encoding.UTF8.GetString(delivery.OutboxEvent.PayloadBytes));
             }
             var context = new PublishContext(delivery.OutboxEvent.EventId.ToString())
             {

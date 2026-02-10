@@ -102,6 +102,7 @@ namespace Juice.EventBus.RabbitMQ.Consuming
                 {
                     _logger.LogDebug("[{Queue}] Received event: {EventName} from {Broker}", _queueName, routingKey, eventArgs.Exchange);
                 }
+
                 if (message.ToLowerInvariant().Contains("throw-fake-exception"))
                 {
                     throw new InvalidOperationException($"Fake exception requested: \"{message}\"");
@@ -259,6 +260,10 @@ namespace Juice.EventBus.RabbitMQ.Consuming
             {
                 _logger.LogWarning("Failed to deserialize message to {eventType}", eventType.Name);
                 return EventDispatchResult.NotHandled;
+            }
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("Processing RabbitMQ event: {EventName}, EventId: {EventId}. Message: {Message}, Data: {Data}", routingKey, integrationEvent.MessageId, message, integrationEvent);
             }
 
             var correlationId = headers.GetHeaderString("x-correlation-id")

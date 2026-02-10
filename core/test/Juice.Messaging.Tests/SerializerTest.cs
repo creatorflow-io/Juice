@@ -1,6 +1,10 @@
-﻿using FluentAssertions;
+﻿using System;
+using System.Text;
+using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Xunit.Abstractions;
 
 namespace Juice.Messaging.Tests
@@ -144,6 +148,51 @@ namespace Juice.Messaging.Tests
 
         #region Interface Type Tests
 
+        [Fact(DisplayName = "Should serialize and deserialize bytes")]
+        public void Should_Serialize_And_Deserialize_Bytes()
+        {
+            // Arrange
+            IMessage original = new TestData
+            {
+                Id = Guid.NewGuid(),
+                Name = "Interface Test",
+                Value = 200,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            // Act
+            byte[] SerializeToUtf8Bytes(object? value)
+            {
+                return System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(value);
+            }
+            var serialized = SerializeToUtf8Bytes(original);
+            _testOutput.WriteLine("System.Text.Json JSON: {0}", Encoding.UTF8.GetString(serialized));
+            
+            var serialized1 = _serializer.SerializeToUtf8Bytes(original);
+            _testOutput.WriteLine("System.Text.Json JSON: {0}", Encoding.UTF8.GetString(serialized1));
+
+            var deserialized = _serializer.DeserializeFromUtf8Bytes<IMessage>(serialized, typeof(TestData));
+            
+            // Assert
+            deserialized.Should().NotBeNull();
+            deserialized!.MessageId.Should().Be(original.MessageId);
+            _testOutput.WriteLine("Deserialized: {0}", JsonConvert.SerializeObject(deserialized));
+
+            var deserialized1 = _serializer.DeserializeFromUtf8Bytes<IMessage>(serialized1);
+            _testOutput.WriteLine("Deserialized1: {0}", JsonConvert.SerializeObject(deserialized1));
+
+            var json = Encoding.UTF8.GetString(serialized);
+            _testOutput.WriteLine("JSON: {0}", json);
+            var deserialized2 = _serializer.Deserialize<IMessage>(json, typeof(TestData));
+            _testOutput.WriteLine("Deserialized2: {0}", JsonConvert.SerializeObject(deserialized2));
+
+            Assert.Throws<JsonSerializationException>(() =>
+            {
+                var deserializedFail = _serializer.Deserialize<IMessage>(json);
+            });
+
+        }
+
         [Fact(DisplayName = "Should serialize and deserialize IOperationResult")]
         public void Should_Serialize_And_Deserialize_IOperationResult()
         {
@@ -225,6 +274,7 @@ namespace Juice.Messaging.Tests
             deserialized.Data!.Id.Should().Be(testData.Id);
             deserialized.Data.Name.Should().Be(testData.Name);
             deserialized.Data.Value.Should().Be(testData.Value);
+            deserialized.Message.Should().Be("Complex operation succeeded");
         }
 
         [Fact(DisplayName = "Should handle $type metadata for interfaces")]
@@ -362,44 +412,29 @@ namespace Juice.Messaging.Tests
 
         #region Error Handling Tests
 
-        [Fact(DisplayName = "Should return default when deserializing invalid JSON")]
+        [Fact(DisplayName = "Should throw when deserializing invalid JSON")]
         public void Should_Return_Default_When_Deserializing_Invalid_Json()
         {
             // Arrange
             var invalidJson = "{ invalid json }";
 
             // Act
-            var deserialized = _serializer.Deserialize<TestData>(invalidJson);
+            Assert.Throws<JsonReaderException>(() =>
+            {
+                var deserialized = _serializer.Deserialize<TestData>(invalidJson);
+            });
 
-            // Assert
-            deserialized.Should().BeNull();
-        }
-
-        [Fact(DisplayName = "Should handle interface without $type gracefully")]
-        public void Should_Handle_Interface_Without_Type_Gracefully()
-        {
-            // Arrange - JSON without $type property
-            var jsonWithoutType = "{\"Succeeded\":true,\"Message\":\"Test\"}";
-
-            // Act
-            var deserialized = _serializer.Deserialize<IOperationResult>(jsonWithoutType);
-
-            // Assert
-            // Should either deserialize successfully or return null
-            // depending on whether a concrete implementation can be found
-            _testOutput.WriteLine($"Deserialized: {deserialized?.GetType().Name ?? "null"}");
         }
 
         #endregion
 
         #region Test Helper Classes
 
-        public class TestData
+        public record TestData: MessageBase, IMessage
         {
             public Guid Id { get; set; }
-            public string Name { get; set; } = string.Empty;
+            public string? Name { get; set; }
             public int Value { get; set; }
-            public DateTime CreatedAt { get; set; }
         }
 
         public class NestedTestData

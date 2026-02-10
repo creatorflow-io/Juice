@@ -71,7 +71,7 @@ namespace Juice.EventBus.Dispatching
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "{handler} failed to handle event: {EventName}, eventId: {eventId}", handler.GetType().Name, eventName, eventId);
+                        _logger.LogError(ex, "{handler} failed to handle event: {EventName}, eventId: {eventId}. {Message}", handler.GetType().Name, eventName, eventId, ex.Message);
                         if (_logger.IsEnabled(LogLevel.Trace))
                         {
                             _logger.LogTrace(ex, "Event: {EventName}, eventId: {eventId} exception stack trace: {StackTrace}", eventName, eventId, ex.StackTrace);

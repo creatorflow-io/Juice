@@ -9,6 +9,8 @@ namespace Juice.Messaging.Internal
     internal class MessageSerializer : IMessageSerializer
     {
         private readonly ILogger _logger;
+        private readonly IEnumerable<string> _allowedTypes = [];
+        private readonly IEnumerable<string> _allowedAssemblies = ["Juice", "Juice."];
         public MessageSerializer(ILogger<MessageSerializer> logger)
         {
             _logger = logger;
@@ -59,10 +61,10 @@ namespace Juice.Messaging.Internal
             catch (Exception ex)
             {
                 _logger.LogError(ex,
-                    "Failed to deserialize json for type {TypeName}. JSON: {Json}",
+                    "Failed to deserialize json for type {TypeName}. JSON: {Json}. {Message}",
                     typeof(T).Name,
-                    payload);
-                return default;
+                    payload, ex.Message);
+                throw;
             }
         }
 
@@ -83,39 +85,23 @@ namespace Juice.Messaging.Internal
             return JsonConvert.SerializeObject(value, settings);
         }
 
-        public byte[] SerializeToUtf8Bytes<T>(T? value)
-        {
-            return System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(value, typeof(T),
-                new System.Text.Json.JsonSerializerOptions
-                {
-                    WriteIndented = true
-                });
-        }
+        public byte[] SerializeToUtf8Bytes(object? value)
+            => System.Text.Encoding.UTF8.GetBytes(Serialize(value));
 
         private TResponse? DeserializeInterface<TResponse>(string json)
         {
-            try
+            var settings = new JsonSerializerSettings
             {
-                var settings = new JsonSerializerSettings
-                {
-                    // match serialization so $type metadata is honored for concrete types
-                    TypeNameHandling = TypeNameHandling.All,
-                    TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Simple,
-                    MetadataPropertyHandling = MetadataPropertyHandling.ReadAhead,
-                    SerializationBinder = new KnownTypesBinder(),
-                    Converters = [new InterfaceConverter<TResponse>()]
-                };
+                // match serialization so $type metadata is honored for concrete types
+                TypeNameHandling = TypeNameHandling.All,
+                TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Simple,
+                MetadataPropertyHandling = MetadataPropertyHandling.ReadAhead,
+                SerializationBinder = new KnownTypesBinder(_allowedTypes, _allowedAssemblies),
+                Converters = [new InterfaceConverter<TResponse>()]
+            };
 
-                return JsonConvert.DeserializeObject<TResponse>(json, settings);
-            }
-            catch (JsonException ex)
-            {
-                _logger.LogError(ex,
-                    "Failed to deserialize json for type {TypeName}. JSON: {Json}",
-                    typeof(TResponse).Name,
-                    json);
-                return default;
-            }
+            return JsonConvert.DeserializeObject<TResponse>(json, settings);
+
         }
 
         /// <summary>
@@ -151,13 +137,6 @@ namespace Juice.Messaging.Internal
                     }
                 }
 
-                // Fallback: try to find a concrete implementation
-                var concreteType = FindConcreteType(objectType);
-                if (concreteType != null)
-                {
-                    return jObject.ToObject(concreteType, serializer);
-                }
-
                 throw new JsonSerializationException(
                     $"Unable to deserialize interface type {objectType.Name}. " +
                     $"No $type property found and no concrete implementation could be determined.");
@@ -168,37 +147,6 @@ namespace Juice.Messaging.Internal
                 // Use default serialization
                 serializer.Serialize(writer, value);
             }
-
-            private Type? FindConcreteType(Type interfaceType)
-            {
-                // Search in loaded assemblies for concrete implementations
-                var assemblies = AppDomain.CurrentDomain.GetAssemblies()
-                    .Where(a => !a.IsDynamic && !a.ReflectionOnly);
-
-                foreach (var assembly in assemblies)
-                {
-                    try
-                    {
-                        var concreteTypes = assembly.GetTypes()
-                            .Where(t => !t.IsInterface
-                                     && !t.IsAbstract
-                                     && interfaceType.IsAssignableFrom(t))
-                            .ToList();
-
-                        if (concreteTypes.Count == 1)
-                        {
-                            return concreteTypes[0];
-                        }
-                    }
-                    catch (ReflectionTypeLoadException)
-                    {
-                        // Skip assemblies that can't be loaded
-                        continue;
-                    }
-                }
-
-                return null;
-            }
         }
 
         /// <summary>
@@ -206,22 +154,23 @@ namespace Juice.Messaging.Internal
         /// </summary>
         private class KnownTypesBinder : ISerializationBinder
         {
-            private readonly HashSet<string> _allowedTypes;
+            private readonly HashSet<string> _allowedTypes = [];
+            private readonly HashSet<string> _allowedAssemblies = [];
 
-            public KnownTypesBinder(IEnumerable<string>? allowedTypes = null)
+            public KnownTypesBinder(IEnumerable<string>? allowedTypes, IEnumerable<string>? allowedAssemblies)
             {
-                _allowedTypes = new HashSet<string>
-                {
-                    typeof(IOperationResult).FullName!,
-                    "Juice.Services.IOperationResult",
-                    "Juice.Services.OperationResult"
-                };
-
                 if (allowedTypes != null)
                 {
                     foreach (var type in allowedTypes)
                     {
                         _allowedTypes.Add(type);
+                    }
+                }
+                if (allowedAssemblies != null)
+                {
+                    foreach (var asm in allowedAssemblies)
+                    {
+                        _allowedAssemblies.Add(asm);
                     }
                 }
             }
@@ -273,8 +222,7 @@ namespace Juice.Messaging.Internal
                 if (!string.IsNullOrEmpty(assemblyName))
                 {
                     // include the main Juice assembly name so internal concrete types can be resolved
-                    var trustedAssemblies = new[] { "Juice.Services", "Juice.MediatR", "Juice" };
-                    if (trustedAssemblies.Any(asm => assemblyName.StartsWith(asm)))
+                    if (_allowedAssemblies.Any(asm => asm == assemblyName || (asm.EndsWith(".") && assemblyName.StartsWith(asm))))
                     {
                         return true;
                     }

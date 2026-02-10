@@ -138,6 +138,8 @@ namespace Juice.Integrations.Tests
             await Waiter.WaitAsync(() => sharedService.Handlers.Count > 0, TimeSpan.FromSeconds(10), CancellationToken.None);
             sharedService.Handlers.Should().Contain(nameof(ContentPublishedIntegrationEventHandler));
 
+            await Task.Delay(200);
+
         }
 
         [IgnoreOnCIFact(DisplayName = "Transaction behavior + repository"), TestPriority(10)]
