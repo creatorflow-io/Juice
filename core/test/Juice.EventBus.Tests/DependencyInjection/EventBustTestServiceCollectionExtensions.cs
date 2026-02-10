@@ -3,7 +3,6 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Juice.EF.Tests.Events;
 using Juice.Messaging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
@@ -23,10 +22,6 @@ namespace Microsoft.Extensions.DependencyInjection
                 .AddDelivery(delivery =>
                 {
                     delivery.AddDeliveryPolicies(configuration.GetSection("Juice:EventBus:DeliveryPolicies"));
-                    delivery.ConfigureEventTypeRegistry(cfg =>
-                    {
-                        cfg.RegisterEventsFromAssembly(typeof(ContentPublishedIntegrationEvent).Assembly);
-                    });
                     delivery.EventBus.AddRabbitMQ(cfg =>
                     {
                         cfg

@@ -8,8 +8,6 @@ namespace Juice.Messaging.Outbox.Delivery.Processing
     internal sealed class DeliveryProcessor<TContext>
     {
         private readonly IOutboxRepository _outbox;
-        private readonly IEventTypeRegistry _typeRegistry;
-        private readonly IMessageSerializer _serializer;
         private readonly ILogger _logger;
 
         private ITransportPublisher _publisher = default!;
@@ -17,13 +15,9 @@ namespace Juice.Messaging.Outbox.Delivery.Processing
 
         public DeliveryProcessor(
             IOutboxRepository<TContext> outboxRepository,
-            IEventTypeRegistry typeRegistry,
-            IMessageSerializer serializer,
             ILogger<DeliveryProcessor<TContext>> logger)
         {
             _outbox = outboxRepository;
-            _typeRegistry = typeRegistry;
-            _serializer = serializer;
             _logger = logger;
         }
 
@@ -108,14 +102,7 @@ namespace Juice.Messaging.Outbox.Delivery.Processing
             {
                 _logger.LogDebug(
                     "Publishing outbox event {@log}",
-                    new
-                    {
-                        correlationId = headers["x-correlation-id"],
-                        causationId = headers["x-causation-id"],
-                        messageId = headers["x-message-id"],
-                        messageName = headers["x-message-name"],
-                        source = headers["x-source"]
-                    });
+                    headers);
             }
             var context = new PublishContext(delivery.OutboxEvent.EventId.ToString())
             {

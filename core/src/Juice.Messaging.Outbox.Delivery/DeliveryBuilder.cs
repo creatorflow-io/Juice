@@ -65,13 +65,13 @@ namespace Juice.Messaging.Outbox.Delivery
         /// </summary>
         /// <param name="configure"></param>
         /// <returns></returns>
-        public DeliveryBuilder ConfigureEventTypeRegistry(Action<EventTypeRegistryBuilder> configure)
-        {
-            var registryBuilder = new EventTypeRegistryBuilder();
-            configure(registryBuilder);
-            _registeredTypes.UnionWith(registryBuilder.EventTypes);
-            return this;
-        }
+        //public DeliveryBuilder ConfigureEventTypeRegistry(Action<EventTypeRegistryBuilder> configure)
+        //{
+        //    var registryBuilder = new EventTypeRegistryBuilder();
+        //    configure(registryBuilder);
+        //    _registeredTypes.UnionWith(registryBuilder.EventTypes);
+        //    return this;
+        //}
 
 
         /// <summary>

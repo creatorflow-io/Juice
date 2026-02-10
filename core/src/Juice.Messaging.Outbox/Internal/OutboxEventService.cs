@@ -75,6 +75,7 @@ namespace Juice.Messaging.Outbox.Internal
                                     {
                                         { "x-correlation-id", ctx.CorrelationId},
                                         { "x-causation-id", ctx.ExecutionId },
+                                        { "x-source", ctx.Source},
                                         { "x-tenant-id", _tenantAccessor?.Tenant?.Id },
                                         { "x-message-type", message.GetType().Name },
                                         { "x-message-id", message.MessageId},
