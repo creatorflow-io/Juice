@@ -1,6 +1,6 @@
-﻿namespace Juice.EventBus.RabbitMQ.Policies
+﻿namespace Juice.EventBus.Policies
 {
-    internal interface IRetryPolicyProvider
+    public interface IRetryPolicyProvider<TPolicy>
     {
         /// <summary>
         /// Retrieves the appropriate retry policy for a given source and number of attempts.
@@ -8,6 +8,6 @@
         /// <param name="source"></param>
         /// <param name="attempts"></param>
         /// <returns></returns>
-        ValueTask<RetryPolicy?> GetRetryPolicyForSourceAsync(string? source, int attempts);
+        ValueTask<TPolicy?> GetRetryPolicyForSourceAsync(string? source, int attempts);
     }
 }

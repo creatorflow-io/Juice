@@ -1,4 +1,5 @@
-﻿using Juice.EventBus.RabbitMQ;
+﻿using Juice.EventBus.Policies;
+using Juice.EventBus.RabbitMQ;
 using Juice.EventBus.RabbitMQ.Consuming;
 using Juice.EventBus.RabbitMQ.Infrastructure;
 using Juice.EventBus.RabbitMQ.Policies;
@@ -84,13 +85,6 @@ namespace Microsoft.Extensions.DependencyInjection
             return this;
         }
 
-        public RabbitMQEventBusBuilder AddRetryPolicies(IConfigurationSection policies)
-        {
-            _services.Configure<RetryPolicyOptions>(policies);
-            _services.TryAddSingleton<IRetryPolicyProvider, DefaultRetryPolicyProvider>();
-            return this;
-        }
-
         /// <summary>
         /// Add a RabbitMQ event consumer
         /// </summary>
@@ -104,6 +98,8 @@ namespace Microsoft.Extensions.DependencyInjection
              string queueName, string connectionName,
             Action<RabbitMQConsumerBuilder>? configure = default)
         {
+            _services.TryAddSingleton<IRetryPolicyProvider<RetryPolicy>, RetryPolicyProvider>();
+
             if (!_registeredQueues.Add($"{connectionName}:{queueName}"))
             {
                 throw new InvalidOperationException($"A consumer for the queue '{queueName}' and connection '{connectionName}' has already been registered.");

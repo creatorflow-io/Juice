@@ -38,18 +38,6 @@ namespace Juice.EventBus.RabbitMQ.Consuming
             return this;
         }
 
-        public RabbitMQConsumerBuilder WithDeadLetterExchange(string exchange, string? routingKey = null, string? routingPattern = "{0}.parking")
-        {
-            _endpoint.DeadLetter = new DeadLetterConfig
-            {
-                Enabled = true,
-                Exchange = exchange,
-                RoutingKey = routingKey,
-                RoutingPattern = routingPattern
-            };
-            return this;
-        }
-
         /// <summary>
         /// Subscribe to an integration event with a specific handler for this consumer.
         /// </summary>

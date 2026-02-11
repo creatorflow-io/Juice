@@ -9,8 +9,10 @@
         public string Queue { get; init; } = default!;
         public ushort QosPrefetchCount { get; private set; } = 10;
 
-        public DeadLetterConfig? DeadLetter { get; set; }
-
+        /// <summary>
+        /// Dead letter routing configuration
+        /// </summary>
+        public string? DLRoutingPattern { get; set; }
         public void SetQosPrefetchCount(ushort prefetchCount)
         {
             if (prefetchCount <= 0)
@@ -19,41 +21,13 @@
             }
             QosPrefetchCount = prefetchCount;
         }
-    }
-
-    public class DeadLetterConfig
-    {
-        /// <summary>
-        /// Dead letter exchange name
-        /// </summary>
-        public string Exchange { get; set; } = string.Empty;
-
-        /// <summary>
-        /// Dead letter routing key
-        /// </summary>
-        public string? RoutingKey { get; set; }
-
-        /// <summary>
-        /// Dead letter routing pattern
-        /// </summary>
-        public string? RoutingPattern { get; set; }
-
-        /// <summary>
-        /// Whether to send to DLQ after max retries
-        /// </summary>
-        public bool Enabled { get; set; } = true;
-
-        public string GetRoutingKey(string originalRoutingKey)
+        public void SetDLRoutingPattern(string pattern)
         {
-            if (!string.IsNullOrWhiteSpace(RoutingKey))
+            if (string.IsNullOrWhiteSpace(pattern))
             {
-                return RoutingKey;
+                throw new ArgumentException("DL routing pattern cannot be null or whitespace.", nameof(pattern));
             }
-            if (!string.IsNullOrWhiteSpace(RoutingPattern))
-            {
-                return string.Format(RoutingPattern, originalRoutingKey);
-            }
-            return originalRoutingKey;
+            DLRoutingPattern = pattern;
         }
     }
 }

@@ -57,5 +57,6 @@ namespace Juice.EventBus.RabbitMQ.Policies
         public string Exchange { get; init; } = default!;
         public string RoutingKey { get; init; } = default!;
         public bool IsMaxRetryReached { get; init; }
+        public bool IsParkingEnabled { get; init; }
     }
 }

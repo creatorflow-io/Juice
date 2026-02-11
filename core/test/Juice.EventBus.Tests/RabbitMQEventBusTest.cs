@@ -235,10 +235,10 @@ namespace Juice.EventBus.Tests
 
                 services.AddEventBus()
                     .AddPublishingServices()
+                    .AddConsumerRetryPolicies(configuration.GetSection("Juice:EventBus:ConsumerRetryPolicies"))
                     .AddRabbitMQ(cfg =>
                     {
                         cfg
-                        .AddRetryPolicies(configuration.GetSection("Juice:EventBus:RabbitMQ:RetryPolicies"))
                         .AddConsumer("rabbitmq.x.unit.integration.3", "juice_eventbus_xunit_3", "rabbitmq", qcfg =>
                         {
                             qcfg.Subscribe<LogEvent, LogEventFailureHandler>("kernel.*");
@@ -293,12 +293,20 @@ namespace Juice.EventBus.Tests
                 services.AddTestMessaging(configuration);
                 services.AddEventBus()
                     .AddPublishingServices()
+                    .AddConsumerRetryPolicies(retry =>
+                    {
+                        retry.AddPolicy(new ()
+                        {
+                            DeadLetterDest = "x.logs.retry",
+                            IsParkingEnabled = true,
+                            MaxRetryAttempts = 0
+                        });
+                    })
                     .AddRabbitMQ(cfg =>
                     {
                         cfg.AddConsumer("rabbitmq.x.unit.integration.4", "juice_eventbus_xunit_4", "rabbitmq", qcfg =>
                         {
                             qcfg.Subscribe<LogEvent, LogEventFailureHandler>("kernel.*");
-                            qcfg.WithDeadLetterExchange("x.logs.retry");
                         });
                     });
                 services.AddSingleton<HandledService>();

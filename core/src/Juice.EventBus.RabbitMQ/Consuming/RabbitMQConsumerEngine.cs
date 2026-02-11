@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using Juice.EventBus.Dispatching;
+using Juice.EventBus.Policies;
 using Juice.EventBus.RabbitMQ.Policies;
 using Juice.EventBus.Subscriptions;
 using Juice.Messaging;
@@ -22,19 +23,19 @@ namespace Juice.EventBus.RabbitMQ.Consuming
 
         private ISubscriptionsManager _subscriptionsManager = default!;
         private readonly IntegrationEventDispatcher _dispatcher;
-        private readonly IRetryPolicyProvider? _retryPolicyProvider;
+        private readonly IRetryPolicyProvider<RetryPolicy>? _retryPolicyProvider;
         private readonly IMessageSerializer _eventSerializer;
         private readonly ILogger _logger;
         private readonly IServiceProvider _keyedService;
-        private DeadLetterConfig? _deadLetterConfig;
         private string _serviceKey = default!;
+        private string _dlRoutingPattern = "{0}.parking";
 
         public RabbitMQConsumerEngine(
             IServiceProvider keyedService,
             IntegrationEventDispatcher dispatcher,
             IMessageSerializer eventSerializer,
             ILogger<RabbitMQConsumerEngine> logger,
-            IRetryPolicyProvider? retryPolicyProvider = default
+            IRetryPolicyProvider<RetryPolicy>? retryPolicyProvider = default
             )
         {
             _retryPolicyProvider = retryPolicyProvider;
@@ -55,11 +56,11 @@ namespace Juice.EventBus.RabbitMQ.Consuming
                 ?? throw new InvalidOperationException($"RabbitMQ connection with name '{endpoint.ConnectionName}' is not registered.");
             _queueName = endpoint.Queue;
 
+            _dlRoutingPattern = endpoint.DLRoutingPattern ?? _dlRoutingPattern;
+
             _subscriptionsManager = subscriptionsManager;
 
             _qosPrefetchCount = endpoint.QosPrefetchCount;
-
-            _deadLetterConfig = endpoint.DeadLetter;
 
             _consumerChannel = await CreateConsumerChannelAsync(cancellationToken);
             if (_consumerChannel == null)
@@ -128,15 +129,6 @@ namespace Juice.EventBus.RabbitMQ.Consuming
                     {
                         _logger.LogDebug("No handler processed RabbitMQ event: {EventName}", routingKey);
                     }
-                    if (_deadLetterConfig?.Enabled == true)
-                    {
-                        await SendToDeadLetterQueueAsync(eventArgs, "NoHandlerFoundOrProcessingFailed");
-                    }
-                    else
-                    {
-                        await _consumerChannel.BasicNackAsync(eventArgs.DeliveryTag, multiple: false, requeue: false);
-                    }
-                    return;
                 }
                 #region Retry processing
                 var originalExchange = headers.GetHeaderString("x-original-exchange") ?? eventArgs.Exchange;
@@ -144,29 +136,25 @@ namespace Juice.EventBus.RabbitMQ.Consuming
 
                 var retryPolicy = _retryPolicyProvider == null ? null
                     : await _retryPolicyProvider.GetRetryPolicyForSourceAsync(originalExchange, attempts);
-
-                if (retryPolicy == null || retryPolicy.IsMaxRetryReached)
+                if (retryPolicy == null || (retryPolicy.IsMaxRetryReached && !retryPolicy.IsParkingEnabled))
+                {
+                    if (_logger.IsEnabled(LogLevel.Debug))
+                    {
+                        _logger.LogDebug("Max processing retries reached for event: {EventName}, attempts: {Attempts}. Send Nack.", routingKey, attempts);
+                    }
+                    await _consumerChannel.BasicNackAsync(eventArgs.DeliveryTag, multiple: false, requeue: false);
+                    return;
+                }
+                if (retryPolicy.IsMaxRetryReached && retryPolicy.IsParkingEnabled)
                 {
                     // Route to DLQ after max retries
-                    if (_deadLetterConfig?.Enabled == true)
+
+                    if (_logger.IsEnabled(LogLevel.Debug))
                     {
-                        if (_logger.IsEnabled(LogLevel.Debug))
-                        {
-                            _logger.LogDebug("Max processing retries reached for event: {EventName}, attempts: {Attempts}. Send to DLX.", routingKey, attempts);
-                        }
-                        await SendToDeadLetterQueueAsync(eventArgs,
-                            retryPolicy?.IsMaxRetryReached == true
-                                ? $"MaxRetriesReached_Attempts_{attempts}"
-                                : "NoRetryPolicyDefined");
+                        _logger.LogDebug("Max processing retries reached for event: {EventName}, attempts: {Attempts}. Send to DLX.", routingKey, attempts);
                     }
-                    else
-                    {
-                        if (_logger.IsEnabled(LogLevel.Debug))
-                        {
-                            _logger.LogDebug("Max processing retries reached for event: {EventName}, attempts: {Attempts}. Send Nack.", routingKey, attempts);
-                        }
-                        await _consumerChannel.BasicNackAsync(eventArgs.DeliveryTag, multiple: false, requeue: false);
-                    }
+                    await SendToDeadLetterQueueAsync(eventArgs, retryPolicy, $"MaxRetriesReached_Attempts_{attempts}");
+
                     return;
                 }
 
@@ -263,7 +251,7 @@ namespace Juice.EventBus.RabbitMQ.Consuming
             }
             if (_logger.IsEnabled(LogLevel.Debug))
             {
-                _logger.LogDebug("Processing RabbitMQ event: {EventName}, EventId: {EventId}. Message: {Message}, Data: {Data}", routingKey, integrationEvent.MessageId, message, integrationEvent);
+                _logger.LogDebug("Processing RabbitMQ event: {EventName}, EventId: {EventId}.", routingKey, integrationEvent.MessageId);
             }
 
             var correlationId = headers.GetHeaderString("x-correlation-id")
@@ -331,9 +319,9 @@ namespace Juice.EventBus.RabbitMQ.Consuming
             await _consumerChannel.BasicAckAsync(eventArgs.DeliveryTag, multiple: false);
         }
 
-        private async Task SendToDeadLetterQueueAsync(BasicDeliverEventArgs eventArgs, string reason)
+        private async Task SendToDeadLetterQueueAsync(BasicDeliverEventArgs eventArgs, RetryPolicy retryPolicy, string reason)
         {
-            if (_consumerChannel == null || _deadLetterConfig == null)
+            if (_consumerChannel == null)
             {
                 return;
             }
@@ -344,7 +332,7 @@ namespace Juice.EventBus.RabbitMQ.Consuming
             headers["x-original-queue"] = _queueName;
 
             var originalRoutingKey = headers.GetHeaderString("x-original-routing-key") ?? eventArgs.RoutingKey;
-            var routingKey = _deadLetterConfig.GetRoutingKey(originalRoutingKey);
+            var routingKey = GetDeadLetterRoutingKey(originalRoutingKey);
             _logger.LogWarning(
                 "Sending message to DLQ. Queue: {Queue}, Original: {Event}, Routing: {Routing}, Reason: {Reason}",
                 _queueName,
@@ -352,8 +340,8 @@ namespace Juice.EventBus.RabbitMQ.Consuming
                 reason);
 
             await _consumerChannel.BasicPublishAsync(
-                exchange: _deadLetterConfig.Exchange,
-                routingKey: _deadLetterConfig.GetRoutingKey(originalRoutingKey),
+                exchange: retryPolicy.Exchange,
+                routingKey: routingKey,
                 mandatory: false,
                 basicProperties: new BasicProperties
                 {
@@ -367,6 +355,11 @@ namespace Juice.EventBus.RabbitMQ.Consuming
                 body: eventArgs.Body);
 
             await _consumerChannel.BasicAckAsync(eventArgs.DeliveryTag, multiple: false);
+        }
+
+        private string GetDeadLetterRoutingKey(string originalRoutingKey)
+        {
+            return string.Format(_dlRoutingPattern, originalRoutingKey);
         }
         #endregion
 

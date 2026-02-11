@@ -1,8 +1,10 @@
 ﻿using Juice.EventBus;
 using Juice.EventBus.Dispatching;
 using Juice.EventBus.Internal;
+using Juice.EventBus.Policies;
 using Juice.EventBus.Subscriptions;
 using Juice.Messaging;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 
@@ -88,6 +90,21 @@ namespace Microsoft.Extensions.DependencyInjection
             return this;
         }
 
+        /// <summary>
+        /// Add consumer retry policies from configuration section.
+        /// </summary>
+        /// <param name="policies"></param>
+        /// <returns></returns>
+        public EventBusBuilder AddConsumerRetryPolicies(IConfigurationSection policies)
+        {
+            Services.Configure<ConsumeRetryPolicyOptions>(policies);
+            return this;
+        }
+        public EventBusBuilder AddConsumerRetryPolicies(Action<ConsumeRetryPolicyOptions> configure)
+        {
+            Services.Configure(configure);
+            return this;
+        }
         #endregion
 
         #region Producer services
