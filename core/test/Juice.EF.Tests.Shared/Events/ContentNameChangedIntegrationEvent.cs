@@ -1,7 +1,9 @@
 ﻿using Juice.EventBus;
+using Juice.Messaging.Attributes;
 
 namespace Juice.EF.Tests.Events
 {
+    [Domain("Contents")]
     public record ContentNameChangedIntegrationEvent : IntegrationEvent
     {
         public ContentNameChangedIntegrationEvent(Guid contentId,  string originalName, string name)

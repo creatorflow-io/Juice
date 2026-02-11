@@ -20,6 +20,8 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\core\src\Juice.Extensions.Logging\Juice.Extensions.Logging.csproj" />
+        <ProjectReference Include="..\..\core\src\Juice.Messaging\Juice.Messaging.csproj" />
+        <ProjectReference Include="..\..\core\src\Juice\Juice.csproj" />
     </ItemGroup>
 
 </Project>

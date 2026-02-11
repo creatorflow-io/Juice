@@ -23,11 +23,14 @@ namespace Juice.MediatR.Behaviors
                 if (!result.Succeeded)
                 {
                     _logger.LogError("Command {typeName} {request} not success. {message}", typeName, request?.ToString() ?? "", result.Message);
-                    if (_logger.IsEnabled(LogLevel.Debug) && result.Exception != null)
+                    if (_logger.IsEnabled(LogLevel.Trace))
                     {
-                        _logger.LogDebug(result.Exception.StackTrace);
+                        _logger.LogDebug(result.StackTrace);
                     }
-                }if (_logger.IsEnabled(LogLevel.Debug))
+                    return result;
+                }
+
+                if (_logger.IsEnabled(LogLevel.Debug))
                 {
                     _logger.LogDebug("Command {typeName} {request} return Succeeded state", typeName, request?.ToString() ?? "");
                 }

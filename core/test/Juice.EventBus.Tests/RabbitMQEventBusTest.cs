@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Formats.Asn1;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -22,6 +21,7 @@ using Xunit.Abstractions;
 namespace Juice.EventBus.Tests
 {
     [TestCaseOrderer("Juice.XUnit.PriorityOrderer", "Juice.XUnit")]
+    [InitializeMessageContext]
     public class RabbitMQEventBusTest
     {
         private readonly ITestOutputHelper _output;
@@ -32,7 +32,7 @@ namespace Juice.EventBus.Tests
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
         }
 
-        [IgnoreOnCIFact(DisplayName = "Init infra"), TestPriority(10)]
+        [IgnoreOnCIFact(DisplayName = "Init infra"), TestPriority(999)]
         public async Task InitInfraAsync()
         {
             var resolver = new DependencyResolver
@@ -98,7 +98,7 @@ namespace Juice.EventBus.Tests
             await serviceProvider.InitRabbitMQInfrastructureAsync();
         }
 
-        [IgnoreOnCIFact(DisplayName = "Event should route by tenant")]
+        [IgnoreOnCIFact(DisplayName = "Event should route by tenant"), TestPriority(99)]
         public async Task IntegrationEventTestAsync()
         {
             var resolver = new DependencyResolver
@@ -165,7 +165,6 @@ namespace Juice.EventBus.Tests
             var tenantResolver = serviceProvider.GetRequiredService<IScopedTenantResolver>();
             var tenantAccessor = serviceProvider.GetRequiredService<ITenantAccessor>();
 
-            MessageContextHelper.InitMessageContext();
             try
             {
                 // wait for pending messages to be processed
@@ -212,7 +211,7 @@ namespace Juice.EventBus.Tests
             }
         }
 
-        [IgnoreOnCIFact(DisplayName = "Should retry 3 times on failure")]
+        [IgnoreOnCIFact(DisplayName = "Should retry 3 times on failure"), TestPriority(90)]
         public async Task ShouldRetryBeforeFailureAsync()
         {
             var resolver = new DependencyResolver
@@ -249,7 +248,7 @@ namespace Juice.EventBus.Tests
             });
             var serviceProvider = resolver.ServiceProvider;
             await serviceProvider.RunHostedServicesAsync();
-            MessageContextHelper.InitMessageContext();
+
             var eventBus = serviceProvider.GetRequiredService<IEventBus>();
             var handledService = serviceProvider.GetRequiredService<HandledService>();
             try
@@ -271,7 +270,7 @@ namespace Juice.EventBus.Tests
             }
         }
 
-        [IgnoreOnCIFact(DisplayName = "Should handle once on failure")]
+        [IgnoreOnCIFact(DisplayName = "Should handle once on failure"), TestPriority(80)]
         public async Task ShouldFailureImmediatelyAsync()
         {
             var resolver = new DependencyResolver
@@ -311,7 +310,7 @@ namespace Juice.EventBus.Tests
                     });
                 services.AddSingleton<HandledService>();
             });
-            MessageContextHelper.InitMessageContext();
+
             var serviceProvider = resolver.ServiceProvider;
             await serviceProvider.RunHostedServicesAsync();
 
@@ -333,7 +332,7 @@ namespace Juice.EventBus.Tests
             }
         }
 
-        [IgnoreOnCIFact(DisplayName = "Should send to multiple exchanges use channel pool")]
+        [IgnoreOnCIFact(DisplayName = "Should send to multiple exchanges use channel pool"), TestPriority(70)]
         public async Task ShouldSendToMultipleExchangeAsync()
         {
             var resolver = new DependencyResolver
@@ -372,7 +371,6 @@ namespace Juice.EventBus.Tests
             var serviceProvider = resolver.ServiceProvider;
 
             await serviceProvider.RunHostedServicesAsync();
-            MessageContextHelper.InitMessageContext();
 
             var publisher = serviceProvider.GetKeyedService<ITransportPublisher>("rabbitmq");
             publisher.Should().NotBeNull();

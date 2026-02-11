@@ -16,6 +16,7 @@ namespace Juice.EventBus.Tests
     {
 
         [IgnoreOnCIFact(DisplayName = "Send topic event"), TestPriority(800)]
+        [InitializeMessageContext]
         public async Task Send_topic_event_Async()
         {
             var client = factory.CreateClient();
@@ -54,7 +55,7 @@ namespace Juice.EventBus.Tests
 
                 services.AddSingleton<HandledService>();
             });
-            MessageContextHelper.InitMessageContext();
+
             await resolver.ServiceProvider.RunHostedServicesAsync();
             using var scope = resolver.ServiceProvider.CreateScope();
             var eventBus = scope.ServiceProvider.GetRequiredService<IEventBus>();

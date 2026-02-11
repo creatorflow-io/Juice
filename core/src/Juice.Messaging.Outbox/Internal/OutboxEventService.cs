@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using Juice.Measurement;
+using Juice.Messaging.Extensions;
 using Juice.Messaging.Policies;
 using Juice.MultiTenant;
 using Microsoft.Extensions.Logging;
@@ -56,7 +57,7 @@ namespace Juice.Messaging.Outbox.Internal
             {
                 var routes = await _publishingPolicy.ResolveAsync(new PolicyResolveContext
                 {
-                    Domain = typeof(TContext).Name,
+                    Domain = message.GetType().GetDomainName() ?? typeof(TContext).GetDomainName() ?? typeof(TContext).Name,
                     EventType = message.GetType().Name,
                     TenantIdentifier = _tenantAccessor?.Tenant?.Identifier,
                     TenantTier = _tenantAccessor?.Tenant?.Tier

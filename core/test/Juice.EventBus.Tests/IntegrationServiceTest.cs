@@ -41,6 +41,7 @@ namespace Juice.EventBus.Tests
         [IgnoreOnCITheory(DisplayName = "Integration event service should"), TestPriority(9)]
         [InlineData("SqlServer")]
         [InlineData("PostgreSQL")]
+        [InitializeMessageContext]
         public async Task IntegrationEventServiceTestAsync(string provider)
         {
             var resolver = new DependencyResolver
@@ -89,7 +90,6 @@ namespace Juice.EventBus.Tests
             });
 
             await resolver.ServiceProvider.RunHostedServicesAsync();
-            MessageContextHelper.InitMessageContext();
 
             var sharedService = resolver.ServiceProvider.GetRequiredService<HandledService>();
             var logger = resolver.ServiceProvider.GetRequiredService<ILogger<IntegrationServiceTest>>();

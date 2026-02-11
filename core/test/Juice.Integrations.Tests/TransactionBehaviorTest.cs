@@ -13,7 +13,6 @@ using Juice.EventBus.Tests.Handlers;
 using Juice.Extensions.DependencyInjection;
 using Juice.Measurement;
 using Juice.MediatR;
-using Juice.Messaging;
 using Juice.Messaging.Outbox;
 using Juice.Services;
 using Juice.XUnit;
@@ -21,13 +20,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Polly;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace Juice.Integrations.Tests
 {
     [TestCaseOrderer("Juice.XUnit.PriorityOrderer", "Juice.XUnit")]
+    [InitializeMessageContext]
     public class TransactionBehaviorTest
     {
         private readonly string _testSchema1 = "Contents";
@@ -99,8 +98,6 @@ namespace Juice.Integrations.Tests
 
             await resolver.ServiceProvider.RunHostedServicesAsync();
             
-            MessageContextHelper.InitMessageContext();
-
             var sharedService = resolver.ServiceProvider.GetRequiredService<HandledService>();
 
             // warm up
@@ -195,7 +192,7 @@ namespace Juice.Integrations.Tests
             await resolver.ServiceProvider.RunHostedServicesAsync();
 
             var sharedService = resolver.ServiceProvider.GetRequiredService<HandledService>();
-            MessageContextHelper.InitMessageContext();
+
             // warm up
             using (var s = resolver.ServiceProvider.CreateScope())
             {
