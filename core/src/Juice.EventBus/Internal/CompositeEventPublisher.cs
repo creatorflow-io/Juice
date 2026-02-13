@@ -1,5 +1,6 @@
 ﻿using Juice.EventBus.Publishing;
 using Juice.Messaging;
+using Juice.Messaging.Extensions;
 using Juice.Messaging.Policies;
 using Juice.MultiTenant;
 using Microsoft.Extensions.DependencyInjection;
@@ -33,7 +34,7 @@ namespace Juice.EventBus.Internal
         {
             var routes = await _policy.ResolveAsync(new PolicyResolveContext
             {
-                Domain = domain,
+                Domain = domain ?? @event.GetType().GetDomainName(),
                 EventType = @event.GetType().Name,
                 TenantIdentifier = _tenantAccessor?.Tenant?.Identifier,
                 TenantTier = _tenantAccessor?.Tenant?.Tier

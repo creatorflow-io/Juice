@@ -2,6 +2,7 @@
 using Finbuckle.MultiTenant;
 using Finbuckle.MultiTenant.Abstractions;
 using Juice.MultiTenant;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Juice.Extensions.MultiTenant
@@ -11,18 +12,18 @@ namespace Juice.Extensions.MultiTenant
     {
         private readonly IMultiTenantContextSetter _tenantContextSetter;
         private readonly IMultiTenantContextAccessor _tenantContextAccessor;
-        private readonly IMultiTenantStore<TTenant>[] _stores;
         private readonly ILoggerFactory _loggerFactory;
+        private readonly IServiceProvider _serviceProvider;
 
         public FinbuckleTenantResolver(
             IMultiTenantContextSetter tenantContextSetter,
             IMultiTenantContextAccessor tenantContextAccessor,
-            IEnumerable<IMultiTenantStore<TTenant>> stores,
+            IServiceProvider serviceProvider,
             ILoggerFactory logger)
         {
             _tenantContextAccessor = tenantContextAccessor;
             _tenantContextSetter = tenantContextSetter;
-            _stores = [.. stores];
+            _serviceProvider = serviceProvider;
             _loggerFactory = logger;
         }
 
@@ -32,7 +33,9 @@ namespace Juice.Extensions.MultiTenant
             {
                 return Resolve((TTenant?)null);
             }
-            foreach (var store in _stores)
+            using var scope = _serviceProvider.CreateScope();
+            var stores = scope.ServiceProvider.GetServices<IMultiTenantStore<TTenant>>();
+            foreach (var store in stores)
             {
                 var tenant = store.TryGetAsync(tenantId).GetAwaiter().GetResult();
                 if (tenant is not null)
