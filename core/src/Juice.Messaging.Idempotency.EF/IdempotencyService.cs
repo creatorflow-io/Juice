@@ -8,7 +8,9 @@ namespace Juice.Messaging.Idempotency.EF
         private IdempotencyContext _context;
         private readonly ILogger _logger;
         private readonly IMessageSerializer _serializer;
-        public IdempotencyService(IdempotencyContext context, ILogger<IdempotencyService> logger, IMessageSerializer serializer)
+        public IdempotencyService(IdempotencyContext context,
+            ILogger<IdempotencyService> logger,
+            IMessageSerializer serializer)
         {
             _context = context;
             _logger = logger;
