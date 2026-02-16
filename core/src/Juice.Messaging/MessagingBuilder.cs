@@ -1,4 +1,5 @@
 ﻿using Juice.Messaging.Internal;
+using Juice.Messaging.Outbox;
 using Juice.Messaging.Policies;
 using Juice.Messaging.Policies.Internal;
 using Microsoft.Extensions.Configuration;
@@ -31,6 +32,19 @@ namespace Juice.Messaging
             }
             Services.Configure<PublishingPolicyOptions>(policies);
             Services.AddSingleton<IMessagePublishingPolicy, DefaultEventPublishingPolicy>();
+            return this;
+        }
+
+        /// <summary>
+        /// Register outbox proxy for specific type.
+        /// </summary>
+        /// <typeparam name="TOutbox"></typeparam>
+        /// <typeparam name="TContext"></typeparam>
+        /// <returns></returns>
+        public MessagingBuilder AddOutboxProxy<TOutbox, TContext>()
+            where TOutbox : IOutboxService
+        {
+            Services.TryAddScoped(typeof(TOutbox), sp => OutboxProxy<TOutbox>.Create(sp.GetRequiredService<IOutboxService<TContext>>())!);
             return this;
         }
     }
