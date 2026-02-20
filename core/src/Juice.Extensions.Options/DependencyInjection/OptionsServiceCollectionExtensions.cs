@@ -17,7 +17,7 @@ namespace Microsoft.Extensions.DependencyInjection
             IConfigurationSection section) where T : class, new()
         {
             services.Configure<T>(section);
-            services.AddScoped<IOptionsMutable<T>>(provider =>
+            services.AddTransient<IOptionsMutable<T>>(provider =>
             {
                 return new OptionsMutable<T>(provider, section.Path);
             });
@@ -45,7 +45,7 @@ namespace Microsoft.Extensions.DependencyInjection
             {
                 services.Configure(configureOptions);
             }
-            services.AddScoped<IOptionsMutable<T>>(provider =>
+            services.AddTransient<IOptionsMutable<T>>(provider =>
             {
                 return new OptionsMutable<T>(provider, section.Path, configureOptions);
             });
