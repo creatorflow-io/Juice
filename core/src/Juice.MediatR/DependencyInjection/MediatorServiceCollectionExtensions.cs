@@ -101,5 +101,48 @@ namespace Microsoft.Extensions.DependencyInjection
                 }
             }
         }
+
+        public MediatorBuilder AddOpenBehavior(Type type)
+        {
+            if (type == null)
+            {
+                throw new ArgumentNullException(nameof(type));
+            }
+
+            if (!type.IsGenericTypeDefinition)
+            {
+                throw new ArgumentException("The provided type must be an open generic type definition.", nameof(type));
+            }
+
+            var interfaces = type.GetInterfaces()
+                   .Where(i => i.IsGenericType)
+                   .ToList();
+
+            foreach (var iface in interfaces)
+            {
+                var def = iface.GetGenericTypeDefinition();
+                // Only handle mediator interfaces
+                if (def == typeof(INotificationHandler<>) ||
+                    def == typeof(IPipelineBehavior<>) ||
+                    def == typeof(IPipelineBehavior<,>) ||
+                    def == typeof(IStreamPipelineBehavior<,>) ||
+                    def == typeof(INotificationPipelineBehavior<>))
+                {
+                    if (type.IsGenericTypeDefinition)
+                    {
+                        // open generic registration
+                        Services.AddTransient(def, type);
+                    }
+                    else
+                    {
+                        // closed generic registration
+                        Services.AddTransient(iface, type);
+                    }
+                }
+            }
+            return this;
+        }
+
+        public MediatorBuilder AddOpenBehavior<T>() where T : class => AddOpenBehavior(typeof(T));
     }
 }

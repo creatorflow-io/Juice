@@ -17,8 +17,8 @@ namespace Microsoft.Extensions.DependencyInjection
             var idempotencyBuilder = new MediatorIdempotencyBuilder(builder.Services);
             configure?.Invoke(idempotencyBuilder);
 
-            builder.Services.AddScoped(typeof(IPipelineBehavior<,>), typeof(IdempotencyRequestBehavior<,>));
-            builder.Services.AddScoped(typeof(IPipelineBehavior<>), typeof(IdempotencyRequestBehavior<>));
+            builder.AddOpenBehavior(typeof(IdempotencyRequestBehavior<,>));
+            builder.AddOpenBehavior(typeof(IdempotencyRequestBehavior<>));
             return builder;
         }
     }

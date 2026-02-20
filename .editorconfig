@@ -229,6 +229,9 @@ csharp_space_between_parentheses = false
 csharp_preserve_single_line_statements = true
 csharp_preserve_single_line_blocks = true
 
+# CS0103: The name 'xxx' does not exist in the current context
+dotnet_diagnostic.CS0103.severity = none
+
 
 #########################################################################################
 #                             .NET naming conventions                                   #

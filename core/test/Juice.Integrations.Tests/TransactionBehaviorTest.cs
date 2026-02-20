@@ -85,6 +85,24 @@ namespace Juice.Integrations.Tests
                             ;
                         });
 
+				services.AddMessaging()
+	                .AddIdempotencyRedis(opts =>
+	                {
+		                opts.ConnectionString = configuration.GetConnectionString("Redis");
+	                })
+	                .AddEventBus()
+		                .AddConsumerServices(consumers =>
+		                {
+		                })
+		                .AddConsumerRetryPolicies(configuration.GetSection("RetryPolicies"))
+		                .AddRabbitMQ(rabbitMQ =>
+		                {
+			                rabbitMQ.AddConnection("rabbitmq", configuration.GetSection("RabbitMQ"))
+					                .AddConsumer("orders", "orders-queue", "rabbitmq", consumer =>
+					                {
+					                });
+		                });
+
                 services.AddMediatR(cfg =>
                 {
                     cfg.RegisterServicesFromAssembly(typeof(CreateContentCommandHandler).Assembly);
