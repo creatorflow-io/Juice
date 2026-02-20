@@ -41,14 +41,7 @@ namespace Juice.Core.Tests
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
 
-                services.Configure<ScalaredOptions>(options =>
-                {
-                    var config = configuration.GetSection("Options").GetScalaredConfig<ScalaredOptions>();
-                    if (config != null)
-                    {
-                        options.Dict = config.Dict;
-                    }
-                });
+                services.Configure<ScalaredOptions>(configuration.GetSection("Options"));
             });
 
             using var scope = builder.ServiceProvider.GetRequiredService<IServiceScopeFactory>().CreateScope();
