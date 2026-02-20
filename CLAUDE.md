@@ -7,6 +7,7 @@ Detailed architectural notes are in `.claude/`. Read them before making changes:
 - `.claude/messaging-outbox.md` — outbox/messaging pipeline (most complex area)
 - `.claude/domain-patterns.md` — domain model, EF conventions, DDD patterns
 - `.claude/di-patterns.md` — DI builder patterns, service lifetimes, extension methods
+- `.claude/extensions.md` — Extensions projects deep-dive (MultiTenant, Options, Configuration, Redis, Logging, AspNetCore)
 
 ## Key Facts (Quick Reference)
 - Custom `IMediator` in `Juice.MediatR` — NOT the MediatR NuGet package

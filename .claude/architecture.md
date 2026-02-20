@@ -69,12 +69,14 @@ d:/Workspaces/Juice/Juice/
 ### Infrastructure / Extensions
 | Project | Purpose |
 |---------|---------|
-| `Juice.AspNetCore` | Cookie auth, Swagger, modular startup, message context middleware, GraphQL |
-| `Juice.Extensions.Configuration` | Tenant-aware configuration provider |
-| `Juice.Extensions.Logging` | Custom file logging provider |
-| `Juice.Extensions.MultiTenant` | Finbuckle integration, FinbuckleTenantResolver, TenantInfo |
-| `Juice.Extensions.Options` | IOptionsMutable, tenant-aware options, JSON file store |
-| `Juice.Extensions.Redis` | Redis connection provider |
+| `Juice.AspNetCore` | Cookie auth, Swagger, modular startup (`IModuleStartup`), `MessageContextMiddleware`, GraphQL, MVC filters |
+| `Juice.Extensions.Configuration` | `ITenantConfiguration` — tenant-scoped IConfiguration; `TenantFileConfigurationProvider` (per-tenant JSON files at `tenants/{id}/`) |
+| `Juice.Extensions.Logging` | Abstract `LoggerProvider`/`ExternalScopeLoggerProvider` base for custom log sinks |
+| `Juice.Extensions.MultiTenant` | Finbuckle integration: `TenantInfo` (DynamicModel + ITenant + ITenantInfo), `FinbuckleTenantAccessor`, `FinbuckleTenantResolver` (`IScopedTenantResolver`) |
+| `Juice.Extensions.Options` | `IOptionsMutable<T>` (live config mutation), tenant-aware options, JSON file store, `IOptionsProvider<TService,TOptions>` |
+| `Juice.Extensions.Redis` | `IRedisConnectionProvider` — lazy Sentinel-aware Redis singleton; `IRedisConnectionProvider<T>` typed variant |
+
+**See `.claude/extensions.md` for full deep-dive on all extension projects.**
 
 ---
 
@@ -107,6 +109,8 @@ Behaviors (cross-cuts EF + Messaging + MediatR)
   ↓
 RabbitMQ / Outbox.EF / Idempotency.* (infrastructure)
   ↓
+Extensions.* (MultiTenant, Options, Configuration, Redis, Logging)
+  ↓
 AspNetCore (host)
 ```
 
@@ -120,7 +124,7 @@ AspNetCore (host)
 | Npgsql | 7/8/9 | PostgreSQL EF provider |
 | Finbuckle.MultiTenant | 8.1/9.1 | Multi-tenancy |
 | MediatR | 12.4 | Only for registration helpers, actual mediator is custom |
-| StackExchange.Redis | 2.8 | Idempotency + distributed cache |
+| StackExchange.Redis | 2.8 | Idempotency + distributed cache + Redis provider |
 | Polly | (implicit via RabbitMQ) | Retry policies |
-| Newtonsoft.Json | — | Dynamic entity property serialization |
+| Newtonsoft.Json | — | Dynamic entity property serialization, options JSON store |
 | System.Text.Json | — | Message serialization |
