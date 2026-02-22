@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Threading.Tasks;
 using Juice.Core.Tests.Models;
-using Juice.Extensions.Configuration;
 using Juice.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

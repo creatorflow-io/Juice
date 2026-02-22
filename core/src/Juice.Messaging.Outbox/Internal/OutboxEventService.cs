@@ -53,6 +53,8 @@ namespace Juice.Messaging.Outbox.Internal
             _timeTracker?.BeginScope("Saving integration events");
 
             var events = new List<OutboxEvent>();
+            var ctx = MessageContext.Current;
+
             foreach (var message in _messages)
             {
                 var routes = await _publishingPolicy.ResolveAsync(new PolicyResolveContext
@@ -73,7 +75,6 @@ namespace Juice.Messaging.Outbox.Internal
                         Encoding.UTF8.GetString(_serializer.SerializeToUtf8Bytes(message))
                         );
                 }
-                var ctx = MessageContext.Current;
                 events.Add(new OutboxEvent
                 {
                     EventId = message.MessageId,

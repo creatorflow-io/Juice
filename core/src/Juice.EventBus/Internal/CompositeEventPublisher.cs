@@ -1,5 +1,6 @@
 ﻿using Juice.EventBus.Publishing;
 using Juice.Messaging;
+using Juice.Messaging.Context;
 using Juice.Messaging.Extensions;
 using Juice.Messaging.Policies;
 using Juice.MultiTenant;
@@ -39,35 +40,19 @@ namespace Juice.EventBus.Internal
                 TenantIdentifier = _tenantAccessor?.Tenant?.Identifier,
                 TenantTier = _tenantAccessor?.Tenant?.Tier
             });
-
+            var ctx = MessageContext.Current;
             foreach (var route in routes)
             {
-                var publisher = _serviceProvider.GetKeyedService<ITransportPublisher>(route.PublisherKey);
-                if (publisher is null)
+                await PublishAsync(@event, route.PublisherKey, new PublishContext(@event.MessageId.ToString())
                 {
-                    throw new InvalidOperationException(
-                        $"Publisher '{route.PublisherKey}' not registered");
-                }
-
-                await publisher.PublishAsync(
-                    _serializer.SerializeToUtf8Bytes(@event),
-                    new PublishContext(@event.MessageId.ToString()) {
-                        Destination = route.Destination, TenantId = _tenantAccessor?.Tenant?.Id,
-                        Headers = new Dictionary<string, object?>
-                        {
-                            { "x-tenant-id", _tenantAccessor?.Tenant?.Id },
-                            { "x-message-type", @event.GetType().Name },
-                            { "x-message-name", (@event as IEvent)?.EventName ?? @event.GetType().Name },
-                            { "x-correlation-id", MessageContext.Current.CorrelationId },
-                            { "x-causation-id", MessageContext.Current.ExecutionId }
-                        }
-                    },
-                    ct);
+                    Destination = route.Destination,
+                    TenantId = _tenantAccessor?.Tenant?.Id
+                }, ctx, ct);
             }
         }
 
-        public async ValueTask PublishAsync<T>(
-            T @event, string publisherKey, PublishContext context,
+        private async ValueTask PublishAsync<T>(
+            T message, string publisherKey, PublishContext context, MessageContextData ctx,
             CancellationToken ct = default)
             where T : IMessage
         {
@@ -77,22 +62,27 @@ namespace Juice.EventBus.Internal
                 throw new InvalidOperationException(
                     $"Publisher '{publisherKey}' not registered");
             }
-
-            var headers = context.Headers ?? new Dictionary<string, object?>();
-            headers["x-tenant-id"] = context.TenantId ?? _tenantAccessor?.Tenant?.Id;
-            headers["x-message-type"] = @event.GetType().Name;
-            headers["x-event-name"] = (@event as IEvent)?.EventName ?? @event.GetType().Name;
-            headers["x-correlation-id"] = MessageContext.Current.CorrelationId;
-            headers["x-causation-id"] = MessageContext.Current.ExecutionId;
+            var headers = new Dictionary<string, object?>
+                            {
+                                { "x-correlation-id", ctx.CorrelationId},
+                                { "x-causation-id", ctx.ExecutionId },
+                                { "x-source", ctx.Source},
+                                { "x-tenant-id", _tenantAccessor?.Tenant?.Id },
+                                { "x-message-type", message.GetType().Name },
+                                { "x-message-id", message.MessageId},
+                                { "x-message-name", message is IEvent evt ? evt.EventName : message.GetType().Name },
+                            };
 
             await publisher.PublishAsync(
-                _serializer.SerializeToUtf8Bytes(@event),
-                new PublishContext(context.MessageId) {
-                    Destination = context.Destination,
-                    TenantId = context.TenantId ?? _tenantAccessor?.Tenant?.Id,
-                    Headers = headers
-                },
+                _serializer.SerializeToUtf8Bytes(message),
+                context.WithHeaders(headers),
                 ct);
         }
+
+        public ValueTask PublishAsync<T>(
+            T @event, string publisherKey, PublishContext context,
+            CancellationToken ct = default)
+            where T : IMessage
+        => PublishAsync(@event, publisherKey, context, MessageContext.Current, ct);
     }
 }
