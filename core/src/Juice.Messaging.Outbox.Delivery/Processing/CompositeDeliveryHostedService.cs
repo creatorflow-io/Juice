@@ -18,13 +18,18 @@ namespace Juice.Messaging.Outbox.Delivery.Processing
         {
             Publisher = publisher;
             _logger = serviceProvider.GetRequiredService<ILogger<CompositeDeliveryHostedService<TContext>>>();
+            var policyResolver = serviceProvider.GetRequiredService<IDeliveryPolicyResolver>();
+
             _hostedServices = [.. intents.Select(intent =>
             {
-                 _logger.LogInformation("Initializing DeliveryHostedService for Publisher: {Publisher}, Intent: {Intent}", publisher, intent);
-                    return new DeliveryHostedService<TContext>(
-                        serviceProvider,
-                        publisher,
-                        intent);
+                _logger.LogInformation("Initializing DeliveryHostedService for Publisher: {Publisher}, Intent: {Intent}", publisher, intent);
+                var worker = new DeliveryWorker<TContext>(
+                    serviceProvider, publisher, intent,
+                    policyResolver,
+                    serviceProvider.GetRequiredService<ILogger<DeliveryWorker<TContext>>>());
+                return new DeliveryHostedService<TContext>(
+                    worker,
+                    serviceProvider.GetRequiredService<ILogger<DeliveryHostedService<TContext>>>());
             })];
         }
 
