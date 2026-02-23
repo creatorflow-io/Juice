@@ -117,12 +117,58 @@ DeliveryHostedService<TContext> loop (per Publisher × Intent):
 RabbitMQConsumerEngine.Consumer_ReceivedAsync():
   1. Extract routingKey from x-original-routing-key header
   2. Lookup eventType from ISubscriptionsManager by routingKey
+     (supports topic wildcard matching: * = one segment, # = zero+)
   3. Deserialize message bytes → IIntegrationEvent
-  4. Initialize MessageContext (correlationId, causationId, executionId, source)
-  5. IntegrationEventDispatcher.DispatchAsync() → handler(s)
-  6. On success: BasicAckAsync
-  7. On failure: retry via retry exchange OR send to DLQ
+  4. Initialize MessageContext (correlationId, causationId=messageId, executionId, source)
+  5. Resolve tenant context via IScopedTenantResolver (from x-tenant-id header)
+  6. IntegrationEventDispatcher.DispatchAsync():
+     a. Check IIdempotencyService (key: "{EventName}:{Source}:{MessageId}")
+     b. If duplicate → return Duplicated (skip)
+     c. Resolve handler types from ISubscriptionsManager
+     d. Create DI scope per dispatch
+     e. For each handler: resolve from DI, invoke HandleAsync via reflection cache
+     f. Return: Success (≥1 handler ok) | Failure (all failed) | NotHandled (no handlers)
+  7. Result handling:
+     - Success/Duplicated → BasicAckAsync (remove from queue)
+     - Failure → Check IRetryPolicyProvider:
+       - Retries remaining → republish to retry exchange with updated x-attempts header
+       - Max retries reached + parking enabled → route to parking queue (DLQ)
+       - Max retries reached + no parking → BasicNackAsync
+     - NotHandled → BasicNackAsync
 ```
+
+### Consumer Retry Topology (RabbitMQ)
+```
+Main exchange (direct) → main queue (consumer listens here)
+  on failure → retry exchange (topic)
+    → retry.10s queue (TTL 10s, DLX → main exchange)
+    → retry.1m   queue (TTL 1m,  DLX → main exchange)
+    → retry.5m   queue (TTL 5m,  DLX → main exchange)
+  on max retries → parking exchange → parking queue (no consumer, manual intervention)
+```
+Additional headers added on retry/parking:
+| Header | Value |
+|--------|-------|
+| `x-attempts` | Retry count (incremented) |
+| `x-original-exchange` | Source exchange |
+| `x-original-routing-key` | Original routing key |
+| `x-death-reason` | Why message was parked |
+| `x-death-timestamp` | When it was parked |
+| `x-original-queue` | Queue it came from |
+
+### EventBus (Direct Publishing, non-Outbox)
+`IEventBus` → `CompositeEventPublisher` — for direct event publishing (no outbox atomicity):
+```csharp
+// Resolves routes via IMessagePublishingPolicy, adds standard headers, publishes via keyed ITransportPublisher
+await eventBus.PublishAsync(event, domain: "Orders");
+```
+Relationship: Outbox uses `ITransportPublisher` directly (bypass IEventBus). IEventBus is for non-transactional direct publishing.
+
+### Subscriptions
+- `ISubscriptionsManager` — in-memory registry of event→handler mappings
+- `SubscriptionInfo` — metadata: EventType, HandlerType, Key, IsDynamic
+- `RoutingKeyUtils.IsTopicMatch()` — RabbitMQ topic wildcard matching (regex-based)
+- Registration: `consumer.Subscribe<TEvent, THandler>(routingKey?)` during DI setup
 
 ---
 

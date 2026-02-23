@@ -113,10 +113,11 @@ public class CreateOrderHandler(IOrdersOutboxService outbox)
 ## Pipeline Behavior Order (IPipelineBehavior.Order)
 Behaviors are sorted ascending by `Order`. Lower = runs earlier (outer wrapper).
 ```
-OperationExceptionBehavior    Order = 0        (outermost — catches all exceptions)
-IdempotencyRequestBehavior    Order = 10       (before transaction)
-TransactionBehavior           Order = int.MaxValue - 20  (innermost — wraps DB transaction)
+IdempotencyRequestBehavior    Order = int.MinValue       (outermost — prevent duplicate commands)
+TransactionBehavior           Order = int.MaxValue - 20  (late — wraps DB transaction + outbox)
+OperationExceptionBehavior    Order = int.MaxValue - 10  (innermost — exception → IOperationResult)
 ```
+Execution nesting: Idempotency → ... → Transaction → OperationException → Handler
 
 ---
 
@@ -164,3 +165,70 @@ MessageContext.Initialize(correlationId, causationId, executionId, source);
 // Access anywhere in call chain:
 var ctx = MessageContext.Current; // throws if not initialized
 ```
+
+---
+
+## EventBus Consumer DI Details
+```csharp
+services.AddEventBus(builder => {
+    builder.AddPublishingServices();           // IEventBus → CompositeEventPublisher (singleton)
+    builder.AddConsumerServices(key);          // ISubscriptionsManager (keyed singleton)
+    builder.AddConsumerRetryPolicies(...);     // ConsumeRetryPolicyOptions
+});
+```
+### Consumer Service Lifetimes
+| Service | Lifetime |
+|---------|----------|
+| `IEventBus` (CompositeEventPublisher) | Singleton |
+| `ISubscriptionsManager` | Keyed Singleton per consumer |
+| `ITransportPublisher` | Keyed Singleton per producer |
+| `IRabbitMQPersistentConnection` | Keyed Singleton per connection |
+| `IntegrationEventDispatcher` | Transient (per dispatch) |
+| `IIntegrationEventHandler<>` | Transient (per dispatch) |
+| `RabbitMQConsumerHostedService` | Singleton (IHostedService) |
+
+### Consumer Pipeline
+```
+RabbitMQConsumerEngine receives message
+  → Extract headers (AMQP encoding) + deserialize to IIntegrationEvent
+  → Initialize MessageContext (correlationId, causationId=messageId, executionId, source)
+  → Resolve tenant via IScopedTenantResolver (from x-tenant-id header)
+  → IntegrationEventDispatcher:
+      → IIdempotencyService check (key: "{EventName}:{Source}:{MessageId}")
+      → Resolve handler(s) from ISubscriptionsManager
+      → Execute handler(s) in new DI scope
+  → Result: Success/Duplicated → BasicAck | Failure → Retry/DLQ
+```
+
+### Retry Topology (RabbitMQ)
+```
+Main exchange (direct) → main queue
+  on failure → retry exchange (topic)
+    → retry.10s queue (TTL, DLX→main)
+    → retry.1m queue (TTL, DLX→main)
+    → retry.5m queue (TTL, DLX→main)
+  on max retries → parking queue (no consumer)
+```
+Configured via `ConsumeRetryPolicyOptions` → `RetryPolicyProvider`.
+
+---
+
+## Juice.Measurement — Time Tracking
+```csharp
+services.AddExecutionTimeMeasurement();  // scoped ITimeTracker
+// Usage:
+using (tracker.BeginScope("Operation")) {
+    tracker.Checkpoint("Step 1");
+}
+Console.WriteLine(tracker.ToString(humanReadable: true));
+```
+Scoped service; nested scopes + checkpoints; renders as aligned table.
+Injected into `DbContextBase` when `DbOptions.EnableTimeTracking = true`.
+
+---
+
+## Utility Classes (Juice project)
+- `StringIdGenerator.Instance` — Crockford Base32 unique IDs from GUIDs; `GenerateRandomId(length)`
+- `QueryableExtensions` — `OrderBy<T>(propertyName)` etc. — dynamic LINQ sorting via expression trees
+- `DictionaryExtensions` — `GetOption<T>` (deep dot/bracket access), `MergeOptions`, `Set` (dot-notation)
+- `EnumExtensions` — `DisplayValue()` (`[Display]`), `StringValue()` (`[EnumMember]`)
