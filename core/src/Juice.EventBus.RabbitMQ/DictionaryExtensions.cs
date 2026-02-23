@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using RabbitMQ.Client;
 
 namespace Juice.EventBus.RabbitMQ
 {
@@ -58,5 +59,50 @@ namespace Juice.EventBus.RabbitMQ
             }
             return null;
         }
+
+        /// <summary>
+        /// Returns a new dictionary where values not supported by the AMQP 0-9-1 table spec
+        /// are converted to their string representation.
+        /// Supported types: bool, byte, sbyte, short, ushort, int, uint, long, ulong,
+        /// float, double, decimal, string, byte[], AmqpTimestamp, BinaryTableValue,
+        /// IList&lt;object?&gt;, IDictionary&lt;string, object?&gt;, null.
+        /// </summary>
+        public static IDictionary<string, object?> ToStandardized(this IDictionary<string, object?>? dictionary)
+        {
+            if (dictionary == null)
+            {
+                return new Dictionary<string, object?>();
+            }
+            var result = new Dictionary<string, object?>(dictionary.Count);
+            foreach (var kvp in dictionary)
+            {
+                result[kvp.Key] = IsAmqpSupported(kvp.Value) ? kvp.Value : kvp.Value?.ToString();
+            }
+            return result;
+        }
+
+        private static bool IsAmqpSupported(object? value) => value switch
+        {
+            null => true,
+            bool => true,
+            byte => true,
+            sbyte => true,
+            short => true,
+            ushort => true,
+            int => true,
+            uint => true,
+            long => true,
+            ulong => true,
+            float => true,
+            double => true,
+            decimal => true,
+            string => true,
+            byte[] => true,
+            AmqpTimestamp => true,
+            BinaryTableValue => true,
+            IList<object?> => true,
+            IDictionary<string, object?> => true,
+            _ => false
+        };
     }
 }

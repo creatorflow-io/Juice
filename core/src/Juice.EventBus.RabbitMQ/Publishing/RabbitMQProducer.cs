@@ -104,7 +104,7 @@ namespace Juice.EventBus.RabbitMQ.Publishing
                         MessageId = messageId,
                         Timestamp = new AmqpTimestamp(DateTimeOffset.UtcNow.ToUnixTimeSeconds()),
                         DeliveryMode = DeliveryModes.Persistent,
-                        Headers = headers
+                        Headers = headers.ToStandardized()
                     };
 
                     if (_logger.IsEnabled(LogLevel.Debug))
