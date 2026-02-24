@@ -12,6 +12,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.editorconfig = .editorconfig
 		.gitignore = .gitignore
 		azure-pipelines.yml = azure-pipelines.yml
+		CHANGELOG.md = CHANGELOG.md
 		Directory.Build.props = Directory.Build.props
 		nuget.config = nuget.config
 		README.md = README.md
@@ -114,10 +115,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.Messaging.Idempotency.EF.PostgreSQL", "core\src\Juice.Messaging.Idempotency.EF.PostgreSQL\Juice.Messaging.Idempotency.EF.PostgreSQL.csproj", "{2C470AC8-C80C-4EE7-B56B-892925C568BD}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.Messaging.Idempotency.Caching", "core\src\Juice.Messaging.Idempotency.Caching\Juice.Messaging.Idempotency.Caching.csproj", "{0FB9F79F-9E84-222C-578F-7FD8D213D44B}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "core", "core", "{FBF56CC3-7AE6-AD2D-3F14-7F97FD322CD6}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{580459B1-2454-B1D6-7C9B-FACCBBFF1222}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Juice.Messaging.Contracts", "core\src\Juice.Messaging.Contracts\Juice.Messaging.Contracts.csproj", "{709B040A-457C-4644-85A6-67D6BD7459AD}"
 EndProject
@@ -721,7 +718,6 @@ Global
 		{191110E3-9217-4F54-938B-1F3C5DAEF07A} = {9E4FFBBB-2E8E-4463-B502-260D502D43E1}
 		{2C470AC8-C80C-4EE7-B56B-892925C568BD} = {9E4FFBBB-2E8E-4463-B502-260D502D43E1}
 		{0FB9F79F-9E84-222C-578F-7FD8D213D44B} = {9E4FFBBB-2E8E-4463-B502-260D502D43E1}
-		{580459B1-2454-B1D6-7C9B-FACCBBFF1222} = {FBF56CC3-7AE6-AD2D-3F14-7F97FD322CD6}
 		{709B040A-457C-4644-85A6-67D6BD7459AD} = {9E4FFBBB-2E8E-4463-B502-260D502D43E1}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
