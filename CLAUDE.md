@@ -1,4 +1,4 @@
-# Juice Framework — Claude Instructions
+﻿# Juice Framework — Claude Instructions
 
 ## Memory Files
 Detailed architectural notes are in `.claude/`. Read them before making changes:
