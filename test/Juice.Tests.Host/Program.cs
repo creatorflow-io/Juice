@@ -1,6 +1,6 @@
 ﻿using Juice;
 using Juice.EF.Tests.Infrastructure;
-using Juice.EventBus;
+using Juice.Messaging;
 using Juice.Modular;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Caching.Distributed;

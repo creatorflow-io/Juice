@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Juice.Messaging;
+using Microsoft.Extensions.Logging;
 
 namespace Juice.EventBus.Tests.Events
 {

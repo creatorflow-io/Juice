@@ -1,5 +1,5 @@
 ﻿
-namespace Juice.EventBus.Dispatching
+namespace Juice.Messaging.Integrations
 {
     public enum EventDispatchResult
     {

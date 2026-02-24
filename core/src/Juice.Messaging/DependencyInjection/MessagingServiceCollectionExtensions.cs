@@ -12,6 +12,9 @@ namespace Microsoft.Extensions.DependencyInjection
             buildAction?.Invoke(builder);
 
             builder.AddDefaultSerializer();
+
+            builder.AddIntegrationEventDispatcher();
+
             return builder;
         }
 

@@ -1,4 +1,6 @@
-﻿namespace Juice.EventBus.Subscriptions
+﻿using Juice.Messaging;
+
+namespace Juice.EventBus.Subscriptions
 {
     public sealed class SubscriptionBuilder
     {

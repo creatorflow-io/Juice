@@ -1,9 +1,9 @@
 ﻿using System.Text;
-using Juice.EventBus.Dispatching;
 using Juice.EventBus.Policies;
 using Juice.EventBus.RabbitMQ.Policies;
 using Juice.EventBus.Subscriptions;
 using Juice.Messaging;
+using Juice.Messaging.Integrations;
 using Juice.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

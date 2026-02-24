@@ -1,5 +1,4 @@
 ﻿using Juice.EventBus;
-using Juice.EventBus.Dispatching;
 using Juice.EventBus.Internal;
 using Juice.EventBus.Policies;
 using Juice.EventBus.Subscriptions;
@@ -55,7 +54,6 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <returns></returns>
         public EventBusBuilder AddConsumerServices(string key)
         {
-            Services.TryAddTransient<IntegrationEventDispatcher>();
             Services.TryAddKeyedSingleton<ISubscriptionsManager>(key, (sp, k) =>
             {
                 var logger = sp.GetRequiredService<ILoggerFactory>()
@@ -74,8 +72,6 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <returns></returns>
         public EventBusBuilder AddConsumerServices(Action<SubscriptionBuilder>? subscription)
         {
-            Services.TryAddTransient<IntegrationEventDispatcher>();
-            
             var subscriptionBuilder = new SubscriptionBuilder();
             subscription?.Invoke(subscriptionBuilder);
             if (subscriptionBuilder.HasSubscriptions)

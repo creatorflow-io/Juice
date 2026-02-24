@@ -1,4 +1,5 @@
-﻿using Juice.Messaging.Internal;
+﻿using Juice.Messaging.Integrations;
+using Juice.Messaging.Internal;
 using Juice.Messaging.Outbox;
 using Juice.Messaging.Policies;
 using Juice.Messaging.Policies.Internal;
@@ -20,6 +21,12 @@ namespace Juice.Messaging
         {
             // Add messaging related services here
             Services.TryAddSingleton<IMessageSerializer, MessageSerializer>();
+            return this;
+        }
+
+        internal MessagingBuilder AddIntegrationEventDispatcher()
+        {
+            Services.TryAddTransient<IntegrationEventDispatcher>();
             return this;
         }
 

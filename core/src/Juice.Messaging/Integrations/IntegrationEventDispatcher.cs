@@ -5,7 +5,7 @@ using Juice.MultiTenant;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace Juice.EventBus.Dispatching
+namespace Juice.Messaging.Integrations
 {
     public sealed class IntegrationEventDispatcher
     {
@@ -36,7 +36,7 @@ namespace Juice.EventBus.Dispatching
             {
                 var eventName = context.EventName ?? evt.GetType().Name;
                 var eventId = evt.MessageId;
-                var concreteType = typeof(IIntegrationEventHandler<>).MakeGenericType(evt.GetType());
+                var concreteType = typeof(IIntegrationEventHandler<>).MakeGenericType(evt.GetType()); // resolves Juice.Messaging.IIntegrationEventHandler<>
                 var tenantResolver = scope.ServiceProvider.GetService<IScopedTenantResolver>();
                 using var _1 = tenantResolver?.Resolve(context.TenantId);
                 if (_logger.IsEnabled(LogLevel.Debug))

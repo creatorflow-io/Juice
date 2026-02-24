@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Juice.EventBus.Tests.Events;
+using Juice.Messaging;
 using Microsoft.Extensions.Logging;
 
 namespace Juice.EventBus.Tests.Handlers

@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>$(AppTargetFramework)</TargetFrameworks>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <RootNamespace>Juice.Messaging</RootNamespace>
+        <Description>Canonical contracts for Juice integration events (IIntegrationEvent, IntegrationEvent, IIntegrationEventHandler).</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Juice.Contracts\Juice.Contracts.csproj" />
+    </ItemGroup>
+
+</Project>

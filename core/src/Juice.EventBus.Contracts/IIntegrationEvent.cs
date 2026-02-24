@@ -1,6 +1,7 @@
-﻿namespace Juice.EventBus
+namespace Juice.EventBus
 {
-	public interface IIntegrationEvent: IEvent
+    [Obsolete("Use Juice.Messaging.IIntegrationEvent from Juice.Messaging.Contracts instead.", false)]
+    public interface IIntegrationEvent : Juice.Messaging.IIntegrationEvent
     {
     }
 }
