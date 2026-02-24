@@ -9,6 +9,10 @@
 *.userosscache
 *.sln.docstates
 
+# AI tools
+.claude/settings.local.json
+.claude/commands/
+
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
