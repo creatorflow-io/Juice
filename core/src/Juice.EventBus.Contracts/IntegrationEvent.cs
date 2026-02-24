@@ -1,7 +1,7 @@
 ﻿namespace Juice.EventBus
 {
-    public abstract record IntegrationEvent: MessageBase, IIntegrationEvent
+    [Obsolete("Use Juice.Messaging.IntegrationEvent from Juice.Messaging.Contracts instead.", false)]
+    public abstract record IntegrationEvent : Juice.Messaging.IntegrationEvent, IIntegrationEvent
     {
-        public virtual string EventName => GetType().Name;
     }
 }

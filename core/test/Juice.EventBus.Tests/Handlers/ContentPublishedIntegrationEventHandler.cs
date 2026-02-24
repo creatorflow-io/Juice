@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Juice.EventBus.Tests.Handlers
 {
-    public class ContentPublishedIntegrationEventHandler : IIntegrationEventHandler<ContentPublishedIntegrationEvent>
+    public class ContentPublishedIntegrationEventHandler : Messaging.IIntegrationEventHandler<ContentPublishedIntegrationEvent>
     {
         private ILogger _logger;
         private readonly HandledService _handledService;

@@ -1,4 +1,4 @@
-﻿using Juice.EventBus;
+﻿using Juice.Messaging;
 using Juice.Messaging.Attributes;
 
 namespace Juice.EF.Tests.Events

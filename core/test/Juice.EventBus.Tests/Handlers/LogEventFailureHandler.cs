@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Juice.EventBus.Tests.Handlers
 {
-    internal class LogEventFailureHandler : IIntegrationEventHandler<LogEvent>
+    internal class LogEventFailureHandler : Messaging.IIntegrationEventHandler<LogEvent>
     {
         private ILogger _logger;
         private readonly HandledService _handledService;

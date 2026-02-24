@@ -5,10 +5,12 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <RootNamespace>Juice.EventBus</RootNamespace>
+        <Description>[Deprecated] Use Juice.Messaging.Contracts instead. This package re-exports integration event contracts from Juice.Messaging.Contracts for backward compatibility.</Description>
     </PropertyGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\Juice.Contracts\Juice.Contracts.csproj" />
+      <ProjectReference Include="..\Juice.Messaging.Contracts\Juice.Messaging.Contracts.csproj" />
     </ItemGroup>
 
 </Project>

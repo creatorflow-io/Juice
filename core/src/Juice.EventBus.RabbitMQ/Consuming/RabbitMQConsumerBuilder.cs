@@ -1,4 +1,5 @@
 ﻿using Juice.EventBus.Subscriptions;
+using Juice.Messaging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;

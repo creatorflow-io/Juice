@@ -16,6 +16,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Juice.Contracts\Juice.Contracts.csproj" />
+      <ProjectReference Include="..\Juice.Messaging.Contracts\Juice.Messaging.Contracts.csproj" />
     </ItemGroup>
 
 </Project>
