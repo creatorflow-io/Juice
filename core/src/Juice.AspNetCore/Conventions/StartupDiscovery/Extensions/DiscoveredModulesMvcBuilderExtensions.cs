@@ -91,7 +91,7 @@ namespace Juice.Conventions.StartupDiscovery.Extensions
                     var feature = startup.GetFeature();
                     if (feature != null && feature.IncompatibleFeatures != null && requirements.Any(f => feature.IncompatibleFeatures.Contains(f)))
                     {
-                        var conflict = requirements.Any(f => feature.IncompatibleFeatures.Contains(f));
+                        var conflict = requirements.Where(f => feature.IncompatibleFeatures.Contains(f));
                         logger?.LogWarning($"Feature {featureName} is not compatible with {string.Join(", ", conflict)}");
 
                         hasConflict = true;
