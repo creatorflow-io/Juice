@@ -16,7 +16,7 @@ namespace Juice.Extensions.Redis.Internal
 
         public RedisConnectionProvider(
             IOptionsProvider<IRedisConnectionProvider, RedisOptions> options,
-            ILogger<RedisConnectionProvider> logger): this(options.Value, logger)
+            ILogger<RedisConnectionProvider> logger) : this(options.Value, logger)
         {
         }
 
@@ -69,6 +69,11 @@ namespace Juice.Extensions.Redis.Internal
                 }
 
                 return _master;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to connect to Redis. {message}", ex.Message);
+                throw;
             }
             finally
             {

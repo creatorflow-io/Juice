@@ -169,11 +169,26 @@ namespace Juice.Messaging.Idempotency.Redis
             var requestKey = GetRequestKey(scope, key);
             var resultKey = GetResultKey(scope, key);
             var stateKey = GetStateKey(scope, key);
-            var connection = await ConnectionProvider.GetConnectionAsync();
-            var db = connection.GetDatabase();
+
+            IConnectionMultiplexer connection;
+            try
+            {
+                connection = await ConnectionProvider.GetConnectionAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Error while trying to get Redis connection for request {RequestId} for {CommandType}",
+                    key, scope);
+                return OperationResult.Failed<T>(ex, 
+                    $"Error while trying to get Redis connection.");
+            }
 
             try
             {
+                var db = connection.GetDatabase();
+
                 // Use transaction to ensure both keys are created together
                 var transaction = db.CreateTransaction();
 
