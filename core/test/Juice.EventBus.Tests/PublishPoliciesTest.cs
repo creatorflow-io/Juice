@@ -482,5 +482,129 @@ namespace Juice.EventBus.Tests
             routes.Should().HaveCount(1);
             routes.First().Destination.Should().Be("default");
         }
+
+        [Fact(DisplayName = "Should include routing key in resolved route when configured")]
+        public async Task Should_Include_RoutingKey_In_Resolved_Route_When_ConfiguredAsync()
+        {
+            // Arrange
+            var options = new PublishingPolicyOptions
+            {
+                Default = new PublishRule
+                {
+                    Publishers = [new PublisherDestination { Key = "rabbitmq", Destination = "default" }]
+                },
+                Rules =
+                [
+                    new PublishRule
+                    {
+                        Priority = 10,
+                        Match = new PublishRuleMatch { Event = "OrderPlacedEvent" },
+                        Publishers =
+                        [
+                            new PublisherDestination
+                            {
+                                Key = "rabbitmq",
+                                Destination = "orders-exchange",
+                                RoutingKey = "orders.placed"
+                            }
+                        ]
+                    }
+                ]
+            };
+            var policy = new DefaultEventPublishingPolicy(Options.Create(options));
+            var context = new PolicyResolveContext { EventType = "OrderPlacedEvent" };
+
+            // Act
+            var routes = await policy.ResolveAsync(context);
+
+            // Assert
+            routes.Should().HaveCount(1);
+            routes.First().Destination.Should().Be("orders-exchange");
+            routes.First().RoutingKey.Should().Be("orders.placed");
+        }
+
+        [Fact(DisplayName = "Should return null routing key when not configured")]
+        public async Task Should_Return_Null_RoutingKey_When_Not_ConfiguredAsync()
+        {
+            // Arrange
+            var options = new PublishingPolicyOptions
+            {
+                Default = new PublishRule
+                {
+                    Publishers = [new PublisherDestination { Key = "rabbitmq", Destination = "default_exchange" }]
+                },
+                Rules = []
+            };
+            var policy = new DefaultEventPublishingPolicy(Options.Create(options));
+            var context = CreateDefaultContext();
+
+            // Act
+            var routes = await policy.ResolveAsync(context);
+
+            // Assert - RoutingKey should be null so transport falls back to x-message-name
+            routes.Should().HaveCount(1);
+            routes.First().RoutingKey.Should().BeNull();
+        }
+
+        [Fact(DisplayName = "Should use different routing keys for different tenants")]
+        public async Task Should_Use_Different_RoutingKeys_For_Different_TenantsAsync()
+        {
+            // Arrange
+            var options = new PublishingPolicyOptions
+            {
+                Default = new PublishRule
+                {
+                    Publishers = [new PublisherDestination { Key = "rabbitmq", Destination = "default" }]
+                },
+                Rules =
+                [
+                    new PublishRule
+                    {
+                        Priority = 10,
+                        Match = new PublishRuleMatch { Event = "OrderPlacedEvent", TenantIdentifier = "acme" },
+                        Publishers =
+                        [
+                            new PublisherDestination
+                            {
+                                Key = "rabbitmq",
+                                Destination = "topic-exchange",
+                                RoutingKey = "acme.orders.placed"
+                            }
+                        ]
+                    },
+                    new PublishRule
+                    {
+                        Priority = 10,
+                        Match = new PublishRuleMatch { Event = "OrderPlacedEvent", TenantIdentifier = "globex" },
+                        Publishers =
+                        [
+                            new PublisherDestination
+                            {
+                                Key = "rabbitmq",
+                                Destination = "topic-exchange",
+                                RoutingKey = "globex.orders.placed"
+                            }
+                        ]
+                    }
+                ]
+            };
+            var policy = new DefaultEventPublishingPolicy(Options.Create(options));
+
+            // Act
+            var acmeRoutes = await policy.ResolveAsync(new PolicyResolveContext
+            {
+                EventType = "OrderPlacedEvent",
+                TenantIdentifier = "acme"
+            });
+            var globexRoutes = await policy.ResolveAsync(new PolicyResolveContext
+            {
+                EventType = "OrderPlacedEvent",
+                TenantIdentifier = "globex"
+            });
+
+            // Assert
+            acmeRoutes.First().RoutingKey.Should().Be("acme.orders.placed");
+            globexRoutes.First().RoutingKey.Should().Be("globex.orders.placed");
+        }
     }
 }

@@ -46,7 +46,8 @@ namespace Juice.EventBus.Internal
                 await PublishAsync(@event, route.PublisherKey, new PublishContext(@event.MessageId.ToString())
                 {
                     Destination = route.Destination,
-                    TenantId = _tenantAccessor?.Tenant?.Id
+                    TenantId = _tenantAccessor?.Tenant?.Id,
+                    RoutingKey = route.RoutingKey
                 }, ctx, ct);
             }
         }
@@ -72,6 +73,10 @@ namespace Juice.EventBus.Internal
                                 { "x-message-id", message.MessageId},
                                 { "x-message-name", message is IEvent evt ? evt.EventName : message.GetType().Name },
                             };
+            if (!string.IsNullOrEmpty(context.RoutingKey))
+            {
+                headers["x-routing-key"] = context.RoutingKey;
+            }
 
             await publisher.PublishAsync(
                 _serializer.SerializeToUtf8Bytes(message),

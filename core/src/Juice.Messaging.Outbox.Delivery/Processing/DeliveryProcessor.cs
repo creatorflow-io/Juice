@@ -109,7 +109,8 @@ namespace Juice.Messaging.Outbox.Delivery.Processing
             {
                 TenantId = delivery.OutboxEvent.TenantId,
                 Destination = delivery.Destination,
-                Headers = headers
+                Headers = headers,
+                RoutingKey = delivery.RoutingKey
             };
 
             await _publisher.PublishAsync(delivery.OutboxEvent.PayloadBytes, context, cancellationToken);

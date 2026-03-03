@@ -97,7 +97,8 @@ namespace Juice.Messaging.Outbox.Internal
                     {
                         EventId = message.MessageId,
                         PublisherKey = route.PublisherKey,
-                        Destination = route.Destination
+                        Destination = route.Destination,
+                        RoutingKey = route.RoutingKey
                     })]
                 });
             }

@@ -79,7 +79,8 @@ namespace Juice.EventBus.RabbitMQ.Publishing
                             messageId, $"{time.TotalSeconds:n1}", ex.Message);
                     });
 
-            var routingKey = headers.GetHeaderString("x-message-name")
+            var routingKey = headers.GetHeaderString("x-routing-key")
+                ?? headers.GetHeaderString("x-message-name")
                 ?? headers.GetHeaderString("x-message-type")
                 ?? throw new InvalidOperationException(
                     "Missing required header 'x-message-name' or 'x-message-type' for routing key");

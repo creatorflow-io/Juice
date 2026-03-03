@@ -2,5 +2,6 @@
 {
     public sealed record PublishRoute(
         string PublisherKey,
-        string Destination);
+        string Destination,
+        string? RoutingKey = null);
 }

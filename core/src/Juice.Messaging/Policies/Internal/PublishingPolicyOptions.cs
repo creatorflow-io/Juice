@@ -11,6 +11,7 @@ namespace Juice.Messaging.Policies.Internal
     {
         public string Key { get; init; } = default!;
         public string Destination { get; init; } = default!;
+        public string? RoutingKey { get; init; }
     }
 
     internal sealed record PublishRule
