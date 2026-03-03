@@ -51,17 +51,17 @@ namespace Microsoft.Extensions.DependencyInjection
                 configureOptions?.Invoke(options);
                 return options;
             });
-            var dbOptions = _services.BuildServiceProvider().GetRequiredKeyedService<DbOptions<OutboxContext>>(typeof(T).Name);
-            var provider = dbOptions.DatabaseProvider;
-            var schema = dbOptions.Schema;
-            var connectionName = dbOptions.ConnectionName;
-            if (string.IsNullOrEmpty(connectionName))
-            {
-                throw new ArgumentNullException(nameof(connectionName));
-            }
 
-            _services.AddKeyedScoped<OutboxContext>(typeof(T).Name, (sp, key) =>
+            _services.AddKeyedScoped(typeof(T).Name, (sp, key) =>
             {
+                var dbOptions = sp.GetRequiredKeyedService<DbOptions<OutboxContext>>(key);
+                var provider = dbOptions.DatabaseProvider;
+                var schema = dbOptions.Schema;
+                var connectionName = dbOptions.ConnectionName;
+                if (string.IsNullOrEmpty(connectionName))
+                {
+                    throw new ArgumentNullException(nameof(connectionName));
+                }
                 var options = new DbContextOptionsBuilder<OutboxContext>();
                 switch (provider)
                 {
@@ -93,7 +93,7 @@ namespace Microsoft.Extensions.DependencyInjection
                     .ReplaceService<IMigrationsAssembly, DbSchemaAwareMigrationAssembly>()
                 ;
 
-                return new OutboxContext(options.Options, sp.GetRequiredKeyedService<DbOptions<OutboxContext>>(typeof(T).Name));
+                return new OutboxContext(options.Options, dbOptions);
             });
         }
     }
