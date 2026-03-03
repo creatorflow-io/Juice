@@ -29,6 +29,9 @@ namespace Juice.Messaging.Outbox.EF
                .HasMaxLength(LengthConstants.IdentityLength)
                .IsRequired();
 
+            builder.Property(e => e.RoutingKey)
+               .HasMaxLength(LengthConstants.IdentityLength);
+
             builder.Property(e => e.State)
                 .IsRequired();
 

@@ -153,6 +153,10 @@ namespace Juice.EF.Tests.SqlServer.Migrations
                     b.Property<int>("RetryCount")
                         .HasColumnType("int");
 
+                    b.Property<string>("RoutingKey")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<int>("State")
                         .HasColumnType("int");
 

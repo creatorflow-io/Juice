@@ -4,7 +4,8 @@
         string MessageId,
         string? Destination = null,
         string? TenantId = null,
-        IDictionary<string, object?>? Headers = default)
+        IDictionary<string, object?>? Headers = default,
+        string? RoutingKey = null)
     {
         public PublishContext WithHeader(string key, object? value)
         {

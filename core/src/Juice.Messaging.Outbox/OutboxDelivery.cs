@@ -8,6 +8,7 @@ namespace Juice.Messaging.Outbox
         public Guid EventId { get; init; }
         public string PublisherKey { get; init; } = default!;
         public string Destination { get; init; } = default!;
+        public string? RoutingKey { get; init; }
         public DateTimeOffset CreationTime { get; init; }
         public DeliveryState State { get; private set; }
         public int RetryCount { get; private set; }

@@ -30,7 +30,7 @@ namespace Juice.Messaging.Policies.Internal
         private static ValueTask<IReadOnlyCollection<PublishRoute>> Map(
             IEnumerable<PublisherDestination> publishers)
         {
-            IReadOnlyCollection<PublishRoute> routes = [.. publishers.Select(p => new PublishRoute(p.Key, p.Destination))];
+            IReadOnlyCollection<PublishRoute> routes = [.. publishers.Select(p => new PublishRoute(p.Key, p.Destination, p.RoutingKey))];
             return ValueTask.FromResult(routes);
         }
     }
