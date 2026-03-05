@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Juice.EF
 {
@@ -84,6 +85,20 @@ namespace Juice.EF
             }
 
             _options = serviceProvider.GetService(typeof(DbOptions<>).MakeGenericType(GetType())) as DbOptions;
+            if (_options == null)
+            {
+                // Try to get from IOptions if DbOptions is registered as options
+                var optionsType = typeof(IOptions<>).MakeGenericType(typeof(DbOptions<>).MakeGenericType(GetType()));
+                var optionsWrapper = serviceProvider.GetService(optionsType);
+                if (optionsWrapper != null)
+                {
+                    var valueProperty = optionsType.GetProperty("Value");
+                    if (valueProperty != null)
+                    {
+                        _options = valueProperty.GetValue(optionsWrapper) as DbOptions;
+                    }
+                }
+            }
             Schema = _options?.Schema;
             if (_options?.EnableTimeTracking ?? false)
             {

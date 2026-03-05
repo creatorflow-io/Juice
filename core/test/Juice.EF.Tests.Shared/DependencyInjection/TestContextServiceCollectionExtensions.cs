@@ -12,7 +12,7 @@ namespace Microsoft.Extensions.DependencyInjection
     {
         public static IServiceCollection AddTestDbContext(this IServiceCollection services, IConfiguration configuration, string provider)
         {
-            services.AddScoped(sp => new DbOptions<TestContext> { EnableTimeTracking = true });
+            services.Configure<DbOptions<TestContext>>(options => options.EnableTimeTracking = true);
             services.AddScoped(sp =>
             {
                 var connectionName = provider switch

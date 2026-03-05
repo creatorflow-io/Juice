@@ -121,7 +121,7 @@ namespace Juice.EF.Tests
 
             logger.LogInformation("Content {code} was added", code1);
 
-            var timeMeasured = dbContext.TimeTracker!.ToString();
+            var timeMeasured = dbContext.TimeTracker?.ToString();
             logger.LogInformation("Time measured: \n{timeMeasured}", timeMeasured);
 
             var addedContent = await dbContext.Set<Content>().FirstOrDefaultAsync(c => c.Code == code1);
