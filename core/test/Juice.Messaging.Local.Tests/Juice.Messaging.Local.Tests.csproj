@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>$(AppTargetFramework)</TargetFrameworks>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <IsPackable>false</IsPackable>
+        <IsTestProject>true</IsTestProject>
+        <UserSecretsId>b7e3c921-4f2a-4d8b-9e1c-abc123def456</UserSecretsId>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdk)" />
+        <PackageReference Include="xunit" Version="$(XUnitVersion)" />
+        <PackageReference Include="xunit.runner.visualstudio" Version="2.8.*">
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="coverlet.collector" Version="6.0.2">
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="FluentAssertions" Version="6.12.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\test\Juice.XUnit\Juice.XUnit.csproj" />
+        <ProjectReference Include="..\..\src\Juice.Messaging.Local\Juice.Messaging.Local.csproj" />
+        <ProjectReference Include="..\..\src\Juice.Messaging.Idempotency.Caching\Juice.Messaging.Idempotency.Caching.csproj" />
+        <ProjectReference Include="..\..\src\Juice.Messaging.Outbox.EF\Juice.Messaging.Outbox.EF.csproj" />
+        <ProjectReference Include="..\..\src\Juice.MediatR.Behaviors\Juice.MediatR.Behaviors.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="Xunit" />
+    </ItemGroup>
+
+</Project>
