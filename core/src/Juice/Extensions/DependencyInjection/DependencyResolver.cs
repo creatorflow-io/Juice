@@ -5,6 +5,24 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Juice.Extensions.DependencyInjection
 {
+    internal static class ConfigurationBuilderExtensions
+    {
+        /// <summary>
+        /// Adds a JSON file only if it exists and is not empty.
+        /// Prevents <see cref="System.Text.Json.JsonReaderException"/> on empty files
+        /// that may appear in CI build output directories.
+        /// </summary>
+        public static IConfigurationBuilder AddNonEmptyJsonFile(
+            this IConfigurationBuilder builder, string path)
+        {
+            if (File.Exists(path) && new FileInfo(path).Length > 0)
+            {
+                builder.AddJsonFile(path, optional: true);
+            }
+            return builder;
+        }
+    }
+
     /// <summary>
     /// Use <see cref="DependencyResolver"/> to init IServiceProvider
     /// <para>NOTE: ONLY USE FOR UNIT TEST AND IMPLEMENT IDesignTimeDbContextFactory FOR EF-MIGRATIONS</para>
@@ -39,12 +57,12 @@ namespace Juice.Extensions.DependencyInjection
         {
 
             var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
-               ?? "Production";
+               ?? "Development";
 
             var cb = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-                .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development"}.json", optional: true);
+                .AddNonEmptyJsonFile($"appsettings.{environment}.json");
             var regex = new Regex($"appsettings\\.[\\w]+\\.{environment}\\.json");
 
             var files = Directory.GetFiles(CurrentDirectory)
@@ -52,7 +70,7 @@ namespace Juice.Extensions.DependencyInjection
                 .ToArray();
             foreach (var f in files)
             {
-                cb.AddJsonFile(f, optional: true);
+                cb.AddNonEmptyJsonFile(f);
             }
             if (assembly != null)
             {
@@ -63,6 +81,7 @@ namespace Juice.Extensions.DependencyInjection
                 .AddCommandLine(args ?? [])
                 .Build();
         }
+
 
         private void ConfigureServices(IServiceCollection services)
         {
