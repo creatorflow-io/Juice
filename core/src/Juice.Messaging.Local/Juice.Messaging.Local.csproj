@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>$(AppTargetFramework)</TargetFrameworks>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="$(MicrosoftExtensionsVersion)" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="$(MicrosoftExtensionsVersion)" />
+        <PackageReference Include="Microsoft.Extensions.Logging" Version="$(MicrosoftExtensionsVersion)" />
+        <PackageReference Include="Microsoft.Extensions.Options" Version="$(MicrosoftExtensionsVersion)" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Juice.EventBus\Juice.EventBus.csproj" />
+        <ProjectReference Include="..\Juice.MediatR\Juice.MediatR.csproj" />
+        <ProjectReference Include="..\Juice.Messaging\Juice.Messaging.csproj" />
+    </ItemGroup>
+
+</Project>

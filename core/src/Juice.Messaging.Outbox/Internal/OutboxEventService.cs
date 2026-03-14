@@ -57,13 +57,15 @@ namespace Juice.Messaging.Outbox.Internal
 
             foreach (var message in _messages)
             {
-                var routes = await _publishingPolicy.ResolveAsync(new PolicyResolveContext
+                var allRoutes = await _publishingPolicy.ResolveAsync(new PolicyResolveContext
                 {
                     Domain = message.GetType().GetDomainName() ?? typeof(TContext).GetDomainName() ?? typeof(TContext).Name,
                     EventType = message.GetType().Name,
                     TenantIdentifier = _tenantAccessor?.Tenant?.Identifier,
                     TenantTier = _tenantAccessor?.Tenant?.Tier
                 });
+                // Skip reserved in-process keys — "local-channel" never writes to the outbox.
+                var routes = allRoutes.Where(r => r.PublisherKey != "local-channel").ToList();
                 if (routes.Count == 0)
                 {
                     continue;

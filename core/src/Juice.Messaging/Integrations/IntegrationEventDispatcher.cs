@@ -53,7 +53,11 @@ namespace Juice.Messaging.Integrations
 
                         continue;
                     }
-                    var handler = scope.ServiceProvider.GetService(handlerType);
+                    // Try resolving by concrete type first (e.g. RabbitMQ subscriptions),
+                    // then fall back to resolving by interface (e.g. local-channel handlers).
+                    var handler = scope.ServiceProvider.GetService(handlerType)
+                        ?? scope.ServiceProvider.GetServices(concreteType)
+                            .FirstOrDefault(h => h!.GetType() == handlerType);
                     if (handler == null)
                     {
                         _logger.LogWarning("Type {typeName} not registered as a service", handlerType.Name);
@@ -64,7 +68,7 @@ namespace Juice.Messaging.Integrations
                     try
                     {
                         handled = true;
-                        var handleMethod = _methodCache.GetOrAdd(concreteType, type => 
+                        var handleMethod = _methodCache.GetOrAdd(concreteType, type =>
                             type.GetMethod(nameof(IIntegrationEventHandler<IIntegrationEvent>.HandleAsync))!);
                         await (Task)handleMethod.Invoke(handler, new object[] { evt })!;
                         ok = true;
