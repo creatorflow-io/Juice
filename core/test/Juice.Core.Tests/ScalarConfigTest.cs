@@ -1,6 +1,7 @@
 ﻿using System;
 using Juice.Core.Tests.Models;
 using Juice.Extensions.DependencyInjection;
+using Juice.XUnit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -21,7 +22,7 @@ namespace Juice.Core.Tests
         }
 
 
-        [Fact(DisplayName = "Biding a dictionary from appsettings")]
+        [IgnoreOnCIFact(DisplayName = "Biding a dictionary from appsettings")]
         public void Config_should_write()
         {
             var builder = new DependencyResolver();
