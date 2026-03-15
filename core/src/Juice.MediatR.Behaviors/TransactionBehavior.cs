@@ -106,6 +106,7 @@ namespace Juice.MediatR.Behaviors
         private readonly TContext _dbContext;
         private readonly IOutboxService _outboxService;
         private readonly IMediator _mediator;
+        private readonly IPostCommitActions? _postCommitActions;
         /// <summary>
         /// Gets a value indicating whether integration events should be published after processing.
         /// </summary>
@@ -116,12 +117,14 @@ namespace Juice.MediatR.Behaviors
         public TransactionBehavior(TContext dbContext,
             IOutboxService<TContext> integrationEventService,
             IMediator mediator,
-            ILogger logger)
+            ILogger logger,
+            IPostCommitActions? postCommitActions = null)
         {
             _dbContext = dbContext ?? throw new ArgumentException(typeof(TContext).Name);
             _outboxService = integrationEventService ?? throw new ArgumentException(nameof(integrationEventService));
             _mediator = mediator ?? throw new ArgumentException(nameof(IMediator));
             _logger = logger ?? throw new ArgumentException(nameof(ILogger));
+            _postCommitActions = postCommitActions;
         }
 
         public async ValueTask<TResponse> Handle(TRequest request, RequestHandlerDelegate<TRequest, TResponse> next, CancellationToken cancellationToken)
@@ -174,6 +177,11 @@ namespace Juice.MediatR.Behaviors
                         _logger.LogDebug("----- Transaction {TransactionId} committed", transaction.TransactionId);
                     }
                     _dbContext.ClearEvents();
+
+                    // Flush deferred local dispatch actions (e.g., channel enqueue
+                    // for "local" routes). These were registered by IMessageService
+                    // during domain event dispatch and deferred until after commit.
+                    _postCommitActions?.Flush();
                 }, cancellationToken);
 
                 return response;

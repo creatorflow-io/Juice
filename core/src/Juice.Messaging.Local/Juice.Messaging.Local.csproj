@@ -14,6 +14,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\Juice\Juice.csproj" />
         <ProjectReference Include="..\Juice.EventBus\Juice.EventBus.csproj" />
         <ProjectReference Include="..\Juice.MediatR\Juice.MediatR.csproj" />
         <ProjectReference Include="..\Juice.Messaging\Juice.Messaging.csproj" />

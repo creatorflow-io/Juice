@@ -39,10 +39,10 @@ namespace Juice.Messaging
 
 ## Transaction Behavior
 
-| Context | Action |
-|---|---|
-| Inside `TransactionBehavior` scope (`TContext.Database.CurrentTransaction != null`) | `IOutboxService<TContext>.AddEventAsync(msg)` only. `TransactionBehavior` commits via `SaveEventsAsync`. No immediate channel dispatch (transaction not yet committed). |
-| Outside active transaction | `AddEventAsync(msg)` + `SaveEventsAsync(null, ct)` immediately. Then, for `"local"` routes, enqueue to channel for immediate dispatch (idempotency deduplicates with delivery retry). |
+| Context | Detection | Action |
+|---|---|---|
+| Inside managed `TransactionBehavior` scope | `TContext is IUnitOfWork { IsManaged: true }` | `AddEventAsync(msg)` only — save deferred to `TransactionBehavior.SaveEventsAsync(transactionId)`. No immediate channel dispatch (data not committed yet). `"local-channel"` routes still enqueue immediately. |
+| Outside managed transaction | `IsManaged = false`, or `TContext` is not `IUnitOfWork`, or `TContext` is null | `AddEventAsync(msg)` + `SaveEventsAsync(null, ct)` immediately. For `"local"` routes, enqueue to channel for immediate dispatch (idempotency deduplicates with delivery retry). |
 
 ---
 

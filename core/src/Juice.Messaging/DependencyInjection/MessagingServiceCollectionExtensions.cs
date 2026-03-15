@@ -15,6 +15,8 @@ namespace Microsoft.Extensions.DependencyInjection
 
             builder.AddIntegrationEventDispatcher();
 
+            services.TryAddScoped<IPostCommitActions, PostCommitActions>();
+
             return builder;
         }
 
