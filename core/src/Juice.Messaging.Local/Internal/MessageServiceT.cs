@@ -1,4 +1,5 @@
 ﻿using System.Threading.Channels;
+using Juice.Domain;
 using Juice.Messaging.Integrations;
 using Juice.Messaging.Outbox;
 using Juice.MultiTenant;
@@ -19,40 +20,57 @@ namespace Juice.Messaging.Local.Internal
     /// For broker routes the message is written to the outbox only.
     /// </para>
     /// <para>
-    /// When called inside an active <c>TransactionBehavior</c> scope,
-    /// <c>SaveEventsAsync</c> joins the ambient transaction; the behavior's final
-    /// <c>SaveEventsAsync</c> call finds no pending messages (cleared after first save)
-    /// and becomes a no-op.
+    /// <c>"local-channel"</c> and <c>"local"</c> are mutually exclusive — if the policy
+    /// resolves both, <c>"local"</c> takes precedence (durable superset) and the
+    /// <c>"local-channel"</c> route is ignored to prevent double handler invocation.
+    /// </para>
+    /// <para>
+    /// When called inside a managed <c>TransactionBehavior</c> scope (detected via
+    /// <c>IUnitOfWork.IsManaged</c>), only <c>AddEventAsync</c> is called — the save
+    /// is deferred to <c>TransactionBehavior</c>'s <c>SaveEventsAsync(transactionId)</c>,
+    /// ensuring atomicity with domain data. Immediate channel dispatch for <c>"local"</c>
+    /// routes is also suppressed (data not yet committed).
+    /// </para>
+    /// <para>
+    /// When called outside a managed transaction, <c>SaveEventsAsync(null)</c> is called
+    /// immediately as a standalone operation, and <c>"local"</c> routes are enqueued to
+    /// the channel for immediate dispatch.
     /// </para>
     /// </summary>
     internal sealed class MessageService<TContext> : MessageService, IMessageService<TContext>
         where TContext : class
     {
         private readonly IOutboxService<TContext>? _outboxService;
+        private readonly TContext? _context;
+        private readonly IPostCommitActions? _postCommitActions;
 
         public MessageService(
             Policies.IMessagePublishingPolicy policy,
             ChannelWriter<IMessage> channelWriter,
             ILogger<MessageService<TContext>> logger,
             IOutboxService<TContext>? outboxService = null,
+            TContext? context = null,
+            IPostCommitActions? postCommitActions = null,
             ITenantAccessor? tenantAccessor = null)
             : base(policy, channelWriter, logger, tenantAccessor)
         {
             _outboxService = outboxService;
+            _context = context;
+            _postCommitActions = postCommitActions;
         }
 
         public override async Task PublishAsync(IMessage message, CancellationToken cancellationToken = default)
         {
             var routes = await ResolveRoutesAsync(message);
 
-            bool hasLocalChannel = false;
             bool hasLocalOutbox = false;
             bool hasOutboxRoutes = false;
+            bool hasLocalChannelOnly = false;
 
             foreach (var route in routes)
             {
                 if (route.PublisherKey == "local-channel")
-                    hasLocalChannel = true;
+                    hasLocalChannelOnly = true;
                 else
                 {
                     hasOutboxRoutes = true;
@@ -61,7 +79,13 @@ namespace Juice.Messaging.Local.Internal
                 }
             }
 
-            if (hasLocalChannel)
+            // "local" supersedes "local-channel" — they are mutually exclusive.
+            // If both are present, "local" wins (durable superset) to prevent
+            // double handler invocation.
+            if (hasLocalOutbox)
+                hasLocalChannelOnly = false;
+
+            if (hasLocalChannelOnly)
             {
                 EnqueueLocalChannel(message);
             }
@@ -79,16 +103,31 @@ namespace Juice.Messaging.Local.Internal
                     throw new InvalidOperationException("MessageContext is not initialized. An ambient MessageContext scope is required to publish messages with outbox routes.");
                 }
                 await _outboxService.AddEventAsync(message);
-                // OutboxEventService resolves routes internally and skips "local-channel".
-                // Passing transactionId=null: when inside an ambient transaction the
-                // OutboxRepository joins it; when outside, a standalone write is committed.
+
+                var isManaged = _context is IUnitOfWork { IsManaged: true };
+
+                if (isManaged)
+                {
+                    // Inside a managed TransactionBehavior scope — defer save.
+                    // TransactionBehavior will call SaveEventsAsync(transactionId) later,
+                    // persisting all accumulated events atomically with domain data.
+                    // Register a post-commit action to enqueue to channel after commit
+                    // for immediate local dispatch.
+                    if (hasLocalOutbox && _postCommitActions != null)
+                    {
+                        _postCommitActions.Add(() => EnqueueLocalChannel(message));
+                    }
+                    return;
+                }
+
+                // Outside transaction — save immediately as standalone operation.
                 await _outboxService.SaveEventsAsync(null, cancellationToken);
 
                 // For "local" routes, enqueue to the in-memory channel for immediate
                 // best-effort dispatch. The outbox entry remains for durability —
                 // DeliveryHostedService will pick it up on retry if this dispatch fails.
                 // IntegrationEventDispatcher idempotency deduplicates if both succeed.
-                if (hasLocalOutbox && !hasLocalChannel)
+                if (hasLocalOutbox)
                 {
                     EnqueueLocalChannel(message);
                 }
