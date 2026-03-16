@@ -90,6 +90,7 @@ namespace Juice.Messaging.Outbox.Internal
                                         { "x-source", ctx.Source},
                                         { "x-tenant-id", _tenantAccessor?.Tenant?.Id },
                                         { "x-message-type", message.GetType().Name },
+                                        { "x-message-clr-type", $"{message.GetType().FullName}, {message.GetType().Assembly.GetName().Name}" },
                                         { "x-message-id", message.MessageId},
                                         { "x-message-name", message is IEvent evt ? evt.EventName : message.GetType().Name },
                                     },

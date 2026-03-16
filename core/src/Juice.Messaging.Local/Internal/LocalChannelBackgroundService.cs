@@ -28,13 +28,13 @@ namespace Juice.Messaging.Local.Internal
     {
         private const string PublisherKey = "local-channel";
 
-        private readonly ChannelReader<IMessage> _reader;
+        private readonly ChannelReader<ChannelEnvelope> _reader;
         private readonly IOptions<LocalChannelOptions> _options;
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<LocalChannelBackgroundService> _logger;
 
         public LocalChannelBackgroundService(
-            ChannelReader<IMessage> reader,
+            ChannelReader<ChannelEnvelope> reader,
             IOptions<LocalChannelOptions> options,
             IServiceScopeFactory scopeFactory,
             ILogger<LocalChannelBackgroundService> logger)
@@ -52,7 +52,7 @@ namespace Juice.Messaging.Local.Internal
                 ? new SemaphoreSlim(maxConcurrency.Value, maxConcurrency.Value)
                 : null;
 
-            await foreach (var message in _reader.ReadAllAsync(stoppingToken))
+            await foreach (var envelope in _reader.ReadAllAsync(stoppingToken))
             {
                 if (semaphore != null)
                 {
@@ -62,6 +62,22 @@ namespace Juice.Messaging.Local.Internal
                 _ = Task.Run(async () =>
                 {
                     var stopwatch = Stopwatch.StartNew();
+                    var message = envelope.Message;
+
+                    // Restore MessageContext from the snapshot captured at enqueue time.
+                    // CorrelationId and Source are preserved for tracing and idempotency.
+                    // ExecutionId is regenerated (this is a new execution context) and the
+                    // original ExecutionId becomes the CausationId (causal chain).
+                    var needsContext = !MessageContext.IsInitialized;
+                    if (needsContext && envelope.Context != null)
+                    {
+                        MessageContext.Initialize(
+                            correlationId: envelope.Context.CorrelationId,
+                            causationId: envelope.Context.ExecutionId,
+                            executionId: Guid.NewGuid().ToString(),
+                            source: envelope.Context.Source);
+                    }
+
                     try
                     {
                         LocalChannelMetrics.IncrementDeliveryAttempt(PublisherKey);
@@ -99,6 +115,10 @@ namespace Juice.Messaging.Local.Internal
                     }
                     finally
                     {
+                        if (needsContext && envelope.Context != null)
+                        {
+                            MessageContext.Clear();
+                        }
                         semaphore?.Release();
                     }
                 }, CancellationToken.None);

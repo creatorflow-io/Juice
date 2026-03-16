@@ -98,7 +98,7 @@ namespace Juice.Messaging.Local.Tests
 
             var scope = provider.CreateScope();
             var svc = scope.ServiceProvider.GetRequiredService<IMessageService<FakeDbContext>>();
-            var channel = provider.GetRequiredService<ChannelReader<IMessage>>();
+            var channel = provider.GetRequiredService<ChannelReader<Juice.Messaging.Local.Internal.ChannelEnvelope>>();
             var postCommit = scope.ServiceProvider.GetRequiredService<IPostCommitActions>();
 
             await svc.PublishAsync(new TestIntegrationEvent());
@@ -145,7 +145,7 @@ namespace Juice.Messaging.Local.Tests
 
             var scope = provider.CreateScope();
             var svc = scope.ServiceProvider.GetRequiredService<IMessageService<FakeDbContext>>();
-            var channel = provider.GetRequiredService<ChannelReader<IMessage>>();
+            var channel = provider.GetRequiredService<ChannelReader<Juice.Messaging.Local.Internal.ChannelEnvelope>>();
 
             await svc.PublishAsync(new TestIntegrationEvent());
 
@@ -200,7 +200,7 @@ namespace Juice.Messaging.Local.Tests
 
             var scope = provider.CreateScope();
             var svc = scope.ServiceProvider.GetRequiredService<IMessageService<FakeDbContext>>();
-            var channel = provider.GetRequiredService<ChannelReader<IMessage>>();
+            var channel = provider.GetRequiredService<ChannelReader<Juice.Messaging.Local.Internal.ChannelEnvelope>>();
 
             await svc.PublishAsync(new TestIntegrationEvent());
 
@@ -237,7 +237,7 @@ namespace Juice.Messaging.Local.Tests
             var provider = services.BuildServiceProvider();
             var scope = provider.CreateScope();
             var svc = scope.ServiceProvider.GetRequiredService<IMessageService<FakeDbContext>>();
-            var channel = provider.GetRequiredService<ChannelReader<IMessage>>();
+            var channel = provider.GetRequiredService<ChannelReader<Juice.Messaging.Local.Internal.ChannelEnvelope>>();
 
             var postCommit = scope.ServiceProvider.GetRequiredService<IPostCommitActions>();
 

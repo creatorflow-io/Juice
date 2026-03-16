@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+
 namespace Juice.Messaging.Outbox
 {
     /// <summary>
@@ -16,8 +18,15 @@ namespace Juice.Messaging.Outbox
         /// <summary>
         /// Executes and clears all registered actions. Called by
         /// <c>TransactionBehavior</c> after <c>CommitTransactionAsync</c>.
+        /// Failures are logged but do not throw — the transaction is already committed.
         /// </summary>
-        void Flush();
+        void Flush(ILogger? logger = null);
+
+        /// <summary>
+        /// Clears all registered actions without executing them. Called on
+        /// transaction rollback to prevent stale actions from firing.
+        /// </summary>
+        void Clear();
     }
 
     internal sealed class PostCommitActions : IPostCommitActions
@@ -26,11 +35,26 @@ namespace Juice.Messaging.Outbox
 
         public void Add(Action action) => _actions.Add(action);
 
-        public void Flush()
+        public void Clear() => _actions.Clear();
+
+        public void Flush(ILogger? logger = null)
         {
             foreach (var action in _actions)
             {
-                action();
+                try
+                {
+                    action();
+                }
+                catch (Exception ex)
+                {
+                    // Best-effort: don't stop remaining actions or throw.
+                    // The transaction is already committed — these are non-critical
+                    // optimistic dispatches (e.g., channel enqueue for "local" routes).
+                    // DeliveryHostedService will retry from the outbox if this fails.
+                    logger?.LogWarning(ex,
+                        "Post-commit action failed. The transaction was committed successfully. " +
+                        "Outbox delivery will retry if needed. {Message}", ex.Message);
+                }
             }
             _actions.Clear();
         }

@@ -31,6 +31,24 @@ namespace Juice.Messaging
         }
 
 
+        /// <summary>
+        /// Configures the message serializer to allow additional assembly prefixes
+        /// for <c>$type</c> deserialization. By default only <c>Juice.*</c> assemblies
+        /// are allowed. Call this to register your application assemblies so that
+        /// event types can be deserialized by the local transport publisher.
+        /// </summary>
+        /// <example>
+        /// <code>
+        /// builder.AddMessaging()
+        ///     .ConfigureSerializer(opts => opts.AllowedAssemblyPrefixes.Add("MyApp"));
+        /// </code>
+        /// </example>
+        public MessagingBuilder ConfigureSerializer(Action<MessageSerializerOptions> configure)
+        {
+            Services.Configure(configure);
+            return this;
+        }
+
         public MessagingBuilder AddPublishingPolicies(IConfigurationSection policies)
         {
             if (Services.Any(sd => sd.ServiceType == typeof(IMessagePublishingPolicy)))

@@ -152,6 +152,7 @@ namespace Juice.MediatR.Behaviors
                 var response = await next.Invoke(request, cancellationToken);
                 _?.Dispose();
 
+                var committed = false;
                 var transactionId = await ResilientTransaction.New(_dbContext, _logger).ExecuteAsync(async (transaction) =>
                 {
                     await _dbContext.SaveChangesAsync(cancellationToken);
@@ -171,24 +172,37 @@ namespace Juice.MediatR.Behaviors
                     }
 
                     await _dbContext.CommitTransactionAsync(transaction.TransactionId, cancellationToken);
+                    committed = true;
 
                     if (_logger?.IsEnabled(LogLevel.Debug) ?? false)
                     {
                         _logger.LogDebug("----- Transaction {TransactionId} committed", transaction.TransactionId);
                     }
                     _dbContext.ClearEvents();
-
-                    // Flush deferred local dispatch actions (e.g., channel enqueue
-                    // for "local" routes). These were registered by IMessageService
-                    // during domain event dispatch and deferred until after commit.
-                    _postCommitActions?.Flush();
                 }, cancellationToken);
+
+                // Flush deferred local dispatch actions (e.g., channel enqueue
+                // for "local" routes) only after a successful commit.
+                // MUST be outside ResilientTransaction — if Flush throws, we must
+                // not retry the already-committed transaction.
+                if (committed)
+                {
+                    _postCommitActions?.Flush(_logger);
+                }
+                else
+                {
+                    _postCommitActions?.Clear();
+                }
 
                 return response;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "ERROR Handling transaction for {CommandName} ({@Command})", typeName, request);
+
+                // Clear deferred actions from the failed transaction — they must
+                // not fire since the domain data was rolled back.
+                _postCommitActions?.Clear();
 
                 throw;
             }

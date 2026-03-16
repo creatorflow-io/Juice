@@ -57,11 +57,32 @@ A developer publishes a message routed to `"local-channel"` inside a `Transactio
 
 ---
 
+### User Story 4 - Post-Commit Immediate Dispatch for "local" Routes (Priority: P2)
+
+A developer publishes a `"local"` route message inside `TransactionBehavior`. After the transaction commits, the message is immediately enqueued to the in-memory channel for near-zero-latency dispatch — not waiting for `DeliveryHostedService` polling. The channel dispatch gets its own `ExecutionId` (new execution context) with `CausationId` pointing to the original `ExecutionId` (preserving causation chain). If the channel enqueue fails, it is logged as a warning and the outbox ensures eventual delivery.
+
+**Why this priority**: Reduces delivery latency for `"local"` routes inside transactions from polling interval (5-30s) to near-immediate, while maintaining the correct distributed tracing causation tree.
+
+**Independent Test**: Inside a `TransactionBehavior` scope, call `IMessageService<TContext>.PublishAsync` with a `"local"` route. Verify no channel enqueue before commit. Simulate commit by flushing `IPostCommitActions`. Verify the message is enqueued to the channel after flush.
+
+**Acceptance Scenarios**:
+
+1. **Given** a `"local"` route message published inside `TransactionBehavior`, **When** the transaction commits and `IPostCommitActions.Flush()` is called, **Then** the message is enqueued to the in-memory channel for immediate dispatch.
+2. **Given** a `"local"` route message published inside `TransactionBehavior`, **When** the transaction rolls back, **Then** `IPostCommitActions.Clear()` is called and no channel enqueue occurs.
+3. **Given** the `TransactionBehavior` lambda exits early without committing (e.g., `!HasActiveTransaction`), **When** `IPostCommitActions` contains deferred actions, **Then** the actions are cleared — not flushed.
+4. **Given** a post-commit flush action that throws an exception, **When** `Flush()` is called, **Then** the exception is logged as a warning, remaining actions continue to execute, and the command does not fail (transaction already committed).
+5. **Given** a message dispatched via the post-commit channel path, **When** the background service processes it, **Then** `MessageContext` is restored with the original `CorrelationId` and `Source`, a new `ExecutionId` is generated, and `CausationId` is set to the original `ExecutionId` (preserving causation chain).
+
+---
+
 ### Edge Cases
 
 - What happens if `IMessageService<TContext>.PublishAsync` is called after `TransactionBehavior` has already called `SaveEventsAsync(transactionId)` but before `CommitTransactionAsync`? The event would be staged but not saved in this transaction — it would be orphaned. This should not happen in practice because domain event dispatch occurs before the save phase.
 - What happens if the `DbContext` has an active transaction but is NOT managed by `TransactionBehavior` (e.g., manual `BeginTransaction`)? The message service should detect the managed state, not just the raw transaction presence.
 - What happens if `IMessageService<TContext>` is called multiple times during the same transaction? All events should accumulate in the same `IOutboxService<TContext>` (scoped) and be saved together by `TransactionBehavior`.
+- What happens if a post-commit flush action throws? The exception is caught and logged — remaining actions continue. The command does not fail because the transaction is already committed. `DeliveryHostedService` retries from the outbox.
+- What happens if `ResilientTransaction` completes without committing (`!HasActiveTransaction` early return)? Post-commit actions are cleared, not flushed — preventing stale actions from firing without a committed transaction.
+- What happens to the causation tree when the channel background service dispatches a message? The `ExecutionId` from the envelope snapshot becomes the `CausationId`, and a new `ExecutionId` is generated — preserving parent→child tracing.
 
 ## Requirements *(mandatory)*
 
@@ -70,15 +91,21 @@ A developer publishes a message routed to `"local-channel"` inside a `Transactio
 - **FR-001**: `IMessageService<TContext>.PublishAsync` MUST detect whether the `DbContext` (`TContext`) is currently managed by `TransactionBehavior`. When managed, it MUST only call `AddEventAsync` — it MUST NOT call `SaveEventsAsync`.
 - **FR-002**: When `IMessageService<TContext>.PublishAsync` is called outside a managed transaction, it MUST call both `AddEventAsync` and `SaveEventsAsync(null)` immediately — preserving the existing standalone behavior.
 - **FR-003**: `"local-channel"` route enqueuing MUST be unaffected by transaction state — it MUST always enqueue to the channel immediately regardless of whether a transaction is active.
-- **FR-004**: When inside a managed transaction with a `"local"` route, `IMessageService<TContext>` MUST NOT enqueue to the channel for immediate dispatch. The immediate dispatch MUST only happen in the outside-transaction path (after `SaveEventsAsync` commits the outbox standalone).
+- **FR-004**: When inside a managed transaction with a `"local"` route, `IMessageService<TContext>` MUST register a post-commit action (via `IPostCommitActions`) to enqueue the message to the channel after `TransactionBehavior` commits. The channel enqueue MUST NOT happen before commit.
 - **FR-005**: The transaction detection MUST use the managed state set by `TransactionBehavior` (e.g., `DbContext.BeginManage()` / `HasActiveTransaction`), not raw EF `Database.CurrentTransaction`, to avoid false positives from manual transactions unrelated to the outbox.
 - **FR-006**: All events staged via `IMessageService<TContext>.PublishAsync` during a managed transaction MUST be persisted by `TransactionBehavior`'s `SaveEventsAsync(transactionId)` call — tagged with the correct `transactionId` for post-commit delivery.
+- **FR-007**: `IPostCommitActions.Flush()` MUST execute all registered actions and catch exceptions per action. Failed actions MUST be logged as warnings but MUST NOT prevent remaining actions from executing or cause the command to fail (transaction is already committed).
+- **FR-008**: `TransactionBehavior` MUST call `IPostCommitActions.Flush()` only after a successful `CommitTransactionAsync`. If the transaction exits without committing (early return or rollback), `IPostCommitActions.Clear()` MUST be called to discard stale actions.
+- **FR-009**: `IPostCommitActions.Flush()` MUST be called outside the `ResilientTransaction` execution scope to prevent retry of an already-committed transaction if a flush action throws.
+- **FR-010**: When the `LocalChannelBackgroundService` restores `MessageContext` from a `ChannelEnvelope` snapshot, it MUST generate a new `ExecutionId` and set `CausationId` to the original `ExecutionId` — preserving the causation chain for distributed tracing.
 
 ### Key Entities
 
-- **IMessageService\<TContext\>**: Unified publishing interface. Must become transaction-aware — detect managed transaction and defer save.
+- **IMessageService\<TContext\>**: Unified publishing interface. Transaction-aware — detects managed transaction and defers save. Registers post-commit channel enqueue for `"local"` routes.
 - **IOutboxService\<TContext\>**: Scoped service that accumulates events. Shared between `TransactionBehavior` (direct `AddEventAsync` from domain handlers) and `IMessageService<TContext>` (via `PublishAsync`). Same instance within the request scope.
-- **TransactionBehavior**: Pipeline behavior that manages the DB transaction, dispatches domain events, and calls `SaveEventsAsync(transactionId)` atomically.
+- **TransactionBehavior**: Pipeline behavior that manages the DB transaction, dispatches domain events, calls `SaveEventsAsync(transactionId)` atomically, and flushes `IPostCommitActions` after commit.
+- **IPostCommitActions**: Scoped service that accumulates actions to execute after transaction commit. `IMessageService` registers channel enqueue actions; `TransactionBehavior` calls `Flush(logger)` after commit or `Clear()` on rollback.
+- **ChannelEnvelope**: Internal record wrapping `IMessage` + `MessageContextData?` snapshot. Preserves `MessageContext` across the channel boundary so the background service can restore correlation, source, and causation chain.
 
 ## Success Criteria *(mandatory)*
 
@@ -88,7 +115,10 @@ A developer publishes a message routed to `"local-channel"` inside a `Transactio
 - **SC-002**: Events published via `IMessageService<TContext>.PublishAsync` inside a `TransactionBehavior` scope are rolled back when the transaction fails — verified by asserting zero outbox records after a failed transaction.
 - **SC-003**: Events published via `IMessageService<TContext>.PublishAsync` outside a transaction are saved immediately — verified by querying outbox records before any background delivery runs.
 - **SC-004**: Existing tests for `TransactionBehavior`, `IOutboxService`, and `IMessageService` continue to pass without modification.
-- **SC-005**: No breaking API changes — `IMessageService`, `IOutboxService`, and `TransactionBehavior` public interfaces remain unchanged.
+- **SC-005**: No breaking changes to `IMessageService` or `IOutboxService` interfaces. `TransactionBehavior` constructor adds optional `IPostCommitActions?` parameter (backward compatible). New `IPostCommitActions` interface added to `Juice.Messaging`.
+- **SC-006**: Post-commit flush failures are logged as warnings — verified by observing log output when a flush action throws.
+- **SC-007**: Post-commit actions are cleared on transaction rollback — verified by asserting no channel enqueue after a failed transaction.
+- **SC-008**: Channel-dispatched messages have a new `ExecutionId` with `CausationId` pointing to the original `ExecutionId` — verified by inspecting `MessageContext` in the handler.
 
 ## Assumptions
 
@@ -96,3 +126,6 @@ A developer publishes a message routed to `"local-channel"` inside a `Transactio
 - `TransactionBehavior` always calls `SaveEventsAsync(transactionId)` after domain event dispatch (step 7 in the flow). Any events added during dispatch (whether via `IOutboxService.AddEventAsync` directly or via `IMessageService.PublishAsync`) will be included.
 - The transaction detection mechanism uses the `DbContext`'s managed state (set by `BeginManage()`) rather than raw EF transaction presence, to avoid interference with manual transactions not related to outbox processing.
 - `"local-channel"` enqueue inside a transaction is intentionally allowed — it is non-durable by design, and the handler may run before the transaction commits. This is an accepted trade-off documented in the local transport spec.
+- `IPostCommitActions` is scoped and shared between `TransactionBehavior` and `IMessageService<TContext>` within the same request scope. Actions registered by `IMessageService` during domain event dispatch are flushed by `TransactionBehavior` after commit.
+- Post-commit flush failures are non-fatal — the outbox guarantees eventual delivery via `DeliveryHostedService`. The channel dispatch is a best-effort optimization.
+- The `ChannelEnvelope` captures `MessageContext` at enqueue time. The background service generates a new `ExecutionId` (it is a new execution context) and uses the original `ExecutionId` as `CausationId` to maintain the distributed tracing causation chain.

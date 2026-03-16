@@ -46,7 +46,7 @@ namespace Juice.Messaging.Local.Internal
 
         public MessageService(
             Policies.IMessagePublishingPolicy policy,
-            ChannelWriter<IMessage> channelWriter,
+            ChannelWriter<ChannelEnvelope> channelWriter,
             ILogger<MessageService<TContext>> logger,
             IOutboxService<TContext>? outboxService = null,
             TContext? context = null,

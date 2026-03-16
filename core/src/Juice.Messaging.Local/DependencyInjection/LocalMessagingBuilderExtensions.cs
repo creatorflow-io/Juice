@@ -33,13 +33,13 @@ namespace Juice.Messaging
             Action<LocalChannelOptions>? configure = null)
         {
             // Guard: already registered
-            if (builder.Services.Any(sd => sd.ServiceType == typeof(Channel<IMessage>)))
+            if (builder.Services.Any(sd => sd.ServiceType == typeof(Channel<ChannelEnvelope>)))
             {
                 return builder;
             }
 
             // Unbounded channel — single reader (the background service), concurrent writers.
-            var channel = Channel.CreateUnbounded<IMessage>(new UnboundedChannelOptions
+            var channel = Channel.CreateUnbounded<ChannelEnvelope>(new UnboundedChannelOptions
             {
                 SingleReader = true,
                 AllowSynchronousContinuations = false

@@ -374,7 +374,8 @@
 /// •	✅ x-correlation-id - Tracks request flow across services (CorrelationId)
 /// •	✅ x-causation-id - Tracks message that caused this message (ExecutionId)
 /// •	✅ x-message-id - Unique message identifier - MessageId
-/// •	✅ x-message-type - Event type name (class name)
+/// •	✅ x-message-type - Event type name (short class name, e.g. "OrderCreatedEvent")
+/// •	✅ x-message-clr-type - Assembly-qualified CLR type name (e.g. "MyApp.Events.OrderCreatedEvent, MyApp") for unambiguous deserialization
 /// •	✅ x-event-name - Event name for routing
 /// •	✅ x-tenant-id - Multi-tenant identifier
 /// •	✅ x-original-exchange - RabbitMQ retry tracking - RabbitMQ

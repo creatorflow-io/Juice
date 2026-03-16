@@ -80,8 +80,9 @@ namespace Juice.Messaging.Local.Tests
 
             // 1. Publish via the in-memory channel (immediate dispatch path)
             var message = new TestIntegrationEvent();
-            var channel = provider.GetRequiredService<ChannelWriter<IMessage>>();
-            channel.TryWrite(message);
+            var channel = provider.GetRequiredService<ChannelWriter<ChannelEnvelope>>();
+            var contextSnapshot = MessageContext.IsInitialized ? MessageContext.Current : null;
+            channel.TryWrite(new ChannelEnvelope(message, contextSnapshot));
 
             // Wait for the handler to complete
             await handled.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -167,9 +168,9 @@ namespace Juice.Messaging.Local.Tests
             foreach (var hs in hostedServices) await hs.StartAsync(cts.Token);
 
             // Publish two distinct messages via the channel
-            var channel = provider.GetRequiredService<ChannelWriter<IMessage>>();
-            channel.TryWrite(new TestIntegrationEvent()); // unique MessageId
-            channel.TryWrite(new TestIntegrationEvent()); // different unique MessageId
+            var channel = provider.GetRequiredService<ChannelWriter<ChannelEnvelope>>();
+            channel.TryWrite(new ChannelEnvelope(new TestIntegrationEvent(), null)); // unique MessageId
+            channel.TryWrite(new ChannelEnvelope(new TestIntegrationEvent(), null)); // different unique MessageId
 
             await allHandled.Task.WaitAsync(TimeSpan.FromSeconds(5));
 

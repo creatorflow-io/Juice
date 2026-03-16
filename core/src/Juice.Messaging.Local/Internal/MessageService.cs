@@ -15,13 +15,13 @@ namespace Juice.Messaging.Local.Internal
     internal class MessageService : IMessageService
     {
         protected readonly IMessagePublishingPolicy _policy;
-        protected readonly ChannelWriter<IMessage> _channelWriter;
+        protected readonly ChannelWriter<ChannelEnvelope> _channelWriter;
         protected readonly ITenantAccessor? _tenantAccessor;
         protected readonly ILogger _logger;
 
         public MessageService(
             IMessagePublishingPolicy policy,
-            ChannelWriter<IMessage> channelWriter,
+            ChannelWriter<ChannelEnvelope> channelWriter,
             ILogger<MessageService> logger,
             ITenantAccessor? tenantAccessor = null)
         {
@@ -36,7 +36,7 @@ namespace Juice.Messaging.Local.Internal
         /// </summary>
         protected MessageService(
             IMessagePublishingPolicy policy,
-            ChannelWriter<IMessage> channelWriter,
+            ChannelWriter<ChannelEnvelope> channelWriter,
             ILogger logger,
             ITenantAccessor? tenantAccessor)
         {
@@ -71,7 +71,14 @@ namespace Juice.Messaging.Local.Internal
 
         protected void EnqueueLocalChannel(IMessage message)
         {
-            if (!_channelWriter.TryWrite(message))
+            // Capture MessageContext snapshot so the background service can restore
+            // it before dispatch — ensures consistent idempotency keys across
+            // the channel dispatch and DeliveryHostedService retry paths.
+            var contextSnapshot = MessageContext.IsInitialized
+                ? MessageContext.Current
+                : null;
+            var envelope = new ChannelEnvelope(message, contextSnapshot);
+            if (!_channelWriter.TryWrite(envelope))
             {
                 _logger.LogWarning("Failed to enqueue {MessageType} to local-channel",
                     message.GetType().Name);

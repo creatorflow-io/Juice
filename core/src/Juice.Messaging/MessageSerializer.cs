@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
@@ -10,10 +11,12 @@ namespace Juice.Messaging.Internal
     {
         private readonly ILogger _logger;
         private readonly IEnumerable<string> _allowedTypes = [];
-        private readonly IEnumerable<string> _allowedAssemblies = ["Juice", "Juice."];
-        public MessageSerializer(ILogger<MessageSerializer> logger)
+        private readonly IEnumerable<string> _allowedAssemblies;
+        public MessageSerializer(ILogger<MessageSerializer> logger,
+            IOptions<MessageSerializerOptions>? options = null)
         {
             _logger = logger;
+            _allowedAssemblies = options?.Value.AllowedAssemblyPrefixes ?? ["Juice", "Juice."];
         }
         public T? Deserialize<T>(string? payload, Type? eventType)
         {
