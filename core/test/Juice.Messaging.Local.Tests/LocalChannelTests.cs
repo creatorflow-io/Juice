@@ -1,4 +1,4 @@
-using System.Threading.Channels;
+﻿using System.Threading.Channels;
 using FluentAssertions;
 using Juice.Messaging;
 using Juice.Messaging.Local;
@@ -33,6 +33,7 @@ namespace Juice.Messaging.Local.Tests
             var messaging = services.AddMessaging();
             messaging.AddLocalChannel(configureChannel);
             messaging.AddIdempotencyInMemory();
+            messaging.AddMessageService();
 
             // Register test publishing policy returning "local-channel"
             services.AddSingleton<IMessagePublishingPolicy>(

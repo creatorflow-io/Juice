@@ -1,8 +1,8 @@
-using System.Threading.Channels;
+﻿using System.Threading.Channels;
 using Juice.EventBus.Publishing;
-using Juice.Messaging;
 using Juice.Messaging.Local;
 using Juice.Messaging.Local.Internal;
+using Juice.Messaging.Publishing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -21,7 +21,6 @@ namespace Juice.Messaging
         ///   <item><see cref="Channel{T}"/> — singleton, unbounded, single-reader</item>
         ///   <item><see cref="LocalChannelOptions"/> — configurable <c>MaxConcurrency</c></item>
         ///   <item><see cref="LocalChannelBackgroundService"/> — hosted service that drains the channel</item>
-        ///   <item><see cref="IMessageService"/> → <see cref="MessageService"/> — scoped</item>
         /// </list>
         /// Calling this method more than once is safe — <c>TryAdd*</c> guards prevent
         /// double-registration.
@@ -49,15 +48,14 @@ namespace Juice.Messaging
             builder.Services.AddSingleton(channel.Reader);
             builder.Services.AddSingleton(channel.Writer);
 
+            builder.Services.AddKeyedScoped<IMessagePublisher, LocalChannelMessagePublisher>("local-channel");
+
             if (configure != null)
             {
                 builder.Services.Configure(configure);
             }
 
-            builder.Services.TryAddSingleton<LocalChannelOptions>();
             builder.Services.AddHostedService<LocalChannelBackgroundService>();
-
-            builder.Services.TryAddScoped<IMessageService, MessageService>();
 
             return builder;
         }
@@ -76,19 +74,5 @@ namespace Juice.Messaging
             return builder;
         }
 
-        /// <summary>
-        /// Registers <see cref="IMessageService{TContext}"/> for unified publishing across all
-        /// route types (<c>"local-channel"</c>, <c>"local"</c>, and broker). Implicitly calls
-        /// <see cref="AddLocalChannel"/> if the in-memory channel has not been registered yet.
-        /// </summary>
-        /// <typeparam name="TContext">The <c>DbContext</c> type used for outbox writes.</typeparam>
-        public static MessagingBuilder AddMessageService<TContext>(
-            this MessagingBuilder builder)
-            where TContext : class
-        {
-            builder.AddLocalChannel();
-            builder.Services.TryAddScoped<IMessageService<TContext>, MessageService<TContext>>();
-            return builder;
-        }
     }
 }

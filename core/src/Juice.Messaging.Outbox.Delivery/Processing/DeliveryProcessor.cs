@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Text;
 using Juice.EventBus.Publishing;
+using Juice.Messaging.Publishing;
 using Microsoft.Extensions.Logging;
 
 namespace Juice.Messaging.Outbox.Delivery.Processing

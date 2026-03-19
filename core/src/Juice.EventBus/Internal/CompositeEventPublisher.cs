@@ -3,6 +3,7 @@ using Juice.Messaging;
 using Juice.Messaging.Context;
 using Juice.Messaging.Extensions;
 using Juice.Messaging.Policies;
+using Juice.Messaging.Publishing;
 using Juice.MultiTenant;
 using Microsoft.Extensions.DependencyInjection;
 

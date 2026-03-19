@@ -1,4 +1,4 @@
-using Juice.EventBus.Publishing;
+﻿using Juice.EventBus.Publishing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
