@@ -1,6 +1,7 @@
 namespace Juice.Messaging.Local.Internal
 {
     using System.Diagnostics.Metrics;
+    using System.Threading.Channels;
 
     /// <summary>
     /// Delivery metrics for the local-channel and local transport publisher paths.
@@ -34,6 +35,14 @@ namespace Juice.Messaging.Local.Internal
                 unit: "ms",
                 description: "Delivery latency in milliseconds");
 
+        private static readonly Counter<long> ChannelDroppedCounter =
+            _meter.CreateCounter<long>(
+                "channel_dropped_total",
+                description: "Messages dropped because the local channel was full");
+
+        // Registered lazily when the channel is created so the gauge holds a live reference.
+        private static bool _queueDepthRegistered;
+
         public static void IncrementDeliveryAttempt(string publisherKey)
         {
             DeliveryAttemptCounter.Add(
@@ -61,6 +70,29 @@ namespace Juice.Messaging.Local.Internal
             DeliveryLatencyHistogram.Record(
                 elapsed.TotalMilliseconds,
                 new KeyValuePair<string, object?>("publisher", publisherKey));
+        }
+
+        public static void IncrementChannelDropped(string publisherKey, string messageType)
+        {
+            ChannelDroppedCounter.Add(
+                1,
+                new KeyValuePair<string, object?>("publisher", publisherKey),
+                new KeyValuePair<string, object?>("message_type", messageType));
+        }
+
+        /// <summary>
+        /// Registers an observable gauge that reports the current number of messages
+        /// waiting in the local channel queue. Called once when the channel is created.
+        /// </summary>
+        public static void RegisterQueueDepth(ChannelReader<ChannelEnvelope> reader)
+        {
+            if (_queueDepthRegistered) return;
+            _queueDepthRegistered = true;
+
+            _meter.CreateObservableGauge<int>(
+                "channel_queue_depth",
+                observeValue: () => reader.Count,
+                description: "Current number of messages waiting in the local channel queue");
         }
     }
 }
