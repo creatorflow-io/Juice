@@ -1,5 +1,6 @@
 ﻿using System.Threading.Channels;
 using FluentAssertions;
+using Juice.MediatR;
 using Juice.Messaging;
 using Juice.Messaging.Local;
 using Juice.Messaging.Policies;
@@ -28,13 +29,13 @@ namespace Juice.Messaging.Local.Tests
             Action<IServiceCollection>? configureServices = null)
         {
             var services = new ServiceCollection();
-            services.AddLogging(b => b.AddTestOutputLogger(_output));
+            services.AddLogging(b => b.SetMinimumLevel(LogLevel.Debug).AddTestOutputLogger(_output));
 
             var messaging = services.AddMessaging();
             messaging.AddLocalChannel(configureChannel);
             messaging.AddIdempotencyInMemory();
-            messaging.AddMessageService();
-
+            // Local channel tests focus on the dispatch path and handler execution, so we can skip actual outbox persistence by registering a no-op message service and a fixed publishing policy that routes all messages to the local channel.
+            messaging.AddDefaultMessageService(_ => { });
             // Register test publishing policy returning "local-channel"
             services.AddSingleton<IMessagePublishingPolicy>(
                 new FixedRoutePolicy("local-channel", string.Empty));
@@ -198,9 +199,134 @@ namespace Juice.Messaging.Local.Tests
             foreach (var hs in hostedServices) await hs.StopAsync(CancellationToken.None);
         }
 
+        // ─────────────────────────────────────────────────────────────────────
+        // INotification: DomainEvent dispatched via INotificationPublisher
+        // ─────────────────────────────────────────────────────────────────────
+
+        [IgnoreOnCIFact]
+        [InitializeMessageContext]
+        public async Task DomainEvent_DispatchedViaNotificationPublisher_OnLocalChannelAsync()
+        {
+            var notified = new TaskCompletionSource<bool>();
+
+            var provider = BuildServices(configureServices: svc =>
+            {
+                svc.AddTransient<INotificationHandler<TestDomainEvent>>(
+                    _ => new SignalingNotificationHandler(notified));
+            });
+
+            using var cts = new CancellationTokenSource();
+            var hostedServices = provider.GetServices<IHostedService>().ToList();
+            foreach (var hs in hostedServices) await hs.StartAsync(cts.Token);
+
+            var svc = provider.CreateScope().ServiceProvider.GetRequiredService<IMessageService>();
+            await svc.PublishAsync(new TestDomainEvent());
+
+            await notified.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            notified.Task.Result.Should().BeTrue("INotification must be dispatched via INotificationPublisher on local-channel");
+
+            cts.Cancel();
+            foreach (var hs in hostedServices) await hs.StopAsync(CancellationToken.None);
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Context chain: CorrelationId preserved, ExecutionId → CausationId, fresh ExecutionId
+        // ─────────────────────────────────────────────────────────────────────
+
+        [IgnoreOnCIFact]
+        [InitializeMessageContext]
+        public async Task LocalChannel_PreservesMessageContextChain_IntegrationEventAsync()
+        {
+            var contextCapture = new TaskCompletionSource<Juice.Messaging.Context.MessageContextData>();
+
+            var provider = BuildServices(configureServices: svc =>
+            {
+                svc.AddTransient<IIntegrationEventHandler<TestIntegrationEvent>>(
+                    _ => new ContextCapturingHandler(contextCapture));
+            });
+
+            using var cts = new CancellationTokenSource();
+            var hostedServices = provider.GetServices<IHostedService>().ToList();
+            foreach (var hs in hostedServices) await hs.StartAsync(cts.Token);
+
+            // Capture the publisher context so we can assert the chain
+            var publisherCtx = MessageContext.Current;
+
+            var messageSvc = provider.CreateScope().ServiceProvider.GetRequiredService<IMessageService>();
+            await messageSvc.PublishAsync(new TestIntegrationEvent());
+
+            var handlerCtx = await contextCapture.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+            handlerCtx.CorrelationId.Should().Be(publisherCtx.CorrelationId,
+                "CorrelationId must be preserved across the dispatch hop");
+            handlerCtx.CausationId.Should().Be(publisherCtx.ExecutionId,
+                "publisher's ExecutionId must become CausationId in the handler (causal chain)");
+            handlerCtx.ExecutionId.Should().NotBe(publisherCtx.ExecutionId,
+                "a fresh ExecutionId must be generated for each dispatch hop");
+            handlerCtx.ExecutionId.Should().NotBeNullOrEmpty(
+                "handler must have a valid ExecutionId");
+
+            cts.Cancel();
+            foreach (var hs in hostedServices) await hs.StopAsync(CancellationToken.None);
+        }
+
+        [IgnoreOnCIFact]
+        [InitializeMessageContext]
+        public async Task LocalChannel_PreservesMessageContextChain_NotificationAsync()
+        {
+            var contextCapture = new TaskCompletionSource<Juice.Messaging.Context.MessageContextData>();
+
+            var provider = BuildServices(configureServices: svc =>
+            {
+                svc.AddTransient<INotificationHandler<TestDomainEvent>>(
+                    _ => new ContextCapturingNotificationHandler(contextCapture));
+            });
+
+            using var cts = new CancellationTokenSource();
+            var hostedServices = provider.GetServices<IHostedService>().ToList();
+            foreach (var hs in hostedServices) await hs.StartAsync(cts.Token);
+
+            var publisherCtx = MessageContext.Current;
+
+            var messageSvc = provider.CreateScope().ServiceProvider.GetRequiredService<IMessageService>();
+            await messageSvc.PublishAsync(new TestDomainEvent());
+
+            var handlerCtx = await contextCapture.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+            handlerCtx.CorrelationId.Should().Be(publisherCtx.CorrelationId,
+                "CorrelationId must be preserved across the dispatch hop");
+            handlerCtx.CausationId.Should().Be(publisherCtx.ExecutionId,
+                "publisher's ExecutionId must become CausationId in the handler (causal chain)");
+            handlerCtx.ExecutionId.Should().NotBe(publisherCtx.ExecutionId,
+                "a fresh ExecutionId must be generated for each dispatch hop");
+            handlerCtx.ExecutionId.Should().NotBeNullOrEmpty(
+                "handler must have a valid ExecutionId");
+
+            cts.Cancel();
+            foreach (var hs in hostedServices) await hs.StopAsync(CancellationToken.None);
+        }
+
         // ─── Supporting types ────────────────────────────────────────────────
 
         private sealed record TestIntegrationEvent : IntegrationEvent;
+
+        [Juice.Messaging.Attributes.Domain("test")]
+        private sealed class TestDomainEvent : INotification
+        {
+            public Guid MessageId { get; } = Guid.NewGuid();
+            public DateTimeOffset CreatedAt { get; } = DateTimeOffset.UtcNow;
+            public string? TenantId => null;
+        }
+
+        private sealed class SignalingNotificationHandler(TaskCompletionSource<bool> signal)
+            : INotificationHandler<TestDomainEvent>
+        {
+            public ValueTask Handle(TestDomainEvent notification, CancellationToken cancellationToken = default)
+            {
+                signal.TrySetResult(true);
+                return ValueTask.CompletedTask;
+            }
+        }
 
         private sealed class SignalingHandler(TaskCompletionSource<bool> signal)
             : IIntegrationEventHandler<TestIntegrationEvent>
@@ -244,6 +370,34 @@ namespace Juice.Messaging.Local.Tests
                 var n = counter.Increment();
                 if (n == 1) throw new InvalidOperationException("Simulated handler failure");
                 signal.TrySetResult(true);
+                return Task.CompletedTask;
+            }
+        }
+
+        private sealed class ContextCapturingNotificationHandler(
+            TaskCompletionSource<Juice.Messaging.Context.MessageContextData> capture)
+            : INotificationHandler<TestDomainEvent>
+        {
+            public ValueTask Handle(TestDomainEvent notification, CancellationToken cancellationToken = default)
+            {
+                if (MessageContext.IsInitialized)
+                    capture.TrySetResult(MessageContext.Current);
+                else
+                    capture.TrySetException(new InvalidOperationException("MessageContext not initialized in notification handler"));
+                return ValueTask.CompletedTask;
+            }
+        }
+
+        private sealed class ContextCapturingHandler(
+            TaskCompletionSource<Juice.Messaging.Context.MessageContextData> capture)
+            : IIntegrationEventHandler<TestIntegrationEvent>
+        {
+            public Task HandleAsync(TestIntegrationEvent @event)
+            {
+                if (MessageContext.IsInitialized)
+                    capture.TrySetResult(MessageContext.Current);
+                else
+                    capture.TrySetException(new InvalidOperationException("MessageContext not initialized in handler"));
                 return Task.CompletedTask;
             }
         }

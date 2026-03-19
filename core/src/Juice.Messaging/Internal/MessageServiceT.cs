@@ -1,6 +1,10 @@
-﻿using Juice.Messaging.Integrations;
+﻿using Juice.Messaging.Extensions;
+using Juice.Messaging.Integrations;
 using Juice.Messaging.Outbox;
+using Juice.Messaging.Policies;
+using Juice.Messaging.Publishing;
 using Juice.MultiTenant;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Juice.Messaging.Internal
@@ -35,12 +39,16 @@ namespace Juice.Messaging.Internal
     /// the channel for immediate dispatch.
     /// </para>
     /// </summary>
-    internal sealed class MessageService<TContext> : MessageService, IMessageService<TContext>
+    internal sealed class MessageService<TContext> : IMessageService<TContext>
         where TContext : class
     {
         private readonly IOutboxService<TContext>? _outboxService;
         private readonly TContext? _context;
         private readonly IPostCommitActions? _postCommitActions;
+        private readonly IServiceProvider _serviceProvider;
+        private readonly IMessagePublishingPolicy _policy;
+        private readonly ITenantAccessor? _tenantAccessor;
+        private readonly ILogger _logger;
 
         public MessageService(
             IServiceProvider serviceProvider,
@@ -50,14 +58,17 @@ namespace Juice.Messaging.Internal
             TContext? context = null,
             IPostCommitActions? postCommitActions = null,
             ITenantAccessor? tenantAccessor = null)
-            : base(serviceProvider, policy, logger, tenantAccessor)
         {
             _outboxService = outboxService;
             _context = context;
             _postCommitActions = postCommitActions;
+            _serviceProvider = serviceProvider;
+            _policy = policy;
+            _tenantAccessor = tenantAccessor;
+            _logger = logger;
         }
 
-        public override async Task PublishAsync(IMessage message, CancellationToken cancellationToken = default)
+        public async Task PublishAsync(IMessage message, CancellationToken cancellationToken = default)
         {
             var routes = await ResolveRoutesAsync(message);
 
@@ -127,6 +138,33 @@ namespace Juice.Messaging.Internal
                     await PublishLocalMessageAsync(message, cancellationToken);
                 }
             }
+        }
+
+
+        private async Task<IReadOnlyCollection<PublishRoute>> ResolveRoutesAsync(IMessage message)
+        {
+            return await _policy.ResolveAsync(new PolicyResolveContext
+            {
+                Domain = message.GetType().GetDomainName(),
+                EventType = message.GetType().Name,
+                TenantIdentifier = _tenantAccessor?.Tenant?.Identifier,
+                TenantTier = _tenantAccessor?.Tenant?.Tier
+            });
+        }
+
+        private async Task PublishLocalMessageAsync(IMessage message, CancellationToken cancellationToken)
+        {
+            var contextSnapshot = MessageContext.IsInitialized
+                ? MessageContext.Current
+                : null;
+            using var scope = _serviceProvider.CreateScope();
+            var messagePublisher = scope.ServiceProvider.GetKeyedService<IMessagePublisher>("local-channel");
+            if (messagePublisher == null)
+            {
+                _logger.LogWarning("No local-channel publisher registered; message {MessageId} will not be dispatched to handlers", message.MessageId);
+                return;
+            }
+            await messagePublisher.PublishAsync(message, contextSnapshot, cancellationToken);
         }
     }
 }

@@ -108,7 +108,7 @@ namespace Juice.Messaging.Local.Tests
                 "local route should NOT enqueue to channel before post-commit flush");
 
             // Simulate TransactionBehavior calling Flush() after commit
-            postCommit.Flush();
+            await postCommit.FlushAsync();
 
             // After flush — enqueued for immediate dispatch
             channel.TryRead(out _).Should().BeTrue(
@@ -252,7 +252,7 @@ namespace Juice.Messaging.Local.Tests
             tracker.SaveEventsCalled.Should().BeFalse("outbox save should be deferred inside transaction");
 
             // After post-commit flush — local route enqueues to channel
-            postCommit.Flush();
+            await postCommit.FlushAsync();
             channel.TryRead(out _).Should().BeTrue(
                 "local route should be enqueued to channel after post-commit flush");
         }

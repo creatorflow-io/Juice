@@ -41,6 +41,12 @@ namespace Juice.EventBus.Internal
                 TenantIdentifier = _tenantAccessor?.Tenant?.Identifier,
                 TenantTier = _tenantAccessor?.Tenant?.Tier
             });
+            if (!MessageContext.IsInitialized)
+            {
+                throw new InvalidOperationException(
+                    "MessageContext must be initialized before publishing via IEventBus. " +
+                    "Add UseMessageContext() middleware or the [InitializeMessageContext] attribute at the entry point.");
+            }
             var ctx = MessageContext.Current;
             foreach (var route in routes)
             {
@@ -90,6 +96,14 @@ namespace Juice.EventBus.Internal
             T @event, string publisherKey, PublishContext context,
             CancellationToken ct = default)
             where T : IMessage
-        => PublishAsync(@event, publisherKey, context, MessageContext.Current, ct);
+        {
+            if (!MessageContext.IsInitialized)
+            {
+                throw new InvalidOperationException(
+                    "MessageContext must be initialized before publishing via IEventBus. " +
+                    "Add UseMessageContext() middleware or the [InitializeMessageContext] attribute at the entry point.");
+            }
+            return PublishAsync(@event, publisherKey, context, MessageContext.Current, ct);
+        }
     }
 }

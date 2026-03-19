@@ -187,7 +187,8 @@ namespace Juice.MediatR.Behaviors
                 // not retry the already-committed transaction.
                 if (committed)
                 {
-                    _postCommitActions?.Flush(_logger);
+                    if (_postCommitActions != null)
+                        await _postCommitActions.FlushAsync(_logger);
                 }
                 else
                 {

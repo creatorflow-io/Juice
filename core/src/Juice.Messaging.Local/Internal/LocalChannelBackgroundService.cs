@@ -64,18 +64,31 @@ namespace Juice.Messaging.Local.Internal
                     var stopwatch = Stopwatch.StartNew();
                     var message = envelope.Message;
 
-                    // Restore MessageContext from the snapshot captured at enqueue time.
-                    // CorrelationId and Source are preserved for tracing and idempotency.
-                    // ExecutionId is regenerated (this is a new execution context) and the
-                    // original ExecutionId becomes the CausationId (causal chain).
-                    var needsContext = !MessageContext.IsInitialized;
-                    if (needsContext && envelope.Context != null)
+                    // Each dispatch hop establishes a fresh execution context to maintain the
+                    // causal chain. When the envelope carries a context snapshot we ALWAYS
+                    // restore it — even if a parent AsyncLocal context was inherited — so that
+                    // CausationId correctly reflects the publisher's ExecutionId and a new
+                    // ExecutionId is generated for this hop.
+                    // AsyncLocal values flow downward into Task.Run, so relying on
+                    // !IsInitialized would skip the restore when called from an initialized
+                    // scope (e.g. tests, ASP.NET request handlers).
+                    // If no snapshot was captured, fall back to generating a fresh context
+                    // only when no context is already present.
+                    var needsContext = envelope.Context != null || !MessageContext.IsInitialized;
+                    if (needsContext)
                     {
+                        var newExecutionId = Guid.NewGuid().ToString();
+                        _logger.LogDebug(
+                            "Dispatch context: CorrelationId={CorrelationId} CausationId={CausationId} ExecutionId={ExecutionId} MessageType={MessageType}",
+                            envelope.Context?.CorrelationId ?? "(generated)",
+                            envelope.Context?.ExecutionId ?? "(none)",
+                            newExecutionId,
+                            message.GetType().Name);
                         MessageContext.Initialize(
-                            correlationId: envelope.Context.CorrelationId,
-                            causationId: envelope.Context.ExecutionId,
-                            executionId: Guid.NewGuid().ToString(),
-                            source: envelope.Context.Source);
+                            correlationId: envelope.Context?.CorrelationId ?? Guid.NewGuid().ToString(),
+                            causationId: envelope.Context?.ExecutionId,
+                            executionId: newExecutionId,
+                            source: envelope.Context?.Source ?? string.Empty);
                     }
 
                     try
@@ -87,11 +100,13 @@ namespace Juice.Messaging.Local.Internal
 
                         if (message is INotification notification)
                         {
+                            _logger.LogDebug("Dispatching INotification {MessageType}", message.GetType().Name);
                             var publisher = sp.GetRequiredService<IMediator>();
                             await LocalDispatchHelper.DispatchNotificationAsync(publisher, notification, CancellationToken.None);
                         }
                         else if (message is IIntegrationEvent integrationEvent)
                         {
+                            _logger.LogDebug("Dispatching IIntegrationEvent {MessageType}", message.GetType().Name);
                             var dispatcher = sp.GetRequiredService<IntegrationEventDispatcher>();
                             await LocalDispatchHelper.DispatchIntegrationEventAsync(sp, dispatcher, integrationEvent, CancellationToken.None);
                         }
@@ -104,6 +119,7 @@ namespace Juice.Messaging.Local.Internal
                         stopwatch.Stop();
                         LocalChannelMetrics.RecordDeliveryLatency(PublisherKey, stopwatch.Elapsed);
                         LocalChannelMetrics.IncrementDeliverySuccess(PublisherKey);
+                        _logger.LogDebug("Dispatched {MessageType} in {Elapsed}ms", message.GetType().Name, stopwatch.ElapsedMilliseconds);
                     }
                     catch (Exception ex)
                     {
@@ -115,7 +131,7 @@ namespace Juice.Messaging.Local.Internal
                     }
                     finally
                     {
-                        if (needsContext && envelope.Context != null)
+                        if (needsContext)
                         {
                             MessageContext.Clear();
                         }
