@@ -1,4 +1,5 @@
 ﻿using Juice.Messaging;
+using Juice.Messaging.Internal;
 using Juice.Messaging.Outbox;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -14,8 +15,6 @@ namespace Microsoft.Extensions.DependencyInjection
             builder.AddDefaultSerializer();
 
             builder.AddIntegrationEventDispatcher();
-
-            services.TryAddScoped<IPostCommitActions, PostCommitActions>();
 
             return builder;
         }

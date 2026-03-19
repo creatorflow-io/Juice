@@ -1,11 +1,9 @@
-﻿using System.Threading.Channels;
-using Juice.Domain;
-using Juice.Messaging.Integrations;
+﻿using Juice.Messaging.Integrations;
 using Juice.Messaging.Outbox;
 using Juice.MultiTenant;
 using Microsoft.Extensions.Logging;
 
-namespace Juice.Messaging.Local.Internal
+namespace Juice.Messaging.Internal
 {
     /// <summary>
     /// Scoped implementation of <see cref="IMessageService{TContext}"/> that handles all
@@ -45,14 +43,14 @@ namespace Juice.Messaging.Local.Internal
         private readonly IPostCommitActions? _postCommitActions;
 
         public MessageService(
+            IServiceProvider serviceProvider,
             Policies.IMessagePublishingPolicy policy,
-            ChannelWriter<ChannelEnvelope> channelWriter,
             ILogger<MessageService<TContext>> logger,
             IOutboxService<TContext>? outboxService = null,
             TContext? context = null,
             IPostCommitActions? postCommitActions = null,
             ITenantAccessor? tenantAccessor = null)
-            : base(policy, channelWriter, logger, tenantAccessor)
+            : base(serviceProvider, policy, logger, tenantAccessor)
         {
             _outboxService = outboxService;
             _context = context;
@@ -65,12 +63,12 @@ namespace Juice.Messaging.Local.Internal
 
             bool hasLocalOutbox = false;
             bool hasOutboxRoutes = false;
-            bool hasLocalChannelOnly = false;
+            bool hasLocalChannel = false;
 
             foreach (var route in routes)
             {
                 if (route.PublisherKey == "local-channel")
-                    hasLocalChannelOnly = true;
+                    hasLocalChannel = true;
                 else
                 {
                     hasOutboxRoutes = true;
@@ -82,12 +80,9 @@ namespace Juice.Messaging.Local.Internal
             // "local" supersedes "local-channel" — they are mutually exclusive.
             // If both are present, "local" wins (durable superset) to prevent
             // double handler invocation.
-            if (hasLocalOutbox)
-                hasLocalChannelOnly = false;
-
-            if (hasLocalChannelOnly)
+            if (hasLocalChannel && !hasLocalOutbox)
             {
-                EnqueueLocalChannel(message);
+                await PublishLocalMessageAsync(message, cancellationToken);
             }
 
             if (hasOutboxRoutes)
@@ -104,7 +99,7 @@ namespace Juice.Messaging.Local.Internal
                 }
                 await _outboxService.AddEventAsync(message);
 
-                var isManaged = _context is IUnitOfWork { IsManaged: true };
+                var isManaged = _context is IManagable { IsManaged: true };
 
                 if (isManaged)
                 {
@@ -115,7 +110,7 @@ namespace Juice.Messaging.Local.Internal
                     // for immediate local dispatch.
                     if (hasLocalOutbox && _postCommitActions != null)
                     {
-                        _postCommitActions.Add(() => EnqueueLocalChannel(message));
+                        _postCommitActions.Add(async () => await PublishLocalMessageAsync(message, CancellationToken.None));
                     }
                     return;
                 }
@@ -129,7 +124,7 @@ namespace Juice.Messaging.Local.Internal
                 // IntegrationEventDispatcher idempotency deduplicates if both succeed.
                 if (hasLocalOutbox)
                 {
-                    EnqueueLocalChannel(message);
+                    await PublishLocalMessageAsync(message, cancellationToken);
                 }
             }
         }

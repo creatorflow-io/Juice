@@ -1,10 +1,11 @@
-using System.Threading.Channels;
-using Juice.Messaging.Extensions;
+﻿using Juice.Messaging.Extensions;
 using Juice.Messaging.Policies;
+using Juice.Messaging.Publishing;
 using Juice.MultiTenant;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace Juice.Messaging.Local.Internal
+namespace Juice.Messaging.Internal
 {
     /// <summary>
     /// Scoped implementation of <see cref="IMessageService"/> that handles
@@ -14,19 +15,19 @@ namespace Juice.Messaging.Local.Internal
     /// </summary>
     internal class MessageService : IMessageService
     {
+        protected readonly IServiceProvider _serviceProvider;
         protected readonly IMessagePublishingPolicy _policy;
-        protected readonly ChannelWriter<ChannelEnvelope> _channelWriter;
         protected readonly ITenantAccessor? _tenantAccessor;
         protected readonly ILogger _logger;
 
         public MessageService(
+            IServiceProvider serviceProvider,
             IMessagePublishingPolicy policy,
-            ChannelWriter<ChannelEnvelope> channelWriter,
             ILogger<MessageService> logger,
             ITenantAccessor? tenantAccessor = null)
         {
+            _serviceProvider = serviceProvider;
             _policy = policy;
-            _channelWriter = channelWriter;
             _logger = logger;
             _tenantAccessor = tenantAccessor;
         }
@@ -35,13 +36,13 @@ namespace Juice.Messaging.Local.Internal
         /// Internal constructor for derived classes that provide their own logger.
         /// </summary>
         protected MessageService(
+            IServiceProvider serviceProvider,
             IMessagePublishingPolicy policy,
-            ChannelWriter<ChannelEnvelope> channelWriter,
             ILogger logger,
             ITenantAccessor? tenantAccessor)
         {
+            _serviceProvider = serviceProvider;
             _policy = policy;
-            _channelWriter = channelWriter;
             _logger = logger;
             _tenantAccessor = tenantAccessor;
         }
@@ -49,12 +50,15 @@ namespace Juice.Messaging.Local.Internal
         public virtual async Task PublishAsync(IMessage message, CancellationToken cancellationToken = default)
         {
             var routes = await ResolveRoutesAsync(message);
-            foreach (var route in routes)
+            var hasLocalRoutes = routes.Any(r => r.PublisherKey == "local");
+            if (hasLocalRoutes)
             {
-                if (route.PublisherKey == "local-channel")
-                {
-                    EnqueueLocalChannel(message);
-                }
+                return; // local-channel routes are ignored if local (outbox) routes are present, to prevent double dispatch
+            }
+            var hasLocalChannelRoutes = routes.Any(r => r.PublisherKey == "local-channel");
+            if (hasLocalChannelRoutes)
+            {
+                await PublishLocalMessageAsync(message, cancellationToken);
             }
         }
 
@@ -69,20 +73,19 @@ namespace Juice.Messaging.Local.Internal
             });
         }
 
-        protected void EnqueueLocalChannel(IMessage message)
+        protected async Task PublishLocalMessageAsync(IMessage message, CancellationToken cancellationToken)
         {
-            // Capture MessageContext snapshot so the background service can restore
-            // it before dispatch — ensures consistent idempotency keys across
-            // the channel dispatch and DeliveryHostedService retry paths.
             var contextSnapshot = MessageContext.IsInitialized
                 ? MessageContext.Current
                 : null;
-            var envelope = new ChannelEnvelope(message, contextSnapshot);
-            if (!_channelWriter.TryWrite(envelope))
+            using var scope = _serviceProvider.CreateScope();
+            var messagePublisher = scope.ServiceProvider.GetKeyedService<IMessagePublisher>("local-channel");
+            if (messagePublisher == null)
             {
-                _logger.LogWarning("Failed to enqueue {MessageType} to local-channel",
-                    message.GetType().Name);
+                _logger.LogWarning("No local-channel publisher registered; message {MessageId} will not be dispatched to handlers", message.MessageId);
+                return;
             }
+            await messagePublisher.PublishAsync(message, contextSnapshot, cancellationToken);
         }
     }
 }

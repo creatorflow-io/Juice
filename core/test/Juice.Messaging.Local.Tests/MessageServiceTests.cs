@@ -1,4 +1,4 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using Juice.MediatR;
 using Juice.Messaging;
 using Juice.Messaging.Local;
@@ -33,6 +33,7 @@ namespace Juice.Messaging.Local.Tests
             var messaging = services.AddMessaging();
             messaging.AddLocalChannel();
             messaging.AddIdempotencyInMemory();
+            messaging.AddMessageService();
 
             services.AddSingleton<IMessagePublishingPolicy>(
                 new FixedRoutePolicy(publisherKey, string.Empty));

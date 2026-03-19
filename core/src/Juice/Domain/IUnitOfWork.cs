@@ -6,12 +6,8 @@ namespace Juice.Domain
     /// We consider using <see cref="IUnitOfWork"/> insead of the repository pattern
     /// <para>OR only use the <see cref="IRepository{T}"/> if needed</para>
     /// </summary>
-    public interface IUnitOfWork
+    public interface IUnitOfWork: IManagable
     {
-        /// <summary>
-        /// Gets a value indicating whether the current context is managed by the framework or infrastructure.
-        /// </summary>
-        bool IsManaged { get; }
         /// <summary>
         /// Gets a value indicating whether there is an active transaction associated with the current context.
         /// </summary>

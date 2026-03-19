@@ -72,5 +72,26 @@ namespace Juice.Messaging
             Services.TryAddScoped(typeof(TOutbox), sp => OutboxProxy<TOutbox>.Create(sp.GetRequiredService<IOutboxService<TContext>>())!);
             return this;
         }
+
+
+        /// <summary>
+        /// Registers <see cref="IMessageService{TContext}"/> for unified publishing across all
+        /// route types (<c>"local-channel"</c>, <c>"local"</c>, and broker). Implicitly calls
+        /// </summary>
+        /// <typeparam name="TContext">The <c>DbContext</c> type used for outbox writes.</typeparam>
+        public MessagingBuilder AddMessageService<TContext>()
+            where TContext : class
+        {
+            Services.TryAddScoped<IPostCommitActions, PostCommitActions>();
+
+            Services.TryAddScoped<IMessageService<TContext>, MessageService<TContext>>();
+            return this;
+        }
+
+        public MessagingBuilder AddMessageService()
+        {
+            Services.TryAddScoped<IMessageService, MessageService>();
+            return this;
+        }
     }
 }
