@@ -125,10 +125,13 @@ namespace Juice.Messaging.Local.Internal
 
             var message = DeserializeMessage(payload, context);
 
-            // Ensure MessageContext is initialized from outbox headers so that
-            // the idempotency key ("{Source}:{MessageId}") matches across
-            // immediate dispatch and delivery retry paths.
-            var needsContext = !MessageContext.IsInitialized;
+            // Restore MessageContext from outbox headers so that the idempotency key
+            // ("{Source}:{MessageId}") matches across immediate dispatch and delivery retry
+            // paths. Always restore when headers are present — the delivery loop runs on
+            // background threads but the guard must not rely on !IsInitialized because
+            // AsyncLocal values propagate into child scopes (e.g. from tests or middleware).
+            var hasHeaders = context.Headers != null;
+            var needsContext = hasHeaders || !MessageContext.IsInitialized;
             if (needsContext)
             {
                 var headers = context.Headers;

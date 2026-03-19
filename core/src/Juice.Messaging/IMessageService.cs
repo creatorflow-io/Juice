@@ -1,3 +1,4 @@
+﻿using Juice.Messaging.Outbox;
 namespace Juice.Messaging
 {
     /// <summary>

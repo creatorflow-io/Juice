@@ -11,16 +11,16 @@ namespace Juice.Messaging.Outbox
     public interface IPostCommitActions
     {
         /// <summary>
-        /// Registers an action to execute after the transaction commits.
+        /// Registers an async action to execute after the transaction commits.
         /// </summary>
-        void Add(Action action);
+        void Add(Func<Task> action);
 
         /// <summary>
-        /// Executes and clears all registered actions. Called by
+        /// Awaits and clears all registered actions. Called by
         /// <c>TransactionBehavior</c> after <c>CommitTransactionAsync</c>.
         /// Failures are logged but do not throw — the transaction is already committed.
         /// </summary>
-        void Flush(ILogger? logger = null);
+        Task FlushAsync(ILogger? logger = null);
 
         /// <summary>
         /// Clears all registered actions without executing them. Called on
@@ -31,19 +31,19 @@ namespace Juice.Messaging.Outbox
 
     internal sealed class PostCommitActions : IPostCommitActions
     {
-        private readonly List<Action> _actions = [];
+        private readonly List<Func<Task>> _actions = [];
 
-        public void Add(Action action) => _actions.Add(action);
+        public void Add(Func<Task> action) => _actions.Add(action);
 
         public void Clear() => _actions.Clear();
 
-        public void Flush(ILogger? logger = null)
+        public async Task FlushAsync(ILogger? logger = null)
         {
             foreach (var action in _actions)
             {
                 try
                 {
-                    action();
+                    await action();
                 }
                 catch (Exception ex)
                 {

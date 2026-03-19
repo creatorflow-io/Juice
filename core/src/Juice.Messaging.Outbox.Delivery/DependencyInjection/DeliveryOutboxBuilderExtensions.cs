@@ -1,4 +1,4 @@
-﻿using Juice.Messaging;
+using Juice.Messaging;
 using Juice.Messaging.Outbox.Delivery;
 using Microsoft.Extensions.Configuration;
 namespace Microsoft.Extensions.DependencyInjection

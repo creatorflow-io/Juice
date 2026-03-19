@@ -73,7 +73,6 @@ namespace Juice.Messaging
             return this;
         }
 
-
         /// <summary>
         /// Registers <see cref="IMessageService{TContext}"/> for unified publishing across all
         /// route types (<c>"local-channel"</c>, <c>"local"</c>, and broker). Implicitly calls
@@ -85,12 +84,6 @@ namespace Juice.Messaging
             Services.TryAddScoped<IPostCommitActions, PostCommitActions>();
 
             Services.TryAddScoped<IMessageService<TContext>, MessageService<TContext>>();
-            return this;
-        }
-
-        public MessagingBuilder AddMessageService()
-        {
-            Services.TryAddScoped<IMessageService, MessageService>();
             return this;
         }
     }

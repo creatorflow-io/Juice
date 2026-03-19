@@ -4,6 +4,7 @@ using Juice.Messaging.Outbox;
 using Juice.Messaging.Outbox.Delivery;
 using Juice.Messaging.Outbox.EF;
 using Juice.Messaging.Outbox.EF.Intents;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Microsoft.Extensions.DependencyInjection
@@ -27,6 +28,39 @@ namespace Microsoft.Extensions.DependencyInjection
 
             builder.AddOutboxCore();
 
+            return builder;
+        }
+
+        /// <summary>
+        /// Registers <see cref="DefaultOutboxContext"/> and backs <see cref="IMessageService"/>
+        /// with <c>MessageService&lt;DefaultOutboxContext&gt;</c>, enabling full-route publishing
+        /// (<c>"local-channel"</c>, <c>"local"</c>, and broker routes) outside domain transactions.
+        /// <para>
+        /// Tables must exist — run <c>OutboxContext</c> migrations against the target database.
+        /// No separate migration project is required for <see cref="DefaultOutboxContext"/>.
+        /// </para>
+        /// <para>
+        /// Delivery is NOT auto-configured by this overload; call <c>AddDelivery()</c> separately
+        /// or use the <c>AddDefaultMessageService(configure, autoWireDelivery: true)</c> overload
+        /// from <c>Juice.Messaging.Outbox.Delivery</c>.
+        /// </para>
+        /// <para>
+        /// <b>Warning</b>: <c>IMessageService</c> is registered with <c>TryAddScoped</c> — first
+        /// registration wins. Calling both <c>AddMessageService()</c> and
+        /// <c>AddDefaultMessageService()</c> is a misconfiguration; only the first will take effect.
+        /// </para>
+        /// </summary>
+        /// <param name="builder">The <see cref="MessagingBuilder"/> instance.</param>
+        /// <param name="configure">EF Core options (connection string, provider).</param>
+        public static MessagingBuilder AddDefaultMessageService(
+            this MessagingBuilder builder,
+            Action<DbContextOptionsBuilder> configure)
+        {
+            builder.Services.AddDbContext<DefaultOutboxContext>(configure);
+            builder.AddOutbox();
+            builder.AddMessageService<DefaultOutboxContext>();
+            builder.Services.TryAddScoped<IMessageService>(sp =>
+                sp.GetRequiredService<IMessageService<DefaultOutboxContext>>());
             return builder;
         }
     }
