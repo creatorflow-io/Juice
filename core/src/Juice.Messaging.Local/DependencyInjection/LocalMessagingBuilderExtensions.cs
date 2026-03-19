@@ -5,6 +5,7 @@ using Juice.Messaging.Local.Internal;
 using Juice.Messaging.Publishing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace Juice.Messaging
 {
@@ -37,23 +38,44 @@ namespace Juice.Messaging
                 return builder;
             }
 
-            // Unbounded channel — single reader (the background service), concurrent writers.
-            var channel = Channel.CreateUnbounded<ChannelEnvelope>(new UnboundedChannelOptions
-            {
-                SingleReader = true,
-                AllowSynchronousContinuations = false
-            });
-
-            builder.Services.AddSingleton(channel);
-            builder.Services.AddSingleton(channel.Reader);
-            builder.Services.AddSingleton(channel.Writer);
-
-            builder.Services.AddKeyedScoped<IMessagePublisher, LocalChannelMessagePublisher>("local-channel");
-
             if (configure != null)
             {
                 builder.Services.Configure(configure);
             }
+
+            // Channel is created lazily so that Capacity / FullMode set via IConfiguration
+            // or Configure<LocalChannelOptions>() are picked up before the first resolve.
+            builder.Services.AddSingleton(sp =>
+            {
+                var opts = sp.GetRequiredService<IOptions<LocalChannelOptions>>().Value;
+                Channel<ChannelEnvelope> channel;
+
+                if (opts.Capacity.HasValue && opts.Capacity.Value > 0)
+                {
+                    channel = Channel.CreateBounded<ChannelEnvelope>(new BoundedChannelOptions(opts.Capacity.Value)
+                    {
+                        FullMode = opts.FullMode,
+                        SingleReader = true,
+                        AllowSynchronousContinuations = false
+                    });
+                }
+                else
+                {
+                    channel = Channel.CreateUnbounded<ChannelEnvelope>(new UnboundedChannelOptions
+                    {
+                        SingleReader = true,
+                        AllowSynchronousContinuations = false
+                    });
+                }
+
+                LocalChannelMetrics.RegisterQueueDepth(channel.Reader);
+                return channel;
+            });
+
+            builder.Services.AddSingleton(sp => sp.GetRequiredService<Channel<ChannelEnvelope>>().Reader);
+            builder.Services.AddSingleton(sp => sp.GetRequiredService<Channel<ChannelEnvelope>>().Writer);
+
+            builder.Services.AddKeyedScoped<IMessagePublisher, LocalChannelMessagePublisher>("local-channel");
 
             builder.Services.AddHostedService<LocalChannelBackgroundService>();
 
