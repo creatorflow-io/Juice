@@ -8,7 +8,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Juice.Modular" Version="10.0.0" />
+        <PackageReference Include="Juice.Modular" Version="10.0.1" />
     </ItemGroup>
 
 </Project>

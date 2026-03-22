@@ -36,7 +36,7 @@
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="Microsoft.EntityFrameworkCore" Version="$(EFVersion)" />
-        <PackageReference Include="Juice.Modular" Version="10.0.0" />
+        <PackageReference Include="Juice.Modular" Version="10.0.1" />
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\Juice.Extensions.Options\Juice.Extensions.Options.csproj" />
