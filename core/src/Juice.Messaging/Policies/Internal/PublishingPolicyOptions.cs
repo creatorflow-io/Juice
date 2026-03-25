@@ -19,6 +19,11 @@ namespace Juice.Messaging.Policies.Internal
         public int Priority { get; init; }
         public PublishRuleMatch Match { get; init; } = new();
         public List<PublisherDestination> Publishers { get; init; } = new();
+        /// <summary>
+        /// True when this rule was registered via code (not JSON config).
+        /// Used as a tiebreaker: code-defined rules beat config rules at equal priority.
+        /// </summary>
+        public bool IsCodeDefined { get; init; }
     }
 
     internal sealed record PublishRuleMatch
