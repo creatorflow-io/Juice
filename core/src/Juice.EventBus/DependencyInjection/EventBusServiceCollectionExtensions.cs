@@ -27,6 +27,26 @@ namespace Microsoft.Extensions.DependencyInjection
             builder.AddDefaultServices();
             return builder;
         }
+
+        /// <summary>
+        /// Registers the keyed <see cref="ISubscriptionsManager"/> (key <c>"local"</c>) for
+        /// in-process dispatch routes (<c>"local"</c> and <c>"local-channel"</c>).
+        /// The manager is populated from all <see cref="ILocalSubscriptionsProvider"/> instances
+        /// registered in the container (added by <c>AddLocalConsumer</c>).
+        /// Safe to call multiple times — subsequent calls are no-ops.
+        /// </summary>
+        public static IServiceCollection AddLocalSubscriptionsManager(this IServiceCollection services)
+        {
+            services.TryAddKeyedSingleton<ISubscriptionsManager>("local", (sp, k) =>
+            {
+                var logger = sp.GetRequiredService<ILoggerFactory>()
+                    .CreateLogger(typeof(InMemorySubscriptionsManager).Name + "[local]");
+                var providers = sp.GetServices<ILocalSubscriptionsProvider>()
+                    .Cast<ISubscriptionsProvider>();
+                return new InMemorySubscriptionsManager(providers, logger, topicSupport: false);
+            });
+            return services;
+        }
     }
 
     public class EventBusBuilder

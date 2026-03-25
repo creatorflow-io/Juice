@@ -1,13 +1,13 @@
 ﻿using System.Threading.Channels;
+using Juice.EventBus.Subscriptions;
 using Juice.EventBus.Publishing;
 using Juice.Messaging.Local;
 using Juice.Messaging.Local.Internal;
 using Juice.Messaging.Publishing;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
+using Juice.Messaging;
 
-namespace Juice.Messaging
+namespace Microsoft.Extensions.DependencyInjection
 {
     /// <summary>
     /// Extension methods on <see cref="MessagingBuilder"/> that register the local transport
@@ -79,6 +79,34 @@ namespace Juice.Messaging
 
             builder.Services.AddHostedService<LocalChannelBackgroundService>();
 
+            return builder;
+        }
+
+        /// <summary>
+        /// Registers handlers for in-process integration events dispatched on the
+        /// <c>"local"</c> and <c>"local-channel"</c> routes, and ensures the keyed
+        /// <see cref="ISubscriptionsManager"/> (key <c>"local"</c>) is registered.
+        /// <para>
+        /// Each call to <paramref name="configure"/> adds subscriptions to the manager.
+        /// Multiple calls to <see cref="AddLocalConsumer"/> are additive — each registers
+        /// an additional <see cref="ILocalSubscriptionsProvider"/> that is picked up when
+        /// the manager is first resolved.
+        /// </para>
+        /// <para>
+        /// When the manager is registered, <c>LocalChannelBackgroundService</c> and
+        /// <c>LocalTransportPublisher</c> use it exclusively for handler lookup.
+        /// If <see cref="AddLocalConsumer"/> is never called, both dispatch paths fall back
+        /// to discovering handlers from the DI container (backward-compatible behavior).
+        /// </para>
+        /// </summary>
+        public static MessagingBuilder AddLocalConsumer(
+            this MessagingBuilder builder,
+            Action<LocalConsumerBuilder> configure)
+        {
+            var consumerBuilder = new LocalConsumerBuilder(builder.Services);
+            configure(consumerBuilder);
+            builder.Services.AddSingleton<ILocalSubscriptionsProvider>(consumerBuilder);
+            builder.Services.AddLocalSubscriptionsManager();
             return builder;
         }
 

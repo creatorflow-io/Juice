@@ -1,6 +1,7 @@
 using System.Text;
 using FluentAssertions;
 using Juice.EventBus.Publishing;
+using Juice.EventBus.Subscriptions;
 using Juice.Messaging;
 using Juice.Messaging.Local.Internal;
 using Juice.XUnit;
@@ -263,6 +264,116 @@ namespace Juice.Messaging.Local.Tests
                 .WithMessage("*Type could not be resolved from headers*");
         }
 
+        // ─────────────────────────────────────────────────────────────────────
+        // US3-a: Handler registered via AddLocalConsumer is invoked by LocalTransportPublisher
+        // ─────────────────────────────────────────────────────────────────────
+
+        [IgnoreOnCIFact]
+        [InitializeMessageContext]
+        public async Task PublishAsync_dispatches_to_handler_registered_via_subscriptions_manager_Async()
+        {
+            var handled = new TaskCompletionSource<bool>();
+
+            var services = new ServiceCollection();
+            services.AddLogging(b => b.AddTestOutputLogger(_output));
+            var m = services.AddMessaging();
+            m.AddIdempotencyInMemory();
+            services.AddMediatR();
+
+            // Pre-register spy so TryAddTransient in Subscribe is a no-op
+            services.AddTransient<SubsManagerSpyHandler>(_ => new SubsManagerSpyHandler(handled));
+            m.AddLocalConsumer(c => c.Subscribe<TestIntegrationEvent, SubsManagerSpyHandler>());
+
+            var provider = services.BuildServiceProvider();
+            var scope = provider.CreateScope().ServiceProvider;
+            var publisher = ActivatorUtilities.CreateInstance<LocalTransportPublisher>(scope);
+            var serializer = scope.GetRequiredService<IMessageSerializer>();
+
+            var message = new TestIntegrationEvent();
+            var payload = serializer.SerializeToUtf8Bytes(message);
+            var context = new PublishContext(
+                message.MessageId.ToString(),
+                Headers: new Dictionary<string, object?> { ["x-message-type"] = nameof(TestIntegrationEvent) });
+
+            await publisher.PublishAsync(payload, context);
+
+            handled.Task.IsCompleted.Should().BeTrue("handler registered via AddLocalConsumer must be invoked by LocalTransportPublisher");
+            handled.Task.Result.Should().BeTrue();
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // US3-b: Handler in DI but not in subscriptions manager is NOT invoked
+        // ─────────────────────────────────────────────────────────────────────
+
+        [IgnoreOnCIFact]
+        [InitializeMessageContext]
+        public async Task PublishAsync_does_not_invoke_unregistered_handler_when_manager_present_Async()
+        {
+            var unregisteredInvoked = false;
+
+            var services = new ServiceCollection();
+            services.AddLogging(b => b.AddTestOutputLogger(_output));
+            var m = services.AddMessaging();
+            m.AddIdempotencyInMemory();
+            services.AddMediatR();
+
+            // Manager registered with no subscription for TestIntegrationEvent
+            m.AddLocalConsumer(_ => { });
+
+            // Register a handler only in DI — NOT via AddLocalConsumer
+            services.AddTransient<IIntegrationEventHandler<TestIntegrationEvent>>(
+                _ => new SideEffectHandler2(() => unregisteredInvoked = true));
+
+            var provider = services.BuildServiceProvider();
+            var scope = provider.CreateScope().ServiceProvider;
+            var publisher = ActivatorUtilities.CreateInstance<LocalTransportPublisher>(scope);
+            var serializer = scope.GetRequiredService<IMessageSerializer>();
+
+            var message = new TestIntegrationEvent();
+            var payload = serializer.SerializeToUtf8Bytes(message);
+            var context = new PublishContext(
+                message.MessageId.ToString(),
+                Headers: new Dictionary<string, object?> { ["x-message-type"] = nameof(TestIntegrationEvent) });
+
+            await publisher.PublishAsync(payload, context);
+
+            unregisteredInvoked.Should().BeFalse(
+                "handler registered only in DI must not be invoked when subscriptions manager is present");
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // US3-c: Without AddLocalConsumer, DI-scan fallback still works
+        // ─────────────────────────────────────────────────────────────────────
+
+        [IgnoreOnCIFact]
+        [InitializeMessageContext]
+        public async Task PublishAsync_fallback_to_di_scan_when_no_manager_Async()
+        {
+            var handled = new TaskCompletionSource<bool>();
+
+            var provider = BuildServices(svc =>
+            {
+                // No AddLocalConsumer — DI scan fallback
+                svc.AddTransient<IIntegrationEventHandler<TestIntegrationEvent>>(
+                    _ => new SignalingHandler(handled));
+            });
+
+            var scope = provider.CreateScope().ServiceProvider;
+            var publisher = ActivatorUtilities.CreateInstance<LocalTransportPublisher>(scope);
+            var serializer = scope.GetRequiredService<IMessageSerializer>();
+
+            var message = new TestIntegrationEvent();
+            var payload = serializer.SerializeToUtf8Bytes(message);
+            var context = new PublishContext(
+                message.MessageId.ToString(),
+                Headers: new Dictionary<string, object?> { ["x-message-type"] = nameof(TestIntegrationEvent) });
+
+            await publisher.PublishAsync(payload, context);
+
+            handled.Task.IsCompleted.Should().BeTrue("DI-scan fallback must work when no subscriptions manager is registered");
+            handled.Task.Result.Should().BeTrue();
+        }
+
         // ─── Supporting types ────────────────────────────────────────────────
 
         private sealed record TestIntegrationEvent : IntegrationEvent;
@@ -297,6 +408,28 @@ namespace Juice.Messaging.Local.Tests
         {
             public Task HandleAsync(TestIntegrationEvent @event)
                 => throw new InvalidOperationException("Simulated handler failure");
+        }
+
+        /// <summary>Spy handler registered via <c>AddLocalConsumer</c> for US3 tests.</summary>
+        private sealed class SubsManagerSpyHandler(TaskCompletionSource<bool> signal)
+            : IIntegrationEventHandler<TestIntegrationEvent>
+        {
+            public Task HandleAsync(TestIntegrationEvent @event)
+            {
+                signal.TrySetResult(true);
+                return Task.CompletedTask;
+            }
+        }
+
+        /// <summary>Side-effect handler used to assert a handler is NOT invoked.</summary>
+        private sealed class SideEffectHandler2(Action onInvoke)
+            : IIntegrationEventHandler<TestIntegrationEvent>
+        {
+            public Task HandleAsync(TestIntegrationEvent @event)
+            {
+                onInvoke();
+                return Task.CompletedTask;
+            }
         }
     }
 }
