@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics;
 using Juice.EventBus.Publishing;
+using Juice.EventBus.Subscriptions;
 using Juice.MediatR;
 using Juice.Messaging.Integrations;
 using Microsoft.Extensions.DependencyInjection;
@@ -152,8 +153,9 @@ namespace Juice.Messaging.Local.Internal
                 else if (message is IIntegrationEvent integrationEvent)
                 {
                     using var scope = _scopeFactory.CreateScope();
+                    var subsManager = scope.ServiceProvider.GetKeyedService<ISubscriptionsManager>("local");
                     var result = await LocalDispatchHelper.DispatchIntegrationEventAsync(
-                        scope.ServiceProvider, _dispatcher, integrationEvent, cancellationToken);
+                        scope.ServiceProvider, _dispatcher, subsManager, integrationEvent, cancellationToken);
                     if (result == Integrations.EventDispatchResult.Failure)
                     {
                         throw new InvalidOperationException(

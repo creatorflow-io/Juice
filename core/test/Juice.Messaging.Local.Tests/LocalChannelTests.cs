@@ -1,9 +1,9 @@
 ﻿using System.Threading.Channels;
 using FluentAssertions;
-using Juice.MediatR;
 using Juice.Messaging;
 using Juice.Messaging.Local;
 using Juice.Messaging.Policies;
+using Juice.MediatR;
 using Juice.XUnit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -306,6 +306,120 @@ namespace Juice.Messaging.Local.Tests
             foreach (var hs in hostedServices) await hs.StopAsync(CancellationToken.None);
         }
 
+        // ─────────────────────────────────────────────────────────────────────
+        // US2-a: Subscriptions manager — registered handler is invoked
+        // ─────────────────────────────────────────────────────────────────────
+
+        [IgnoreOnCIFact]
+        [InitializeMessageContext]
+        public async Task LocalChannel_dispatches_to_registered_handler_via_subscriptions_manager_Async()
+        {
+            var handled = new TaskCompletionSource<bool>();
+
+            var services = new ServiceCollection();
+            services.AddLogging(b => b.AddTestOutputLogger(_output));
+            var m = services.AddMessaging();
+            m.AddLocalChannel();
+            m.AddIdempotencyInMemory();
+            m.AddDefaultMessageService(_ => { });
+            services.AddSingleton<IMessagePublishingPolicy>(new FixedRoutePolicy("local-channel", string.Empty));
+            services.AddMediatR();
+
+            // Pre-register the spy handler so TryAddTransient in Subscribe is a no-op
+            services.AddTransient<SubscriptionsManagerSpyHandler>(_ => new SubscriptionsManagerSpyHandler(handled));
+            // Register via AddLocalConsumer — this is what registers it in the subscriptions manager
+            m.AddLocalConsumer(c => c.Subscribe<TestIntegrationEvent, SubscriptionsManagerSpyHandler>());
+
+            var sp = services.BuildServiceProvider();
+            var hostedServices = sp.GetServices<IHostedService>().ToList();
+            using var cts = new CancellationTokenSource();
+            foreach (var hs in hostedServices) await hs.StartAsync(cts.Token);
+
+            var svc = sp.CreateScope().ServiceProvider.GetRequiredService<IMessageService>();
+            await svc.PublishAsync(new TestIntegrationEvent());
+
+            await handled.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            handled.Task.Result.Should().BeTrue("handler registered via AddLocalConsumer must be invoked");
+
+            cts.Cancel();
+            foreach (var hs in hostedServices) await hs.StopAsync(CancellationToken.None);
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // US2-b: Handler in DI but not in subscriptions manager is NOT invoked
+        // ─────────────────────────────────────────────────────────────────────
+
+        [IgnoreOnCIFact]
+        [InitializeMessageContext]
+        public async Task LocalChannel_does_not_invoke_unregistered_handler_when_manager_present_Async()
+        {
+            var unregisteredHandlerInvoked = false;
+
+            var services = new ServiceCollection();
+            services.AddLogging(b => b.AddTestOutputLogger(_output));
+            var m = services.AddMessaging();
+            m.AddLocalChannel();
+            m.AddIdempotencyInMemory();
+            m.AddDefaultMessageService(_ => { });
+            services.AddSingleton<IMessagePublishingPolicy>(new FixedRoutePolicy("local-channel", string.Empty));
+            services.AddMediatR();
+
+            // Manager registered with NO subscription for TestIntegrationEvent
+            m.AddLocalConsumer(_ => { });
+
+            // Register spy directly in DI — NOT via AddLocalConsumer
+            services.AddTransient<IIntegrationEventHandler<TestIntegrationEvent>>(
+                _ => new SideEffectHandler(() => unregisteredHandlerInvoked = true));
+
+            var sp = services.BuildServiceProvider();
+            var hostedServices = sp.GetServices<IHostedService>().ToList();
+            using var cts = new CancellationTokenSource();
+            foreach (var hs in hostedServices) await hs.StartAsync(cts.Token);
+
+            var svc = sp.CreateScope().ServiceProvider.GetRequiredService<IMessageService>();
+            await svc.PublishAsync(new TestIntegrationEvent());
+
+            // Give background service time to dispatch
+            await Task.Delay(200);
+
+            unregisteredHandlerInvoked.Should().BeFalse(
+                "handler registered only in DI (not in subscriptions manager) must not be invoked");
+
+            cts.Cancel();
+            foreach (var hs in hostedServices) await hs.StopAsync(CancellationToken.None);
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // US2-c: Without AddLocalConsumer, DI-scan fallback still works
+        // ─────────────────────────────────────────────────────────────────────
+
+        [IgnoreOnCIFact]
+        [InitializeMessageContext]
+        public async Task LocalChannel_fallback_to_di_scan_when_no_manager_Async()
+        {
+            var handled = new TaskCompletionSource<bool>();
+
+            var provider = BuildServices(configureServices: svc =>
+            {
+                // No AddLocalConsumer call — DI-scan fallback must kick in
+                svc.AddTransient<IIntegrationEventHandler<TestIntegrationEvent>>(
+                    _ => new SignalingHandler(handled));
+            });
+
+            var hostedServices = provider.GetServices<IHostedService>().ToList();
+            using var cts = new CancellationTokenSource();
+            foreach (var hs in hostedServices) await hs.StartAsync(cts.Token);
+
+            var svc = provider.CreateScope().ServiceProvider.GetRequiredService<IMessageService>();
+            await svc.PublishAsync(new TestIntegrationEvent());
+
+            await handled.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            handled.Task.Result.Should().BeTrue("DI-scan fallback must invoke handler when no subscriptions manager registered");
+
+            cts.Cancel();
+            foreach (var hs in hostedServices) await hs.StopAsync(CancellationToken.None);
+        }
+
         // ─── Supporting types ────────────────────────────────────────────────
 
         private sealed record TestIntegrationEvent : IntegrationEvent;
@@ -409,6 +523,33 @@ namespace Juice.Messaging.Local.Tests
             {
                 IReadOnlyCollection<PublishRoute> routes = [new PublishRoute(publisherKey, destination)];
                 return ValueTask.FromResult(routes);
+            }
+        }
+
+        /// <summary>
+        /// Spy handler registered via <c>AddLocalConsumer</c> for US2 subscriptions-manager dispatch tests.
+        /// </summary>
+        private sealed class SubscriptionsManagerSpyHandler(TaskCompletionSource<bool> signal)
+            : IIntegrationEventHandler<TestIntegrationEvent>
+        {
+            public Task HandleAsync(TestIntegrationEvent @event)
+            {
+                signal.TrySetResult(true);
+                return Task.CompletedTask;
+            }
+        }
+
+        /// <summary>
+        /// Handler that records a side-effect without signaling a TCS — used to assert
+        /// that a handler is NOT invoked when excluded from the subscriptions manager.
+        /// </summary>
+        private sealed class SideEffectHandler(Action onInvoke)
+            : IIntegrationEventHandler<TestIntegrationEvent>
+        {
+            public Task HandleAsync(TestIntegrationEvent @event)
+            {
+                onInvoke();
+                return Task.CompletedTask;
             }
         }
     }

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Threading.Channels;
+using Juice.EventBus.Subscriptions;
 using Juice.MediatR;
 using Juice.Messaging.Integrations;
 using Microsoft.Extensions.DependencyInjection;
@@ -108,7 +109,8 @@ namespace Juice.Messaging.Local.Internal
                         {
                             _logger.LogDebug("Dispatching IIntegrationEvent {MessageType}", message.GetType().Name);
                             var dispatcher = sp.GetRequiredService<IntegrationEventDispatcher>();
-                            await LocalDispatchHelper.DispatchIntegrationEventAsync(sp, dispatcher, integrationEvent, CancellationToken.None);
+                            var subsManager = sp.GetKeyedService<ISubscriptionsManager>("local");
+                            await LocalDispatchHelper.DispatchIntegrationEventAsync(sp, dispatcher, subsManager, integrationEvent, CancellationToken.None);
                         }
                         else
                         {
