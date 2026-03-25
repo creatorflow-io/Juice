@@ -1,8 +1,53 @@
-﻿using Juice.Messaging.Policies;
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
 
 namespace Juice.Messaging.Policies.Internal
 {
+    /// <summary>
+    /// Tracks all <see cref="IMessagePublishingPolicy"/> contributor types registered via
+    /// any <c>AddPublishingPolicies</c> overload. Accumulated during DI registration;
+    /// resolved at container-build time by <see cref="CompositeMessagePublishingPolicy"/>.
+    /// Uses insertion-order deduplication so that config + code overloads both sharing
+    /// <see cref="DefaultEventPublishingPolicy"/> result in a single entry.
+    /// </summary>
+    internal sealed class PolicyContributorRegistry
+    {
+        private readonly List<Type> _types = new();
+
+        /// <summary>Adds <paramref name="type"/> if not already present.</summary>
+        public void TryAdd(Type type)
+        {
+            if (!_types.Contains(type))
+                _types.Add(type);
+        }
+
+        public IReadOnlyList<Type> Types => _types;
+    }
+
+    /// <summary>
+    /// Composes all registered <see cref="IMessagePublishingPolicy"/> contributors.
+    /// Routes from every policy are merged and returned together (fan-out).
+    /// </summary>
+    internal sealed class CompositeMessagePublishingPolicy : IMessagePublishingPolicy
+    {
+        private readonly IReadOnlyList<IMessagePublishingPolicy> _policies;
+
+        public CompositeMessagePublishingPolicy(IReadOnlyList<IMessagePublishingPolicy> policies)
+        {
+            _policies = policies;
+        }
+
+        public async ValueTask<IReadOnlyCollection<PublishRoute>> ResolveAsync(PolicyResolveContext context)
+        {
+            if (_policies.Count == 1)
+                return await _policies[0].ResolveAsync(context);
+
+            var routes = new List<PublishRoute>();
+            foreach (var policy in _policies)
+                routes.AddRange(await policy.ResolveAsync(context));
+            return routes;
+        }
+    }
+
     internal sealed class DefaultEventPublishingPolicy
     : IMessagePublishingPolicy
     {
@@ -17,6 +62,7 @@ namespace Juice.Messaging.Policies.Internal
         {
             var rule = _options.Rules
                 .OrderByDescending(r => r.Priority)
+                .ThenByDescending(r => r.IsCodeDefined ? 1 : 0)
                 .FirstOrDefault(r => r.Match.IsMatch(context));
             if(rule != null)
             {
