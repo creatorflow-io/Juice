@@ -448,6 +448,96 @@ namespace Juice.Messaging.Local.Tests
             foreach (var hs in hostedServices) await hs.StopAsync(CancellationToken.None);
         }
 
+        // ─────────────────────────────────────────────────────────────────────
+        // Topic EventName: explicit key override matches custom EventName
+        // ─────────────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// When an event overrides <c>EventName</c> (e.g. <c>"orders.placed"</c>) and the
+        /// local subscriptions manager has <c>topicSupport: true</c>, a subscription registered
+        /// with a wildcard key (e.g. <c>"orders.#"</c>) matches via
+        /// <c>RoutingKeyUtils.IsTopicMatch</c> and the handler is invoked.
+        /// </summary>
+        [IgnoreOnCIFact]
+        [InitializeMessageContext]
+        public async Task LocalChannel_dispatches_to_handler_when_Subscribe_key_matches_EventNameAsync()
+        {
+            var handled = new TaskCompletionSource<bool>();
+
+            var services = new ServiceCollection();
+            services.AddLogging(b => b.AddTestOutputLogger(_output));
+            var m = services.AddMessaging();
+            m.AddLocalChannel();
+            m.AddIdempotencyInMemory();
+            m.AddDefaultMessageService(_ => { });
+            services.AddSingleton<IMessagePublishingPolicy>(new FixedRoutePolicy("local-channel", string.Empty));
+            services.AddMediatR();
+
+            // Register spy so TryAddTransient is a no-op; Subscribe with wildcard key "orders.#"
+            // topicSupport:true → IsTopicMatch("orders.placed", "orders.#") = true → handler invoked
+            services.AddTransient<TopicSpyHandler>(_ => new TopicSpyHandler(handled));
+            m.AddLocalConsumer(c => c.Subscribe<TopicIntegrationEvent, TopicSpyHandler>(TopicIntegrationEvent.TopicKey));
+
+            var sp = services.BuildServiceProvider();
+            var hostedServices = sp.GetServices<IHostedService>().ToList();
+            using var cts = new CancellationTokenSource();
+            foreach (var hs in hostedServices) await hs.StartAsync(cts.Token);
+
+            var svc = sp.CreateScope().ServiceProvider.GetRequiredService<IMessageService>();
+            await svc.PublishAsync(new TopicIntegrationEvent());
+
+            await handled.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            handled.Task.Result.Should().BeTrue(
+                "handler must be invoked when Subscribe key matches the event's EventName");
+
+            cts.Cancel();
+            foreach (var hs in hostedServices) await hs.StopAsync(CancellationToken.None);
+        }
+
+        /// <summary>
+        /// When no explicit key is provided to <c>Subscribe</c>, the key defaults to
+        /// <c>typeof(TEvent).Name</c> (e.g. <c>"TopicIntegrationEvent"</c>). If the event's
+        /// <c>EventName</c> differs (e.g. <c>"orders.placed"</c>) and neither exact nor wildcard
+        /// matching applies, no handlers are found and the event is silently dropped.
+        /// </summary>
+        [IgnoreOnCIFact]
+        [InitializeMessageContext]
+        public async Task LocalChannel_does_not_dispatch_when_Subscribe_key_does_not_match_EventNameAsync()
+        {
+            var handlerInvoked = false;
+
+            var services = new ServiceCollection();
+            services.AddLogging(b => b.AddTestOutputLogger(_output));
+            var m = services.AddMessaging();
+            m.AddLocalChannel();
+            m.AddIdempotencyInMemory();
+            m.AddDefaultMessageService(_ => { });
+            services.AddSingleton<IMessagePublishingPolicy>(new FixedRoutePolicy("local-channel", string.Empty));
+            services.AddMediatR();
+
+            // No explicit key → registered as "TopicIntegrationEvent" (type name)
+            // IsTopicMatch("orders.placed", "TopicIntegrationEvent") = false → handler not found
+            m.AddLocalConsumer(c => c.Subscribe<TopicIntegrationEvent, TopicSideEffectHandler>());
+            services.AddTransient<TopicSideEffectHandler>(_ => new TopicSideEffectHandler(() => handlerInvoked = true));
+
+            var sp = services.BuildServiceProvider();
+            var hostedServices = sp.GetServices<IHostedService>().ToList();
+            using var cts = new CancellationTokenSource();
+            foreach (var hs in hostedServices) await hs.StartAsync(cts.Token);
+
+            var svc = sp.CreateScope().ServiceProvider.GetRequiredService<IMessageService>();
+            await svc.PublishAsync(new TopicIntegrationEvent());
+
+            // Allow background dispatch time to complete (or not)
+            await Task.Delay(300);
+
+            handlerInvoked.Should().BeFalse(
+                "type-name key \"TopicIntegrationEvent\" does not match EventName \"orders.placed\" — explicit key required when EventName differs from type name");
+
+            cts.Cancel();
+            foreach (var hs in hostedServices) await hs.StopAsync(CancellationToken.None);
+        }
+
         // ─── Supporting types ────────────────────────────────────────────────
 
         private sealed record TestIntegrationEvent : IntegrationEvent;
@@ -575,6 +665,36 @@ namespace Juice.Messaging.Local.Tests
             : IIntegrationEventHandler<TestIntegrationEvent>
         {
             public Task HandleAsync(TestIntegrationEvent @event)
+            {
+                onInvoke();
+                return Task.CompletedTask;
+            }
+        }
+
+        /// <summary>
+        /// Integration event with a custom <c>EventName</c> that differs from its type name.
+        /// Simulates a "topic" event where the routing key is a dotted name like <c>"orders.placed"</c>.
+        /// </summary>
+        private sealed record TopicIntegrationEvent : IntegrationEvent
+        {
+            public const string TopicKey = "orders.#";
+            public override string EventName => "orders.placed";
+        }
+
+        private sealed class TopicSpyHandler(TaskCompletionSource<bool> signal)
+            : IIntegrationEventHandler<TopicIntegrationEvent>
+        {
+            public Task HandleAsync(TopicIntegrationEvent @event)
+            {
+                signal.TrySetResult(true);
+                return Task.CompletedTask;
+            }
+        }
+
+        private sealed class TopicSideEffectHandler(Action onInvoke)
+            : IIntegrationEventHandler<TopicIntegrationEvent>
+        {
+            public Task HandleAsync(TopicIntegrationEvent @event)
             {
                 onInvoke();
                 return Task.CompletedTask;

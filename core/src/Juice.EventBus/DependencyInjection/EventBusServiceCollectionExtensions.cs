@@ -43,7 +43,7 @@ namespace Microsoft.Extensions.DependencyInjection
                     .CreateLogger(typeof(InMemorySubscriptionsManager).Name + "[local]");
                 var providers = sp.GetServices<ILocalSubscriptionsProvider>()
                     .Cast<ISubscriptionsProvider>();
-                return new InMemorySubscriptionsManager(providers, logger, topicSupport: false);
+                return new InMemorySubscriptionsManager(providers, logger, topicSupport: true);
             });
             return services;
         }
