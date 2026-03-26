@@ -1,11 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Configuration;
-using Xunit;
-using System.Threading;
 using Juice.Messaging.Outbox.Delivery;
+using Juice.Messaging.Outbox.Delivery.Internal;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Xunit;
 
 namespace Juice.EventBus.Tests
 {
@@ -60,12 +62,75 @@ namespace Juice.EventBus.Tests
         {
             // Test retry delays
             var policy = DeliveryPolicy.Default;
-            
+
             var retry1 = policy.GetNextAttempt(1); // 5s
             var retry2 = policy.GetNextAttempt(2); // 10s
             var retry3 = policy.GetNextAttempt(3); // 20s
-            
+
             // Assert backoff timing
+        }
+
+        [Fact(DisplayName = "Multiple AddDeliveryPolicies(delegate) calls merge policies")]
+        public async Task Multiple_Delegate_Calls_Merge_PoliciesAsync()
+        {
+            var services = new ServiceCollection();
+            services.AddMessaging()
+                .AddDelivery(delivery =>
+                {
+                    delivery
+                        .AddDeliveryPolicies(o =>
+                        {
+                            o.Policies["rabbitmq:send-pending:*"] = new PolicyConfiguration { BatchSize = 5 };
+                        })
+                        .AddDeliveryPolicies(o =>
+                        {
+                            o.Policies["rabbitmq:retry:*"] = new PolicyConfiguration { BatchSize = 15 };
+                        });
+                });
+
+            var provider = services.BuildServiceProvider();
+            var resolver = provider.GetRequiredService<IDeliveryPolicyResolver>();
+
+            var sendPolicy = await resolver.GetPolicyAsync(
+                new DeliveryContext("rabbitmq", "send-pending", "Ctx"), CancellationToken.None);
+            var retryPolicy = await resolver.GetPolicyAsync(
+                new DeliveryContext("rabbitmq", "retry", "Ctx"), CancellationToken.None);
+
+            sendPolicy.BatchSize.Should().Be(5);
+            retryPolicy.BatchSize.Should().Be(15);
+        }
+
+        [Fact(DisplayName = "Delegate call and config section call merge policies")]
+        public async Task Delegate_And_Config_Calls_Merge_PoliciesAsync()
+        {
+            var inMemoryConfig = new Dictionary<string, string?>
+            {
+                ["DeliveryPolicies:Policies:rabbitmq__send-pending__*:BatchSize"] = "7"
+            };
+            var cfg = new ConfigurationBuilder().AddInMemoryCollection(inMemoryConfig).Build();
+
+            var services = new ServiceCollection();
+            services.AddMessaging()
+                .AddDelivery(delivery =>
+                {
+                    delivery
+                        .AddDeliveryPolicies(cfg.GetSection("DeliveryPolicies"))
+                        .AddDeliveryPolicies(o =>
+                        {
+                            o.Policies["rabbitmq:retry:*"] = new PolicyConfiguration { BatchSize = 25 };
+                        });
+                });
+
+            var provider = services.BuildServiceProvider();
+            var resolver = provider.GetRequiredService<IDeliveryPolicyResolver>();
+
+            var sendPolicy = await resolver.GetPolicyAsync(
+                new DeliveryContext("rabbitmq", "send-pending", "Ctx"), CancellationToken.None);
+            var retryPolicy = await resolver.GetPolicyAsync(
+                new DeliveryContext("rabbitmq", "retry", "Ctx"), CancellationToken.None);
+
+            sendPolicy.BatchSize.Should().Be(7);
+            retryPolicy.BatchSize.Should().Be(25);
         }
     }
 }

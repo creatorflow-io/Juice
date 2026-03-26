@@ -76,12 +76,27 @@ namespace Juice.Messaging.Outbox.Delivery
 
         /// <summary>
         /// Adds delivery policies from configuration.
+        /// Safe to call multiple times — each call's policies are merged into the shared options.
         /// </summary>
         /// <param name="policies"></param>
         /// <returns></returns>
         public DeliveryBuilder AddDeliveryPolicies(IConfigurationSection policies)
         {
             _services.Configure<DeliveryPolicyOptions>(policies);
+            _services.TryAddEnumerable(ServiceDescriptor.Singleton<IDeliveryPolicyProvider, DeliveryPolicyConfiguration>());
+            _services.TryAddSingleton<IDeliveryPolicyResolver, DefaultDeliveryPolicyResolver>();
+            return this;
+        }
+
+        /// <summary>
+        /// Adds delivery policies programmatically via a delegate.
+        /// Safe to call multiple times — each call's policies are merged into the shared options.
+        /// </summary>
+        /// <param name="configure"></param>
+        /// <returns></returns>
+        public DeliveryBuilder AddDeliveryPolicies(Action<DeliveryPolicyOptions> configure)
+        {
+            _services.Configure<DeliveryPolicyOptions>(configure);
             _services.TryAddEnumerable(ServiceDescriptor.Singleton<IDeliveryPolicyProvider, DeliveryPolicyConfiguration>());
             _services.TryAddSingleton<IDeliveryPolicyResolver, DefaultDeliveryPolicyResolver>();
             return this;

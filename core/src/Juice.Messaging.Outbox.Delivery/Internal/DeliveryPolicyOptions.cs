@@ -1,6 +1,6 @@
 ﻿namespace Juice.Messaging.Outbox.Delivery.Internal
 {
-    internal sealed class DeliveryPolicyOptions
+    public sealed class DeliveryPolicyOptions
     {
         /// <summary>
         /// Policies per Publisher × Intent × Context combination
