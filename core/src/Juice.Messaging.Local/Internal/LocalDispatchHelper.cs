@@ -60,7 +60,8 @@ namespace Juice.Messaging.Local.Internal
 
             if (subscriptionsManager != null)
             {
-                var types = await subscriptionsManager.GetHandlersForEventAsync(evt.GetType().Name);
+                var routeKey = evt.EventName ?? evt.GetType().Name;
+                var types = await subscriptionsManager.GetHandlersForEventAsync(routeKey);
                 handlerTypes = types.ToList();
             }
             else
