@@ -83,6 +83,14 @@ namespace Juice.Messaging.Policies
             return this;
         }
 
+        /// <summary> Constrains the rule to events of type <typeparamref name="TEvent"/>. If not
+        /// called, the rule matches events of any type. </summary>
+        public PublishRuleBuilder ForEvent<TEvent>() where TEvent : IIntegrationEvent
+        {
+            _event = typeof(TEvent).Name;
+            return this;
+        }
+
         /// <summary>
         /// Constrains the rule to events decorated with <c>[Domain(<paramref name="domain"/>)]</c>
         /// (case-insensitive). If not called, the rule matches events of any domain.

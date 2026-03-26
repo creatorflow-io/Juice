@@ -307,6 +307,34 @@ namespace Juice.Messaging.Local.Tests
         }
 
         // ─────────────────────────────────────────────────────────────────────
+        // US1-d: Publishing to "local-channel" without AddLocalChannel throws
+        // ─────────────────────────────────────────────────────────────────────
+
+        [Fact]
+        [InitializeMessageContext]
+        public async Task PublishAsync_Throws_WhenLocalChannelPublisherNotRegistered_AndNoOutboxRouteAsync()
+        {
+            // No AddLocalChannel() — publisher not registered.
+            // Policy routes to "local-channel" only (no outbox route).
+            var services = new ServiceCollection();
+            services.AddLogging();
+            var messaging = services.AddMessaging();
+            messaging.AddIdempotencyInMemory();
+            messaging.AddDefaultMessageService(_ => { });
+            services.AddSingleton<IMessagePublishingPolicy>(
+                new FixedRoutePolicy("local-channel", string.Empty));
+            services.AddMediatR();
+
+            var sp = services.BuildServiceProvider();
+            var svc = sp.CreateScope().ServiceProvider.GetRequiredService<IMessageService>();
+
+            var act = async () => await svc.PublishAsync(new TestIntegrationEvent());
+
+            await act.Should().ThrowAsync<InvalidOperationException>()
+                .WithMessage("*AddLocalChannel*");
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
         // US2-a: Subscriptions manager — registered handler is invoked
         // ─────────────────────────────────────────────────────────────────────
 

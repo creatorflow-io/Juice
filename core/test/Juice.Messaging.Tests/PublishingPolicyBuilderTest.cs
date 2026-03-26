@@ -376,8 +376,60 @@ namespace Juice.Messaging.Tests
         }
 
         // -----------------------------------------------------------------------
+        // ForEvent<TEvent>() generic overload
+        // -----------------------------------------------------------------------
+
+        [Fact]
+        public async Task ForEventGeneric_MatchesEventByTypeName_ResolvesCorrectDestinationAsync()
+        {
+            var services = new ServiceCollection();
+            services.AddMessaging()
+                .AddPublishingPolicies(p => p
+                    .SetDefault("rabbitmq", "default-exchange")
+                    .AddRule(10, r => r
+                        .ForEvent<OrderPlacedEvent>()
+                        .PublishTo("rabbitmq", "orders-exchange")));
+
+            var sp = services.BuildServiceProvider();
+            var policy = sp.GetRequiredService<IMessagePublishingPolicy>();
+
+            var routes = await policy.ResolveAsync(new PolicyResolveContext
+            {
+                EventType = nameof(OrderPlacedEvent)
+            });
+
+            Assert.Single(routes);
+            Assert.Equal("orders-exchange", routes.First().Destination);
+        }
+
+        [Fact]
+        public async Task ForEventGeneric_DoesNotMatchOtherEventType_FallsBackToDefaultAsync()
+        {
+            var services = new ServiceCollection();
+            services.AddMessaging()
+                .AddPublishingPolicies(p => p
+                    .SetDefault("rabbitmq", "default-exchange")
+                    .AddRule(10, r => r
+                        .ForEvent<OrderPlacedEvent>()
+                        .PublishTo("rabbitmq", "orders-exchange")));
+
+            var sp = services.BuildServiceProvider();
+            var policy = sp.GetRequiredService<IMessagePublishingPolicy>();
+
+            var routes = await policy.ResolveAsync(new PolicyResolveContext
+            {
+                EventType = "InvoiceCreatedEvent"
+            });
+
+            Assert.Single(routes);
+            Assert.Equal("default-exchange", routes.First().Destination);
+        }
+
+        // -----------------------------------------------------------------------
         // Helper: minimal custom policy for US3 tests
         // -----------------------------------------------------------------------
+
+        private sealed record OrderPlacedEvent : IntegrationEvent;
 
         private sealed class FixedRoutePolicy : IMessagePublishingPolicy
         {

@@ -93,7 +93,7 @@ namespace Juice.Messaging.Internal
             // double handler invocation.
             if (hasLocalChannel && !hasLocalOutbox)
             {
-                await PublishLocalMessageAsync(message, cancellationToken);
+                await PublishLocalMessageAsync(message, hasOutboxRoutes, cancellationToken);
             }
 
             if (hasOutboxRoutes)
@@ -121,7 +121,7 @@ namespace Juice.Messaging.Internal
                     // for immediate local dispatch.
                     if (hasLocalOutbox && _postCommitActions != null)
                     {
-                        _postCommitActions.Add(async () => await PublishLocalMessageAsync(message, CancellationToken.None));
+                        _postCommitActions.Add(async () => await PublishLocalMessageAsync(message, true, CancellationToken.None));
                     }
                     return;
                 }
@@ -135,7 +135,7 @@ namespace Juice.Messaging.Internal
                 // IntegrationEventDispatcher idempotency deduplicates if both succeed.
                 if (hasLocalOutbox)
                 {
-                    await PublishLocalMessageAsync(message, cancellationToken);
+                    await PublishLocalMessageAsync(message, true, cancellationToken);
                 }
             }
         }
@@ -152,7 +152,7 @@ namespace Juice.Messaging.Internal
             });
         }
 
-        private async Task PublishLocalMessageAsync(IMessage message, CancellationToken cancellationToken)
+        private async Task PublishLocalMessageAsync(IMessage message, bool hasOutboxRoutes, CancellationToken cancellationToken)
         {
             var contextSnapshot = MessageContext.IsInitialized
                 ? MessageContext.Current
@@ -161,7 +161,14 @@ namespace Juice.Messaging.Internal
             var messagePublisher = scope.ServiceProvider.GetKeyedService<IMessagePublisher>("local-channel");
             if (messagePublisher == null)
             {
-                _logger.LogWarning("No local-channel publisher registered; message {MessageId} will not be dispatched to handlers", message.MessageId);
+                if (!hasOutboxRoutes)
+                {
+                    throw new InvalidOperationException("No IMessagePublisher with key 'local-channel' is registered. Ensure AddLocalChannel has been called to register the local in-memory transport.");
+                }
+                if(_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogDebug("No IMessagePublisher with key 'local-channel' found for message {MessageType} — this should not happen because outbox routes are present", message.GetType());
+                }
                 return;
             }
             await messagePublisher.PublishAsync(message, contextSnapshot, cancellationToken);
