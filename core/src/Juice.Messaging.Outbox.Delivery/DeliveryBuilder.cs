@@ -37,6 +37,8 @@ namespace Juice.Messaging.Outbox.Delivery
 
             configure?.Invoke(builder);
 
+            builder.RegisterProcessorPolicies<TContext>();
+
             _services.AddHostedService(sp => builder.BuildHostedService<TContext>(sp));
             return this;
         }
@@ -54,6 +56,8 @@ namespace Juice.Messaging.Outbox.Delivery
 
             // ✅ Register default intents automatically if not configured
             builder.WithIntents(intents);
+
+            builder.RegisterProcessorPolicies<TContext>();
 
             _services.AddHostedService(sp => builder.BuildHostedService<TContext>(sp));
             return this;
