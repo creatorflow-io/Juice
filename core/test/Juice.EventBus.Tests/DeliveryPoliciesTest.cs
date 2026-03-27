@@ -132,5 +132,141 @@ namespace Juice.EventBus.Tests
             sendPolicy.BatchSize.Should().Be(7);
             retryPolicy.BatchSize.Should().Be(25);
         }
+
+        // US1: processor code policy is used when no global key-matched entry exists
+        [Fact(DisplayName = "Processor code policy is used when no global key match exists")]
+        public async Task Processor_Code_Policy_Used_When_No_Global_Key_MatchAsync()
+        {
+            var services = new ServiceCollection();
+            services.AddMessaging()
+                .AddDelivery(delivery =>
+                {
+                    delivery.AddDeliveryProcessor<ProcessorPolicyTestContext>("rabbitmq", proc =>
+                        proc.AddDeliveryPolicies(opts =>
+                            opts.DefaultPolicy = new PolicyConfiguration { BatchSize = 50 }));
+                });
+
+            var provider = services.BuildServiceProvider();
+            var resolver = provider.GetRequiredService<IDeliveryPolicyResolver>();
+
+            var policy = await resolver.GetPolicyAsync(
+                new DeliveryContext("rabbitmq", "send-pending", nameof(ProcessorPolicyTestContext)),
+                CancellationToken.None);
+
+            policy.BatchSize.Should().Be(50);
+        }
+
+        // US1: global config-section key-matched entry wins over processor code policy
+        [Fact(DisplayName = "Global config-section key match overrides processor code policy")]
+        public async Task Global_Config_Section_Key_Match_Overrides_Processor_Code_PolicyAsync()
+        {
+            var contextName = nameof(ProcessorPolicyTestContext);
+            var inMemoryConfig = new Dictionary<string, string?>
+            {
+                [$"GlobalPolicies:Policies:rabbitmq__send-pending__{contextName}:BatchSize"] = "30"
+            };
+            var cfg = new ConfigurationBuilder().AddInMemoryCollection(inMemoryConfig).Build();
+
+            var services = new ServiceCollection();
+            services.AddMessaging()
+                .AddDelivery(delivery =>
+                {
+                    delivery
+                        .AddDeliveryPolicies(cfg.GetSection("GlobalPolicies"))
+                        .AddDeliveryProcessor<ProcessorPolicyTestContext>("rabbitmq", proc =>
+                            proc.AddDeliveryPolicies(opts =>
+                                opts.DefaultPolicy = new PolicyConfiguration { BatchSize = 50 }));
+                });
+
+            var provider = services.BuildServiceProvider();
+            var resolver = provider.GetRequiredService<IDeliveryPolicyResolver>();
+
+            var policy = await resolver.GetPolicyAsync(
+                new DeliveryContext("rabbitmq", "send-pending", contextName),
+                CancellationToken.None);
+
+            policy.BatchSize.Should().Be(30);
+        }
+
+        // US2: processor without code policy falls back to global delegate policy
+        [Fact(DisplayName = "Processor without code policy falls back to global policy")]
+        public async Task Processor_Without_Code_Policy_Falls_Back_To_GlobalAsync()
+        {
+            var services = new ServiceCollection();
+            services.AddMessaging()
+                .AddDelivery(delivery =>
+                {
+                    delivery
+                        .AddDeliveryPolicies(opts =>
+                            opts.DefaultPolicy = new PolicyConfiguration { BatchSize = 20 })
+                        .AddDeliveryProcessor<ProcessorPolicyTestContext>("rabbitmq");
+                });
+
+            var provider = services.BuildServiceProvider();
+            var resolver = provider.GetRequiredService<IDeliveryPolicyResolver>();
+
+            var policy = await resolver.GetPolicyAsync(
+                new DeliveryContext("rabbitmq", "send-pending", nameof(ProcessorPolicyTestContext)),
+                CancellationToken.None);
+
+            policy.BatchSize.Should().Be(20);
+        }
+
+        // US2: processor and global both absent — built-in defaults apply
+        [Fact(DisplayName = "Processor without any policy uses built-in defaults")]
+        public async Task Processor_Without_Any_Policy_Uses_Built_In_DefaultsAsync()
+        {
+            var services = new ServiceCollection();
+            services.AddMessaging()
+                .AddDelivery(delivery =>
+                {
+                    delivery
+                        .AddDeliveryPolicies(opts => { }) // register resolver, no policy values set
+                        .AddDeliveryProcessor<ProcessorPolicyTestContext>("rabbitmq");
+                });
+
+            var provider = services.BuildServiceProvider();
+            var resolver = provider.GetRequiredService<IDeliveryPolicyResolver>();
+
+            var policy = await resolver.GetPolicyAsync(
+                new DeliveryContext("rabbitmq", "send-pending", nameof(ProcessorPolicyTestContext)),
+                CancellationToken.None);
+
+            policy.BatchSize.Should().Be(DeliveryPolicy.Default.BatchSize);
+            policy.Interval.Should().Be(DeliveryPolicy.Default.Interval);
+        }
+
+        // US3: processor code policy sets only one field; remaining fields come from global default
+        [Fact(DisplayName = "Processor code policy partially overrides global and inherits remaining fields")]
+        public async Task Processor_Code_Policy_Partially_Overrides_Global_Inherits_RestAsync()
+        {
+            var services = new ServiceCollection();
+            services.AddMessaging()
+                .AddDelivery(delivery =>
+                {
+                    delivery
+                        .AddDeliveryPolicies(opts =>
+                            opts.DefaultPolicy = new PolicyConfiguration
+                            {
+                                BatchSize = 10,
+                                Interval = TimeSpan.FromSeconds(5)
+                            })
+                        .AddDeliveryProcessor<ProcessorPolicyTestContext>("rabbitmq", proc =>
+                            proc.AddDeliveryPolicies(opts =>
+                                opts.DefaultPolicy = new PolicyConfiguration { BatchSize = 50 }));
+                });
+
+            var provider = services.BuildServiceProvider();
+            var resolver = provider.GetRequiredService<IDeliveryPolicyResolver>();
+
+            var policy = await resolver.GetPolicyAsync(
+                new DeliveryContext("rabbitmq", "send-pending", nameof(ProcessorPolicyTestContext)),
+                CancellationToken.None);
+
+            policy.BatchSize.Should().Be(50);
+            policy.Interval.Should().Be(TimeSpan.FromSeconds(5));
+        }
+
+        private sealed class ProcessorPolicyTestContext { }
     }
 }
