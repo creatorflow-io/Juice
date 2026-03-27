@@ -277,7 +277,7 @@ namespace Juice.EventBus.Tests
                 {
                     delivery.AddDeliveryProcessor<ProcessorPolicyTestContext>("rabbitmq", proc =>
                         proc.AddDeliveryPolicies(opts =>
-                            opts.Policies["rabbitmq:send-pending"] = new PolicyConfiguration { BatchSize = 7 }));
+                            opts.Policies["send-pending"] = new PolicyConfiguration { BatchSize = 7 }));
                 });
 
             var provider = services.BuildServiceProvider();
@@ -309,7 +309,7 @@ namespace Juice.EventBus.Tests
                         .AddDeliveryPolicies(cfg.GetSection("GlobalPolicies"))
                         .AddDeliveryProcessor<ProcessorPolicyTestContext>("rabbitmq", proc =>
                             proc.AddDeliveryPolicies(opts =>
-                                opts.Policies["rabbitmq:send-pending"] = new PolicyConfiguration { BatchSize = 7 }));
+                                opts.Policies["send-pending"] = new PolicyConfiguration { BatchSize = 7 }));
                 });
 
             var provider = services.BuildServiceProvider();
@@ -335,7 +335,7 @@ namespace Juice.EventBus.Tests
                             opts.Policies["rabbitmq:send-pending:*"] = new PolicyConfiguration { BatchSize = 5 })
                         .AddDeliveryProcessor<ProcessorPolicyTestContext>("rabbitmq", proc =>
                             proc.AddDeliveryPolicies(opts =>
-                                opts.Policies["rabbitmq:send-pending"] = new PolicyConfiguration { BatchSize = 99 }));
+                                opts.Policies["send-pending"] = new PolicyConfiguration { BatchSize = 99 }));
                 });
 
             var provider = services.BuildServiceProvider();
@@ -360,7 +360,7 @@ namespace Juice.EventBus.Tests
                         proc.AddDeliveryPolicies(opts =>
                         {
                             opts.DefaultPolicy = new PolicyConfiguration { Interval = TimeSpan.FromSeconds(15) };
-                            opts.Policies["rabbitmq:send-pending"] = new PolicyConfiguration { BatchSize = 7 };
+                            opts.Policies["send-pending"] = new PolicyConfiguration { BatchSize = 7 };
                         }));
                 });
 

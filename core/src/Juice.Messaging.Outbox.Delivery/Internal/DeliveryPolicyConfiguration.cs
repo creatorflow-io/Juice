@@ -30,7 +30,7 @@ namespace Juice.Messaging.Outbox.Delivery.Internal
                 return ValueTask.FromResult(exactConfig.ToPolicy(globalDefault));
 
             // Steps 2–3: processor-scoped policies (intent-specific, then default)
-            // Key format inside processor Policies: "{publisher}:{intent}" (2-segment; context is implicit)
+            // Key format inside processor Policies: "{intent}" (publisher and context are implicit)
             var processorKey = $"{context.PublisherKey}:{context.Context}";
             if (_processorRegistry?.IsConfigured(processorKey) == true)
             {
@@ -41,9 +41,8 @@ namespace Juice.Messaging.Outbox.Delivery.Internal
                 var processorPolicies = (processorOpts.Policies ?? [])
                     .ToDictionary(kvp => kvp.Key.Replace("__", ":"), kvp => kvp.Value);
 
-                // Step 2: processor intent-specific key: "{publisher}:{intent}"
-                var processorIntentKey = $"{context.PublisherKey}:{context.Intent}";
-                if (processorPolicies.TryGetValue(processorIntentKey, out var ppIntent))
+                // Step 2: processor intent-specific key: "{intent}" (publisher is implicit)
+                if (processorPolicies.TryGetValue(context.Intent, out var ppIntent))
                     return ValueTask.FromResult(ppIntent.ToPolicy(processorBase));
 
                 // Step 3: processor DefaultPolicy
