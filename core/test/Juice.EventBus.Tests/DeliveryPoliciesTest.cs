@@ -277,7 +277,7 @@ namespace Juice.EventBus.Tests
                 {
                     delivery.AddDeliveryProcessor<ProcessorPolicyTestContext>("rabbitmq", proc =>
                         proc.AddDeliveryPolicies(opts =>
-                            opts.Policies["rabbitmq:send-pending:*"] = new PolicyConfiguration { BatchSize = 7 }));
+                            opts.Policies["rabbitmq:send-pending"] = new PolicyConfiguration { BatchSize = 7 }));
                 });
 
             var provider = services.BuildServiceProvider();
@@ -290,9 +290,9 @@ namespace Juice.EventBus.Tests
             policy.BatchSize.Should().Be(7);
         }
 
-        // US4: global key-matched entry overrides processor intent-specific policy
-        [Fact(DisplayName = "Global key-matched entry overrides processor intent-specific policy")]
-        public async Task Global_Key_Match_Overrides_Processor_Intent_PolicyAsync()
+        // US4: global exact entry overrides processor intent-specific policy
+        [Fact(DisplayName = "Global exact entry overrides processor intent-specific policy")]
+        public async Task Global_Exact_Match_Overrides_Processor_Intent_PolicyAsync()
         {
             var contextName = nameof(ProcessorPolicyTestContext);
             var inMemoryConfig = new Dictionary<string, string?>
@@ -309,7 +309,7 @@ namespace Juice.EventBus.Tests
                         .AddDeliveryPolicies(cfg.GetSection("GlobalPolicies"))
                         .AddDeliveryProcessor<ProcessorPolicyTestContext>("rabbitmq", proc =>
                             proc.AddDeliveryPolicies(opts =>
-                                opts.Policies["rabbitmq:send-pending:*"] = new PolicyConfiguration { BatchSize = 7 }));
+                                opts.Policies["rabbitmq:send-pending"] = new PolicyConfiguration { BatchSize = 7 }));
                 });
 
             var provider = services.BuildServiceProvider();
@@ -317,6 +317,32 @@ namespace Juice.EventBus.Tests
 
             var policy = await resolver.GetPolicyAsync(
                 new DeliveryContext("rabbitmq", "send-pending", contextName),
+                CancellationToken.None);
+
+            policy.BatchSize.Should().Be(99);
+        }
+
+        // US4: processor intent policy beats global wildcard (publisher:intent:*)
+        [Fact(DisplayName = "Processor intent policy beats global wildcard publisher:intent:*")]
+        public async Task Processor_Intent_Policy_Beats_Global_Wildcard_IntentAsync()
+        {
+            var services = new ServiceCollection();
+            services.AddMessaging()
+                .AddDelivery(delivery =>
+                {
+                    delivery
+                        .AddDeliveryPolicies(opts =>
+                            opts.Policies["rabbitmq:send-pending:*"] = new PolicyConfiguration { BatchSize = 5 })
+                        .AddDeliveryProcessor<ProcessorPolicyTestContext>("rabbitmq", proc =>
+                            proc.AddDeliveryPolicies(opts =>
+                                opts.Policies["rabbitmq:send-pending"] = new PolicyConfiguration { BatchSize = 99 }));
+                });
+
+            var provider = services.BuildServiceProvider();
+            var resolver = provider.GetRequiredService<IDeliveryPolicyResolver>();
+
+            var policy = await resolver.GetPolicyAsync(
+                new DeliveryContext("rabbitmq", "send-pending", nameof(ProcessorPolicyTestContext)),
                 CancellationToken.None);
 
             policy.BatchSize.Should().Be(99);
@@ -334,7 +360,7 @@ namespace Juice.EventBus.Tests
                         proc.AddDeliveryPolicies(opts =>
                         {
                             opts.DefaultPolicy = new PolicyConfiguration { Interval = TimeSpan.FromSeconds(15) };
-                            opts.Policies["rabbitmq:send-pending:*"] = new PolicyConfiguration { BatchSize = 7 };
+                            opts.Policies["rabbitmq:send-pending"] = new PolicyConfiguration { BatchSize = 7 };
                         }));
                 });
 

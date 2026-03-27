@@ -22,61 +22,47 @@ namespace Juice.Messaging.Outbox.Delivery.Internal
 
         public ValueTask<DeliveryPolicy> GetPolicyAsync(DeliveryContext context, CancellationToken cancellationToken)
         {
-            // Steps 1–4: global key-matched entries (highest priority — config-section entries live here)
+            var globalDefault = _options.DefaultPolicy?.ToPolicy();
+
+            // Step 1: global exact match — only this outranks processor-scoped policies
             var exactKey = $"{context.PublisherKey}:{context.Intent}:{context.Context}";
             if (_options.Policies.TryGetValue(exactKey, out var exactConfig))
-            {
-                return ValueTask.FromResult(exactConfig.ToPolicy(_options.DefaultPolicy?.ToPolicy()));
-            }
+                return ValueTask.FromResult(exactConfig.ToPolicy(globalDefault));
 
-            var publisherIntentKey = $"{context.PublisherKey}:{context.Intent}:*";
-            if (_options.Policies.TryGetValue(publisherIntentKey, out var piConfig))
-            {
-                return ValueTask.FromResult(piConfig.ToPolicy(_options.DefaultPolicy?.ToPolicy()));
-            }
-
-            var publisherKey = $"{context.PublisherKey}:*:*";
-            if (_options.Policies.TryGetValue(publisherKey, out var pConfig))
-            {
-                return ValueTask.FromResult(pConfig.ToPolicy(_options.DefaultPolicy?.ToPolicy()));
-            }
-
-            var intentKey = $"*:{context.Intent}:*";
-            if (_options.Policies.TryGetValue(intentKey, out var iConfig))
-            {
-                return ValueTask.FromResult(iConfig.ToPolicy(_options.DefaultPolicy?.ToPolicy()));
-            }
-
-            // Step 5: processor code policies — below key-matched global entries, above global DefaultPolicy
+            // Steps 2–3: processor-scoped policies (intent-specific, then default)
+            // Key format inside processor Policies: "{publisher}:{intent}" (2-segment; context is implicit)
             var processorKey = $"{context.PublisherKey}:{context.Context}";
             if (_processorRegistry?.IsConfigured(processorKey) == true)
             {
                 var processorOpts = _optionsMonitor.Get(processorKey);
-                var globalDefault = _options.DefaultPolicy?.ToPolicy();
                 var processorDefault = processorOpts.DefaultPolicy?.ToPolicy(globalDefault);
                 var processorBase = processorDefault ?? globalDefault;
 
                 var processorPolicies = (processorOpts.Policies ?? [])
                     .ToDictionary(kvp => kvp.Key.Replace("__", ":"), kvp => kvp.Value);
 
-                if (processorPolicies.TryGetValue(exactKey, out var ppExact))
-                    return ValueTask.FromResult(ppExact.ToPolicy(processorBase));
-                if (processorPolicies.TryGetValue(publisherIntentKey, out var ppPi))
-                    return ValueTask.FromResult(ppPi.ToPolicy(processorBase));
-                if (processorPolicies.TryGetValue(publisherKey, out var ppP))
-                    return ValueTask.FromResult(ppP.ToPolicy(processorBase));
-                if (processorPolicies.TryGetValue(intentKey, out var ppI))
-                    return ValueTask.FromResult(ppI.ToPolicy(processorBase));
+                // Step 2: processor intent-specific key: "{publisher}:{intent}"
+                var processorIntentKey = $"{context.PublisherKey}:{context.Intent}";
+                if (processorPolicies.TryGetValue(processorIntentKey, out var ppIntent))
+                    return ValueTask.FromResult(ppIntent.ToPolicy(processorBase));
 
+                // Step 3: processor DefaultPolicy
                 if (processorOpts.DefaultPolicy != null)
                     return ValueTask.FromResult(processorOpts.DefaultPolicy.ToPolicy(globalDefault));
             }
 
+            // Steps 4–5: global wildcard policies (fall below processor-scoped config)
+            var publisherIntentKey = $"{context.PublisherKey}:{context.Intent}:*";
+            if (_options.Policies.TryGetValue(publisherIntentKey, out var piConfig))
+                return ValueTask.FromResult(piConfig.ToPolicy(globalDefault));
+
+            var publisherKey = $"{context.PublisherKey}:*:*";
+            if (_options.Policies.TryGetValue(publisherKey, out var pConfig))
+                return ValueTask.FromResult(pConfig.ToPolicy(globalDefault));
+
             // Step 6: global DefaultPolicy
             if (_options.DefaultPolicy != null)
-            {
                 return ValueTask.FromResult(_options.DefaultPolicy.ToPolicy());
-            }
 
             // Step 7: built-in default
             return ValueTask.FromResult(DeliveryPolicy.Default);
