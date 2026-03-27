@@ -52,10 +52,24 @@ namespace Juice.Messaging.Outbox.Delivery.Internal
             if (_processorRegistry?.IsConfigured(processorKey) == true)
             {
                 var processorOpts = _optionsMonitor.Get(processorKey);
+                var globalDefault = _options.DefaultPolicy?.ToPolicy();
+                var processorDefault = processorOpts.DefaultPolicy?.ToPolicy(globalDefault);
+                var processorBase = processorDefault ?? globalDefault;
+
+                var processorPolicies = (processorOpts.Policies ?? [])
+                    .ToDictionary(kvp => kvp.Key.Replace("__", ":"), kvp => kvp.Value);
+
+                if (processorPolicies.TryGetValue(exactKey, out var ppExact))
+                    return ValueTask.FromResult(ppExact.ToPolicy(processorBase));
+                if (processorPolicies.TryGetValue(publisherIntentKey, out var ppPi))
+                    return ValueTask.FromResult(ppPi.ToPolicy(processorBase));
+                if (processorPolicies.TryGetValue(publisherKey, out var ppP))
+                    return ValueTask.FromResult(ppP.ToPolicy(processorBase));
+                if (processorPolicies.TryGetValue(intentKey, out var ppI))
+                    return ValueTask.FromResult(ppI.ToPolicy(processorBase));
+
                 if (processorOpts.DefaultPolicy != null)
-                {
-                    return ValueTask.FromResult(processorOpts.DefaultPolicy.ToPolicy(_options.DefaultPolicy?.ToPolicy()));
-                }
+                    return ValueTask.FromResult(processorOpts.DefaultPolicy.ToPolicy(globalDefault));
             }
 
             // Step 6: global DefaultPolicy

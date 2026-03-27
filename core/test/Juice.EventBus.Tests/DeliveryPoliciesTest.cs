@@ -267,6 +267,88 @@ namespace Juice.EventBus.Tests
             policy.Interval.Should().Be(TimeSpan.FromSeconds(5));
         }
 
+        // US4: processor intent-specific key used when no global key match
+        [Fact(DisplayName = "Processor intent-specific policy is used when no global key match")]
+        public async Task Processor_Intent_Policy_Used_When_No_Global_Key_MatchAsync()
+        {
+            var services = new ServiceCollection();
+            services.AddMessaging()
+                .AddDelivery(delivery =>
+                {
+                    delivery.AddDeliveryProcessor<ProcessorPolicyTestContext>("rabbitmq", proc =>
+                        proc.AddDeliveryPolicies(opts =>
+                            opts.Policies["rabbitmq:send-pending:*"] = new PolicyConfiguration { BatchSize = 7 }));
+                });
+
+            var provider = services.BuildServiceProvider();
+            var resolver = provider.GetRequiredService<IDeliveryPolicyResolver>();
+
+            var policy = await resolver.GetPolicyAsync(
+                new DeliveryContext("rabbitmq", "send-pending", nameof(ProcessorPolicyTestContext)),
+                CancellationToken.None);
+
+            policy.BatchSize.Should().Be(7);
+        }
+
+        // US4: global key-matched entry overrides processor intent-specific policy
+        [Fact(DisplayName = "Global key-matched entry overrides processor intent-specific policy")]
+        public async Task Global_Key_Match_Overrides_Processor_Intent_PolicyAsync()
+        {
+            var contextName = nameof(ProcessorPolicyTestContext);
+            var inMemoryConfig = new Dictionary<string, string?>
+            {
+                [$"GlobalPolicies:Policies:rabbitmq__send-pending__{contextName}:BatchSize"] = "99"
+            };
+            var cfg = new ConfigurationBuilder().AddInMemoryCollection(inMemoryConfig).Build();
+
+            var services = new ServiceCollection();
+            services.AddMessaging()
+                .AddDelivery(delivery =>
+                {
+                    delivery
+                        .AddDeliveryPolicies(cfg.GetSection("GlobalPolicies"))
+                        .AddDeliveryProcessor<ProcessorPolicyTestContext>("rabbitmq", proc =>
+                            proc.AddDeliveryPolicies(opts =>
+                                opts.Policies["rabbitmq:send-pending:*"] = new PolicyConfiguration { BatchSize = 7 }));
+                });
+
+            var provider = services.BuildServiceProvider();
+            var resolver = provider.GetRequiredService<IDeliveryPolicyResolver>();
+
+            var policy = await resolver.GetPolicyAsync(
+                new DeliveryContext("rabbitmq", "send-pending", contextName),
+                CancellationToken.None);
+
+            policy.BatchSize.Should().Be(99);
+        }
+
+        // US4: processor intent-specific policy inherits unset fields from processor DefaultPolicy
+        [Fact(DisplayName = "Processor intent policy inherits unset fields from processor DefaultPolicy")]
+        public async Task Processor_Intent_Policy_Inherits_From_Processor_DefaultAsync()
+        {
+            var services = new ServiceCollection();
+            services.AddMessaging()
+                .AddDelivery(delivery =>
+                {
+                    delivery.AddDeliveryProcessor<ProcessorPolicyTestContext>("rabbitmq", proc =>
+                        proc.AddDeliveryPolicies(opts =>
+                        {
+                            opts.DefaultPolicy = new PolicyConfiguration { Interval = TimeSpan.FromSeconds(15) };
+                            opts.Policies["rabbitmq:send-pending:*"] = new PolicyConfiguration { BatchSize = 7 };
+                        }));
+                });
+
+            var provider = services.BuildServiceProvider();
+            var resolver = provider.GetRequiredService<IDeliveryPolicyResolver>();
+
+            var policy = await resolver.GetPolicyAsync(
+                new DeliveryContext("rabbitmq", "send-pending", nameof(ProcessorPolicyTestContext)),
+                CancellationToken.None);
+
+            policy.BatchSize.Should().Be(7);
+            policy.Interval.Should().Be(TimeSpan.FromSeconds(15));
+        }
+
         private sealed class ProcessorPolicyTestContext { }
     }
 }
