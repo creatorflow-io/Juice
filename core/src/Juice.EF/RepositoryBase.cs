@@ -7,13 +7,19 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Juice.EF
 {
-    public abstract class RepositoryBase<T, TContext>(TContext context) : IRepository<T>
+    public abstract class RepositoryBase<T, TContext>(TContext context) : RepositoryBase<T>(context)
         where T : class
         where TContext : DbContext
     {
+        protected new TContext DbContext { get; private set; } = context;
+    }
+
+    public abstract class RepositoryBase<T>(DbContext context) : IRepository<T>
+        where T : class
+    {
         private IUnitOfWork<T>? _unitOfWork = context is IUnitOfWork uow ? new UnitOfWorkWrapper<T>(uow) : default;
         public virtual IUnitOfWork<T> UnitOfWork => _unitOfWork ?? throw new InvalidOperationException("UnitOfWork is not initialized. Please ensure the DbContext implements IUnitOfWork.");
-        protected virtual TContext DbContext { get; private set; } = context;
+        protected virtual DbContext DbContext { get; private set; } = context;
 
         public virtual Task<IOperationResult<T>> AddAsync(T entity, CancellationToken token = default)
             => DbContext.AddAndSaveInternalAsync(entity, token);
