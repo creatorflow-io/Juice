@@ -24,6 +24,13 @@ namespace Juice.Messaging.Integrations
         public async Task<EventDispatchResult> DispatchAsync(
             IIntegrationEvent evt, EventDispatchContext context)
         {
+            if(context.Handlers == null || !context.Handlers.Any())
+            {
+                if(_logger.IsEnabled(LogLevel.Debug))
+                _logger.LogDebug("No handlers found for event: {EventName}, eventId: {eventId} for tenant: {TenantId}"
+                    , context.EventName, evt.MessageId, context.TenantId);
+                return EventDispatchResult.NotHandled;
+            }
             using var scope = _scopeFactory.CreateScope();
             var idempotencyService = scope.ServiceProvider.GetRequiredService<IIdempotencyService>();
             var create = await idempotencyService.TryCreateRequestAsync(context.EventName, $"{context.Source}:{evt.MessageId}");
