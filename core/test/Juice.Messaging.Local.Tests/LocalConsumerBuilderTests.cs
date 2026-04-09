@@ -1,4 +1,5 @@
 ﻿using FluentAssertions;
+using Juice.EventBus;
 using Juice.EventBus.Subscriptions;
 using Juice.Messaging.Local.Internal;
 using Microsoft.Extensions.DependencyInjection;
@@ -135,6 +136,53 @@ namespace Juice.Messaging.Local.Tests
             var handler = provider.GetService<TestHandler>();
 
             handler.Should().NotBeNull("handler must be resolvable from DI after Subscribe");
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // IConsumerBuilder interface tests
+        // ─────────────────────────────────────────────────────────────────────
+
+        [Fact]
+        public async Task LocalConsumerBuilder_is_assignable_to_IConsumerBuilder_Async()
+        {
+            // Verify LocalConsumerBuilder satisfies IConsumerBuilder and fluent
+            // chaining through the interface returns IConsumerBuilder.
+            IConsumerBuilder? capturedBuilder = null;
+
+            var provider = BuildServices(m =>
+                m.AddLocalConsumer(c =>
+                {
+                    capturedBuilder = c;
+                    IConsumerBuilder iface = c; // compile-time proof of assignability
+                    var returned = iface.Subscribe<TestEvent, TestHandler>();
+                    returned.Should().BeSameAs(iface, "IConsumerBuilder.Subscribe must return this");
+                }));
+
+            capturedBuilder.Should().NotBeNull();
+            var manager = provider.GetRequiredKeyedService<ISubscriptionsManager>("local");
+            var handlers = await manager.GetHandlersForEventAsync(nameof(TestEvent));
+            handlers.Should().ContainSingle("subscription via IConsumerBuilder must be registered");
+        }
+
+        [Fact]
+        public async Task Shared_extension_method_on_IConsumerBuilder_registers_subscriptions_Async()
+        {
+            // Demonstrates that a shared extension method written against IConsumerBuilder
+            // works with LocalConsumerBuilder (US2: reusable cross-transport helpers).
+            static IConsumerBuilder SubscribeAll(IConsumerBuilder b)
+                => b.Subscribe<TestEvent, TestHandler>()
+                    .Subscribe<OtherEvent, OtherHandler>();
+
+            var provider = BuildServices(m =>
+                m.AddLocalConsumer(c => SubscribeAll(c)));
+
+            var manager = provider.GetRequiredKeyedService<ISubscriptionsManager>("local");
+
+            var testHandlers = await manager.GetHandlersForEventAsync(nameof(TestEvent));
+            var otherHandlers = await manager.GetHandlersForEventAsync(nameof(OtherEvent));
+
+            testHandlers.Should().ContainSingle();
+            otherHandlers.Should().ContainSingle();
         }
 
         // ─── Supporting types ────────────────────────────────────────────────

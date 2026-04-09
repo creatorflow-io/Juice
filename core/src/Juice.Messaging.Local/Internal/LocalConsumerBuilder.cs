@@ -1,3 +1,4 @@
+using Juice.EventBus;
 using Juice.EventBus.Subscriptions;
 using Juice.Messaging;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,7 +17,7 @@ namespace Juice.Messaging.Local.Internal
     /// <see cref="ILocalSubscriptionsProvider"/> singletons, making them available
     /// to <see cref="Microsoft.Extensions.DependencyInjection.EventBusServiceCollectionExtensions.AddLocalSubscriptionsManager"/>.
     /// </summary>
-    public sealed class LocalConsumerBuilder : ILocalSubscriptionsProvider
+    public sealed class LocalConsumerBuilder : IConsumerBuilder, ILocalSubscriptionsProvider
     {
         private readonly IServiceCollection _services;
         private readonly List<SubscriptionInfo> _subscriptions = new();
@@ -41,6 +42,9 @@ namespace Juice.Messaging.Local.Internal
             _services.TryAddTransient<THandler>();
             return this;
         }
+
+        IConsumerBuilder IConsumerBuilder.Subscribe<TEvent, THandler>(string? route)
+            => Subscribe<TEvent, THandler>(route);
 
         /// <inheritdoc />
         IEnumerable<SubscriptionInfo> ISubscriptionsProvider.GetSubscriptions() => _subscriptions;

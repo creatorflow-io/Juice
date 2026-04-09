@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Juice.EventBus.RabbitMQ.Consuming
 {
-    public sealed class RabbitMQConsumerBuilder
+    public sealed class RabbitMQConsumerBuilder : IConsumerBuilder
     {
         internal record SubscriptionDescriptor(string? Route, Type EventType, Type HandlerType);
 
@@ -54,6 +54,9 @@ namespace Juice.EventBus.RabbitMQ.Consuming
             _services.TryAddTransient<THandler>();
             return this;
         }
+
+        IConsumerBuilder IConsumerBuilder.Subscribe<TEvent, THandler>(string? route)
+            => Subscribe<TEvent, THandler>(route);
 
         internal RabbitMQConsumerHostedService BuildHostedService(IServiceProvider sp)
         {
