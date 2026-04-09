@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Text;
 using FluentAssertions;
+using Juice.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -428,6 +429,160 @@ namespace Juice.Messaging.Tests
 
         #endregion
 
+        #region IDictionary Tests
+
+        [Fact(DisplayName = "Should serialize and deserialize class with IDictionary<string, object> property")]
+        public void Should_Serialize_And_Deserialize_Class_With_Dictionary_Property()
+        {
+            // Arrange
+            var guidValue = Guid.NewGuid();
+            var original = new DictionaryData
+            {
+                Id = Guid.NewGuid(),
+                Properties = new Dictionary<string, object?>
+                {
+                    ["name"]  = "Alice",
+                    ["score"] = 99,
+                    ["active"] = true,
+                    ["guid"] = guidValue
+                }
+            };
+
+            // Act
+            var serialized = _serializer.Serialize(original);
+            _testOutput.WriteLine($"Serialized: {serialized}");
+
+            var deserialized = _serializer.Deserialize<IIntegrationEvent>(serialized, typeof(DictionaryData)) as DictionaryData;
+
+            // Assert
+            deserialized.Should().NotBeNull();
+            deserialized!.Id.Should().Be(original.Id);
+            deserialized.Properties.Should().NotBeNull();
+            deserialized.Properties!["name"].Should().Be("Alice");
+            deserialized.Properties["score"].Should().Be(99L);   // JSON numbers → long when target is object
+            deserialized.Properties["active"].Should().Be(true);
+            deserialized.Properties["guid"].Should().Be(guidValue.ToString());
+            deserialized.Properties.GetOption<Guid>("guid").Should().Be(guidValue);
+        }
+
+        [Fact(DisplayName = "Should round-trip string values in dictionary")]
+        public void Should_Round_Trip_String_Values_In_Dictionary()
+        {
+            // Arrange
+            var original = new DictionaryData
+            {
+                Properties = new Dictionary<string, object?>
+                {
+                    ["key1"] = "value1",
+                    ["key2"] = "value2"
+                }
+            };
+
+            // Act
+            var serialized = _serializer.Serialize(original);
+            var deserialized = _serializer.Deserialize<DictionaryData>(serialized);
+
+            // Assert
+            deserialized!.Properties!["key1"].Should().Be("value1");
+            deserialized.Properties["key2"].Should().Be("value2");
+        }
+
+        [Fact(DisplayName = "Should handle null value in dictionary")]
+        public void Should_Handle_Null_Value_In_Dictionary()
+        {
+            // Arrange
+            var original = new DictionaryData
+            {
+                Properties = new Dictionary<string, object?>
+                {
+                    ["present"] = "yes",
+                    ["absent"]  = null!
+                }
+            };
+
+            // Act
+            var serialized = _serializer.Serialize(original);
+            _testOutput.WriteLine($"Serialized: {serialized}");
+
+            var deserialized = _serializer.Deserialize<DictionaryData>(serialized);
+
+            // Assert
+            deserialized!.Properties!["present"].Should().Be("yes");
+            deserialized.Properties["absent"].Should().BeNull();
+        }
+
+        [Fact(DisplayName = "Should handle empty dictionary property")]
+        public void Should_Handle_Empty_Dictionary_Property()
+        {
+            // Arrange
+            var original = new DictionaryData
+            {
+                Id = Guid.NewGuid(),
+                Properties = new Dictionary<string, object?>()
+            };
+
+            // Act
+            var serialized = _serializer.Serialize(original);
+            _testOutput.WriteLine($"Serialized: {serialized}");
+
+            var deserialized = _serializer.Deserialize<DictionaryData>(serialized);
+
+            // Assert
+            deserialized!.Properties.Should().NotBeNull();
+            deserialized.Properties.Should().BeEmpty();
+        }
+
+        [Fact(DisplayName = "Dictionary nested object value deserializes as JObject")]
+        public void Should_Deserialize_Nested_Object_In_Dictionary_As_JObject()
+        {
+            // Arrange - complex objects stored in object-typed dictionary slots
+            // come back as JObject because plain Deserialize<T> (concrete) does not
+            // apply TypeNameHandling, so $type metadata is not used.
+            var original = new DictionaryData
+            {
+                Properties = new Dictionary<string, object?>
+                {
+                    ["inner"] = new TestData { Id = Guid.NewGuid(), Name = "nested", Value = 7 }
+                }
+            };
+
+            // Act
+            var serialized = _serializer.Serialize(original);
+            _testOutput.WriteLine($"Serialized: {serialized}");
+
+            var deserialized = _serializer.Deserialize<DictionaryData>(serialized);
+
+            // Assert — value is present; consumer must cast to JObject / re-hydrate
+            deserialized!.Properties!["inner"].Should().NotBeNull();
+            deserialized.Properties["inner"].Should().BeOfType<Newtonsoft.Json.Linq.JObject>();
+        }
+
+        [Fact(DisplayName = "Should serialize and deserialize plain IDictionary<string,object> via eventType")]
+        public void Should_Serialize_And_Deserialize_Plain_Dictionary_Via_EventType()
+        {
+            // Arrange
+            var original = new Dictionary<string, object>
+            {
+                ["alpha"] = "hello",
+                ["beta"]  = 42
+            };
+
+            // Act
+            var serialized = _serializer.Serialize(original);
+            _testOutput.WriteLine($"Serialized: {serialized}");
+
+            // Pass concrete runtime type so deserializer avoids the interface path
+            var deserialized = _serializer.Deserialize<IDictionary<string, object>>(
+                serialized, typeof(Dictionary<string, object>));
+
+            // Assert
+            deserialized.Should().NotBeNull();
+            deserialized!["alpha"].Should().Be("hello");
+            deserialized["beta"].Should().Be(42L);
+        }
+
+        #endregion
+
         #region Test Helper Classes
 
         public record TestData: MessageBase, IMessage
@@ -441,6 +596,12 @@ namespace Juice.Messaging.Tests
         {
             public Guid Id { get; set; }
             public TestData? Inner { get; set; }
+        }
+
+        public record DictionaryData : IntegrationEvent
+        {
+            public Guid Id { get; set; }
+            public IDictionary<string, object?>? Properties { get; set; }
         }
 
         #endregion
