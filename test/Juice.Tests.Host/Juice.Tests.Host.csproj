@@ -27,6 +27,8 @@
         <ProjectReference Include="..\..\core\src\Juice.Messaging.Idempotency.EF.PostgreSQL\Juice.Messaging.Idempotency.EF.PostgreSQL.csproj" />
         <ProjectReference Include="..\..\core\src\Juice.Messaging.Idempotency.EF.SqlServer\Juice.Messaging.Idempotency.EF.SqlServer.csproj" />
         <ProjectReference Include="..\..\core\src\Juice.Messaging.Idempotency.EF\Juice.Messaging.Idempotency.EF.csproj" />
+        <ProjectReference Include="..\..\core\src\Juice.Messaging.Local\Juice.Messaging.Local.csproj" />
+        <ProjectReference Include="..\..\core\src\Juice.Messaging.Outbox.Delivery\Juice.Messaging.Outbox.Delivery.csproj" />
         <ProjectReference Include="..\..\core\src\Juice.Messaging.Outbox.Migrations.PostgreSQL\Juice.Messaging.Outbox.Migrations.PostgreSQL.csproj" />
         <ProjectReference Include="..\..\core\src\Juice.Messaging.Outbox.Migrations.SqlServer\Juice.Messaging.Outbox.Migrations.SqlServer.csproj" />
         <ProjectReference Include="..\..\core\test\Juice.EF.Tests.PostgreSQL\Juice.EF.Tests.PostgreSQL.csproj" />

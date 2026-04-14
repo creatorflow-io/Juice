@@ -132,10 +132,12 @@ namespace Juice.Messaging.Internal
                 // For "local" routes, enqueue to the in-memory channel for immediate
                 // best-effort dispatch. The outbox entry remains for durability —
                 // DeliveryHostedService will pick it up on retry if this dispatch fails.
-                // IntegrationEventDispatcher idempotency deduplicates if both succeed.
+                // Delivery IDs are passed so LocalChannelBackgroundService can mark them
+                // Published after a successful dispatch, preventing phase-2 re-processing.
                 if (hasLocalOutbox)
                 {
-                    await PublishLocalMessageAsync(message, true, cancellationToken);
+                    var localDeliveryIds = _outboxService.GetPendingDeliveryIds(message.MessageId, "local");
+                    await PublishLocalMessageAsync(message, true, localDeliveryIds.Count > 0 ? localDeliveryIds : null, cancellationToken);
                 }
             }
         }
@@ -152,7 +154,10 @@ namespace Juice.Messaging.Internal
             });
         }
 
-        private async Task PublishLocalMessageAsync(IMessage message, bool hasOutboxRoutes, CancellationToken cancellationToken)
+        private Task PublishLocalMessageAsync(IMessage message, bool hasOutboxRoutes, CancellationToken cancellationToken)
+            => PublishLocalMessageAsync(message, hasOutboxRoutes, localDeliveryIds: null, cancellationToken);
+
+        private async Task PublishLocalMessageAsync(IMessage message, bool hasOutboxRoutes, IReadOnlyList<Guid>? localDeliveryIds, CancellationToken cancellationToken)
         {
             var contextSnapshot = MessageContext.IsInitialized
                 ? MessageContext.Current
@@ -171,7 +176,7 @@ namespace Juice.Messaging.Internal
                 }
                 return;
             }
-            await messagePublisher.PublishAsync(message, contextSnapshot, cancellationToken);
+            await messagePublisher.PublishAsync(message, contextSnapshot, localDeliveryIds, cancellationToken);
         }
     }
 }

@@ -4,6 +4,7 @@ using Juice.Messaging.Outbox.Delivery.Registry;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace Juice.Messaging.Outbox.Delivery
@@ -39,7 +40,12 @@ namespace Juice.Messaging.Outbox.Delivery
 
             builder.RegisterProcessorPolicies<TContext>();
 
-            _services.AddHostedService(sp => builder.BuildHostedService<TContext>(sp));
+            // Use Add instead of AddHostedService to bypass TryAddEnumerable deduplication.
+            // AddHostedService deduplicates by (IHostedService, ImplementationType), so two
+            // AddDeliveryProcessor<TContext> calls with the same TContext but different publishers
+            // would both produce CompositeDeliveryHostedService<TContext> and the second would be
+            // silently dropped.
+            _services.Add(ServiceDescriptor.Singleton<IHostedService>(sp => builder.BuildHostedService<TContext>(sp)));
             return this;
         }
 
@@ -59,7 +65,8 @@ namespace Juice.Messaging.Outbox.Delivery
 
             builder.RegisterProcessorPolicies<TContext>();
 
-            _services.AddHostedService(sp => builder.BuildHostedService<TContext>(sp));
+            // Use Add instead of AddHostedService — see comment in the other overload.
+            _services.Add(ServiceDescriptor.Singleton<IHostedService>(sp => builder.BuildHostedService<TContext>(sp)));
             return this;
         }
 

@@ -112,11 +112,42 @@ namespace Microsoft.Extensions.DependencyInjection
 
         /// <summary>
         /// Registers the <c>"local"</c> outbox-backed in-process transport publisher.
-        /// <see cref="LocalTransportPublisher"/> is registered as a keyed <see cref="ITransportPublisher"/>
-        /// under the key <c>"local"</c>, scoped per request. The existing
-        /// <c>DeliveryHostedService</c> picks up outbox deliveries with <c>PublisherKey = "local"</c>
-        /// and dispatches them in-process via <see cref="LocalTransportPublisher"/>.
         /// </summary>
+        /// <remarks>
+        /// <para>
+        /// <see cref="LocalTransportPublisher"/> is registered as a keyed <see cref="ITransportPublisher"/>
+        /// under the key <c>"local"</c> (scoped). The background <c>DeliveryHostedService</c> picks up
+        /// outbox deliveries whose <c>PublisherKey</c> is <c>"local"</c> and dispatches them in-process
+        /// via <see cref="LocalTransportPublisher"/>.
+        /// </para>
+        /// <para>
+        /// <b>Full setup required</b> — this method only registers the transport; the complete
+        /// <c>"local"</c> route needs all four pieces:
+        /// <code>
+        /// services.AddMessaging()
+        ///     .AddOutbox()                                  // outbox accumulation
+        ///     .AddLocalPublisher()                          // this method — transport publisher
+        ///     .AddDelivery(d =>
+        ///     {
+        ///         d.AddDeliveryPolicies(_ => { });          // policy resolver
+        ///         d.AddDeliveryProcessor&lt;TContext&gt;("local"); // background delivery loop
+        ///     });
+        /// </code>
+        /// Omitting <c>AddDeliveryProcessor&lt;TContext&gt;("local")</c> means outbox rows are written
+        /// but never picked up — their <c>State</c> stays <c>NotPublished</c> indefinitely.
+        /// </para>
+        /// <para>
+        /// If you only need in-process dispatch without durable persistence, use
+        /// <see cref="AddLocalChannel"/> (<c>"local-channel"</c> route) instead — it requires
+        /// no outbox and no delivery hosted service.
+        /// </para>
+        /// <para>
+        /// <b>INotification dispatch</b>: when the message implements <c>INotification</c>,
+        /// <c>IMediator</c> is resolved from the scope. If it is not registered (i.e.
+        /// <c>services.AddMediatR()</c> was not called) an <see cref="InvalidOperationException"/>
+        /// is thrown at delivery time.
+        /// </para>
+        /// </remarks>
         public static MessagingBuilder AddLocalPublisher(
             this MessagingBuilder builder)
         {

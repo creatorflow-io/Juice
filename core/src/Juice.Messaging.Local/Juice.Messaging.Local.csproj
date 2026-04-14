@@ -18,6 +18,7 @@
         <ProjectReference Include="..\Juice.EventBus\Juice.EventBus.csproj" />
         <ProjectReference Include="..\Juice.MediatR\Juice.MediatR.csproj" />
         <ProjectReference Include="..\Juice.Messaging\Juice.Messaging.csproj" />
+        <ProjectReference Include="..\Juice.Messaging.Outbox\Juice.Messaging.Outbox.csproj" />
     </ItemGroup>
 
 </Project>

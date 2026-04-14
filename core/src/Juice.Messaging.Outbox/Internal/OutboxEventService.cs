@@ -18,6 +18,11 @@ namespace Juice.Messaging.Outbox.Internal
         private readonly IMessageSerializer _serializer;
         private readonly ITenantAccessor? _tenantAccessor;
 
+        // Delivery IDs created during the most recent SaveEventsAsync call,
+        // keyed by (messageId, publisherKey). Reset at the start of each SaveEventsAsync
+        // so callers always see the latest snapshot.
+        private Dictionary<(Guid messageId, string publisherKey), List<Guid>> _pendingDeliveryIds = new();
+
         public OutboxEventService(IOutboxRepository<TContext> eventLogService
             , IMessagePublishingPolicy publishingPolicy
             , IMessageSerializer serializer
@@ -44,6 +49,9 @@ namespace Juice.Messaging.Outbox.Internal
             return ValueTask.CompletedTask;
         }
 
+        public IReadOnlyList<Guid> GetPendingDeliveryIds(Guid messageId, string publisherKey)
+            => _pendingDeliveryIds.TryGetValue((messageId, publisherKey), out var ids) ? ids : [];
+
         public async ValueTask SaveEventsAsync(Guid? transactionId, CancellationToken cancellationToken)
         {
             if (_logger.IsEnabled(LogLevel.Debug))
@@ -52,6 +60,7 @@ namespace Juice.Messaging.Outbox.Internal
             }
             _timeTracker?.BeginScope("Saving integration events");
 
+            _pendingDeliveryIds = new Dictionary<(Guid, string), List<Guid>>();
             var events = new List<OutboxEvent>();
             var ctx = MessageContext.Current;
 
@@ -96,12 +105,26 @@ namespace Juice.Messaging.Outbox.Internal
                                     },
                     TransactionId = transactionId?.ToString(),
                     TenantId = _tenantAccessor?.Tenant?.Id,
-                    Deliveries = [.. routes.Select(route => new OutboxDelivery
+                    Deliveries = [.. routes.Select(route =>
                     {
-                        EventId = message.MessageId,
-                        PublisherKey = route.PublisherKey,
-                        Destination = route.Destination,
-                        RoutingKey = route.RoutingKey
+                        var delivery = new OutboxDelivery
+                        {
+                            EventId = message.MessageId,
+                            PublisherKey = route.PublisherKey,
+                            Destination = route.Destination,
+                            RoutingKey = route.RoutingKey,
+                            CreationTime = DateTimeOffset.UtcNow
+                        };
+                        // Track delivery IDs per (messageId, publisherKey) so callers can retrieve
+                        // the exact delivery for a specific message via GetPendingDeliveryIds.
+                        var key = (message.MessageId, route.PublisherKey);
+                        if (!_pendingDeliveryIds.TryGetValue(key, out var idList))
+                        {
+                            idList = new List<Guid>();
+                            _pendingDeliveryIds[key] = idList;
+                        }
+                        idList.Add(delivery.DeliveryId);
+                        return delivery;
                     })]
                 });
             }

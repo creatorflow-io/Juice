@@ -54,6 +54,16 @@ namespace Juice.Messaging.Outbox.Delivery.Processing
             }
         }
 
+        /// <summary>
+        /// Processes a single outbox delivery through the full InProgress → Published/Failed cycle.
+        /// <para>
+        /// For the <c>"local"</c> publisher: if phase 1 (immediate dispatch via
+        /// <c>LocalChannelBackgroundService</c>) succeeded and marked the record <c>Published</c>,
+        /// <c>SendPendingIntent</c> never retrieves it (it filters to <c>NotPublished</c> only),
+        /// so this method is not called for those records. This path handles phase 1 failures,
+        /// crash-recovery scenarios, and any case where the outbox record was not closed by phase 1.
+        /// </para>
+        /// </summary>
         private async Task ProcessSingleDeliveryAsync(OutboxDelivery delivery, CancellationToken cancellationToken)
         {
             using var _ = _logger.BeginScope(new Dictionary<string, object?> { { "TraceId", delivery.DeliveryId } });

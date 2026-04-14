@@ -3,6 +3,7 @@ using System.Threading.Channels;
 using Juice.EventBus.Subscriptions;
 using Juice.MediatR;
 using Juice.Messaging.Integrations;
+using Juice.Messaging.Outbox;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -99,6 +100,7 @@ namespace Juice.Messaging.Local.Internal
                         using var scope = _scopeFactory.CreateScope();
                         var sp = scope.ServiceProvider;
 
+                        var dispatchSucceeded = true;
                         if (message is INotification notification)
                         {
                             _logger.LogDebug("Dispatching INotification {MessageType}", message.GetType().Name);
@@ -110,7 +112,8 @@ namespace Juice.Messaging.Local.Internal
                             _logger.LogDebug("Dispatching IIntegrationEvent {MessageType}", message.GetType().Name);
                             var dispatcher = sp.GetRequiredService<IntegrationEventDispatcher>();
                             var subsManager = sp.GetKeyedService<ISubscriptionsManager>("local");
-                            await LocalDispatchHelper.DispatchIntegrationEventAsync(sp, dispatcher, subsManager, integrationEvent, CancellationToken.None);
+                            var result = await LocalDispatchHelper.DispatchIntegrationEventAsync(sp, dispatcher, subsManager, integrationEvent, CancellationToken.None);
+                            dispatchSucceeded = result != Integrations.EventDispatchResult.Failure;
                         }
                         else
                         {
@@ -118,10 +121,47 @@ namespace Juice.Messaging.Local.Internal
                                 message.GetType().Name);
                         }
 
+                        // For "local" route messages, mark the outbox delivery records as Published
+                        // so the background delivery processor does not re-process them.
+                        // Only mark Published when dispatch succeeded — if any handler failed,
+                        // the records remain NotPublished and the delivery processor will retry.
+                        // If marking fails (e.g. DB unavailable), the records remain NotPublished
+                        // and the delivery processor will pick them up on its next cycle.
+                        if (dispatchSucceeded && envelope.LocalDeliveryIds is { Count: > 0 })
+                        {
+                            var repo = sp.GetService<IOutboxRepository>();
+                            if (repo != null)
+                            {
+                                try
+                                {
+                                    foreach (var deliveryId in envelope.LocalDeliveryIds)
+                                    {
+                                        await repo.MarkAsPublishedAsync(deliveryId, CancellationToken.None);
+                                    }
+                                }
+                                catch (Exception markEx)
+                                {
+                                    _logger.LogWarning(markEx,
+                                        "Failed to mark local delivery Published for message {MessageId} — " +
+                                        "delivery will be retried by background processor",
+                                        message.MessageId);
+                                }
+                            }
+                        }
+
                         stopwatch.Stop();
                         LocalChannelMetrics.RecordDeliveryLatency(PublisherKey, stopwatch.Elapsed);
-                        LocalChannelMetrics.IncrementDeliverySuccess(PublisherKey);
-                        _logger.LogDebug("Dispatched {MessageType} in {Elapsed}ms", message.GetType().Name, stopwatch.ElapsedMilliseconds);
+                        if (dispatchSucceeded)
+                        {
+                            LocalChannelMetrics.IncrementDeliverySuccess(PublisherKey);
+                            _logger.LogDebug("Dispatched {MessageType} in {Elapsed}ms", message.GetType().Name, stopwatch.ElapsedMilliseconds);
+                        }
+                        else
+                        {
+                            LocalChannelMetrics.IncrementDeliveryFailure(PublisherKey, nameof(EventDispatchResult.Failure));
+                            _logger.LogWarning("Dispatch of {MessageType} (id={MessageId}) failed — one or more handlers returned a failure result. Delivery remains NotPublished for retry.",
+                                message.GetType().Name, message.MessageId);
+                        }
                     }
                     catch (Exception ex)
                     {

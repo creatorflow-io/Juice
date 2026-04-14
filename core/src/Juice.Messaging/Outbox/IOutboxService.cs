@@ -23,6 +23,14 @@
     }
     public interface IOutboxService<out TContext> : IOutboxService
     {
-
+        /// <summary>
+        /// Returns the outbox delivery IDs created for the given <paramref name="messageId"/>
+        /// and <paramref name="publisherKey"/> during the most recent
+        /// <see cref="IOutboxService.SaveEventsAsync"/> call.
+        /// Returns an empty list if no matching deliveries were created, or if
+        /// <see cref="IOutboxService.SaveEventsAsync"/> has not yet been called.
+        /// This snapshot is reset at the start of each new <see cref="IOutboxService.SaveEventsAsync"/> cycle.
+        /// </summary>
+        IReadOnlyList<Guid> GetPendingDeliveryIds(Guid messageId, string publisherKey);
     }
 }
