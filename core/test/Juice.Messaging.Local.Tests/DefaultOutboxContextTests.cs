@@ -199,6 +199,8 @@ namespace Juice.Messaging.Local.Tests
                 _tracker.SaveEventsCalled = true;
                 return ValueTask.CompletedTask;
             }
+
+            public IReadOnlyList<Guid> GetPendingDeliveryIds(Guid messageId, string publisherKey) => [];
         }
 
         private sealed class FakeOutboxService : IOutboxService<FakeDbContext>
@@ -206,6 +208,7 @@ namespace Juice.Messaging.Local.Tests
             public ValueTask AddEventAsync(IMessage message) => ValueTask.CompletedTask;
             public ValueTask SaveEventsAsync(Guid? transactionId, CancellationToken cancellationToken = default)
                 => ValueTask.CompletedTask;
+            public IReadOnlyList<Guid> GetPendingDeliveryIds(Guid messageId, string publisherKey) => [];
         }
 
         private sealed class FixedRoutePolicy(string publisherKey, string destination)

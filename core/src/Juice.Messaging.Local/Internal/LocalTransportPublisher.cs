@@ -24,20 +24,17 @@ namespace Juice.Messaging.Local.Internal
         private readonly IMessageSerializer _serializer;
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly IntegrationEventDispatcher _dispatcher;
-        private readonly IMediator _mediator;
         private readonly ILogger<LocalTransportPublisher> _logger;
 
         public LocalTransportPublisher(
             IMessageSerializer serializer,
             IServiceScopeFactory scopeFactory,
             IntegrationEventDispatcher dispatcher,
-            IMediator mediator,
             ILogger<LocalTransportPublisher> logger)
         {
             _serializer = serializer;
             _scopeFactory = scopeFactory;
             _dispatcher = dispatcher;
-            _mediator = mediator;
             _logger = logger;
         }
 
@@ -146,17 +143,34 @@ namespace Juice.Messaging.Local.Internal
 
             try
             {
+                using var scope = _scopeFactory.CreateScope();
                 if (message is INotification notification)
                 {
-                    await LocalDispatchHelper.DispatchNotificationAsync(_mediator, notification, cancellationToken);
+                    var mediator = scope.ServiceProvider.GetService<IMediator>()
+                        ?? throw new InvalidOperationException(
+                            $"IMediator is not registered. Call services.AddMediatR() to dispatch " +
+                            $"INotification messages through the '{Key}' transport publisher.");
+                    await LocalDispatchHelper.DispatchNotificationAsync(mediator, notification, cancellationToken);
                 }
                 else if (message is IIntegrationEvent integrationEvent)
                 {
-                    using var scope = _scopeFactory.CreateScope();
                     var subsManager = scope.ServiceProvider.GetKeyedService<ISubscriptionsManager>("local");
                     var result = await LocalDispatchHelper.DispatchIntegrationEventAsync(
                         scope.ServiceProvider, _dispatcher, subsManager, integrationEvent, cancellationToken);
-                    if (result == Integrations.EventDispatchResult.Failure)
+                    if (result == Integrations.EventDispatchResult.Duplicated)
+                    {
+                        // Phase 1 (LocalChannelBackgroundService) already processed this event but
+                        // did not mark the outbox record Published (e.g. DB was unavailable during marking).
+                        // The delivery processor picked it up as NotPublished and called this publisher.
+                        // Log a warning so operators can distinguish this fallback from normal delivery.
+                        _logger.LogWarning(
+                            "Event {EventName} (MessageId={MessageId}) was already processed in phase 1 immediate dispatch " +
+                            "but its outbox delivery was not marked Published — completing via phase 2 fallback. PublisherKey={PublisherKey}.",
+                            integrationEvent.EventName, integrationEvent.MessageId, Key);
+                        LocalChannelMetrics.IncrementPhase1Fallback(Key);
+                        // Do not throw — DeliveryProcessor marks the record Published via the normal path.
+                    }
+                    else if (result == Integrations.EventDispatchResult.Failure)
                     {
                         throw new InvalidOperationException(
                             $"One or more handlers failed to process event {integrationEvent.GetType().Name} (MessageId={integrationEvent.MessageId})");

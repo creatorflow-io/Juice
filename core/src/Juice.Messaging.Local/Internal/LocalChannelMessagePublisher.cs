@@ -39,9 +39,15 @@ namespace Juice.Messaging.Local.Internal
                 : null;
         }
 
+        public ValueTask PublishAsync(IMessage message, MessageContextData? context, IReadOnlyList<Guid>? localDeliveryIds, CancellationToken cancellationToken = default)
+            => PublishAsync(message, context, cancellationToken, localDeliveryIds);
+
         public async ValueTask PublishAsync(IMessage message, MessageContextData? context, CancellationToken cancellationToken = default)
+            => await PublishAsync(message, context, cancellationToken, localDeliveryIds: null);
+
+        private async ValueTask PublishAsync(IMessage message, MessageContextData? context, CancellationToken cancellationToken, IReadOnlyList<Guid>? localDeliveryIds)
         {
-            var envelope = new ChannelEnvelope(message, context);
+            var envelope = new ChannelEnvelope(message, context, localDeliveryIds);
 
             if (_channelWriter.TryWrite(envelope))
             {

@@ -325,6 +325,8 @@ namespace Juice.Messaging.Local.Tests
                 _tracker.SaveEventsCalled = true;
                 return ValueTask.CompletedTask;
             }
+
+            public IReadOnlyList<Guid> GetPendingDeliveryIds(Guid messageId, string publisherKey) => [];
         }
 
         private sealed class FixedRoutePolicy(string publisherKey, string destination)

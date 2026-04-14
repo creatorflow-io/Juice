@@ -1,7 +1,6 @@
 ﻿using Juice;
 using Juice.EF.Tests.Infrastructure;
 using Juice.Messaging;
-using Juice.Modular;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Caching.Distributed;
 
@@ -19,6 +18,24 @@ builder.Services.AddOutboxMigrations<TestContext>(configuration, options=> {
     options.DatabaseProvider = provider;
     options.ConnectionName = provider == "PostgreSQL" ? "PostgreConnection" : "SqlServerConnection";
 });
+
+builder.Services.AddMediatR();
+
+builder.Services.AddMessaging()
+    .AddOutbox()
+    .AddDelivery(delivery => {
+        delivery.AddDeliveryPolicies(_ => { });
+        delivery.AddDeliveryProcessor<TestContext>("rabbitmq");
+        delivery.AddDeliveryProcessor<TestContext>("local");
+    })
+    .AddLocalPublisher()
+    .AddEventBus()
+    .AddRabbitMQ(cfg =>
+    {
+        cfg.AddConnection("rabbitmq", configuration.GetSection("Juice:EventBus:Connections:RabbitMQ"));
+        cfg.AddProducer("rabbitmq", "rabbitmq");
+    })
+    ;
 
 builder.AddDiscoveredModules();
 

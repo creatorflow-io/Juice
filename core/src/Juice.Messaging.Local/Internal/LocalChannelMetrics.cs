@@ -40,6 +40,11 @@ namespace Juice.Messaging.Local.Internal
                 "channel_dropped_total",
                 description: "Messages dropped because the local channel was full");
 
+        private static readonly Counter<long> Phase1FallbackCounter =
+            _meter.CreateCounter<long>(
+                "local_delivery_phase1_fallback_total",
+                description: "Deliveries for the 'local' route that reached the background delivery processor despite being dispatched in phase 1 — indicates phase 1 did not mark the outbox record Published (e.g. DB unavailable during marking)");
+
         // Registered lazily when the channel is created so the gauge holds a live reference.
         private static bool _queueDepthRegistered;
 
@@ -69,6 +74,13 @@ namespace Juice.Messaging.Local.Internal
         {
             DeliveryLatencyHistogram.Record(
                 elapsed.TotalMilliseconds,
+                new KeyValuePair<string, object?>("publisher", publisherKey));
+        }
+
+        public static void IncrementPhase1Fallback(string publisherKey)
+        {
+            Phase1FallbackCounter.Add(
+                1,
                 new KeyValuePair<string, object?>("publisher", publisherKey));
         }
 
