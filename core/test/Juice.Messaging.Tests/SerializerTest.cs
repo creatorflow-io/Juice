@@ -6,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Juice.Messaging.Tests
 {

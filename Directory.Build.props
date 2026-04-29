@@ -18,13 +18,15 @@
   <PropertyGroup Label="Versioning">
     <LibraryTargetFramework>netstandard2.1</LibraryTargetFramework>
     <AppTargetFramework>net6.0;net8.0;net9.0;net10.0</AppTargetFramework>
+    <AppTestTargetFramework>net8.0;net9.0;net10.0</AppTestTargetFramework>
     <GrpcVersion>2.57.0</GrpcVersion>
     <ProtobufVersion>3.24.3</ProtobufVersion>
     <MediatRVersion>12.4.*</MediatRVersion>
     <RedisVersion>2.8.*</RedisVersion>
     <FinbuckleVersion>9.1.*</FinbuckleVersion>
     <SwashbuckleVersion>6.8.*</SwashbuckleVersion>
-    <XUnitVersion>2.9.*</XUnitVersion>
+    <XUnitV3Version>3.2.*</XUnitV3Version>
+    <XUnitRunnerVersion>3.1.*</XUnitRunnerVersion>
     <TestSdk>17.11.*</TestSdk>
   </PropertyGroup>
 

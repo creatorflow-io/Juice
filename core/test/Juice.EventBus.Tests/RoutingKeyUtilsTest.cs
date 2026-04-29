@@ -1,6 +1,6 @@
 ﻿using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Juice.EventBus.Tests
 {

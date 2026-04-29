@@ -1,7 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFrameworks>$(AppTargetFramework)</TargetFrameworks>
+        <TargetFrameworks>$(AppTestTargetFramework)</TargetFrameworks>
+        <OutputType>Exe</OutputType>
         <Nullable>enable</Nullable>
 
         <IsPackable>false</IsPackable>
@@ -9,8 +10,8 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdk)" />
-        <PackageReference Include="xunit" Version="$(XUnitVersion)" />
-        <PackageReference Include="xunit.runner.visualstudio" Version="2.8.*">
+        <PackageReference Include="xunit.v3" Version="$(XUnitV3Version)" />
+        <PackageReference Include="xunit.runner.visualstudio" Version="$(XUnitRunnerVersion)">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>

@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Juice.Measurement.Internal;
 using Xunit;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Juice.Core.Tests
 {

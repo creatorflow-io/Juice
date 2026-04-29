@@ -6,7 +6,7 @@ using Juice.XUnit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Juice.EventBus.Tests
 {
@@ -37,14 +37,14 @@ namespace Juice.EventBus.Tests
                     "SqlServer" => "SqlServerConnection",
                     _ => throw new NotSupportedException($"Unsupported provider: {provider}")
                 };
-                services.AddOutboxMigrations<TestContext>(configuration, (options) =>
+                services.AddOutboxMigrations<Juice.EF.Tests.Infrastructure.TestContext>(configuration, (options) =>
                 {
                     options.ConnectionName = connectionName;
                     options.DatabaseProvider = provider;
                     options.Schema = "App";
                 });
             }, default);
-            await resolver.ServiceProvider.MigrateOutboxAsync<TestContext>();
+            await resolver.ServiceProvider.MigrateOutboxAsync<Juice.EF.Tests.Infrastructure.TestContext>();
             await Task.Delay(500);
         }
     }

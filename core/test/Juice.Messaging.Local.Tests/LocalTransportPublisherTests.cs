@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using FluentAssertions;
 using Juice.EventBus.Publishing;
 using Juice.EventBus.Subscriptions;
@@ -8,7 +8,7 @@ using Juice.XUnit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Juice.Messaging.Local.Tests
 {
@@ -37,9 +37,9 @@ namespace Juice.Messaging.Local.Tests
             return services.BuildServiceProvider();
         }
 
-        // ─────────────────────────────────────────────────────────────────────
+        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         // US2: Handler invoked when LocalTransportPublisher.PublishAsync is called
-        // ─────────────────────────────────────────────────────────────────────
+        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         [IgnoreOnCIFact]
         [InitializeMessageContext]
@@ -69,9 +69,9 @@ namespace Juice.Messaging.Local.Tests
             handled.Task.Result.Should().BeTrue();
         }
 
-        // ─────────────────────────────────────────────────────────────────────
+        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         // US4: Handler exception propagates so DeliveryProcessor marks delivery Failed
-        // ─────────────────────────────────────────────────────────────────────
+        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         [IgnoreOnCIFact]
         [InitializeMessageContext]
@@ -101,12 +101,12 @@ namespace Juice.Messaging.Local.Tests
                 "handler exceptions must propagate so DeliveryProcessor handles retry logic");
         }
 
-        // ─────────────────────────────────────────────────────────────────────
+        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         // Type resolution fallback chain:
         //   1. $type in JSON payload (KnownTypesBinder)
         //   2. x-message-clr-type header (assembly-qualified, unambiguous)
         //   3. x-message-type header (short name, scan loaded assemblies)
-        // ─────────────────────────────────────────────────────────────────────
+        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         [IgnoreOnCIFact]
         [InitializeMessageContext]
@@ -128,7 +128,7 @@ namespace Juice.Messaging.Local.Tests
             var json = JsonConvert.SerializeObject(message);
             var payload = Encoding.UTF8.GetBytes(json);
 
-            // Provide x-message-clr-type (assembly-qualified) — should resolve unambiguously
+            // Provide x-message-clr-type (assembly-qualified) â€” should resolve unambiguously
             var clrType = $"{typeof(PublisherFallbackTestEvent).FullName}, {typeof(PublisherFallbackTestEvent).Assembly.GetName().Name}";
             var context = new PublishContext(
                 message.MessageId.ToString(),
@@ -164,7 +164,7 @@ namespace Juice.Messaging.Local.Tests
             var json = JsonConvert.SerializeObject(message);
             var payload = Encoding.UTF8.GetBytes(json);
 
-            // x-message-clr-type is invalid — should fall back to x-message-type short name
+            // x-message-clr-type is invalid â€” should fall back to x-message-type short name
             var context = new PublishContext(
                 message.MessageId.ToString(),
                 Headers: new Dictionary<string, object?>
@@ -195,10 +195,10 @@ namespace Juice.Messaging.Local.Tests
             var scope = provider.CreateScope().ServiceProvider;
             var publisher = ActivatorUtilities.CreateInstance<LocalTransportPublisher>(scope);
 
-            // Create a payload WITHOUT $type metadata — simulates a payload from
+            // Create a payload WITHOUT $type metadata â€” simulates a payload from
             // an assembly not in the allowed list, where $type deserialization fails.
             var message = new PublisherFallbackTestEvent();
-            var json = JsonConvert.SerializeObject(message); // no TypeNameHandling → no $type
+            var json = JsonConvert.SerializeObject(message); // no TypeNameHandling â†’ no $type
             var payload = Encoding.UTF8.GetBytes(json);
 
             var context = new PublishContext(
@@ -264,9 +264,9 @@ namespace Juice.Messaging.Local.Tests
                 .WithMessage("*Type could not be resolved from headers*");
         }
 
-        // ─────────────────────────────────────────────────────────────────────
+        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         // US3-a: Handler registered via AddLocalConsumer is invoked by LocalTransportPublisher
-        // ─────────────────────────────────────────────────────────────────────
+        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         [IgnoreOnCIFact]
         [InitializeMessageContext]
@@ -301,9 +301,9 @@ namespace Juice.Messaging.Local.Tests
             handled.Task.Result.Should().BeTrue();
         }
 
-        // ─────────────────────────────────────────────────────────────────────
+        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         // US3-b: Handler in DI but not in subscriptions manager is NOT invoked
-        // ─────────────────────────────────────────────────────────────────────
+        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         [IgnoreOnCIFact]
         [InitializeMessageContext]
@@ -320,7 +320,7 @@ namespace Juice.Messaging.Local.Tests
             // Manager registered with no subscription for TestIntegrationEvent
             m.AddLocalConsumer(_ => { });
 
-            // Register a handler only in DI — NOT via AddLocalConsumer
+            // Register a handler only in DI â€” NOT via AddLocalConsumer
             services.AddTransient<IIntegrationEventHandler<TestIntegrationEvent>>(
                 _ => new SideEffectHandler2(() => unregisteredInvoked = true));
 
@@ -341,9 +341,9 @@ namespace Juice.Messaging.Local.Tests
                 "handler registered only in DI must not be invoked when subscriptions manager is present");
         }
 
-        // ─────────────────────────────────────────────────────────────────────
+        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         // US3-c: Without AddLocalConsumer, DI-scan fallback still works
-        // ─────────────────────────────────────────────────────────────────────
+        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         [IgnoreOnCIFact]
         [InitializeMessageContext]
@@ -353,7 +353,7 @@ namespace Juice.Messaging.Local.Tests
 
             var provider = BuildServices(svc =>
             {
-                // No AddLocalConsumer — DI scan fallback
+                // No AddLocalConsumer â€” DI scan fallback
                 svc.AddTransient<IIntegrationEventHandler<TestIntegrationEvent>>(
                     _ => new SignalingHandler(handled));
             });
@@ -374,12 +374,12 @@ namespace Juice.Messaging.Local.Tests
             handled.Task.Result.Should().BeTrue();
         }
 
-        // ─── Supporting types ────────────────────────────────────────────────
+        // â”€â”€â”€ Supporting types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         private sealed record TestIntegrationEvent : IntegrationEvent;
 
         /// <summary>
-        /// Uniquely named event type for fallback resolution tests — avoids
+        /// Uniquely named event type for fallback resolution tests â€” avoids
         /// ambiguity with <c>TestIntegrationEvent</c> declared in other test classes.
         /// </summary>
         private sealed record PublisherFallbackTestEvent : IntegrationEvent;

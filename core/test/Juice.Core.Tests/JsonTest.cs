@@ -7,7 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Juice.XUnit;
 using Newtonsoft.Json.Linq;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Juice.Core.Tests
 {

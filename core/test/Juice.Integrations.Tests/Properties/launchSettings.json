@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Juice.Integrations.Tests": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:49170;http://localhost:49171"
+    }
+  }
+}

@@ -9,11 +9,11 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Juice.Messaging.Tests
 {
-    [TestCaseOrderer("Juice.XUnit.PriorityOrderer", "Juice.XUnit")]
+    [TestCaseOrderer(typeof(Juice.XUnit.PriorityOrderer))]
     public class IdempotencyServiceTest
     {
         private readonly ITestOutputHelper _testOutput;

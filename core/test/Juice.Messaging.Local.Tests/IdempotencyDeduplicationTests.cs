@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Threading.Channels;
 using FluentAssertions;
 using Juice.EventBus.Publishing;
@@ -12,7 +12,7 @@ using Juice.XUnit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Juice.Messaging.Local.Tests
 {
@@ -53,10 +53,10 @@ namespace Juice.Messaging.Local.Tests
             return services.BuildServiceProvider();
         }
 
-        // ─────────────────────────────────────────────────────────────────────
+        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         // Immediate channel dispatch + subsequent LocalTransportPublisher
-        // retry → handler runs exactly once thanks to idempotency.
-        // ─────────────────────────────────────────────────────────────────────
+        // retry â†’ handler runs exactly once thanks to idempotency.
+        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         [IgnoreOnCIFact]
         [InitializeMessageContext]
@@ -119,9 +119,9 @@ namespace Juice.Messaging.Local.Tests
             foreach (var hs in hostedServices) await hs.StopAsync(CancellationToken.None);
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // Different MessageId → no deduplication, handler runs for each.
-        // ─────────────────────────────────────────────────────────────────────
+        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // Different MessageId â†’ no deduplication, handler runs for each.
+        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         [IgnoreOnCIFact]
         [InitializeMessageContext]
@@ -181,10 +181,10 @@ namespace Juice.Messaging.Local.Tests
             foreach (var hs in hostedServices) await hs.StopAsync(CancellationToken.None);
         }
 
-        // ─────────────────────────────────────────────────────────────────────
+        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         // LocalTransportPublisher restores MessageContext from outbox headers
         // so the idempotency key matches across dispatch paths.
-        // ─────────────────────────────────────────────────────────────────────
+        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         [IgnoreOnCIFact]
         public async Task LocalTransportPublisher_RestoresMessageContext_ForIdempotencyAsync()
@@ -217,7 +217,7 @@ namespace Juice.Messaging.Local.Tests
             var publishContext = new PublishContext(
                 message.MessageId.ToString(), Headers: headers);
 
-            // First dispatch — no MessageContext initialized,
+            // First dispatch â€” no MessageContext initialized,
             // LocalTransportPublisher should restore it from headers.
             MessageContext.IsInitialized.Should().BeFalse(
                 "test starts without MessageContext");
@@ -229,13 +229,13 @@ namespace Juice.Messaging.Local.Tests
             MessageContext.IsInitialized.Should().BeFalse(
                 "LocalTransportPublisher must clear MessageContext after dispatch");
 
-            // Second dispatch with same headers → idempotency dedup
+            // Second dispatch with same headers â†’ idempotency dedup
             await publisher.PublishAsync(payload, publishContext);
             invocationCount.Should().Be(1,
                 "same Source + MessageId must be deduplicated by idempotency");
         }
 
-        // ─── Supporting types ────────────────────────────────────────────────
+        // â”€â”€â”€ Supporting types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         private sealed record TestIntegrationEvent : IntegrationEvent;
 

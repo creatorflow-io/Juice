@@ -15,11 +15,11 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Juice.MediatR.Tests
 {
-    [TestCaseOrderer("Juice.XUnit.PriorityOrderer", "Juice.XUnit")]
+    [TestCaseOrderer(typeof(Juice.XUnit.PriorityOrderer))]
     public class IdempotencyRequestTest
     {
         private ITestOutputHelper _testOutput;
@@ -218,7 +218,7 @@ namespace Juice.MediatR.Tests
                 services.AddScoped(sp =>
                 {
                     var connectionString = configuration.GetConnectionString("Default");
-                    var builder = new DbContextOptionsBuilder<TestContext>();
+                    var builder = new DbContextOptionsBuilder<Juice.EF.Tests.Infrastructure.TestContext>();
                     if (provider == "SqlServer")
                     {
                         builder.UseSqlServer(connectionString);
@@ -227,7 +227,7 @@ namespace Juice.MediatR.Tests
                     {
                         builder.UseNpgsql(connectionString);
                     }
-                    return new TestContext(sp, builder.Options);
+                    return new Juice.EF.Tests.Infrastructure.TestContext(sp, builder.Options);
                 });
             });
 

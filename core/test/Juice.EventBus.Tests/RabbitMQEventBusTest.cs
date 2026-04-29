@@ -17,11 +17,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using Xunit;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Juice.EventBus.Tests
 {
-    [TestCaseOrderer("Juice.XUnit.PriorityOrderer", "Juice.XUnit")]
+    [TestCaseOrderer(typeof(Juice.XUnit.PriorityOrderer))]
     [InitializeMessageContext]
     public class RabbitMQEventBusTest
     {

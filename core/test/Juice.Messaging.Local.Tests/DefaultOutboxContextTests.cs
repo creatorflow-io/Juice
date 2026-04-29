@@ -1,4 +1,4 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using Juice.Messaging;
 using Juice.Messaging.Local;
 using Juice.Messaging.Local.Internal;
@@ -10,12 +10,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Threading.Channels;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Juice.Messaging.Local.Tests
 {
     /// <summary>
-    /// Tests for <c>AddDefaultMessageService()</c> — verifying that
+    /// Tests for <c>AddDefaultMessageService()</c> â€” verifying that
     /// <see cref="IMessageService"/> is backed by <c>MessageService&lt;DefaultOutboxContext&gt;</c>
     /// for full-route publishing outside domain transactions.
     /// Covers US1 (full-route IMessageService), US2 (coexistence), and US3 (auto-wire delivery).
@@ -29,10 +29,10 @@ namespace Juice.Messaging.Local.Tests
             _output = output;
         }
 
-        // ─── US1 (P1): Full-route IMessageService via DefaultOutboxContext ────
+        // â”€â”€â”€ US1 (P1): Full-route IMessageService via DefaultOutboxContext â”€â”€â”€â”€
 
         /// <summary>
-        /// T005 — DI registration: IMessageService resolves as IMessageService&lt;DefaultOutboxContext&gt;.
+        /// T005 â€” DI registration: IMessageService resolves as IMessageService&lt;DefaultOutboxContext&gt;.
         /// Pure DI test; no real DB connection required.
         /// </summary>
         [IgnoreOnCIFact]
@@ -43,7 +43,7 @@ namespace Juice.Messaging.Local.Tests
             services.AddSingleton<IMessagePublishingPolicy>(new FixedRoutePolicy("local", string.Empty));
 
             var messaging = services.AddMessaging();
-            // No provider needed for DI resolution — DB connection is never opened in this test
+            // No provider needed for DI resolution â€” DB connection is never opened in this test
             messaging.AddDefaultMessageService(opts => { });
 
             var provider = services.BuildServiceProvider();
@@ -56,7 +56,7 @@ namespace Juice.Messaging.Local.Tests
         }
 
         /// <summary>
-        /// T006 — local-channel route: message dispatched to in-memory channel; no outbox write attempted.
+        /// T006 â€” local-channel route: message dispatched to in-memory channel; no outbox write attempted.
         /// </summary>
         [IgnoreOnCIFact]
         [InitializeMessageContext]
@@ -76,7 +76,7 @@ namespace Juice.Messaging.Local.Tests
 
             await svc.PublishAsync(new TestEvent());
 
-            // local-channel route → message in channel; outbox NOT touched
+            // local-channel route â†’ message in channel; outbox NOT touched
             channel.TryRead(out _).Should().BeTrue("local-channel route should enqueue to in-memory channel");
             outboxTracker.AddEventCalled.Should().BeFalse("local-channel route must NOT write to outbox");
             outboxTracker.SaveEventsCalled.Should().BeFalse("local-channel route must NOT call SaveEventsAsync");
@@ -86,7 +86,7 @@ namespace Juice.Messaging.Local.Tests
         }
 
         /// <summary>
-        /// T007 — local route: PublishAsync calls AddEventAsync and SaveEventsAsync on the outbox service.
+        /// T007 â€” local route: PublishAsync calls AddEventAsync and SaveEventsAsync on the outbox service.
         /// Uses a TrackingOutboxService to avoid requiring a real DB connection.
         /// </summary>
         [IgnoreOnCIFact]
@@ -106,10 +106,10 @@ namespace Juice.Messaging.Local.Tests
                 "SaveEventsAsync should be called immediately (DefaultOutboxContext is never IsManaged)");
         }
 
-        // ─── US2 (P2): Coexistence with domain-aware IMessageService<TContext> ─
+        // â”€â”€â”€ US2 (P2): Coexistence with domain-aware IMessageService<TContext> â”€
 
         /// <summary>
-        /// T009 — DI coexistence: both IMessageService (default outbox) and IMessageService&lt;FakeDbContext&gt;
+        /// T009 â€” DI coexistence: both IMessageService (default outbox) and IMessageService&lt;FakeDbContext&gt;
         /// (domain-aware) resolve independently without DI conflict.
         /// </summary>
         [IgnoreOnCIFact]
@@ -140,10 +140,10 @@ namespace Juice.Messaging.Local.Tests
             defaultSvc.Should().BeAssignableTo<IMessageService<DefaultOutboxContext>>(
                 "IMessageService should be backed by DefaultOutboxContext");
             defaultSvc.Should().NotBeSameAs(domainSvc,
-                "each service writes to its own outbox context — they must be independent");
+                "each service writes to its own outbox context â€” they must be independent");
         }
 
-        // ─── Helpers ──────────────────────────────────────────────────────────
+        // â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         /// <summary>
         /// Builds services using <c>AddDefaultMessageService()</c> with a <see cref="TrackingOutboxService"/>
@@ -171,7 +171,7 @@ namespace Juice.Messaging.Local.Tests
             return services.BuildServiceProvider();
         }
 
-        // ─── Supporting types ─────────────────────────────────────────────────
+        // â”€â”€â”€ Supporting types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         private sealed record TestEvent : IntegrationEvent;
 

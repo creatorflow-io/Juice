@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using FluentAssertions;
 using Juice.Messaging;
 using Juice.Messaging.Local;
@@ -9,7 +9,7 @@ using Juice.XUnit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Juice.Messaging.Local.Tests
 {
@@ -17,7 +17,7 @@ namespace Juice.Messaging.Local.Tests
     /// Integration tests for the two-phase local delivery skip feature.
     /// <para>
     /// US1 (T015): After phase 1 immediate dispatch succeeds, <see cref="LocalChannelBackgroundService"/>
-    /// calls <see cref="IOutboxRepository.MarkAsPublishedAsync"/> for the outbox delivery ID — so the
+    /// calls <see cref="IOutboxRepository.MarkAsPublishedAsync"/> for the outbox delivery ID â€” so the
     /// background delivery processor never sees a <c>NotPublished</c> record.
     /// </para>
     /// <para>
@@ -35,9 +35,9 @@ namespace Juice.Messaging.Local.Tests
             _output = output;
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // T015 — US1 happy path: phase 1 success marks delivery Published
-        // ─────────────────────────────────────────────────────────────────────
+        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // T015 â€” US1 happy path: phase 1 success marks delivery Published
+        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         /// <summary>
         /// When a "local" route message is published and the handler succeeds,
@@ -84,14 +84,14 @@ namespace Juice.Messaging.Local.Tests
             foreach (var hs in hostedServices) await hs.StopAsync(CancellationToken.None);
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // T016 — US2 failure fallback: phase 1 failure leaves delivery NotPublished
-        // ─────────────────────────────────────────────────────────────────────
+        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // T016 â€” US2 failure fallback: phase 1 failure leaves delivery NotPublished
+        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         /// <summary>
         /// When a "local" route message is published and the handler throws,
         /// <see cref="LocalChannelBackgroundService"/> must NOT call
-        /// <see cref="IOutboxRepository.MarkAsPublishedAsync"/> — the delivery record
+        /// <see cref="IOutboxRepository.MarkAsPublishedAsync"/> â€” the delivery record
         /// stays <c>NotPublished</c> so the background processor can retry it.
         /// </summary>
         [IgnoreOnCIFact]
@@ -126,14 +126,14 @@ namespace Juice.Messaging.Local.Tests
             await Task.Delay(300);
 
             markedPublished.Should().NotContain(deliveryId,
-                "LocalChannelBackgroundService must NOT mark the delivery Published when the handler throws — " +
+                "LocalChannelBackgroundService must NOT mark the delivery Published when the handler throws â€” " +
                 "the record must remain NotPublished for the background processor to retry");
 
             cts.Cancel();
             foreach (var hs in hostedServices) await hs.StopAsync(CancellationToken.None);
         }
 
-        // ─── Helpers ──────────────────────────────────────────────────────────
+        // â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         private IServiceProvider BuildServices(
             Guid deliveryId,
@@ -164,7 +164,7 @@ namespace Juice.Messaging.Local.Tests
             return services.BuildServiceProvider();
         }
 
-        // ─── Supporting types ─────────────────────────────────────────────────
+        // â”€â”€â”€ Supporting types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         private sealed record LocalTestEvent : IntegrationEvent;
 

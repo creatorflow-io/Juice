@@ -6,7 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Juice.MediatR.Tests
 {

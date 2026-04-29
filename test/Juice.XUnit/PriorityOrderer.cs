@@ -1,34 +1,32 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
-using Xunit.Abstractions;
-using Xunit.Sdk;
+using System.Reflection;
+using Xunit.v3;
 
 namespace Juice.XUnit
 {
     public class PriorityOrderer : ITestCaseOrderer
     {
-        public IEnumerable<TTestCase> OrderTestCases<TTestCase>(
-            IEnumerable<TTestCase> testCases) where TTestCase : ITestCase
+        IReadOnlyCollection<TTestCase> ITestCaseOrderer.OrderTestCases<TTestCase>(
+            IReadOnlyCollection<TTestCase> testCases)
         {
-            string assemblyName = typeof(TestPriorityAttribute).AssemblyQualifiedName!;
             var sortedMethods = new SortedDictionary<int, List<TTestCase>>();
             foreach (TTestCase testCase in testCases)
             {
-                int priority = testCase.TestMethod.Method
-                    .GetCustomAttributes(assemblyName)
-                    .FirstOrDefault()
-                    ?.GetNamedArgument<int>(nameof(TestPriorityAttribute.Priority)) ?? 0;
-
+                int priority = 0;
+                if (testCase is IXunitTestCase xunitTestCase)
+                {
+                    priority = xunitTestCase.TestMethod.Method
+                        .GetCustomAttribute<TestPriorityAttribute>()?.Priority ?? 0;
+                }
                 GetOrCreate(sortedMethods, priority).Add(testCase);
             }
 
-            foreach (TTestCase testCase in
-                sortedMethods.Keys.OrderByDescending(p => p).SelectMany(
-                    priority => sortedMethods[priority].OrderBy(
-                        testCase => testCase.TestMethod.Method.Name)))
-            {
-                yield return testCase;
-            }
+            return sortedMethods.Keys
+                .OrderByDescending(p => p)
+                .SelectMany(priority => sortedMethods[priority]
+                    .OrderBy(testCase => (testCase as IXunitTestCase)?.TestMethod.Method.Name ?? string.Empty))
+                .ToList();
         }
 
         private static TValue GetOrCreate<TKey, TValue>(

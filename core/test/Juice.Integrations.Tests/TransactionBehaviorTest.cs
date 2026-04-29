@@ -21,11 +21,11 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Juice.Integrations.Tests
 {
-    [TestCaseOrderer("Juice.XUnit.PriorityOrderer", "Juice.XUnit")]
+    [TestCaseOrderer(typeof(Juice.XUnit.PriorityOrderer))]
     [InitializeMessageContext]
     public class TransactionBehaviorTest
     {
@@ -59,19 +59,19 @@ namespace Juice.Integrations.Tests
                     .AddConfiguration(configuration.GetSection("Logging"));
                 });
                 // Register DbContext class
-                services.AddDbContext<TestContext>(builder =>
+                services.AddDbContext<Juice.EF.Tests.Infrastructure.TestContext>(builder =>
                 {
                     var connectionString = configuration.GetConnectionString("Default");
                     builder.UseSqlServer(connectionString);
                 });
-                services.AddUnitOfWork<Content, TestContext>();
+                services.AddUnitOfWork<Content, Juice.EF.Tests.Infrastructure.TestContext>();
 
                 services.AddDefaultStringIdGenerator();
 
                 services.AddTestMessaging(configuration)
                  .AddDelivery(delivery =>
                  {
-                     delivery.AddDeliveryProcessor<TestContext>("rabbitmq");
+                     delivery.AddDeliveryProcessor<Juice.EF.Tests.Infrastructure.TestContext>("rabbitmq");
                  });
                 services.AddEventBus()
                    .AddRabbitMQ(cfg =>
@@ -121,10 +121,10 @@ namespace Juice.Integrations.Tests
             // warm up
             using (var s = resolver.ServiceProvider.CreateScope())
             {
-                var context = s.ServiceProvider.GetRequiredService<TestContext>();
+                var context = s.ServiceProvider.GetRequiredService<Juice.EF.Tests.Infrastructure.TestContext>();
                 await context.MigrateAsync();
                 var check = await context.Set<Content>().AnyAsync();
-                var integrationEventRepo = s.ServiceProvider.GetRequiredService<IOutboxRepository<TestContext>>();
+                var integrationEventRepo = s.ServiceProvider.GetRequiredService<IOutboxRepository<Juice.EF.Tests.Infrastructure.TestContext>>();
                 var tracker = s.ServiceProvider.GetRequiredService<ITimeTracker>();
                 tracker.BeginScope("Saving integration events");
                 await integrationEventRepo.SaveEventsAsync(Array.Empty<OutboxEvent>());
@@ -172,14 +172,14 @@ namespace Juice.Integrations.Tests
                 });
                 // Register DbContext class
                 services.AddTestDbContext(configuration, "SqlServer");
-                services.AddUnitOfWork<Content, TestContext>();
+                services.AddUnitOfWork<Content, Juice.EF.Tests.Infrastructure.TestContext>();
                 services.AddScoped<ContentRepository>();
                 services.AddDefaultStringIdGenerator();
 
                 var builder = services.AddTestMessaging(configuration)
                       .AddDelivery(delivery =>
                       {
-                          delivery.AddDeliveryProcessor<TestContext>("rabbitmq")
+                          delivery.AddDeliveryProcessor<Juice.EF.Tests.Infrastructure.TestContext>("rabbitmq")
                           ;
                       });
 
@@ -214,9 +214,9 @@ namespace Juice.Integrations.Tests
             // warm up
             using (var s = resolver.ServiceProvider.CreateScope())
             {
-                var context = s.ServiceProvider.GetRequiredService<TestContext>();
+                var context = s.ServiceProvider.GetRequiredService<Juice.EF.Tests.Infrastructure.TestContext>();
                 var check = await context.Set<Content>().AnyAsync();
-                var integrationEventRepo = s.ServiceProvider.GetRequiredService<IOutboxRepository<TestContext>>();
+                var integrationEventRepo = s.ServiceProvider.GetRequiredService<IOutboxRepository<Juice.EF.Tests.Infrastructure.TestContext>>();
                 var tracker = s.ServiceProvider.GetRequiredService<ITimeTracker>();
                 tracker.BeginScope("Saving integration events");
                 await integrationEventRepo.SaveEventsAsync(default);

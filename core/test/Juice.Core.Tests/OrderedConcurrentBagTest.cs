@@ -7,7 +7,7 @@ using FluentAssertions;
 using Juice.Collections;
 using Juice.Services;
 using Xunit;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Juice.Core.Tests
 {

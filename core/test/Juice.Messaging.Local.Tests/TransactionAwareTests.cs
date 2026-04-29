@@ -1,4 +1,4 @@
-using System.Threading.Channels;
+﻿using System.Threading.Channels;
 using FluentAssertions;
 using Juice.Domain;
 using Juice.Messaging;
@@ -10,7 +10,7 @@ using Juice.XUnit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Juice.Messaging.Local.Tests
 {
@@ -68,9 +68,9 @@ namespace Juice.Messaging.Local.Tests
             return services.BuildServiceProvider();
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // US1: Inside managed transaction — defer save
-        // ─────────────────────────────────────────────────────────────────────
+        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // US1: Inside managed transaction â€” defer save
+        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         [IgnoreOnCIFact]
         [InitializeMessageContext]
@@ -86,7 +86,7 @@ namespace Juice.Messaging.Local.Tests
             await svc.PublishAsync(new TestIntegrationEvent());
 
             tracker.AddEventCalled.Should().BeTrue("AddEventAsync should be called to stage the event");
-            tracker.SaveEventsCalled.Should().BeFalse("SaveEventsAsync should NOT be called — deferred to TransactionBehavior");
+            tracker.SaveEventsCalled.Should().BeFalse("SaveEventsAsync should NOT be called â€” deferred to TransactionBehavior");
         }
 
         [IgnoreOnCIFact]
@@ -103,21 +103,21 @@ namespace Juice.Messaging.Local.Tests
 
             await svc.PublishAsync(new TestIntegrationEvent());
 
-            // Before flush — not enqueued yet (data not committed)
+            // Before flush â€” not enqueued yet (data not committed)
             channel.TryRead(out _).Should().BeFalse(
                 "local route should NOT enqueue to channel before post-commit flush");
 
             // Simulate TransactionBehavior calling Flush() after commit
             await postCommit.FlushAsync();
 
-            // After flush — enqueued for immediate dispatch
+            // After flush â€” enqueued for immediate dispatch
             channel.TryRead(out _).Should().BeTrue(
                 "local route should be enqueued to channel after post-commit flush");
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // US2: Outside transaction — save immediately
-        // ─────────────────────────────────────────────────────────────────────
+        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // US2: Outside transaction â€” save immediately
+        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         [IgnoreOnCIFact]
         [InitializeMessageContext]
@@ -157,7 +157,7 @@ namespace Juice.Messaging.Local.Tests
         [InitializeMessageContext]
         public async Task PublishAsync_NullContext_SavesImmediatelyAsync()
         {
-            // Build without registering FakeDbContext — _context will be null
+            // Build without registering FakeDbContext â€” _context will be null
             var services = new ServiceCollection();
             services.AddLogging(b => b.AddTestOutputLogger(_output));
 
@@ -174,7 +174,7 @@ namespace Juice.Messaging.Local.Tests
             services.AddScoped<IOutboxService<FakeDbContext>>(sp =>
                 new TrackingOutboxService(sp.GetRequiredService<OutboxTracker>()));
 
-            // Do NOT register FakeDbContext — so _context is null
+            // Do NOT register FakeDbContext â€” so _context is null
             messaging.AddMessageService<FakeDbContext>();
 
             var provider = services.BuildServiceProvider();
@@ -187,9 +187,9 @@ namespace Juice.Messaging.Local.Tests
                 "null context should fall back to immediate save (defensive)");
         }
 
-        // ─────────────────────────────────────────────────────────────────────
+        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         // US3: Local-channel unaffected by transaction state
-        // ─────────────────────────────────────────────────────────────────────
+        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         [IgnoreOnCIFact]
         [InitializeMessageContext]
@@ -243,21 +243,21 @@ namespace Juice.Messaging.Local.Tests
 
             await svc.PublishAsync(new TestIntegrationEvent());
 
-            // "local" supersedes "local-channel" — no channel enqueue before commit
+            // "local" supersedes "local-channel" â€” no channel enqueue before commit
             channel.TryRead(out _).Should().BeFalse(
-                "local-channel should be suppressed when local route is present — local wins as durable superset");
+                "local-channel should be suppressed when local route is present â€” local wins as durable superset");
 
             // local portion: staged but NOT saved (deferred inside managed tx)
             tracker.AddEventCalled.Should().BeTrue("outbox event should be staged");
             tracker.SaveEventsCalled.Should().BeFalse("outbox save should be deferred inside transaction");
 
-            // After post-commit flush — local route enqueues to channel
+            // After post-commit flush â€” local route enqueues to channel
             await postCommit.FlushAsync();
             channel.TryRead(out _).Should().BeTrue(
                 "local route should be enqueued to channel after post-commit flush");
         }
 
-        // ─── Supporting types ────────────────────────────────────────────────
+        // â”€â”€â”€ Supporting types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         private sealed record TestIntegrationEvent : IntegrationEvent;
 

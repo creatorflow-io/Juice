@@ -23,11 +23,11 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Juice.EF.Tests
 {
-    [TestCaseOrderer("Juice.XUnit.PriorityOrderer", "Juice.XUnit")]
+    [TestCaseOrderer(typeof(Juice.XUnit.PriorityOrderer))]
     public class EFTest
     {
         private readonly ITestOutputHelper _testOutput;
@@ -87,7 +87,7 @@ namespace Juice.EF.Tests
         public async Task EF_should_be_migration_Async(string provider)
         {
             var serviceProvider = ConfigureServices(provider).ServiceProvider;
-            var dbContext = serviceProvider.GetRequiredService<TestContext>();
+            var dbContext = serviceProvider.GetRequiredService<Juice.EF.Tests.Infrastructure.TestContext>();
 
             await dbContext.MigrateAsync();
 
@@ -103,7 +103,7 @@ namespace Juice.EF.Tests
             using var scope = ConfigureServices(provider).CreateScope();
             var serviceProvider = scope.ServiceProvider;
 
-            var dbContext = serviceProvider.GetRequiredService<TestContext>();
+            var dbContext = serviceProvider.GetRequiredService<Juice.EF.Tests.Infrastructure.TestContext>();
 
             var idGenerator = serviceProvider.GetRequiredService<IStringIdGenerator>();
 
@@ -159,7 +159,7 @@ namespace Juice.EF.Tests
         public async Task Dynamic_entity_update_property_Async(string provider)
         {
             var serviceProvider = ConfigureServices(provider).ServiceProvider;
-            var dbContext = serviceProvider.GetRequiredService<TestContext>();
+            var dbContext = serviceProvider.GetRequiredService<Juice.EF.Tests.Infrastructure.TestContext>();
             var sharedService = serviceProvider.GetRequiredService<SharedService>();
             var logger = serviceProvider.GetRequiredService<ILogger<EFTest>>();
             sharedService.Handlers.Clear();
@@ -240,7 +240,7 @@ namespace Juice.EF.Tests
         public async Task Repository_uow_shouldAsync()
         {
             var serviceProvider = ConfigureServices("SqlServer").ServiceProvider;
-            var dbContext = serviceProvider.GetRequiredService<TestContext>();
+            var dbContext = serviceProvider.GetRequiredService<Juice.EF.Tests.Infrastructure.TestContext>();
             var repository = new ContentRepository(dbContext);
 
             _ = await repository.UnitOfWork.FindAsync(c => c.Code == "123");
@@ -273,7 +273,7 @@ namespace Juice.EF.Tests
             tenantInfo.Should().NotBeNull();
             tenantInfo!.Identifier.Should().Be("test-tenant");
 
-            var dbContext = serviceProvider.GetRequiredService<TestContext>();
+            var dbContext = serviceProvider.GetRequiredService<Juice.EF.Tests.Infrastructure.TestContext>();
 
             var idGenerator = serviceProvider.GetRequiredService<IStringIdGenerator>();
 

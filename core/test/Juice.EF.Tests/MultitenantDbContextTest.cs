@@ -13,7 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Juice.EF.Tests
 {
@@ -44,7 +44,7 @@ namespace Juice.EF.Tests
 
                 _output.WriteLine("ConnectionString: {0}", connectionString);
                 // Register DbContext class
-                services.AddDbContext<TestContext>(options =>
+                services.AddDbContext<Juice.EF.Tests.Infrastructure.TestContext>(options =>
                 {
                     options.UseSqlServer(connectionString, options =>
                     {
@@ -77,7 +77,7 @@ namespace Juice.EF.Tests
                 tenantContextAccessor.MultiTenantContext.TenantInfo.Should().NotBeNull();
                 var tenant = context.RequestServices.GetService<ITenantAccessor>()?.Tenant;
                 tenant.Should().NotBeNull();
-                var dbContext = context.RequestServices.GetRequiredService<TestContext>();
+                var dbContext = context.RequestServices.GetRequiredService<Juice.EF.Tests.Infrastructure.TestContext>();
                 dbContext.TenantInfo.Should().NotBeNull();
                 _output.WriteLine("dbContext.TenantInfo: {0}", dbContext.TenantInfo!.Identifier);
             }, "tenant-A");
@@ -87,7 +87,7 @@ namespace Juice.EF.Tests
             // Init data in tenant-A
             await resolver.ServiceProvider.TenantInvokeAsync(async context =>
             {
-                var dbContext = context.RequestServices.GetRequiredService<TestContext>();
+                var dbContext = context.RequestServices.GetRequiredService<Juice.EF.Tests.Infrastructure.TestContext>();
                 // Add entity
                 dbContext.Add(new CrossTenantContent(id, "Init name"));
                 await dbContext.SaveChangesAsync();
@@ -96,7 +96,7 @@ namespace Juice.EF.Tests
             // Verify data in tenant-A
             await resolver.ServiceProvider.TenantInvokeAsync(async context =>
             {
-                var dbContext = context.RequestServices.GetRequiredService<TestContext>();
+                var dbContext = context.RequestServices.GetRequiredService<Juice.EF.Tests.Infrastructure.TestContext>();
                 var entity = await dbContext.Set<CrossTenantContent>()
                     .FirstOrDefaultAsync(e => e.Id == id);
                 entity.Should().NotBeNull();
@@ -106,7 +106,7 @@ namespace Juice.EF.Tests
             // Verify data NOT VISIBLE in tenant-B
             await resolver.ServiceProvider.TenantInvokeAsync(async context =>
             {
-                var dbContext = context.RequestServices.GetRequiredService<TestContext>();
+                var dbContext = context.RequestServices.GetRequiredService<Juice.EF.Tests.Infrastructure.TestContext>();
                 var entity = await dbContext.Set<CrossTenantContent>()
                     .FirstOrDefaultAsync(e => e.Id == id);
                 entity.Should().BeNull();
@@ -115,7 +115,7 @@ namespace Juice.EF.Tests
             // Verify data NOT VISIBLE in root tenant
             await resolver.ServiceProvider.TenantInvokeAsync(async context =>
             {
-                var dbContext = context.RequestServices.GetRequiredService<TestContext>();
+                var dbContext = context.RequestServices.GetRequiredService<Juice.EF.Tests.Infrastructure.TestContext>();
                 var entity = await dbContext.Set<CrossTenantContent>()
                     .FirstOrDefaultAsync(e => e.Id == id);
                 entity.Should().BeNull();
@@ -124,7 +124,7 @@ namespace Juice.EF.Tests
             // Update data in tenant-A
             await resolver.ServiceProvider.TenantInvokeAsync(async context =>
             {
-                var dbContext = context.RequestServices.GetRequiredService<TestContext>();
+                var dbContext = context.RequestServices.GetRequiredService<Juice.EF.Tests.Infrastructure.TestContext>();
                 var entity = await dbContext.Set<CrossTenantContent>()
                     .FirstOrDefaultAsync(e => e.Id == id);
                 entity.Should().NotBeNull();
@@ -135,7 +135,7 @@ namespace Juice.EF.Tests
             // Clean up data in tenant-A
             await resolver.ServiceProvider.TenantInvokeAsync(async context =>
             {
-                var dbContext = context.RequestServices.GetRequiredService<TestContext>();
+                var dbContext = context.RequestServices.GetRequiredService<Juice.EF.Tests.Infrastructure.TestContext>();
                 var entity = await dbContext.Set<CrossTenantContent>()
                     .FirstOrDefaultAsync(e => e.Id == id);
                 if (entity != null)
@@ -148,7 +148,7 @@ namespace Juice.EF.Tests
             // Init data in root tenant
             await resolver.ServiceProvider.TenantInvokeAsync(async context =>
             {
-                var dbContext = context.RequestServices.GetRequiredService<TestContext>();
+                var dbContext = context.RequestServices.GetRequiredService<Juice.EF.Tests.Infrastructure.TestContext>();
                 // Add entity
                 dbContext.Add(new CrossTenantContent(id, "Init name in root tenant"));
                 await dbContext.SaveChangesAsync();
@@ -157,7 +157,7 @@ namespace Juice.EF.Tests
             // Verify data NOT VISIBLE in tenant-A
             await resolver.ServiceProvider.TenantInvokeAsync(async context =>
             {
-                var dbContext = context.RequestServices.GetRequiredService<TestContext>();
+                var dbContext = context.RequestServices.GetRequiredService<Juice.EF.Tests.Infrastructure.TestContext>();
                 var entity = await dbContext.Set<CrossTenantContent>()
                     .FirstOrDefaultAsync(e => e.Id == id);
                 entity.Should().BeNull();
@@ -166,7 +166,7 @@ namespace Juice.EF.Tests
             // Update data in root tenant
             await resolver.ServiceProvider.TenantInvokeAsync(async context =>
             {
-                var dbContext = context.RequestServices.GetRequiredService<TestContext>();
+                var dbContext = context.RequestServices.GetRequiredService<Juice.EF.Tests.Infrastructure.TestContext>();
                 var entity = await dbContext.Set<CrossTenantContent>()
                     .FirstOrDefaultAsync(e => e.Id == id);
                 entity.Should().NotBeNull();
@@ -177,7 +177,7 @@ namespace Juice.EF.Tests
             // Clean up data in root tenant
             await resolver.ServiceProvider.TenantInvokeAsync(async context =>
             {
-                var dbContext = context.RequestServices.GetRequiredService<TestContext>();
+                var dbContext = context.RequestServices.GetRequiredService<Juice.EF.Tests.Infrastructure.TestContext>();
                 var entity = await dbContext.Set<CrossTenantContent>()
                     .FirstOrDefaultAsync(e => e.Id == id);
                 if (entity != null)

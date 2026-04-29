@@ -20,7 +20,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Xunit;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Juice.EventBus.Tests
 {
@@ -68,7 +68,7 @@ namespace Juice.EventBus.Tests
                 // Register DbContext class
                 services.AddTestDbContext(configuration, provider);
 
-                services.AddUnitOfWork<Content, TestContext>();
+                services.AddUnitOfWork<Content, Juice.EF.Tests.Infrastructure.TestContext>();
 
                 services.AddDefaultStringIdGenerator();
 
@@ -98,12 +98,12 @@ namespace Juice.EventBus.Tests
             var serializer = resolver.ServiceProvider.GetRequiredService<IMessageSerializer>();
 
             using var scope = resolver.ServiceProvider.CreateScope();
-            var context = scope.ServiceProvider.GetRequiredService<TestContext>();
+            var context = scope.ServiceProvider.GetRequiredService<Juice.EF.Tests.Infrastructure.TestContext>();
             var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork<Content>>();
 
             await context.MigrateAsync();
 
-            var outboxService = scope.ServiceProvider.GetRequiredService<IOutboxService<TestContext>>();
+            var outboxService = scope.ServiceProvider.GetRequiredService<IOutboxService<Juice.EF.Tests.Infrastructure.TestContext>>();
 
             var idGenerator = scope.ServiceProvider.GetRequiredService<IStringIdGenerator>();
 

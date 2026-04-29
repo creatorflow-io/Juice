@@ -49,7 +49,7 @@ namespace Juice.EventBus.Tests
             
             // Act
             var policy = await resolver.GetPolicyAsync(
-                new DeliveryContext("rabbitmq", "send-pending", "TestContext"), 
+                new DeliveryContext("rabbitmq", "send-pending", "Juice.EF.Tests.Infrastructure.TestContext"), 
                 CancellationToken.None);
             
             // Assert

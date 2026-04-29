@@ -8,11 +8,11 @@ using Microsoft.Extensions.Logging;
 namespace Juice.Integrations.Tests
 {
     internal class ContentTransactionBehavior<TRequest, TResponse>
-        : TransactionBehavior<TRequest, TResponse, TestContext>
+        : TransactionBehavior<TRequest, TResponse, Juice.EF.Tests.Infrastructure.TestContext>
         where TRequest : IRequest<TResponse>, IContentCommand
     {
-        public ContentTransactionBehavior(TestContext dbContext,
-            IOutboxService<TestContext> integrationEventService,
+        public ContentTransactionBehavior(Juice.EF.Tests.Infrastructure.TestContext dbContext,
+            IOutboxService<Juice.EF.Tests.Infrastructure.TestContext> integrationEventService,
             IMediator mediator,
             ILogger<ContentTransactionBehavior<TRequest, TResponse>> logger)
             : base(dbContext, integrationEventService, mediator, logger)

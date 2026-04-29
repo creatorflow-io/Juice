@@ -3,7 +3,7 @@ using FluentAssertions;
 using Juice.Operation;
 using Newtonsoft.Json;
 using Xunit;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Juice.Core.Tests
 {

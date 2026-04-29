@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Juice.EF.Tests": {
+      "commandName": "Project"
+    },
+    "Docker": {
+      "commandName": "Docker"
+    }
+  }
+}

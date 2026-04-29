@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Juice.Messaging;
 using Juice.Services;
+using Xunit.v3;
 using Xunit.Sdk;
 
 namespace Juice.XUnit
@@ -60,7 +61,7 @@ namespace Juice.XUnit
         /// <summary>
         /// Called before the test method is executed.
         /// </summary>
-        public override void Before(MethodInfo methodUnderTest)
+        public override void Before(MethodInfo methodUnderTest, IXunitTest test)
         {
             var correlationId = CorrelationId ?? StringIdGenerator.Instance.GenerateUniqueId();
             var executionId = ExecutionId ?? StringIdGenerator.Instance.GenerateUniqueId();
@@ -76,7 +77,7 @@ namespace Juice.XUnit
         /// <summary>
         /// Called after the test method is executed.
         /// </summary>
-        public override void After(MethodInfo methodUnderTest)
+        public override void After(MethodInfo methodUnderTest, IXunitTest test)
         {
             MessageContext.Clear();
         }
