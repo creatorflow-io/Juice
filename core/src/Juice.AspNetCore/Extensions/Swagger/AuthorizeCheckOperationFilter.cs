@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.Identity.Web.Resource;
 using Swashbuckle.AspNetCore.SwaggerGen;
+#if !NET6_0
+using Microsoft.Identity.Web.Resource;
+#endif
 #if NET6_0
 using Microsoft.OpenApi.Models;
 #else
@@ -22,12 +24,16 @@ namespace Juice.Extensions.Swagger
 
             if (hasAuthorize)
             {
-                operation.Responses.Add("401", new OpenApiResponse { Description = "Unauthorized" });
-                operation.Responses.Add("403", new OpenApiResponse { Description = "Forbidden" });
-
+                operation.Responses?.TryAdd("401", new OpenApiResponse { Description = "Unauthorized" });
+                operation.Responses?.TryAdd("403", new OpenApiResponse { Description = "Forbidden" });
+#if !NET6_0
                 var scopeAttribute = context.MethodInfo.GetCustomAttributes(true).OfType<RequiredScopeAttribute>().FirstOrDefault()??
                     context.MethodInfo.DeclaringType?.GetCustomAttributes(true).OfType<RequiredScopeAttribute>().FirstOrDefault();
-                var scopes = scopeAttribute?.AcceptedScope ?? new string[0];
+                var scopes = scopeAttribute?.AcceptedScope ?? Array.Empty<string>();
+#else
+                
+                var scopes = Array.Empty<string>();
+#endif
 
                 operation.Security = new List<OpenApiSecurityRequirement>
                 {

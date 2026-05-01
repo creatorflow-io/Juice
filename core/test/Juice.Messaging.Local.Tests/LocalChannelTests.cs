@@ -157,7 +157,7 @@ namespace Juice.Messaging.Local.Tests
 
             await allHandled.Task.WaitAsync(TimeSpan.FromSeconds(10));
 
-            maxObserved.Should().BeLessOrEqualTo(maxConcurrency,
+            maxObserved.Should().BeLessThanOrEqualTo(maxConcurrency,
                 "MaxConcurrency must limit simultaneous handler invocations");
 
             cts.Cancel();

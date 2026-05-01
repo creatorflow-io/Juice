@@ -10,7 +10,7 @@
     <PackageIconUrl>https://avatars.githubusercontent.com/u/107674950</PackageIconUrl>
     <RepositoryUrl>https://github.com/creatorflow-io/Juice</RepositoryUrl>
 
-    <VersionPrefix>10.1.0</VersionPrefix>
+    <VersionPrefix>10.1.1</VersionPrefix>
     <VersionSuffix>local.$([System.DateTime]::Now.ToString(`yyyyMMdd`)).1</VersionSuffix>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
