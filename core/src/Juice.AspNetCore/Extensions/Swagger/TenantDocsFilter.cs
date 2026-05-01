@@ -2,8 +2,12 @@
 using Juice.MultiTenant;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
+#if NET6_0
+using Microsoft.OpenApi.Models;
+#else
+using Microsoft.OpenApi;
+#endif
 
 namespace Juice.Extensions.Swagger
 {

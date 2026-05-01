@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Juice.EF.Tests.Infrastructure;
 using Juice.Extensions.DependencyInjection;
 using Juice.Messaging.Idempotency;
 using Juice.Messaging.Idempotency.EF;
@@ -14,7 +13,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Xunit;
 using Xunit;
 
 namespace Juice.MediatR.Tests

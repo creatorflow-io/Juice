@@ -3,7 +3,6 @@ using System;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
 using Microsoft.Extensions.Logging;
-using Xunit;
 using Juice.XUnit;
 using Juice.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;

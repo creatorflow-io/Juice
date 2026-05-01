@@ -7,7 +7,6 @@ using Juice.EF.Extensions;
 using Juice.EF.Tests.Domain;
 using Juice.EF.Tests.EventHandlers;
 using Juice.EF.Tests.Events;
-using Juice.EF.Tests.Infrastructure;
 using Juice.EventBus.Tests;
 using Juice.EventBus.Tests.Handlers;
 using Juice.Extensions.DependencyInjection;
@@ -20,7 +19,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Xunit;
 using Xunit;
 
 namespace Juice.Integrations.Tests

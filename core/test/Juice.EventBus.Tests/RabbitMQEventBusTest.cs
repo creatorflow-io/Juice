@@ -9,14 +9,12 @@ using Juice.EventBus.Publishing;
 using Juice.EventBus.Tests.Handlers;
 using Juice.Extensions.DependencyInjection;
 using Juice.Messaging;
-using Juice.Messaging.Publishing;
 using Juice.MultiTenant;
 using Juice.XUnit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
-using Xunit;
 using Xunit;
 
 namespace Juice.EventBus.Tests

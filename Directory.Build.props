@@ -24,7 +24,8 @@
     <MediatRVersion>12.4.*</MediatRVersion>
     <RedisVersion>2.8.*</RedisVersion>
     <FinbuckleVersion>9.1.*</FinbuckleVersion>
-    <SwashbuckleVersion>6.8.*</SwashbuckleVersion>
+    <OpenApiVersion>2.4.*</OpenApiVersion>
+    <SwashbuckleVersion>10.*</SwashbuckleVersion>
     <XUnitV3Version>3.2.*</XUnitV3Version>
     <XUnitRunnerVersion>3.1.*</XUnitRunnerVersion>
     <TestSdk>17.11.*</TestSdk>
@@ -57,6 +58,8 @@
     <NpgsqlVersion>7.0.*</NpgsqlVersion>
     <FinbuckleVersion>8.1.*</FinbuckleVersion>
     <MvcTesting>6.0.*</MvcTesting>
+    <OpenApiVersion>1.6.*</OpenApiVersion>
+    <SwashbuckleVersion>6.9.*</SwashbuckleVersion>
   </PropertyGroup>
 
   <PropertyGroup Label="Build">

@@ -1,7 +1,11 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.OpenApi.Models;
 using Microsoft.Identity.Web.Resource;
 using Swashbuckle.AspNetCore.SwaggerGen;
+#if NET6_0
+using Microsoft.OpenApi.Models;
+#else
+using Microsoft.OpenApi;
+#endif
 
 namespace Juice.Extensions.Swagger
 {
@@ -29,15 +33,13 @@ namespace Juice.Extensions.Swagger
                 {
                     new OpenApiSecurityRequirement
                     {
-                        [
-                            new OpenApiSecurityScheme {
-                                Reference = new OpenApiReference
-                                {
-                                    Type = ReferenceType.SecurityScheme,
-                                    Id = "oauth2"
-                                }
-                            }
-                        ] = scopes
+#if NET6_0
+                        [new OpenApiSecurityScheme {
+                            Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "oauth2" }
+                        }] = scopes.ToList()
+#else
+                        [new OpenApiSecuritySchemeReference("oauth2")] = scopes.ToList()
+#endif
                     }
                 };
             }

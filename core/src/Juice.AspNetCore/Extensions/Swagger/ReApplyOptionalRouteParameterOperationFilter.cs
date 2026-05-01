@@ -1,6 +1,11 @@
-﻿using Microsoft.OpenApi.Any;
+﻿using Swashbuckle.AspNetCore.SwaggerGen;
+#if NET6_0
+using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
-using Swashbuckle.AspNetCore.SwaggerGen;
+#else
+using Microsoft.OpenApi;
+using System.Text.Json.Nodes;
+#endif
 
 namespace Juice.Extensions.Swagger
 {
@@ -22,6 +27,9 @@ namespace Juice.Extensions.Swagger
             if (string.IsNullOrEmpty(httpMethodWithOptional?.Template))
                 return;
 
+            if(operation.Parameters == null || operation.Parameters.Count == 0)
+                return;
+
             string regex = $"{{(?<{_captureName}>\\w+)\\?}}";
 
             var matches = System.Text.RegularExpressions.Regex.Matches(httpMethodWithOptional!.Template, regex);
@@ -30,6 +38,7 @@ namespace Juice.Extensions.Swagger
             {
                 var name = match.Groups[_captureName].Value;
 
+#if NET6_0
                 var parameter = operation.Parameters.FirstOrDefault(p => p.In == ParameterLocation.Path && p.Name == name);
                 if (parameter != null)
                 {
@@ -39,6 +48,23 @@ namespace Juice.Extensions.Swagger
                     parameter.Schema.Default = new OpenApiString(string.Empty);
                     parameter.Schema.Nullable = true;
                 }
+#else
+                var parameter = operation.Parameters.FirstOrDefault(p => p.In == ParameterLocation.Path && p.Name == name) as OpenApiParameter;
+                if (parameter != null)
+                {
+                    parameter.AllowEmptyValue = true;
+                    parameter.Description = $"Must check \"Send empty value\" or Swagger leaves '{{{name}}}' for empty values otherwise";
+                    parameter.Required = false;
+                    var schema = parameter.Schema as OpenApiSchema;
+                    if (schema != null)
+                    {
+                        schema.Default = JsonValue.Create(string.Empty);
+                        schema.Type = schema.Type.HasValue
+                            ? schema.Type | JsonSchemaType.Null
+                            : JsonSchemaType.String | JsonSchemaType.Null;
+                    }
+                }
+#endif
             }
         }
     }

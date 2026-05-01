@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Juice.EF.Tests.Infrastructure;
 using Juice.Extensions.DependencyInjection;
 using Juice.XUnit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Xunit;
 using Xunit;
 
 namespace Juice.EventBus.Tests
