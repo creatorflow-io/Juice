@@ -19,7 +19,7 @@
         <PackageReference Include="Microsoft.Bcl.Memory" Version="9.0.15" />
         <PackageReference Include="Newtonsoft.Json" Version="*" />
         <PackageReference Include="Microsoft.OpenApi" Version="$(OpenApiVersion)" />
-        <PackageReference Include="Microsoft.Identity.Web" Version="3.8.*" />
+        <PackageReference Include="Microsoft.Identity.Web" Version="4.8.0" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="$(SwashbuckleVersion)" />
         <PackageReference Include="Swashbuckle.AspNetCore.Newtonsoft" Version="$(SwashbuckleVersion)" />
     </ItemGroup>
