@@ -36,6 +36,7 @@
     <EFVersion>10.0.*</EFVersion>
     <NpgsqlVersion>10.0.*</NpgsqlVersion>
     <MvcTesting>$(MicrosoftExtensionsVersion)</MvcTesting>
+    <AspNetCoreVersion>$(MicrosoftExtensionsVersion)</AspNetCoreVersion>
   </PropertyGroup>
   
   <PropertyGroup Label="Versioning" Condition="'$(TargetFramework)' == 'net9.0'">
@@ -43,6 +44,7 @@
     <EFVersion>9.0.*</EFVersion>
     <NpgsqlVersion>9.0.*</NpgsqlVersion>
     <MvcTesting>$(MicrosoftExtensionsVersion)</MvcTesting>
+    <AspNetCoreVersion>$(MicrosoftExtensionsVersion)</AspNetCoreVersion>
   </PropertyGroup>
 
   <PropertyGroup Label="Versioning" Condition="'$(TargetFramework)' == 'net8.0'">
@@ -50,6 +52,7 @@
     <EFVersion>8.0.*</EFVersion>
     <NpgsqlVersion>8.0.*</NpgsqlVersion>
     <MvcTesting>$(MicrosoftExtensionsVersion)</MvcTesting>
+    <AspNetCoreVersion>$(MicrosoftExtensionsVersion)</AspNetCoreVersion>
   </PropertyGroup>
 
   <PropertyGroup Label="Versioning" Condition="'$(TargetFramework)' == 'net6.0'">
@@ -60,11 +63,9 @@
     <MvcTesting>6.0.*</MvcTesting>
     <OpenApiVersion>1.6.*</OpenApiVersion>
     <SwashbuckleVersion>6.9.*</SwashbuckleVersion>
+    <AspNetCoreVersion>6.*</AspNetCoreVersion>
   </PropertyGroup>
 
-  <PropertyGroup Label="Versioning">
-    <AspNetCoreVersion>$(MicrosoftExtensionsVersion)</AspNetCoreVersion>
-  </PropertyGroup>
 
   <PropertyGroup Label="Build">
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
