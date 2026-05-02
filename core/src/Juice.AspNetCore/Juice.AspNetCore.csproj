@@ -35,6 +35,11 @@
         <PackageReference Include="Microsoft.EntityFrameworkCore" Version="$(EFVersion)" />
         <PackageReference Include="Juice.Modular" Version="10.0.1" />
     </ItemGroup>
+
+    <ItemGroup Label="Fix vulnerabilities">
+        <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="$(AspNetCoreVersion)" />
+    </ItemGroup>
+    
     <ItemGroup>
         <ProjectReference Include="..\Juice.Extensions.Options\Juice.Extensions.Options.csproj" />
         <ProjectReference Include="..\Juice.Messaging\Juice.Messaging.csproj" />

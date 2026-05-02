@@ -62,6 +62,10 @@
     <SwashbuckleVersion>6.9.*</SwashbuckleVersion>
   </PropertyGroup>
 
+  <PropertyGroup Label="Versioning">
+    <AspNetCoreVersion>$(MicrosoftExtensionsVersion)</AspNetCoreVersion>
+  </PropertyGroup>
+
   <PropertyGroup Label="Build">
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <EnableSourceLink>false</EnableSourceLink>
