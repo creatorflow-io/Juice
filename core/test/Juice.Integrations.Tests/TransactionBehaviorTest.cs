@@ -70,6 +70,7 @@ namespace Juice.Integrations.Tests
                  .AddDelivery(delivery =>
                  {
                      delivery.AddDeliveryProcessor<Juice.EF.Tests.Infrastructure.TestContext>("rabbitmq");
+                     delivery.UseNodeIdentity("transaction-behavior-test-node");
                  });
                 services.AddEventBus()
                    .AddRabbitMQ(cfg =>
