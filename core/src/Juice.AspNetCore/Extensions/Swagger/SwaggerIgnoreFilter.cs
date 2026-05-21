@@ -1,7 +1,7 @@
 ﻿using Juice.ComponentModel;
 using Newtonsoft.Json;
 using Swashbuckle.AspNetCore.SwaggerGen;
-#if NET6_0
+#if !NET10_0
 using Microsoft.OpenApi.Models;
 #else
 using Microsoft.OpenApi;
@@ -19,7 +19,7 @@ namespace Juice.Extensions.Swagger
     {
 
         #region ISchemaFilter Members
-#if NET6_0
+#if !NET10_0
         public void Apply(OpenApiSchema schema, SchemaFilterContext context)
         {
             var excludedProperties = context.Type.GetProperties()

@@ -1,5 +1,5 @@
 ﻿using Swashbuckle.AspNetCore.SwaggerGen;
-#if NET6_0
+#if !NET10_0
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 #else
@@ -38,7 +38,7 @@ namespace Juice.Extensions.Swagger
             {
                 var name = match.Groups[_captureName].Value;
 
-#if NET6_0
+#if !NET10_0
                 var parameter = operation.Parameters.FirstOrDefault(p => p.In == ParameterLocation.Path && p.Name == name);
                 if (parameter != null)
                 {
