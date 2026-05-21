@@ -1,4 +1,5 @@
-﻿using Juice.Messaging.Outbox.Delivery.Internal;
+﻿using Juice.Messaging.Outbox;
+using Juice.Messaging.Outbox.Delivery.Internal;
 using Juice.Messaging.Outbox.Delivery.Processing;
 using Juice.Messaging.Outbox.Delivery.Registry;
 using Microsoft.Extensions.Configuration;
@@ -20,6 +21,46 @@ namespace Juice.Messaging.Outbox.Delivery
         {
             _services = services;
             EventBus = services.AddEventBus();
+            _services.TryAddSingleton<IDeliveryNodeIdentity, DeliveryNodeIdentity>();
+        }
+
+        /// <summary>
+        /// Overrides the default <see cref="IDeliveryNodeIdentity"/> with a custom instance.
+        /// The node identity is used to record which host/app processed each outbox delivery.
+        /// </summary>
+        public DeliveryBuilder UseNodeIdentity(IDeliveryNodeIdentity nodeIdentity)
+        {
+            _services.RemoveAll<IDeliveryNodeIdentity>();
+            _services.AddSingleton(nodeIdentity);
+            return this;
+        }
+
+        /// <summary>
+        /// Overrides the default <see cref="IDeliveryNodeIdentity"/> with a fixed node ID string.
+        /// The node identity is used to record which host/app processed each outbox delivery.
+        /// </summary>
+        public DeliveryBuilder UseNodeIdentity(string nodeId)
+        {
+            _services.RemoveAll<IDeliveryNodeIdentity>();
+            _services.AddSingleton<IDeliveryNodeIdentity>(new FixedNodeIdentity(nodeId));
+            return this;
+        }
+
+        /// <summary>
+        /// Overrides the default <see cref="IDeliveryNodeIdentity"/> with a custom implementation type.
+        /// The node identity is used to record which host/app processed each outbox delivery.
+        /// </summary>
+        public DeliveryBuilder UseNodeIdentity<TNodeIdentity>()
+            where TNodeIdentity : class, IDeliveryNodeIdentity
+        {
+            _services.RemoveAll<IDeliveryNodeIdentity>();
+            _services.AddSingleton<IDeliveryNodeIdentity, TNodeIdentity>();
+            return this;
+        }
+
+        private sealed class FixedNodeIdentity(string nodeId) : IDeliveryNodeIdentity
+        {
+            public string NodeId { get; } = nodeId;
         }
 
         /// <summary>

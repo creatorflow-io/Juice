@@ -15,6 +15,7 @@ namespace Juice.Messaging.Outbox
         public DateTimeOffset? ProcessedOn { get; private set; }
         public string? LastError { get; private set; }
         public DateTimeOffset? NextAttemptOn { get; private set; }
+        public string? ProcessedBy { get; private set; }
 
         public virtual OutboxEvent OutboxEvent { get; init; } = default!;
 

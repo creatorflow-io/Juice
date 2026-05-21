@@ -1,5 +1,6 @@
 ﻿using Juice.EF.Extensions;
 using Juice.Measurement;
+using Juice.Messaging.Outbox;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
@@ -12,10 +13,12 @@ namespace Juice.Messaging.Outbox.EF
         private IOutboxContext _outboxContext;
 
         private ITimeTracker? _timeTracker;
+        private IDeliveryNodeIdentity? _nodeIdentity;
 
         public OutboxRepository(TContext context,
             ITimeTracker? timeTracker = default,
-            Func<TContext, IOutboxContext>? factory = null)
+            Func<TContext, IOutboxContext>? factory = null,
+            IDeliveryNodeIdentity? nodeIdentity = null)
         {
             _domainContext = context;
             if (factory == null && context is not IOutboxContext)
@@ -26,6 +29,7 @@ namespace Juice.Messaging.Outbox.EF
             _outboxContext = factory != null ? factory(context) : (IOutboxContext)context;
 
             _timeTracker = timeTracker;
+            _nodeIdentity = nodeIdentity;
         }
         private void EnsureAssociatedConnection()
         {
@@ -87,6 +91,7 @@ namespace Juice.Messaging.Outbox.EF
             return await query.ExecuteUpdateAsync(ie =>
                 ie.SetProperty(e => e.State, e => DeliveryState.InProgress)
                   .SetProperty(e => e.ProcessedOn, e => DateTimeOffset.Now)
+                  .SetProperty(e => e.ProcessedBy, e => _nodeIdentity != null ? _nodeIdentity.NodeId : null)
                 , cancellationToken);
         }
 
@@ -101,6 +106,7 @@ namespace Juice.Messaging.Outbox.EF
                   .SetProperty(e => e.LastError, e => error)
                   .SetProperty(e => e.NextAttemptOn, e => nextAttempt)
                   .SetProperty(e => e.ProcessedOn, e => DateTimeOffset.Now)
+                  .SetProperty(e => e.ProcessedBy, e => _nodeIdentity != null ? _nodeIdentity.NodeId : null)
                 , cancellationToken);
         }
 
@@ -112,6 +118,7 @@ namespace Juice.Messaging.Outbox.EF
                 ie.SetProperty(e => e.State, e => DeliveryState.Skipped)
                   .SetProperty(e => e.LastError, e => reason)
                   .SetProperty(e => e.ProcessedOn, e => DateTimeOffset.Now)
+                  .SetProperty(e => e.ProcessedBy, e => _nodeIdentity != null ? _nodeIdentity.NodeId : null)
                 , cancellationToken);
         }
 

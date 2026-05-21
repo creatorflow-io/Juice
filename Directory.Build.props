@@ -10,7 +10,7 @@
     <PackageIconUrl>https://avatars.githubusercontent.com/u/107674950</PackageIconUrl>
     <RepositoryUrl>https://github.com/creatorflow-io/Juice</RepositoryUrl>
 
-    <VersionPrefix>10.1.3</VersionPrefix>
+    <VersionPrefix>10.1.4</VersionPrefix>
     <VersionSuffix>local.$([System.DateTime]::Now.ToString(`yyyyMMdd`)).1</VersionSuffix>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
@@ -25,7 +25,6 @@
     <RedisVersion>2.8.*</RedisVersion>
     <FinbuckleVersion>9.1.*</FinbuckleVersion>
     <OpenApiVersion>2.4.*</OpenApiVersion>
-    <SwashbuckleVersion>10.*</SwashbuckleVersion>
     <XUnitV3Version>3.2.*</XUnitV3Version>
     <XUnitRunnerVersion>3.1.*</XUnitRunnerVersion>
     <TestSdk>17.11.*</TestSdk>
@@ -37,6 +36,7 @@
     <NpgsqlVersion>10.0.*</NpgsqlVersion>
     <MvcTesting>$(MicrosoftExtensionsVersion)</MvcTesting>
     <AspNetCoreVersion>$(MicrosoftExtensionsVersion)</AspNetCoreVersion>
+    <SwashbuckleVersion>10.*</SwashbuckleVersion>
   </PropertyGroup>
   
   <PropertyGroup Label="Versioning" Condition="'$(TargetFramework)' == 'net9.0'">
@@ -45,6 +45,7 @@
     <NpgsqlVersion>9.0.*</NpgsqlVersion>
     <MvcTesting>$(MicrosoftExtensionsVersion)</MvcTesting>
     <AspNetCoreVersion>$(MicrosoftExtensionsVersion)</AspNetCoreVersion>
+    <SwashbuckleVersion>9.*</SwashbuckleVersion>
   </PropertyGroup>
 
   <PropertyGroup Label="Versioning" Condition="'$(TargetFramework)' == 'net8.0'">
@@ -53,6 +54,7 @@
     <NpgsqlVersion>8.0.*</NpgsqlVersion>
     <MvcTesting>$(MicrosoftExtensionsVersion)</MvcTesting>
     <AspNetCoreVersion>$(MicrosoftExtensionsVersion)</AspNetCoreVersion>
+    <SwashbuckleVersion>8.*</SwashbuckleVersion>
   </PropertyGroup>
 
   <PropertyGroup Label="Versioning" Condition="'$(TargetFramework)' == 'net6.0'">

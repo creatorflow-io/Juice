@@ -41,6 +41,9 @@ namespace Juice.Messaging.Outbox.EF
             builder.Property(e => e.LastError)
                 .HasMaxLength(LengthConstants.ShortDescriptionLength);
 
+            builder.Property(e => e.ProcessedBy)
+                .HasMaxLength(LengthConstants.NameLength);
+
             builder.HasIndex(e => e.PublisherKey)
                 ;
 
