@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using FluentAssertions;
 using Juice.Messaging.Outbox;
@@ -100,6 +101,35 @@ namespace Juice.EventBus.Tests
 
             var identity = provider.GetRequiredService<IDeliveryNodeIdentity>();
             identity.Should().BeOfType<FixedNodeIdentity>();
+        }
+
+        // ─── Validation ──────────────────────────────────────────────────────────
+
+        [Fact(DisplayName = "UseNodeIdentity(string) throws on null or empty")]
+        public void UseNodeIdentity_String_Throws_On_NullOrEmpty()
+        {
+            var services = new ServiceCollection();
+            DeliveryBuilder? delivery = null;
+            services.AddMessaging().AddDelivery(d => { delivery = d; });
+
+            delivery!.Invoking(d => d.UseNodeIdentity(string.Empty))
+                .Should().Throw<ArgumentException>();
+
+            delivery!.Invoking(d => d.UseNodeIdentity("   "))
+                .Should().Throw<ArgumentException>();
+        }
+
+        [Fact(DisplayName = "UseNodeIdentity(string) throws when NodeId exceeds NameLength")]
+        public void UseNodeIdentity_String_Throws_When_Too_Long()
+        {
+            var services = new ServiceCollection();
+            DeliveryBuilder? delivery = null;
+            services.AddMessaging().AddDelivery(d => { delivery = d; });
+
+            var tooLong = new string('a', 257); // exceeds NameLength (256)
+            delivery!.Invoking(d => d.UseNodeIdentity(tooLong))
+                .Should().Throw<ArgumentException>()
+                .WithMessage("*exceeds the maximum allowed length*");
         }
 
         // ─── Helpers ─────────────────────────────────────────────────────────────

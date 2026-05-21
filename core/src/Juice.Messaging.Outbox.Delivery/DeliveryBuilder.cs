@@ -39,8 +39,12 @@ namespace Juice.Messaging.Outbox.Delivery
         /// Overrides the default <see cref="IDeliveryNodeIdentity"/> with a fixed node ID string.
         /// The node identity is used to record which host/app processed each outbox delivery.
         /// </summary>
+        /// <exception cref="ArgumentException">
+        /// Thrown when <paramref name="nodeId"/> is null, empty, or exceeds 256 characters.
+        /// </exception>
         public DeliveryBuilder UseNodeIdentity(string nodeId)
         {
+            DeliveryNodeIdentityValidator.Validate(nodeId, nameof(nodeId));
             _services.RemoveAll<IDeliveryNodeIdentity>();
             _services.AddSingleton<IDeliveryNodeIdentity>(new FixedNodeIdentity(nodeId));
             return this;
@@ -58,9 +62,17 @@ namespace Juice.Messaging.Outbox.Delivery
             return this;
         }
 
-        private sealed class FixedNodeIdentity(string nodeId) : IDeliveryNodeIdentity
+        private sealed class FixedNodeIdentity : IDeliveryNodeIdentity
         {
-            public string NodeId { get; } = nodeId;
+            public string NodeId { get; }
+
+            public FixedNodeIdentity() { NodeId = string.Empty; }
+
+            public FixedNodeIdentity(string nodeId)
+            {
+                // Validation already performed by UseNodeIdentity(string) and DeliveryNodeIdentityValidator
+                NodeId = nodeId;
+            }
         }
 
         /// <summary>
