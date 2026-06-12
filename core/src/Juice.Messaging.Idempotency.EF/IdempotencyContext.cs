@@ -42,6 +42,9 @@ namespace Juice.Messaging.Idempotency.EF
             builder.Property(e => e.State)
                 .IsRequired();
 
+            builder.Property(e => e.ProcessedBy)
+                .HasMaxLength(LengthConstants.NameLength);
+
         }
     }
 

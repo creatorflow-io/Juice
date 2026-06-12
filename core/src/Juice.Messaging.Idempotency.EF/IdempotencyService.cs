@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Juice.Messaging.Outbox;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Juice.Messaging.Idempotency.EF
@@ -8,13 +9,17 @@ namespace Juice.Messaging.Idempotency.EF
         private IdempotencyContext _context;
         private readonly ILogger _logger;
         private readonly IMessageSerializer _serializer;
+        private readonly IDeliveryNodeIdentity? _nodeIdentity;
+
         public IdempotencyService(IdempotencyContext context,
             ILogger<IdempotencyService> logger,
-            IMessageSerializer serializer)
+            IMessageSerializer serializer,
+            IDeliveryNodeIdentity? nodeIdentity = null)
         {
             _context = context;
             _logger = logger;
             _serializer = serializer;
+            _nodeIdentity = nodeIdentity;
         }
 
         public async ValueTask TryCompleteRequestAsync(string scope, string key, bool success, object? result, CancellationToken cancellationToken)
@@ -22,6 +27,7 @@ namespace Juice.Messaging.Idempotency.EF
             try
             {
                 var res = _serializer.Serialize(result);
+                var nodeId = _nodeIdentity?.NodeId;
                 await
                     _context.IdempotencyRecords.Where(r => r.Scope == scope && r.Key == key)
                     .ExecuteUpdateAsync(r =>
@@ -29,6 +35,7 @@ namespace Juice.Messaging.Idempotency.EF
                         success ? RequestState.Processed : RequestState.Failed)
                         .SetProperty(r => r.CompletedAt, DateTimeOffset.Now)
                         .SetProperty(r => r.Result, res)
+                        .SetProperty(r => r.ProcessedBy, nodeId)
                         , cancellationToken);
             }
             catch (Exception ex)
@@ -46,7 +53,9 @@ namespace Juice.Messaging.Idempotency.EF
             {
                 try
                 {
-                    _context.IdempotencyRecords.Add(new IdempotencyRecord(scope, key));
+                    var newRecord = new IdempotencyRecord(scope, key);
+                    newRecord.SetProcessedBy(_nodeIdentity?.NodeId);
+                    _context.IdempotencyRecords.Add(newRecord);
                     await _context.SaveChangesAsync(cancellationToken);
                     return OperationResult.Success;
                 }
@@ -71,7 +80,9 @@ namespace Juice.Messaging.Idempotency.EF
             {
                 try
                 {
-                    _context.IdempotencyRecords.Add(new IdempotencyRecord(scope, key));
+                    var newRecord = new IdempotencyRecord(scope, key);
+                    newRecord.SetProcessedBy(_nodeIdentity?.NodeId);
+                    _context.IdempotencyRecords.Add(newRecord);
                     await _context.SaveChangesAsync(cancellationToken);
                     return OperationResult.Result<TResponse>(default);
                 }

@@ -22,5 +22,11 @@
         public RequestState State { get; private set; }
         public DateTimeOffset? CompletedAt { get; private set; }
         public string? Result { get; private set; }
+        public string? ProcessedBy { get; private set; }
+
+        internal void SetProcessedBy(string? nodeId)
+        {
+            ProcessedBy = nodeId;
+        }
     }
 }

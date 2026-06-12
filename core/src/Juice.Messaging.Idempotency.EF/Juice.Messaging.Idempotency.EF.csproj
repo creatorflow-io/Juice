@@ -28,6 +28,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Juice.EF\Juice.EF.csproj" />
     <ProjectReference Include="..\Juice.Messaging\Juice.Messaging.csproj" />
+    <ProjectReference Include="..\Juice.Messaging.Outbox\Juice.Messaging.Outbox.csproj" />
   </ItemGroup>
 
 </Project>

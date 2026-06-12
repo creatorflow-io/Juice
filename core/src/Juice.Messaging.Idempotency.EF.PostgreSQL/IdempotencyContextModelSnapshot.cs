@@ -38,6 +38,10 @@ namespace Juice.Messaging.Idempotency.EF.PostgreSQL
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("ProcessedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
                     b.Property<string>("Result")
                         .HasColumnType("text");
 

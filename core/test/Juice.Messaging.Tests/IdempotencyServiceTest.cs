@@ -3,6 +3,7 @@ using Juice.Extensions.DependencyInjection;
 using Juice.Extensions.Redis;
 using Juice.Messaging.Idempotency;
 using Juice.Messaging.Idempotency.EF;
+using Juice.Messaging.Outbox;
 using Juice.XUnit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -25,7 +26,7 @@ namespace Juice.Messaging.Tests
 
         #region Setup Helpers
 
-        private IServiceProvider BuildServiceProvider(string provider)
+        private IServiceProvider BuildServiceProvider(string provider, IDeliveryNodeIdentity? nodeIdentity = null)
         {
             var resolver = DependencyResolver.Create((services, configuration) =>
             {
@@ -54,6 +55,11 @@ namespace Juice.Messaging.Tests
                     default:
                         builder.AddIdempotencyInMemory();
                         break;
+                }
+
+                if (nodeIdentity != null)
+                {
+                    services.AddSingleton(nodeIdentity);
                 }
 
                 services.AddLogging(builder =>
@@ -640,9 +646,110 @@ local cursor = '0' repeat local res = redis.call('SCAN', cursor, 'MATCH', ARGV[1
 
         #endregion
 
+        #region ProcessedBy Tests
+
+        [IgnoreOnCITheory(DisplayName = "Should stamp ProcessedBy on create when node identity is registered"), TestPriority(70)]
+        [InlineData("SqlServer")]
+        [InlineData("PostgreSQL")]
+        public async Task Should_Stamp_ProcessedBy_On_CreateAsync(string provider)
+        {
+            var nodeIdentity = new FixedNodeIdentity("test-node-create");
+            var serviceProvider = BuildServiceProvider(provider, nodeIdentity);
+            var manager = serviceProvider.GetRequiredService<IIdempotencyService>();
+            var requestId = Guid.NewGuid().ToString();
+
+            try
+            {
+                await manager.TryCreateRequestAsync("ProcessedByTest", requestId);
+
+                using var scope = serviceProvider.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<IdempotencyContext>();
+                var record = await db.IdempotencyRecords.AsNoTracking()
+                    .FirstOrDefaultAsync(r => r.Scope == "ProcessedByTest" && r.Key == requestId);
+
+                record.Should().NotBeNull();
+                record!.ProcessedBy.Should().Be("test-node-create");
+
+                _testOutput.WriteLine($"[{provider}] ProcessedBy on create: {record.ProcessedBy}");
+            }
+            finally
+            {
+                await CleanupEFStoreAsync(serviceProvider, "ProcessedByTest", requestId);
+            }
+        }
+
+        [IgnoreOnCITheory(DisplayName = "Should update ProcessedBy on complete when node identity is registered"), TestPriority(71)]
+        [InlineData("SqlServer")]
+        [InlineData("PostgreSQL")]
+        public async Task Should_Update_ProcessedBy_On_CompleteAsync(string provider)
+        {
+            var nodeIdentity = new FixedNodeIdentity("test-node-complete");
+            var serviceProvider = BuildServiceProvider(provider, nodeIdentity);
+            var manager = serviceProvider.GetRequiredService<IIdempotencyService>();
+            var requestId = Guid.NewGuid().ToString();
+
+            try
+            {
+                await manager.TryCreateRequestAsync("ProcessedByTest", requestId);
+                await manager.TryCompleteRequestAsync("ProcessedByTest", requestId, success: true, result: null);
+
+                using var scope = serviceProvider.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<IdempotencyContext>();
+                var record = await db.IdempotencyRecords.AsNoTracking()
+                    .FirstOrDefaultAsync(r => r.Scope == "ProcessedByTest" && r.Key == requestId);
+
+                record.Should().NotBeNull();
+                record!.ProcessedBy.Should().Be("test-node-complete");
+
+                _testOutput.WriteLine($"[{provider}] ProcessedBy on complete: {record.ProcessedBy}");
+            }
+            finally
+            {
+                await CleanupEFStoreAsync(serviceProvider, "ProcessedByTest", requestId);
+            }
+        }
+
+        [IgnoreOnCITheory(DisplayName = "Should leave ProcessedBy null when no node identity is registered"), TestPriority(72)]
+        [InlineData("SqlServer")]
+        [InlineData("PostgreSQL")]
+        public async Task Should_Leave_ProcessedBy_Null_Without_NodeIdentityAsync(string provider)
+        {
+            var serviceProvider = BuildServiceProvider(provider);
+            var manager = serviceProvider.GetRequiredService<IIdempotencyService>();
+            var requestId = Guid.NewGuid().ToString();
+
+            try
+            {
+                await manager.TryCreateRequestAsync("ProcessedByTest", requestId);
+                await manager.TryCompleteRequestAsync("ProcessedByTest", requestId, success: true, result: null);
+
+                using var scope = serviceProvider.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<IdempotencyContext>();
+                var record = await db.IdempotencyRecords.AsNoTracking()
+                    .FirstOrDefaultAsync(r => r.Scope == "ProcessedByTest" && r.Key == requestId);
+
+                record.Should().NotBeNull();
+                record!.ProcessedBy.Should().BeNull();
+
+                _testOutput.WriteLine($"[{provider}] ProcessedBy without identity: {record.ProcessedBy ?? "(null)"}");
+            }
+            finally
+            {
+                await CleanupEFStoreAsync(serviceProvider, "ProcessedByTest", requestId);
+            }
+        }
+
+        #endregion
+
         #region Test Helper Classes
 
         private record TestRequest(Guid Id) : MessageBase(Id), IMessage;
+
+        private sealed class FixedNodeIdentity : IDeliveryNodeIdentity
+        {
+            public string NodeId { get; }
+            public FixedNodeIdentity(string nodeId) => NodeId = nodeId;
+        }
 
         private class ComplexTestResult
         {
