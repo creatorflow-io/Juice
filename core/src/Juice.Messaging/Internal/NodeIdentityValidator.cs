@@ -1,9 +1,9 @@
-namespace Juice.Messaging.Outbox.Delivery.Internal
+namespace Juice.Messaging.Internal
 {
-    internal static class DeliveryNodeIdentityValidator
+    internal static class NodeIdentityValidator
     {
         // Matches LengthConstants.NameLength (256) — kept local to avoid a transitive
-        // project reference from Juice.Messaging.Outbox.Delivery to Juice.Contracts.
+        // project reference from Juice.Messaging to Juice.Contracts.
         internal const int MaxLength = 256;
 
         internal static void Validate(string nodeId, string paramName)

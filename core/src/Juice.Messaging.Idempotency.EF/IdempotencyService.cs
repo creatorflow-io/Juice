@@ -1,5 +1,4 @@
-﻿using Juice.Messaging.Outbox;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Juice.Messaging.Idempotency.EF
@@ -9,12 +8,12 @@ namespace Juice.Messaging.Idempotency.EF
         private IdempotencyContext _context;
         private readonly ILogger _logger;
         private readonly IMessageSerializer _serializer;
-        private readonly IDeliveryNodeIdentity? _nodeIdentity;
+        private readonly INodeIdentity? _nodeIdentity;
 
         public IdempotencyService(IdempotencyContext context,
             ILogger<IdempotencyService> logger,
             IMessageSerializer serializer,
-            IDeliveryNodeIdentity? nodeIdentity = null)
+            INodeIdentity? nodeIdentity = null)
         {
             _context = context;
             _logger = logger;

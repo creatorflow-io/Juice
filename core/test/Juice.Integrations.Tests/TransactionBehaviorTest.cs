@@ -67,11 +67,11 @@ namespace Juice.Integrations.Tests
                 services.AddDefaultStringIdGenerator();
 
                 services.AddTestMessaging(configuration)
-                 .AddDelivery(delivery =>
-                 {
-                     delivery.AddDeliveryProcessor<Juice.EF.Tests.Infrastructure.TestContext>("rabbitmq");
-                     delivery.UseNodeIdentity("transaction-behavior-test-node");
-                 });
+                    .UseNodeIdentity("transaction-behavior-test-node")
+                    .AddDelivery(delivery =>
+                    {
+                        delivery.AddDeliveryProcessor<Juice.EF.Tests.Infrastructure.TestContext>("rabbitmq");
+                    });
                 services.AddEventBus()
                    .AddRabbitMQ(cfg =>
                         {
@@ -84,23 +84,23 @@ namespace Juice.Integrations.Tests
                             ;
                         });
 
-				services.AddMessaging()
-	                .AddIdempotencyRedis(opts =>
-	                {
-		                opts.ConnectionString = configuration.GetConnectionString("Redis");
-	                })
-	                .AddEventBus()
-		                .AddConsumerServices(consumers =>
-		                {
-		                })
-		                .AddConsumerRetryPolicies(configuration.GetSection("RetryPolicies"))
-		                .AddRabbitMQ(rabbitMQ =>
-		                {
-			                rabbitMQ.AddConnection("rabbitmq", configuration.GetSection("RabbitMQ"))
-					                .AddConsumer("orders", "orders-queue", "rabbitmq", consumer =>
-					                {
-					                });
-		                });
+                services.AddMessaging()
+                    .AddIdempotencyRedis(opts =>
+                    {
+                        opts.ConnectionString = configuration.GetConnectionString("Redis");
+                    })
+                    .AddEventBus()
+                        .AddConsumerServices(consumers =>
+                        {
+                        })
+                        .AddConsumerRetryPolicies(configuration.GetSection("RetryPolicies"))
+                        .AddRabbitMQ(rabbitMQ =>
+                        {
+                            rabbitMQ.AddConnection("rabbitmq", configuration.GetSection("RabbitMQ"))
+                                    .AddConsumer("orders", "orders-queue", "rabbitmq", consumer =>
+                                    {
+                                    });
+                        });
 
                 services.AddMediatR(cfg =>
                 {
@@ -114,7 +114,7 @@ namespace Juice.Integrations.Tests
             });
 
             await resolver.ServiceProvider.RunHostedServicesAsync();
-            
+
             var sharedService = resolver.ServiceProvider.GetRequiredService<HandledService>();
 
             // warm up

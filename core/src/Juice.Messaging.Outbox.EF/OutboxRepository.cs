@@ -1,5 +1,6 @@
 ﻿using Juice.EF.Extensions;
 using Juice.Measurement;
+using Juice.Messaging;
 using Juice.Messaging.Outbox;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -13,12 +14,12 @@ namespace Juice.Messaging.Outbox.EF
         private IOutboxContext _outboxContext;
 
         private ITimeTracker? _timeTracker;
-        private IDeliveryNodeIdentity? _nodeIdentity;
+        private INodeIdentity? _nodeIdentity;
 
         public OutboxRepository(TContext context,
             ITimeTracker? timeTracker = default,
             Func<TContext, IOutboxContext>? factory = null,
-            IDeliveryNodeIdentity? nodeIdentity = null)
+            INodeIdentity? nodeIdentity = null)
         {
             _domainContext = context;
             if (factory == null && context is not IOutboxContext)

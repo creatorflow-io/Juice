@@ -19,9 +19,50 @@ namespace Juice.Messaging
 
         internal MessagingBuilder AddDefaultSerializer()
         {
-            // Add messaging related services here
             Services.TryAddSingleton<IMessageSerializer, MessageSerializer>();
+            Services.TryAddSingleton<INodeIdentity, NodeIdentity>();
             return this;
+        }
+
+        /// <summary>
+        /// Overrides the default <see cref="INodeIdentity"/> with a custom instance.
+        /// </summary>
+        public MessagingBuilder UseNodeIdentity(INodeIdentity nodeIdentity)
+        {
+            Services.RemoveAll<INodeIdentity>();
+            Services.AddSingleton(nodeIdentity);
+            return this;
+        }
+
+        /// <summary>
+        /// Overrides the default <see cref="INodeIdentity"/> with a fixed node ID string.
+        /// </summary>
+        /// <exception cref="ArgumentException">
+        /// Thrown when <paramref name="nodeId"/> is null, empty, or exceeds 256 characters.
+        /// </exception>
+        public MessagingBuilder UseNodeIdentity(string nodeId)
+        {
+            NodeIdentityValidator.Validate(nodeId, nameof(nodeId));
+            Services.RemoveAll<INodeIdentity>();
+            Services.AddSingleton<INodeIdentity>(new FixedNodeIdentity(nodeId));
+            return this;
+        }
+
+        /// <summary>
+        /// Overrides the default <see cref="INodeIdentity"/> with a custom implementation type.
+        /// </summary>
+        public MessagingBuilder UseNodeIdentity<TNodeIdentity>()
+            where TNodeIdentity : class, INodeIdentity
+        {
+            Services.RemoveAll<INodeIdentity>();
+            Services.AddSingleton<INodeIdentity, TNodeIdentity>();
+            return this;
+        }
+
+        private sealed class FixedNodeIdentity : INodeIdentity
+        {
+            public string NodeId { get; }
+            public FixedNodeIdentity(string nodeId) => NodeId = nodeId;
         }
 
         internal MessagingBuilder AddIntegrationEventDispatcher()

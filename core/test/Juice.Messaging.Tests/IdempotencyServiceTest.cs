@@ -3,11 +3,11 @@ using Juice.Extensions.DependencyInjection;
 using Juice.Extensions.Redis;
 using Juice.Messaging.Idempotency;
 using Juice.Messaging.Idempotency.EF;
-using Juice.Messaging.Outbox;
 using Juice.XUnit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 using Xunit;
@@ -26,7 +26,7 @@ namespace Juice.Messaging.Tests
 
         #region Setup Helpers
 
-        private IServiceProvider BuildServiceProvider(string provider, IDeliveryNodeIdentity? nodeIdentity = null)
+        private IServiceProvider BuildServiceProvider(string provider, INodeIdentity? nodeIdentity = null)
         {
             var resolver = DependencyResolver.Create((services, configuration) =>
             {
@@ -59,7 +59,12 @@ namespace Juice.Messaging.Tests
 
                 if (nodeIdentity != null)
                 {
+                    services.RemoveAll<INodeIdentity>();
                     services.AddSingleton(nodeIdentity);
+                }
+                else
+                {
+                    services.RemoveAll<INodeIdentity>();
                 }
 
                 services.AddLogging(builder =>
@@ -745,7 +750,7 @@ local cursor = '0' repeat local res = redis.call('SCAN', cursor, 'MATCH', ARGV[1
 
         private record TestRequest(Guid Id) : MessageBase(Id), IMessage;
 
-        private sealed class FixedNodeIdentity : IDeliveryNodeIdentity
+        private sealed class FixedNodeIdentity : INodeIdentity
         {
             public string NodeId { get; }
             public FixedNodeIdentity(string nodeId) => NodeId = nodeId;
