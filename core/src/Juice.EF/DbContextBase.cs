@@ -6,6 +6,7 @@ using Juice.MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -14,7 +15,7 @@ namespace Juice.EF
 {
 
     public abstract partial class DbContextBase : UnitOfWork,
-        ISchemaDbContext, IAuditableDbContext
+        ISchemaDbContext, IAuditableDbContext, IResettableService
     {
         #region Schema context
         public string? Schema { get; protected set; }
@@ -213,19 +214,34 @@ namespace Juice.EF
 
         #endregion
 
+        public virtual void ResetState()
+        {
+            // Per-request state — reset on every pool return
+            _mediator = null;
+            UserPrincipal = null;
+            _pendingRefreshEntities.Clear();
+            PendingAuditEntries.Clear();
+            PendingDataEvents.Clear();
+            // Schema, _options, _logger, TimeTracker are config-derived and stable across
+            // requests — keep them so pooled contexts don't require ConfigureServices() per use
+        }
+
+        public virtual Task ResetStateAsync(CancellationToken cancellationToken = default)
+        {
+            ResetState();
+            return Task.CompletedTask;
+        }
+
         public override void Dispose()
         {
             base.Dispose();
 
-            // cleanup self services and data
             _logger?.LogDebug(GetType().Name + " is disposing...");
+            ResetState();
             _options = null;
             Schema = null;
-            UserPrincipal = null;
-            _mediator = null;
+            TimeTracker = null;
             _logger = null;
-            _pendingRefreshEntities.Clear();
-            PendingAuditEntries.Clear();
         }
 
     }
