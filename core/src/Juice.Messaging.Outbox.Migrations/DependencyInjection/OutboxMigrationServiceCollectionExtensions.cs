@@ -92,6 +92,13 @@ namespace Microsoft.Extensions.DependencyInjection
                 options
                     .ReplaceService<IMigrationsAssembly, DbSchemaAwareMigrationAssembly>()
                 ;
+#if NET9_0_OR_GREATER
+                // Intentionally ignore this warning as we are aware of the pending model changes and will handle them appropriately.
+                options.ConfigureWarnings(warnings =>
+                {
+                    warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning);
+                });
+#endif
 
                 return new OutboxContext(options.Options, dbOptions);
             });
