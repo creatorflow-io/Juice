@@ -23,6 +23,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\core\src\Juice.AspNetCore\Juice.AspNetCore.csproj" />
+        <ProjectReference Include="..\..\core\src\Juice.AspNetCore.Idempotency\Juice.AspNetCore.Idempotency.csproj" />
         <ProjectReference Include="..\..\core\src\Juice.EventBus.RabbitMQ\Juice.EventBus.RabbitMQ.csproj" />
         <ProjectReference Include="..\..\core\src\Juice.Messaging.Idempotency.EF.PostgreSQL\Juice.Messaging.Idempotency.EF.PostgreSQL.csproj" />
         <ProjectReference Include="..\..\core\src\Juice.Messaging.Idempotency.EF.SqlServer\Juice.Messaging.Idempotency.EF.SqlServer.csproj" />

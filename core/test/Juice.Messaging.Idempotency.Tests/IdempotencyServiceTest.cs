@@ -1,7 +1,6 @@
 ﻿using FluentAssertions;
 using Juice.Extensions.DependencyInjection;
 using Juice.Extensions.Redis;
-using Juice.Messaging.Idempotency;
 using Juice.Messaging.Idempotency.EF;
 using Juice.XUnit;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +11,7 @@ using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 using Xunit;
 
-namespace Juice.Messaging.Tests
+namespace Juice.Messaging.Idempotency.Tests
 {
     [TestCaseOrderer(typeof(Juice.XUnit.PriorityOrderer))]
     public class IdempotencyServiceTest
@@ -194,10 +193,10 @@ local cursor = '0' repeat local res = redis.call('SCAN', cursor, 'MATCH', ARGV[1
             try
             {
                 // Act
-                var created = await manager.TryCreateRequestAsync("TestRequest", requestId);
+                var created = await manager.TryBeginRequestAsync("TestRequest", requestId);
 
                 // Assert
-                created.Succeeded.Should().BeTrue();
+                created.Outcome.Should().Be(IdempotencyOutcome.Created);
                 _testOutput.WriteLine($"[{provider}] Created request marker for ID: {requestId}");
             }
             finally
@@ -220,14 +219,14 @@ local cursor = '0' repeat local res = redis.call('SCAN', cursor, 'MATCH', ARGV[1
             try
             {
                 // Act
-                var created1 = await manager.TryCreateRequestAsync("TestRequest", requestId);
-                var created2 = await manager.TryCreateRequestAsync("TestRequest", requestId);
+                var created1 = await manager.TryBeginRequestAsync("TestRequest", requestId);
+                var created2 = await manager.TryBeginRequestAsync("TestRequest", requestId);
 
                 // Assert
-                created1.Succeeded.Should().BeTrue("First creation should succeed");
-                created2.Succeeded.Should().BeFalse("Second creation should fail (duplicate)");
+                created1.Outcome.Should().Be(IdempotencyOutcome.Created, "First creation should succeed");
+                created2.Outcome.Should().NotBe(IdempotencyOutcome.Created, "Second creation should be deduplicated");
 
-                _testOutput.WriteLine($"[{provider}] First attempt: {created1.Succeeded}, Second attempt: {created2.Succeeded}");
+                _testOutput.WriteLine($"[{provider}] First attempt: {created1.Outcome}, Second attempt: {created2.Outcome}");
             }
             finally
             {
@@ -254,16 +253,16 @@ local cursor = '0' repeat local res = redis.call('SCAN', cursor, 'MATCH', ARGV[1
                         using var scope = serviceProvider.CreateScope();
                         var manager = scope.ServiceProvider.GetRequiredService<IIdempotencyService>();
                         await Task.Delay(Random.Shared.Next(10, 50)); // Add jitter
-                        return await manager.TryCreateRequestAsync("TestRequest", requestId);
+                        return await manager.TryBeginRequestAsync("TestRequest", requestId);
                     });
 
                 var results = await Task.WhenAll(tasks);
 
                 // Assert
-                results.Count(r => r.Succeeded).Should().Be(1, "Only one creation should succeed");
-                results.Count(r => !r.Succeeded).Should().Be(9, "Nine attempts should fail");
+                results.Count(r => r.Outcome == IdempotencyOutcome.Created).Should().Be(1, "Only one creation should succeed");
+                results.Count(r => r.Outcome != IdempotencyOutcome.Created).Should().Be(9, "Nine attempts should fail");
 
-                _testOutput.WriteLine($"[{provider}] Successful: {results.Count(r => r.Succeeded)}, Failed: {results.Count(r => !r.Succeeded)}");
+                _testOutput.WriteLine($"[{provider}] Successful: {results.Count(r => r.Outcome == IdempotencyOutcome.Created)}, Failed: {results.Count(r => r.Outcome != IdempotencyOutcome.Created)}");
             }
             finally
             {
@@ -290,14 +289,14 @@ local cursor = '0' repeat local res = redis.call('SCAN', cursor, 'MATCH', ARGV[1
 
             try
             {
-                await manager.TryCreateRequestAsync("TestRequest", requestId);
+                await manager.TryBeginRequestAsync("TestRequest", requestId);
 
                 // Act
                 await manager.TryCompleteRequestAsync("TestRequest", requestId, success: true, result: null);
 
                 // Assert
-                var verifyCreate = await manager.TryCreateRequestAsync("TestRequest", requestId);
-                verifyCreate.Succeeded.Should().BeFalse("Request should be marked as completed");
+                var verify = await manager.TryBeginRequestAsync("TestRequest", requestId);
+                verify.Outcome.Should().Be(IdempotencyOutcome.Completed, "Request should be marked as completed");
 
                 _testOutput.WriteLine($"[{provider}] Request completed successfully without result");
             }
@@ -318,23 +317,26 @@ local cursor = '0' repeat local res = redis.call('SCAN', cursor, 'MATCH', ARGV[1
             // Arrange
             var serviceProvider = BuildServiceProvider(provider);
             var manager = serviceProvider.GetRequiredService<IIdempotencyService>();
+            var serializer = serviceProvider.GetRequiredService<IMessageSerializer>();
             var requestId = Guid.NewGuid().ToString();
             var expectedResult = OperationResult.Result("Test data", "Operation succeeded");
 
             try
             {
-                await manager.TryCreateRequestAsync("TestRequest", requestId);
+                await manager.TryBeginRequestAsync("TestRequest", requestId);
 
                 // Act
                 await manager.TryCompleteRequestAsync("TestRequest", requestId, success: true, result: expectedResult);
 
-                // Assert - Verify result is cached
-                var cachedResult = await manager.TryCreateRequestAsync<IOperationResult<string>>("TestRequest", requestId);
-                cachedResult.HasData.Should().BeTrue("Cached result should exist");
-                cachedResult.DataValue.Should().NotBeNull();
-                cachedResult.DataValue!.Data.Should().Be("Test data");
+                // Assert - a replayed begin returns Completed with the stored result payload
+                var replay = await manager.TryBeginRequestAsync("TestRequest", requestId);
+                replay.Outcome.Should().Be(IdempotencyOutcome.Completed);
+                replay.StoredResult.Should().NotBeNullOrEmpty("Cached result should exist");
+                var cachedResult = serializer.Deserialize<IOperationResult<string>>(replay.StoredResult);
+                cachedResult.Should().NotBeNull();
+                cachedResult!.Data.Should().Be("Test data");
 
-                _testOutput.WriteLine($"[{provider}] Cached result retrieved: {cachedResult.DataValue.Message}");
+                _testOutput.WriteLine($"[{provider}] Cached result retrieved: {cachedResult.Message}");
             }
             finally
             {
@@ -357,14 +359,14 @@ local cursor = '0' repeat local res = redis.call('SCAN', cursor, 'MATCH', ARGV[1
 
             try
             {
-                await manager.TryCreateRequestAsync("TestRequest", requestId);
+                await manager.TryBeginRequestAsync("TestRequest", requestId);
 
                 // Act
                 await manager.TryCompleteRequestAsync("TestRequest", requestId, success: false, result: null);
 
                 // Assert - Request should be recreatable after failure
-                var recreate = await manager.TryCreateRequestAsync("TestRequest", requestId);
-                recreate.Succeeded.Should().BeTrue("Failed request should allow recreation");
+                var recreate = await manager.TryBeginRequestAsync("TestRequest", requestId);
+                recreate.Outcome.Should().Be(IdempotencyOutcome.Created, "Failed request should allow recreation");
 
                 _testOutput.WriteLine($"[{provider}] Failed request allows recreation");
             }
@@ -389,20 +391,22 @@ local cursor = '0' repeat local res = redis.call('SCAN', cursor, 'MATCH', ARGV[1
             // Arrange
             var serviceProvider = BuildServiceProvider(provider);
             var manager = serviceProvider.GetRequiredService<IIdempotencyService>();
+            var serializer = serviceProvider.GetRequiredService<IMessageSerializer>();
             var requestId = Guid.NewGuid().ToString();
             var expectedResult = "Test Result String";
 
             try
             {
-                await manager.TryCreateRequestAsync("TestRequest", requestId);
+                await manager.TryBeginRequestAsync("TestRequest", requestId);
                 await manager.TryCompleteRequestAsync("TestRequest", requestId, success: true, result: expectedResult);
 
                 // Act
-                var create = await manager.TryCreateRequestAsync<string>("TestRequest", requestId);
+                var replay = await manager.TryBeginRequestAsync("TestRequest", requestId);
 
                 // Assert
-                create.HasData.Should().BeTrue("Cached result should be retrieved");
-                var cachedResult = create.DataValue;
+                replay.Outcome.Should().Be(IdempotencyOutcome.Completed);
+                replay.StoredResult.Should().NotBeNullOrEmpty("Cached result should be retrieved");
+                var cachedResult = serializer.Deserialize<string>(replay.StoredResult);
                 cachedResult.Should().NotBeNull();
                 cachedResult.Should().Be(expectedResult);
 
@@ -425,20 +429,22 @@ local cursor = '0' repeat local res = redis.call('SCAN', cursor, 'MATCH', ARGV[1
             // Arrange
             var serviceProvider = BuildServiceProvider(provider);
             var manager = serviceProvider.GetRequiredService<IIdempotencyService>();
+            var serializer = serviceProvider.GetRequiredService<IMessageSerializer>();
             var requestId = Guid.NewGuid().ToString();
             var expectedResult = OperationResult.Result("Success data", "Operation completed");
 
             try
             {
-                await manager.TryCreateRequestAsync("TestRequest", requestId);
+                await manager.TryBeginRequestAsync("TestRequest", requestId);
                 await manager.TryCompleteRequestAsync("TestRequest", requestId, success: true, result: expectedResult);
 
                 // Act
-                var create = await manager.TryCreateRequestAsync<IOperationResult<string>>("TestRequest", requestId);
+                var replay = await manager.TryBeginRequestAsync("TestRequest", requestId);
 
                 // Assert
-                create.HasData.Should().BeTrue("Cached result should be retrieved");
-                var cachedResult = create.DataValue;
+                replay.Outcome.Should().Be(IdempotencyOutcome.Completed);
+                replay.StoredResult.Should().NotBeNullOrEmpty("Cached result should be retrieved");
+                var cachedResult = serializer.Deserialize<IOperationResult<string>>(replay.StoredResult);
                 cachedResult.Should().NotBeNull();
                 cachedResult!.Succeeded.Should().BeTrue();
                 cachedResult.Data.Should().Be("Success data");
@@ -463,6 +469,7 @@ local cursor = '0' repeat local res = redis.call('SCAN', cursor, 'MATCH', ARGV[1
             // Arrange
             var serviceProvider = BuildServiceProvider(provider);
             var manager = serviceProvider.GetRequiredService<IIdempotencyService>();
+            var serializer = serviceProvider.GetRequiredService<IMessageSerializer>();
             var requestId = Guid.NewGuid().ToString();
             var expectedResult = new ComplexTestResult
             {
@@ -474,15 +481,16 @@ local cursor = '0' repeat local res = redis.call('SCAN', cursor, 'MATCH', ARGV[1
 
             try
             {
-                await manager.TryCreateRequestAsync("TestRequest", requestId);
+                await manager.TryBeginRequestAsync("TestRequest", requestId);
                 await manager.TryCompleteRequestAsync("TestRequest", requestId, success: true, result: expectedResult);
 
                 // Act
-                var create = await manager.TryCreateRequestAsync<ComplexTestResult>("TestRequest", requestId);
+                var replay = await manager.TryBeginRequestAsync("TestRequest", requestId);
 
                 // Assert
-                create.HasData.Should().BeTrue("Cached result should be retrieved");
-                var cachedResult = create.DataValue;
+                replay.Outcome.Should().Be(IdempotencyOutcome.Completed);
+                replay.StoredResult.Should().NotBeNullOrEmpty("Cached result should be retrieved");
+                var cachedResult = serializer.Deserialize<ComplexTestResult>(replay.StoredResult);
                 cachedResult.Should().NotBeNull();
                 cachedResult!.Id.Should().Be(expectedResult.Id);
                 cachedResult.Name.Should().Be(expectedResult.Name);
@@ -512,7 +520,7 @@ local cursor = '0' repeat local res = redis.call('SCAN', cursor, 'MATCH', ARGV[1
             try
             {
                 // Act
-                await manager.TryCreateRequestAsync("TestRequest", requestId);
+                await manager.TryBeginRequestAsync("TestRequest", requestId);
 
                 // Assert
                 var connectionProvider = serviceProvider.GetRequiredService<IRedisConnectionProvider<Idempotency.Redis.RedisIdempotencyService>>();
@@ -544,7 +552,7 @@ local cursor = '0' repeat local res = redis.call('SCAN', cursor, 'MATCH', ARGV[1
 
             try
             {
-                await manager.TryCreateRequestAsync("TestRequest", requestId);
+                await manager.TryBeginRequestAsync("TestRequest", requestId);
 
                 // Act
                 await manager.TryCompleteRequestAsync("TestRequest", requestId, success: true, result: "Test data");
@@ -587,7 +595,7 @@ local cursor = '0' repeat local res = redis.call('SCAN', cursor, 'MATCH', ARGV[1
 
             try
             {
-                await manager.TryCreateRequestAsync("TestRequest", requestId);
+                await manager.TryBeginRequestAsync("TestRequest", requestId);
 
                 // Act - Try to store an object with circular reference (should handle gracefully)
                 var circularObject = new CircularReferenceObject();
@@ -626,7 +634,7 @@ local cursor = '0' repeat local res = redis.call('SCAN', cursor, 'MATCH', ARGV[1
                     .Select(async i =>
                     {
                         var requestId = Guid.NewGuid().ToString();
-                        await manager.TryCreateRequestAsync("TestRequest", requestId);
+                        await manager.TryBeginRequestAsync("TestRequest", requestId);
                         await manager.TryCompleteRequestAsync("TestRequest", requestId, success: true, result: $"Result {i}");
                         return requestId;
                     });
@@ -665,7 +673,7 @@ local cursor = '0' repeat local res = redis.call('SCAN', cursor, 'MATCH', ARGV[1
 
             try
             {
-                await manager.TryCreateRequestAsync("ProcessedByTest", requestId);
+                await manager.TryBeginRequestAsync("ProcessedByTest", requestId);
 
                 using var scope = serviceProvider.CreateScope();
                 var db = scope.ServiceProvider.GetRequiredService<IdempotencyContext>();
@@ -695,7 +703,7 @@ local cursor = '0' repeat local res = redis.call('SCAN', cursor, 'MATCH', ARGV[1
 
             try
             {
-                await manager.TryCreateRequestAsync("ProcessedByTest", requestId);
+                await manager.TryBeginRequestAsync("ProcessedByTest", requestId);
                 await manager.TryCompleteRequestAsync("ProcessedByTest", requestId, success: true, result: null);
 
                 using var scope = serviceProvider.CreateScope();
@@ -725,7 +733,7 @@ local cursor = '0' repeat local res = redis.call('SCAN', cursor, 'MATCH', ARGV[1
 
             try
             {
-                await manager.TryCreateRequestAsync("ProcessedByTest", requestId);
+                await manager.TryBeginRequestAsync("ProcessedByTest", requestId);
                 await manager.TryCompleteRequestAsync("ProcessedByTest", requestId, success: true, result: null);
 
                 using var scope = serviceProvider.CreateScope();
