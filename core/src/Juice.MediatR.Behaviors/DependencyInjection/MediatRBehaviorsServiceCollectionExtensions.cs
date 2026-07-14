@@ -1,6 +1,8 @@
 ﻿using Juice.MediatR.Behaviors;
 using Juice.MediatR;
 using Juice.Messaging;
+using Juice.Messaging.Idempotency;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
@@ -16,6 +18,11 @@ namespace Microsoft.Extensions.DependencyInjection
         {
             var idempotencyBuilder = new MediatorIdempotencyBuilder(builder.Services);
             configure?.Invoke(idempotencyBuilder);
+
+            // Tenant-partitioned scoping (P2), shared with the HTTP layer. Hosts can override either
+            // abstraction with a Finbuckle-backed provider; defaults are the null/unscoped partition.
+            builder.Services.TryAddScoped<IIdempotencyTenantProvider, NullIdempotencyTenantProvider>();
+            builder.Services.TryAddScoped<IIdempotencyScopeProvider, DefaultIdempotencyScopeProvider>();
 
             builder.AddOpenBehavior(typeof(IdempotencyRequestBehavior<,>));
             builder.AddOpenBehavior(typeof(IdempotencyRequestBehavior<>));
