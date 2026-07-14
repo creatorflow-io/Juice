@@ -45,6 +45,14 @@ namespace Juice.Messaging.Idempotency.EF
             builder.Property(e => e.ProcessedBy)
                 .HasMaxLength(LengthConstants.NameLength);
 
+            builder.Property(e => e.RequestHash)
+                .HasMaxLength(128);
+
+            builder.HasIndex(e => e.ExpiresAt)
+                .HasDatabaseName("IX_Idempotency_ExpiresAt");
+
+            builder.HasIndex(e => new { e.State, e.LockedAt })
+                .HasDatabaseName("IX_Idempotency_State_LockedAt");
         }
     }
 

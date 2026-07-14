@@ -7,6 +7,13 @@
         <Description>EF core migration assembly</Description>
     </PropertyGroup>
 
+    <ItemGroup Label="Design-time (migrations tooling)">
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="$(EFVersion)">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
+    </ItemGroup>
+
     <ItemGroup>
       <ProjectReference Include="..\Juice.Messaging.Idempotency.EF\Juice.Messaging.Idempotency.EF.csproj" />
     </ItemGroup>

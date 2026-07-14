@@ -25,7 +25,7 @@ namespace Juice.Messaging.Idempotency.EF.Migrations
                    {
                        "PostgreSQL" => options.UseNpgsql(
                            configuration.GetConnectionString("PostgreConnection")
-                           //, x => x.MigrationsAssembly("Juice.Messaging.Idempotency.EF.PostgreSQL")
+                           , x => x.MigrationsAssembly("Juice.Messaging.Idempotency.EF.PostgreSQL")
                            ),
 
                        "SqlServer" => options.UseSqlServer(
