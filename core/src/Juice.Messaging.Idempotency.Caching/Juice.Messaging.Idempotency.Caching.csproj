@@ -11,6 +11,10 @@
         <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="$(MicrosoftExtensionsVersion)" />
     </ItemGroup>
     <ItemGroup>
+        <InternalsVisibleTo Include="Juice.AspNetCore.Idempotency.Tests" />
+        <InternalsVisibleTo Include="Juice.Messaging.Idempotency.Tests" />
+    </ItemGroup>
+    <ItemGroup>
         <ProjectReference Include="..\Juice.Messaging\Juice.Messaging.csproj" />
         <ProjectReference Include="..\Juice\Juice.csproj" />
     </ItemGroup>
