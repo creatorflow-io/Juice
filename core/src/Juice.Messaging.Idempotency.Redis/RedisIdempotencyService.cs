@@ -1,32 +1,38 @@
 ﻿using Juice.Extensions.Redis;
+using Juice.Messaging.Idempotency;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 
 namespace Juice.Messaging.Idempotency.Redis
 {
     public class RedisIdempotencyService : IIdempotencyService
     {
-        /// <summary>  
-        /// Gets the connection.  
-        /// </summary>  
-        /// <value>The connection.</value>  
+        /// <summary>
+        /// Gets the connection.
+        /// </summary>
+        /// <value>The connection.</value>
         protected IRedisConnectionProvider ConnectionProvider { get; set; }
 
         private readonly IMessageSerializer _serializer;
         private readonly ILogger _logger;
+        private readonly IdempotencyOptions _options;
 
         // Redis key prefixes for better organization
         private const string REQUEST_PREFIX = "request";
         private const string RESULT_PREFIX = "result";
         private const string STATE_PREFIX = "state";
+        private const string HASH_PREFIX = "hash";
 
         public RedisIdempotencyService(ILogger<RedisIdempotencyService> logger,
             IRedisConnectionProvider<RedisIdempotencyService> redisConnectionProvider,
-            IMessageSerializer serializer)
+            IMessageSerializer serializer,
+            IOptions<IdempotencyOptions>? options = null)
         {
             _logger = logger;
             ConnectionProvider = redisConnectionProvider;
             _serializer = serializer;
+            _options = options?.Value ?? new IdempotencyOptions();
         }
 
         /// <summary>
@@ -56,11 +62,21 @@ namespace Juice.Messaging.Idempotency.Redis
             return $"{STATE_PREFIX}:{scope}:{key}";
         }
 
+        /// <summary>
+        /// Generates the Redis key for the request fingerprint
+        /// Format: "hash:{scope}:{key}"
+        /// </summary>
+        private string GetHashKey(string scope, string key)
+        {
+            return $"{HASH_PREFIX}:{scope}:{key}";
+        }
+
         public async ValueTask TryCompleteRequestAsync(string scope, string key, bool success, object? result, CancellationToken cancellationToken)
         {
             var requestKey = GetRequestKey(scope, key);
             var resultKey = GetResultKey(scope, key);
             var stateKey = GetStateKey(scope, key);
+            var hashKey = GetHashKey(scope, key);
             var connection = await ConnectionProvider.GetConnectionAsync();
             var db = connection.GetDatabase();
 
@@ -75,8 +91,12 @@ namespace Juice.Messaging.Idempotency.Redis
                     var requestUpdateTask = transaction.StringSetAsync(
                         requestKey,
                         DateTimeOffset.UtcNow.ToString("O"),
-                        TimeSpan.FromHours(24),
+                        _options.CompletedRetention,
                         When.Exists);
+
+                    // Extend the fingerprint TTL to the completed-retention window so conflict detection
+                    // keeps working for replayed requests (parity with the EF store). No-op if absent.
+                    var hashExpireTask = transaction.KeyExpireAsync(hashKey, _options.CompletedRetention);
 
                     // Store result if provided
                     Task<bool> resultStoreTask = Task.FromResult(true);
@@ -88,7 +108,7 @@ namespace Juice.Messaging.Idempotency.Redis
                             resultStoreTask = transaction.StringSetAsync(
                                 resultKey,
                                 serializedResult,
-                                TimeSpan.FromHours(24));
+                                _options.CompletedRetention);
                         }
                     }
 
@@ -96,14 +116,14 @@ namespace Juice.Messaging.Idempotency.Redis
                     var stateUpdateTask = transaction.StringSetAsync(
                         stateKey,
                         "completed",
-                        TimeSpan.FromHours(24));
+                        _options.CompletedRetention);
 
                     // Execute transaction
                     var executed = await transaction.ExecuteAsync();
 
                     if (executed)
                     {
-                        await Task.WhenAll(requestUpdateTask, resultStoreTask, stateUpdateTask);
+                        await Task.WhenAll(requestUpdateTask, resultStoreTask, stateUpdateTask, hashExpireTask);
 
                         _logger.LogDebug(
                             "Successfully completed request {RequestId} for {CommandType}. Result cached: {HasResult}",
@@ -123,12 +143,14 @@ namespace Juice.Messaging.Idempotency.Redis
                         local requestKey = KEYS[1]
                         local resultKey = KEYS[2]
                         local stateKey = KEYS[3]
+                        local hashKey = KEYS[4]
                         local expectedValue = ARGV[1]
-                        
+
                         if redis.call('EXISTS', requestKey) == 1 then
                             redis.call('DEL', requestKey)
                             redis.call('DEL', resultKey)
                             redis.call('DEL', stateKey)
+                            redis.call('DEL', hashKey)
                             return 1
                         else
                             return 0
@@ -137,7 +159,7 @@ namespace Juice.Messaging.Idempotency.Redis
 
                     var res = await db.ScriptEvaluateAsync(
                         lua_script,
-                        new RedisKey[] { requestKey, resultKey, stateKey },
+                        new RedisKey[] { requestKey, resultKey, stateKey, hashKey },
                         new RedisValue[] { "" });
 
                     var deleted = (long)res;
@@ -164,11 +186,13 @@ namespace Juice.Messaging.Idempotency.Redis
             }
         }
 
-        public async ValueTask<IOperationResult<T>> TryCreateRequestAsync<T>(string scope, string key, CancellationToken cancellationToken)
+        public async ValueTask<IdempotencyResult> TryBeginRequestAsync(string scope, string key,
+            string? requestHash = null, CancellationToken cancellationToken = default)
         {
             var requestKey = GetRequestKey(scope, key);
-            var resultKey = GetResultKey(scope, key);
             var stateKey = GetStateKey(scope, key);
+            var resultKey = GetResultKey(scope, key);
+            var hashKey = GetHashKey(scope, key);
 
             IConnectionMultiplexer connection;
             try
@@ -177,172 +201,51 @@ namespace Juice.Messaging.Idempotency.Redis
             }
             catch (Exception ex)
             {
-                _logger.LogError(
-                    ex,
-                    "Error while trying to get Redis connection for request {RequestId} for {CommandType}",
-                    key, scope);
-                return OperationResult.Failed<T>(ex, 
-                    $"Error while trying to get Redis connection.");
+                _logger.LogError(ex, "Error getting Redis connection to begin request {RequestId} for {CommandType}", key, scope);
+                return new IdempotencyResult(IdempotencyOutcome.InProgress);
             }
 
             try
             {
                 var db = connection.GetDatabase();
 
-                // Use transaction to ensure both keys are created together
-                var transaction = db.CreateTransaction();
-
-                var requestCreateTask = transaction.StringSetAsync(
-                    requestKey,
-                    "",
-                    TimeSpan.FromMinutes(15),
-                    When.NotExists);
-
-                var stateCreateTask = transaction.StringSetAsync(
-                    stateKey,
-                    "pending",
-                    TimeSpan.FromMinutes(15),
-                    When.NotExists);
-
-                var executed = await transaction.ExecuteAsync();
-
-                if (!executed)
+                // SET NX is the atomic concurrency guard: exactly one caller creates the marker.
+                var created = await db.StringSetAsync(requestKey, DateTimeOffset.UtcNow.ToString("O"),
+                    _options.InFlightTtl, When.NotExists);
+                if (created)
                 {
-                    _logger.LogWarning(
-                        "Request marker for {RequestId} for {CommandType} already exists (transaction failed)",
-                        key, scope);
-                    var result = await GetCachedResultAsync<T>(scope, key);
-                    return OperationResult.Failed(
-                        $"Request marker for '{key}' in scope '{scope}' already exists.",
-                        result);
+                    await db.StringSetAsync(stateKey, "pending", _options.InFlightTtl, When.NotExists);
+                    if (!string.IsNullOrEmpty(requestHash))
+                    {
+                        await db.StringSetAsync(hashKey, requestHash, _options.InFlightTtl, When.NotExists);
+                    }
+                    return new IdempotencyResult(IdempotencyOutcome.Created);
                 }
 
-                var created = await Task.WhenAll(requestCreateTask, stateCreateTask);
-                if (!created.All(c => c))
+                // Same key, materially different payload → conflict (FR-005).
+                var storedHash = await db.StringGetAsync(hashKey);
+                if (!storedHash.IsNullOrEmpty && !string.IsNullOrEmpty(requestHash)
+                    && !string.Equals(storedHash.ToString(), requestHash, StringComparison.Ordinal))
                 {
-                    _logger.LogWarning(
-                        "Request marker for {RequestId} for {CommandType} already exists",
-                        key, scope);
-                    var result = await GetCachedResultAsync<T>(scope, key);
-                    return OperationResult.Failed(
-                        $"Request marker for '{key}' in scope '{scope}' already exists.",
-                        result);
+                    return new IdempotencyResult(IdempotencyOutcome.Conflict);
                 }
 
-                _logger.LogDebug(
-                    "Successfully created request marker for {RequestId} for {CommandType}",
-                    key, scope);
-                return OperationResult.Result<T>(default);
+                var state = await db.StringGetAsync(stateKey);
+                if (state == "completed")
+                {
+                    var stored = await db.StringGetAsync(resultKey);
+                    return new IdempotencyResult(IdempotencyOutcome.Completed,
+                        stored.IsNullOrEmpty ? null : stored.ToString());
+                }
+
+                return new IdempotencyResult(IdempotencyOutcome.InProgress);
             }
             catch (Exception ex)
             {
-                _logger.LogError(
-                    ex,
-                    "Error while trying to create request {RequestId} for {CommandType}",
-                    key, scope);
-                var result = await GetCachedResultAsync<T>(scope, key);
-                return OperationResult.Failed(
-                    $"Request marker for '{key}' in scope '{scope}' already exists.",
-                    result);
+                _logger.LogError(ex, "Error beginning request {RequestId} for {CommandType}", key, scope);
+                return new IdempotencyResult(IdempotencyOutcome.InProgress);
             }
         }
 
-        private async ValueTask<TR?> GetCachedResultAsync<TR>(string scope, string key)
-        {
-            var connection = await ConnectionProvider.GetConnectionAsync();
-            var db = connection.GetDatabase();
-
-            try
-            {
-                var resultKey = GetResultKey(scope, key);
-                var cachedValue = await db.StringGetAsync(resultKey);
-
-                if (cachedValue.IsNullOrEmpty)
-                {
-                    _logger.LogDebug(
-                        "Cached result is empty for {Scope} {RequestId}",
-                        scope, key);
-                    return default;
-                }
-
-                var result = _serializer.Deserialize<TR>(cachedValue!, default);
-
-                _logger.LogDebug(
-                    "Retrieved cached result for {Scope} {RequestId}. Type: {ResultType}",
-                    scope, key, typeof(TR).Name);
-
-                return result;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "Error while retrieving cached result for {Scope} {RequestId}. {Message}",
-                    scope, key, ex.Message);
-                return default;
-            }
-        }
-
-        public async ValueTask<IOperationResult> TryCreateRequestAsync(string scope, string key, CancellationToken cancellationToken)
-        {
-            var requestKey = GetRequestKey(scope, key);
-            var stateKey = GetStateKey(scope, key);
-            var connection = await ConnectionProvider.GetConnectionAsync();
-            var db = connection.GetDatabase();
-
-            try
-            {
-                // Use transaction to ensure both keys are created together
-                var transaction = db.CreateTransaction();
-
-                var requestCreateTask = transaction.StringSetAsync(
-                    requestKey,
-                    "",
-                    TimeSpan.FromMinutes(15),
-                    When.NotExists);
-
-                var stateCreateTask = transaction.StringSetAsync(
-                    stateKey,
-                    "pending",
-                    TimeSpan.FromMinutes(15),
-                    When.NotExists);
-
-                var executed = await transaction.ExecuteAsync();
-
-                if (!executed)
-                {
-                    _logger.LogWarning(
-                        "Request marker for {RequestId} for {CommandType} already exists (transaction failed)",
-                        key, scope);
-                    return OperationResult.Failed(
-                        $"Request marker for '{key}' in scope '{scope}' already exists.");
-                }
-
-                var created = await Task.WhenAll(requestCreateTask, stateCreateTask);
-                if (!created.All(c => c))
-                {
-                    _logger.LogWarning(
-                        "Request marker for {RequestId} for {CommandType} already exists",
-                        key, scope);
-                    return OperationResult.Failed(
-                        $"Request marker for '{key}' in scope '{scope}' already exists.");
-                }
-
-                _logger.LogDebug(
-                    "Successfully created request marker for {RequestId} for {CommandType}",
-                    key, scope);
-                return OperationResult.Success;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "Error while trying to create request {RequestId} for {CommandType}",
-                    key, scope);
-                return OperationResult.Failed(
-                    $"Request marker for '{key}' in scope '{scope}' already exists."
-                   );
-            }
-        }
     }
 }
