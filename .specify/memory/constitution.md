@@ -1,35 +1,31 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: (initial creation from template) → 1.0.0
-Bump type: MAJOR — first ratification; all content is new.
+Version change: 1.0.0 → 1.1.0
+Bump type: MINOR — Technology Constraints updated to reflect the repo's actual
+  release/10 target matrix; no principle added, removed, or redefined.
 
-Principles defined (all new):
-  - I. Lightweight & Dual-Architecture
-  - II. Library-First Composability
-  - III. Domain-Driven Design + CQRS
-  - IV. Reliable Messaging via Outbox Pattern
-  - V. Multi-Tenancy First
+Modified sections:
+  - Technology Constraints — Language/Runtime now spans .NET 6/8/9/10 (was 6/8/9);
+    ORM adds EF 10 for net10; Multi-tenancy pins Finbuckle 8.1.x (net6) / 9.1.x
+    (net8/9/10); added a Testing entry (xUnit v3). Values grounded in
+    Directory.Build.props (AppTargetFramework, EFVersion, FinbuckleVersion,
+    XUnitV3Version).
 
-Added sections:
-  - Core Principles (5 principles)
-  - Technology Constraints
-  - Development Workflow & Quality Gates
-  - Governance
-
-Removed sections: N/A (initial creation)
+Principles: unchanged (I–V).
+Added sections: none.
+Removed sections: none.
 
 Templates status:
-  ✅ .specify/templates/plan-template.md — reviewed; Constitution Check section is
-     runtime-filled by /speckit.plan; compatible as-is.
-  ✅ .specify/templates/spec-template.md — reviewed; generic template; compatible.
-  ✅ .specify/templates/tasks-template.md — reviewed; generic template; compatible.
-  ✅ .specify/templates/agent-file-template.md — reviewed; generic template; compatible.
+  ✅ .specify/templates/plan-template.md — Constitution Check is runtime-filled by
+     /speckit.plan; no framework versions hard-coded; compatible as-is.
+  ✅ .specify/templates/spec-template.md — generic; no tech-version coupling; compatible.
+  ✅ .specify/templates/tasks-template.md — generic; compatible.
+  ✅ .specify/templates/agent-file-template.md — generic; compatible.
 
 Follow-up TODOs:
   - plan-template.md: Consider adding a "Library / NuGet Package" project structure
-    option (core/src/, core/test/) alongside the existing web/mobile options, to
-    better serve Juice-style library feature work.
+    option (core/src/, core/test/) alongside the existing web/mobile options.
   - No placeholders intentionally deferred.
 -->
 
@@ -140,16 +136,22 @@ simplifies per-tenant configuration at scale.
 
 ## Technology Constraints
 
-- **Language / Runtime**: C# on .NET 6, .NET 8, .NET 9. Libraries target
-  `netstandard2.1`; runnable apps target `net6.0;net8.0;net9.0`.
+- **Language / Runtime**: C# (`LangVersion=latest`) on .NET 6, .NET 8, .NET 9, and
+  .NET 10. Libraries target `netstandard2.1` (`LibraryTargetFramework`); runnable
+  apps target `net6.0;net8.0;net9.0;net10.0` (`AppTargetFramework`); test projects
+  target `net8.0;net9.0;net10.0` (`AppTestTargetFramework`). The authoritative matrix
+  lives in `Directory.Build.props`.
 - **ORM**: Entity Framework Core (version-matched: EF 7 for net6, EF 8 for net8,
-  EF 9 for net9). Raw SQL MUST NOT bypass EF-managed migrations.
+  EF 9 for net9, EF 10 for net10). Raw SQL MUST NOT bypass EF-managed migrations.
 - **Message Broker**: RabbitMQ via `RabbitMQ.Client 7.x`. Supporting an additional
   broker requires a new `ITransportPublisher` implementation registered as a keyed
   singleton.
-- **Multi-tenancy library**: Finbuckle.MultiTenant 8.x (net6/net8) / 9.x (net9).
+- **Multi-tenancy library**: Finbuckle.MultiTenant 8.1.x (net6) / 9.1.x (net8, net9,
+  net10).
 - **Caching / Idempotency**: StackExchange.Redis 2.8+ or EF-backed; idempotency
   store MUST be pluggable via the `IIdempotencyService` abstraction.
+- **Testing**: xUnit v3 (`XUnitV3Version`). Infrastructure-dependent tests MUST be
+  guarded per the Development Workflow quality gates below.
 - **Serialization**: Newtonsoft.Json for dynamic entity properties and options
   store (TypeNameHandling + KnownTypesBinder). System.Text.Json for message
   serialization. Do not mix serializers within the same boundary.
@@ -208,4 +210,4 @@ before Phase 0 research and re-verified after Phase 1 design.
 Runtime development guidance lives in `.claude/` (architecture.md,
 messaging-outbox.md, domain-patterns.md, di-patterns.md, extensions.md).
 
-**Version**: 1.0.0 | **Ratified**: 2026-02-24 | **Last Amended**: 2026-02-24
+**Version**: 1.1.0 | **Ratified**: 2026-02-24 | **Last Amended**: 2026-07-12

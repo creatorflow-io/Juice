@@ -279,7 +279,7 @@ This is how atomicity is achieved across two DbContext instances.
 
 ## Idempotency (Consumer Side)
 ```
-IIdempotencyService        — TryCreateRequestAsync, TryCompleteRequestAsync
+IIdempotencyService        — TryBeginRequestAsync, TryCompleteRequestAsync
 Implementations:
   - InMemoryIdempotencyService
   - DistributedCacheIdempotencyService
