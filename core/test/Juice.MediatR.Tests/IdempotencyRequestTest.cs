@@ -235,10 +235,10 @@ namespace Juice.MediatR.Tests
             try
             {
                 // Act
-                var ok = await requestManager.TryCreateRequestAsync("Request", key);
+                var begin = await requestManager.TryBeginRequestAsync("Request", key);
 
                 // Assert
-                ok.Succeeded.Should().BeTrue();
+                begin.Outcome.Should().Be(IdempotencyOutcome.Created);
 
                 await requestManager.TryCompleteRequestAsync("Request", key, true);
 

@@ -270,24 +270,6 @@ namespace Juice.Messaging.Local.Tests
         {
             private readonly ConcurrentDictionary<string, bool> _requests = new();
 
-            public ValueTask<IOperationResult> TryCreateRequestAsync(
-                string scope, string key, CancellationToken cancellationToken = default)
-            {
-                var requestKey = $"{scope}:{key}";
-                return _requests.TryAdd(requestKey, false)
-                    ? ValueTask.FromResult(OperationResult.Success)
-                    : ValueTask.FromResult(OperationResult.Failed("Duplicate"));
-            }
-
-            public ValueTask<IOperationResult<TResult>> TryCreateRequestAsync<TResult>(
-                string scope, string key, CancellationToken cancellationToken = default)
-            {
-                var requestKey = $"{scope}:{key}";
-                return _requests.TryAdd(requestKey, false)
-                    ? ValueTask.FromResult(OperationResult.Succeeded<TResult>("Created"))
-                    : ValueTask.FromResult(OperationResult.Failed<TResult>("Duplicate"));
-            }
-
             public ValueTask TryCompleteRequestAsync(
                 string scope, string key, bool success,
                 object? result = null, CancellationToken cancellationToken = default)
@@ -298,6 +280,23 @@ namespace Juice.Messaging.Local.Tests
                 else
                     _requests.TryRemove(requestKey, out _);
                 return ValueTask.CompletedTask;
+            }
+
+            public ValueTask<IdempotencyResult> TryBeginRequestAsync(
+                string scope, string key, string? requestHash = null, CancellationToken cancellationToken = default)
+            {
+                var requestKey = $"{scope}:{key}";
+
+                // Atomic add is the concurrency guard: exactly one caller creates the marker.
+                if (_requests.TryAdd(requestKey, false))
+                    return ValueTask.FromResult(new IdempotencyResult(IdempotencyOutcome.Created));
+
+                // Existing marker: completed (true) → replay; otherwise still in flight.
+                // This simple test store keeps no fingerprint or stored result.
+                var outcome = _requests.TryGetValue(requestKey, out var completed) && completed
+                    ? IdempotencyOutcome.Completed
+                    : IdempotencyOutcome.InProgress;
+                return ValueTask.FromResult(new IdempotencyResult(outcome));
             }
         }
     }
