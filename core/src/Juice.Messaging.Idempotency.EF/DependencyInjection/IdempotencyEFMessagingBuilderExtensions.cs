@@ -87,6 +87,9 @@ namespace Microsoft.Extensions.DependencyInjection
             });
 
             services.AddScoped<IIdempotencyService, IdempotencyService>();
+
+            // Keep the durable store bounded (FR-009) and unblock crashed in-flight keys (FR-010).
+            services.AddHostedService<IdempotencyPurgeHostedService>();
             return builder;
         }
     }

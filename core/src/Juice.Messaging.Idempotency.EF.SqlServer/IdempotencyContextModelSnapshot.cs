@@ -17,7 +17,7 @@ namespace Juice.Messaging.Idempotency.EF.SqlServer
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "7.0.20")
+                .HasAnnotation("ProductVersion", "9.0.17")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -36,13 +36,21 @@ namespace Juice.Messaging.Idempotency.EF.SqlServer
                         .HasColumnType("datetimeoffset");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetimeoffset")
-                        .HasDefaultValue(new DateTimeOffset(new DateTime(2026, 2, 8, 8, 8, 1, 775, DateTimeKind.Unspecified).AddTicks(2151), new TimeSpan(0, 7, 0, 0, 0)));
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("ExpiresAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("LockedAt")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<string>("ProcessedBy")
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("RequestHash")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
 
                     b.Property<string>("Result")
                         .HasColumnType("nvarchar(max)");
@@ -51,6 +59,12 @@ namespace Juice.Messaging.Idempotency.EF.SqlServer
                         .HasColumnType("int");
 
                     b.HasKey("Scope", "Key");
+
+                    b.HasIndex("ExpiresAt")
+                        .HasDatabaseName("IX_Idempotency_ExpiresAt");
+
+                    b.HasIndex("State", "LockedAt")
+                        .HasDatabaseName("IX_Idempotency_State_LockedAt");
 
                     b.ToTable("IdempotencyRecords", "App");
                 });
