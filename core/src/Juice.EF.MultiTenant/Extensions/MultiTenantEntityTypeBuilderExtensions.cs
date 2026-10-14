@@ -63,7 +63,7 @@ namespace Juice.MultiTenant.EF.Extensions
                 throw new MultiTenantException($"{builder.Metadata.ClrType} unable to add TenantId property", ex);
             }
 
-            // build expression tree for e => EF.Property<string>(e, "TenantId") == TenantInfo.MessageId
+            // build expression tree for e => EF.Property<string>(e, "TenantId") == TenantInfo.Id
 
             // where e is one of our entity types
             // will need this ParameterExpression for next step and for final step
@@ -82,7 +82,7 @@ namespace Juice.MultiTenant.EF.Extensions
             var efPropertyExp = Expression.Call(typeof(Microsoft.EntityFrameworkCore.EF), nameof(Microsoft.EntityFrameworkCore.EF.Property), new[] { typeof(string) }, entityParamExp, tenantIdExp);
             var entityExp = efPropertyExp;
 
-            // build up express tree for: TenantInfo?.MessageId
+            // build up express tree for: TenantInfo?.Id
             // EF will magically sub the current db context in for scope.Context
             var scopeConstantExp = Expression.Constant(new ExpressionVariableScope());
             var contextMemberInfo = typeof(ExpressionVariableScope).GetMember(nameof(ExpressionVariableScope.Context))[0];
@@ -99,7 +99,7 @@ namespace Juice.MultiTenant.EF.Extensions
 
             var predicate = entitySharingType switch
             {
-                // (EF.Property<string>(e, "TenantId") == TenantInfo.MessageId
+                // (EF.Property<string>(e, "TenantId") == TenantInfo.Id
                 // OR ( EF.Property<string>(e, "TenantId") == null
                 // OR EF.Property<string>(e, "TenantId") == '')
                 SharingType.Tenant => Expression.OrElse(
@@ -107,17 +107,17 @@ namespace Juice.MultiTenant.EF.Extensions
                     Expression.OrElse(
                         Expression.Equal(entityExp, Expression.Constant(null)),
                         Expression.Equal(entityExp, Expression.Constant("")))),
-                // (EF.Property<string>(e, "TenantId") == TenantInfo.MessageId
-                // OR TenantInfo.MessageId == null OR TenantInfo.MessageId == ''
+                // (EF.Property<string>(e, "TenantId") == TenantInfo.Id
+                // OR TenantInfo.Id == null OR TenantInfo.Id == ''
                 SharingType.Global => Expression.OrElse(
                     Expression.Equal(entityExp, contextExp),
                     Expression.OrElse(
                         Expression.Equal(contextExp, Expression.Constant(null)),
                         Expression.Equal(contextExp, Expression.Constant("")))),
-                // (EF.Property<string>(e, "TenantId") == TenantInfo.MessageId
+                // (EF.Property<string>(e, "TenantId") == TenantInfo.Id
                 // OR (
                 //      (EF.Property<string>(e, "TenantId") == null OR EF.Property<string>(e, "TenantId") == '')
-                //      AND (TenantInfo.MessageId == null OR TenantInfo.MessageId == '')
+                //      AND (TenantInfo.Id == null OR TenantInfo.Id == '')
                 //    )
                 _ => Expression.OrElse(
                     Expression.Equal(entityExp, contextExp),

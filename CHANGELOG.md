@@ -1,3 +1,16 @@
+# v10.3.1 - Multi-tenant DbContext fix
+
+## Fixes
+
+### `Juice.EF.MultiTenant`
+- `MultiTenantDbContext.TenantInfo` is now resolved from `IMultiTenantContextAccessor` on every access instead of
+  being captured once in `ConfigureServices`. Contexts created before tenant resolution (or reused from a pool) no
+  longer stay pinned to a stale/`null` tenant, which previously caused query filters and `EnforceTenantPolicies`
+  to treat them as the root tenant.
+- `TenantInfo` is now get-only (the former `internal` setter is removed).
+- Note: a long-lived context follows the ambient tenant if it changes between operations.
+- Fixed `TenantInfo.MessageId` → `TenantInfo.Id` in XML docs and comments.
+
 # v10.3.0 - HTTP Idempotency-Key Support (Server Side)
 
 ## Features

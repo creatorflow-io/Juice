@@ -11,10 +11,16 @@ namespace Juice.MultiTenant.EF
     public abstract class MultiTenantDbContext : DbContextBase, IMultiTenantDbContext
     {
         #region Finbuckle
-        public virtual ITenantInfo? TenantInfo { get; internal set; }
+        // TenantInfo is resolved from the accessor on every access (not captured at construction),
+        // so it reflects tenants resolved after the context was created and stays correct for pooled contexts.
+        // Note: a long-lived context will follow the ambient tenant if it changes between operations.
+        private IMultiTenantContextAccessor? _multiTenantContextAccessor;
+
+        public virtual ITenantInfo? TenantInfo => _multiTenantContextAccessor?.MultiTenantContext.TenantInfo;
         public abstract TenantMismatchMode TenantMismatchMode { get; set; }
 
         public abstract TenantNotSetMode TenantNotSetMode { get; set; }
+
         #endregion
 
         public override string? TenantId => TenantInfo?.Id;
@@ -34,7 +40,7 @@ namespace Juice.MultiTenant.EF
         {
             base.ConfigureServices(serviceProvider);
 
-            TenantInfo = serviceProvider.GetService<IMultiTenantContextAccessor>()?.MultiTenantContext.TenantInfo;
+            _multiTenantContextAccessor = serviceProvider.GetService<IMultiTenantContextAccessor>();
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

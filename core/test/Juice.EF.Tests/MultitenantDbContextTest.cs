@@ -188,6 +188,48 @@ namespace Juice.EF.Tests
             }, null);
         }
 
+        [Fact(DisplayName = "TenantInfo should follow tenant resolved after dbcontext creation")]
+        public void Tenant_resolved_after_dbcontext_creation_should_be_visible()
+        {
+            var services = new ServiceCollection();
+            services.AddDbContext<Juice.EF.Tests.Infrastructure.TestContext>(options =>
+            {
+                // No connection is opened: the test only reads TenantInfo and generates SQL
+                options.UseSqlServer("Server=localhost;Database=NotUsed;Trusted_Connection=True;");
+            });
+            services.AddTestTenants<TenantInfo>("tenant-A", "tenant-B");
+            services.AddLogging();
+
+            using var provider = services.BuildServiceProvider();
+            using var scope = provider.CreateScope();
+
+            // Resolve the dbcontext BEFORE any tenant is set
+            var dbContext = scope.ServiceProvider.GetRequiredService<Juice.EF.Tests.Infrastructure.TestContext>();
+            dbContext.TenantInfo.Should().BeNull();
+            dbContext.TenantId.Should().BeNull();
+
+            var tenantResolver = scope.ServiceProvider.GetRequiredService<IScopedTenantResolver<TenantInfo>>();
+
+            using (tenantResolver.Resolve("tenant-A"))
+            {
+                dbContext.TenantInfo.Should().NotBeNull();
+                dbContext.TenantId.Should().Be("tenant-A");
+
+                // Query filter must pick up the late-resolved tenant
+                var sql = dbContext.Set<CrossTenantContent>().ToQueryString();
+                _output.WriteLine(sql);
+                sql.Should().Contain("'tenant-A'");
+            }
+
+            using (tenantResolver.Resolve("tenant-B"))
+            {
+                dbContext.TenantId.Should().Be("tenant-B");
+            }
+
+            // Previous (empty) tenant context is restored
+            dbContext.TenantInfo.Should().BeNull();
+        }
+
         [IgnoreOnCIFact(DisplayName = "Tenant shared entities should"), TestPriority(2)]
         public async Task TenantShared_dbcontext_shouldAsync()
         {
