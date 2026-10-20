@@ -1,3 +1,33 @@
+# v10.4.0 - Atomic multi-aggregate transactions
+
+## Fixes
+
+### `Juice.MediatR.Behaviors` / `Juice.EF`
+- **Cascading events**: events raised while dispatching (e.g. a domain event handler adding another aggregate)
+  are now dispatched too. `TransactionBehavior` uses the new `DispatchEventsUntilStableAsync`, which dispatches
+  domain, audit and data change events in rounds, saving handler changes between rounds, until no new events are
+  raised (max 10 rounds, then throws). Previously such aggregates were persisted but their events never reached
+  the outbox.
+- **Nested commands**: a command sent from another command's handler now joins the outer transaction instead of
+  opening its own and committing the outer command's pending changes early.
+- **Atomic repository writes**: inside a command, `RepositoryBase.AddAsync/UpdateAsync/DeleteAsync` and
+  `UnitOfWork.UpdateAsync/DeleteAsync` now stage changes instead of saving immediately; `TransactionBehavior`
+  saves them in one transaction with the outbox. Previously a command failing after these calls left the rows
+  committed without their integration events. Outside a command they still save immediately.
+- `IsManaged` is now reset when a command completes. Previously it stayed `true` for the rest of the scope, so a
+  later plain `SaveChanges()` did not dispatch events and `IMessageService<TContext>` kept deferring outbox saves.
+
+### Contract change
+`IUnitOfWork` gains `EndManage()`. Contexts deriving from `UnitOfWork` / `DbContextBase` are unaffected; **custom
+`IUnitOfWork` implementations must add it**.
+
+### Behavior changes inside a command (`IsManaged`)
+- Store-generated keys (identity `int`) are not assigned until the transaction behavior saves.
+- Database errors (e.g. duplicate key) are thrown at commit instead of returned as `OperationResult.Failed` from
+  repository/unit-of-work calls.
+- Database queries do not see staged rows; same-context `Find`/`Local` do.
+- To fail a command, throw — returning a failed result after staging changes still commits them.
+
 # v10.3.1 - Multi-tenant DbContext fix
 
 ## Fixes

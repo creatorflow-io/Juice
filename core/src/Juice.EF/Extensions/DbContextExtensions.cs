@@ -460,13 +460,21 @@ namespace Juice.EF.Extensions
         public static IDbContextTransaction? GetCurrentTransaction(this DbContext context)
             => context.Database.CurrentTransaction;
 
+        /// <summary>
+        /// Skips saving when the context is managed by an outer behavior (e.g. <c>TransactionBehavior</c>):
+        /// the changes stay staged and are saved inside its transaction together with the outbox,
+        /// instead of being committed on their own before the transaction begins.
+        /// </summary>
+        private static Task SaveChangesIfNotManagedAsync(this DbContext context, CancellationToken token)
+            => context is IUnitOfWork { IsManaged: true } ? Task.CompletedTask : context.SaveChangesAsync(token);
+
         internal static async Task<IOperationResult<T>> AddAndSaveInternalAsync<T>(this DbContext context, T entity, CancellationToken token = default)
             where T : class
         {
             try
             {
                 var entry = context.Set<T>().Add(entity);
-                await context.SaveChangesAsync(token);
+                await context.SaveChangesIfNotManagedAsync(token);
                 return OperationResult.Result(entry.Entity);
             }
             catch (Exception ex)
@@ -481,7 +489,7 @@ namespace Juice.EF.Extensions
             try
             {
                 context.Set<T>().AddRange(entities);
-                await context.SaveChangesAsync(token);
+                await context.SaveChangesIfNotManagedAsync(token);
                 return OperationResult.Success;
             }
             catch (Exception ex)
@@ -496,7 +504,7 @@ namespace Juice.EF.Extensions
             try
             {
                 context.Set<T>().Remove(entity);
-                await context.SaveChangesAsync(token);
+                await context.SaveChangesIfNotManagedAsync(token);
                 return OperationResult.Success;
             }
             catch (Exception ex)
@@ -515,7 +523,7 @@ namespace Juice.EF.Extensions
                 {
                     context.Set<T>().Update(entity);
                 }
-                await context.SaveChangesAsync(token);
+                await context.SaveChangesIfNotManagedAsync(token);
                 return OperationResult.Success;
             }
             catch (Exception ex)

@@ -270,6 +270,7 @@ namespace Juice.Messaging.Local.Tests
             public bool IsManaged => _isManaged;
             public bool HasActiveTransaction => false;
             public void BeginManage() { }
+            public void EndManage() { }
             public Task<bool> CommitTransactionAsync(Guid transactionId, CancellationToken token = default)
                 => Task.FromResult(true);
             public Task<int> SaveChangesAsync(CancellationToken token = default) => Task.FromResult(0);
@@ -289,6 +290,7 @@ namespace Juice.Messaging.Local.Tests
             public bool IsManaged { get; set; }
             public bool HasActiveTransaction => false;
             public void BeginManage() { IsManaged = true; }
+            public void EndManage() { IsManaged = false; }
             public Task<bool> CommitTransactionAsync(Guid transactionId, CancellationToken token = default)
                 => Task.FromResult(true);
             public Task<int> SaveChangesAsync(CancellationToken token = default) => Task.FromResult(0);

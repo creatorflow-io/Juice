@@ -81,20 +81,20 @@ MessagingBuilder.AddOutboxProxy<TOutbox, TContext>()  — registers the proxy
 ```
 MediatR.Send(Command)
   → TransactionBehavior.Handle()
-    1. BeginManage() — notify DbContext it's being managed
+    0. Already managed (IsManaged/HasActiveTransaction) → nested command: just next(), joins outer transaction
+    1. BeginManage() — notify DbContext it's being managed (repository/UoW writes are staged, not saved)
     2. next() — run handler (domain changes, raise domain events)
     3. ResilientTransaction.ExecuteAsync():
        a. SaveChangesAsync() — persist domain entities
-       b. DispatchDomainEventsAsync() — in-process domain event handlers
-       c. DispatchAuditEventsAsync()  — audit tracking
-       d. DispatchDataChangeEventsAsync()
+       b-d. DispatchEventsUntilStableAsync() — domain, audit, data change events in rounds;
+            SaveChanges between rounds until handlers raise no new events (max 10 rounds)
        e. outboxService.SaveEventsAsync(transaction.TransactionId)
           → OutboxEventService: resolves routes via IMessagePublishingPolicy
           → Builds OutboxEvent + OutboxDelivery[] rows
           → OutboxRepository.SaveEventsAsync() — EF insert (same DB connection/transaction)
        f. CommitTransactionAsync() — commit everything atomically
        g. ClearEvents()
-    4. return response
+    4. return response (finally: EndManage())
 ```
 
 ### Phase 2: Background Delivery (DeliveryHostedService)

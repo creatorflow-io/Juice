@@ -12,6 +12,9 @@ namespace Juice.Domain
     {
         IUnitOfWork<T> UnitOfWork { get; }
 
+        // Add/Delete/Update save immediately, except when UnitOfWork.IsManaged (inside a command handled by
+        // a transaction behavior): the change is only staged and saved by the behavior together with the outbox.
+
         Task<IOperationResult<T>> AddAsync(T entity, CancellationToken token = default);
         Task<IOperationResult> DeleteAsync(T entity, CancellationToken token = default);
         Task<IOperationResult> UpdateAsync(T entity, CancellationToken token = default);

@@ -35,5 +35,7 @@ namespace Juice.EF
             => _unitOfWork.SaveChangesAsync(token);
         public void BeginManage()
             => _unitOfWork.BeginManage();
+        public void EndManage()
+            => _unitOfWork.EndManage();
     }
 }

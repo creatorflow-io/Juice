@@ -14,44 +14,136 @@ namespace Juice.EF.Extensions
                 return;
             }
 
-            var domainEntities = ctx.ChangeTracker
-                .Entries<IAggregateRoot<INotification>>()
-                .Where(x => x.Entity.DomainEvents != null && x.Entity.DomainEvents.Any());
+            await mediator.DispatchDomainEventsCoreAsync(ctx, default);
 
-            var domainEvents = domainEntities
+            if (!clearEvents)
+            {
+                return;
+            }
+
+            ctx.ChangeTracker
+                .Entries<IAggregateRoot<INotification>>()
+                .Where(x => x.Entity.DomainEvents != null && x.Entity.DomainEvents.Any())
+                .ToList()
+                .ForEach(entity => entity.Entity.ClearDomainEvents());
+        }
+
+        public static async Task DispatchAuditEventsAsync(this IMediator? mediator, IAuditableDbContext? ctx,
+            bool clearEvents, ILogger? logger = default)
+        {
+            if (mediator == null)
+            {
+                return;
+            }
+            if (ctx == null)
+            {
+                return;
+            }
+            await mediator.DispatchAuditEventsCoreAsync(ctx, default, logger);
+
+            if (!clearEvents)
+            {
+                return;
+            }
+            ctx.PendingAuditEntries?.Clear();
+        }
+
+        public static async Task DispatchDataChangeEventsAsync(this IMediator? mediator, IAuditableDbContext? ctx,
+            bool clearEvents, ILogger? logger = default)
+        {
+            if (mediator == null)
+            {
+                return;
+            }
+            if (ctx == null)
+            {
+                return;
+            }
+            await mediator.DispatchDataChangeEventsCoreAsync(ctx, default, logger);
+
+            if (!clearEvents)
+            {
+                return;
+            }
+            ctx.PendingDataEvents?.Clear();
+        }
+
+        /// <summary>
+        /// Dispatches domain, audit and data change events repeatedly until handlers raise no new events.
+        /// <para>Handlers may add or modify aggregates while handling an event; those changes are saved
+        /// between rounds so their domain, audit and data change events are dispatched too.</para>
+        /// <para>Events are NOT cleared; already dispatched events are skipped by reference.</para>
+        /// </summary>
+        /// <exception cref="InvalidOperationException">Handlers keep raising new events after <paramref name="maxRounds"/> rounds.</exception>
+        public static async Task DispatchEventsUntilStableAsync(this IMediator? mediator, DbContext ctx,
+            ILogger? logger = default, int maxRounds = 10, CancellationToken cancellationToken = default)
+        {
+            if (mediator == null)
+            {
+                return;
+            }
+
+            var dispatched = new HashSet<object>(ReferenceEqualityComparer.Instance);
+            for (var round = 1; ; round++)
+            {
+                var count = await mediator.DispatchDomainEventsCoreAsync(ctx, dispatched);
+                count += await mediator.DispatchAuditEventsCoreAsync(ctx as IAuditableDbContext, dispatched, logger);
+                count += await mediator.DispatchDataChangeEventsCoreAsync(ctx as IAuditableDbContext, dispatched, logger);
+
+                if (count == 0)
+                {
+                    return;
+                }
+                if (logger?.IsEnabled(LogLevel.Debug) ?? false)
+                {
+                    logger.LogDebug("[DispatchEventsUntilStable] Round {round} dispatched {count} events", round, count);
+                }
+                if (round >= maxRounds)
+                {
+                    throw new InvalidOperationException($"Event handlers are still raising new events after {maxRounds} dispatch rounds. Check for cyclic event handlers.");
+                }
+
+                // Persist changes made by handlers so their audit/data change events are collected
+                if (ctx.ChangeTracker.HasChanges())
+                {
+                    await ctx.SaveChangesAsync(cancellationToken);
+                }
+            }
+        }
+
+        private static async Task<int> DispatchDomainEventsCoreAsync(this IMediator mediator, DbContext ctx, ISet<object>? dispatched)
+        {
+            var domainEvents = ctx.ChangeTracker
+                .Entries<IAggregateRoot<INotification>>()
+                .Where(x => x.Entity.DomainEvents != null && x.Entity.DomainEvents.Any())
                 .SelectMany(x => x.Entity.DomainEvents)
+                .Where(e => dispatched == null || dispatched.Add(e))
                 .ToList();
 
             foreach (var domainEvent in domainEvents)
             {
                 await mediator.Publish(domainEvent);
             }
-            if (!clearEvents)
-            {
-                return;
-            }
-
-            domainEntities.ToList()
-               .ForEach(entity => entity.Entity.ClearDomainEvents());
+            return domainEvents.Count;
         }
 
-        public static async Task DispatchAuditEventsAsync(this IMediator? mediator, IAuditableDbContext? ctx,
-            bool clearEvents, ILogger? logger = default)
+        private static async Task<int> DispatchAuditEventsCoreAsync(this IMediator mediator, IAuditableDbContext? ctx,
+            ISet<object>? dispatched, ILogger? logger)
         {
+            var count = 0;
             try
             {
-                if (mediator == null)
-                {
-                    return;
-                }
                 if (ctx == null)
                 {
-                    return;
+                    return count;
                 }
-                var entries = ctx.PendingAuditEntries ?? [];
+                var entries = (ctx.PendingAuditEntries ?? [])
+                    .Where(e => dispatched == null || dispatched.Add(e))
+                    .ToList();
 
                 foreach (var auditEntry in entries)
                 {
+                    count++;
                     // Get the final value of the temporary properties
                     foreach (var prop in auditEntry.TemporaryProperties)
                     {
@@ -75,12 +167,6 @@ namespace Juice.EF.Extensions
                         }
                     }
                 }
-
-                if (!clearEvents)
-                {
-                    return;
-                }
-                ctx.PendingAuditEntries?.Clear();
             }
             catch (Exception ex)
             {
@@ -90,36 +176,32 @@ namespace Juice.EF.Extensions
                     logger.LogError(ex, "[DispatchAuditEvents] Error trace: {0}", ex.StackTrace);
                 }
             }
+            return count;
         }
 
-        public static async Task DispatchDataChangeEventsAsync(this IMediator? mediator, IAuditableDbContext? ctx,
-            bool clearEvents, ILogger? logger = default)
+        private static async Task<int> DispatchDataChangeEventsCoreAsync(this IMediator mediator, IAuditableDbContext? ctx,
+            ISet<object>? dispatched, ILogger? logger)
         {
+            var count = 0;
             try
             {
-                if (mediator == null)
-                {
-                    return;
-                }
                 if (ctx == null)
                 {
-                    return;
+                    return count;
                 }
-                var entries = ctx.PendingDataEvents ?? [];
+                var entries = (ctx.PendingDataEvents ?? [])
+                    .Where(e => dispatched == null || dispatched.Add(e))
+                    .ToList();
 
                 foreach (var dataEvent in entries)
                 {
+                    count++;
                     await mediator.Publish(dataEvent);
                     if (logger != null && logger.IsEnabled(LogLevel.Debug))
                     {
                         logger.LogDebug("[DispatchDataChangeEvents] Published an {type}: {name}", dataEvent.GetType().Name, dataEvent.Name);
                     }
                 }
-                if (!clearEvents)
-                {
-                    return;
-                }
-                ctx.PendingDataEvents?.Clear();
             }
             catch (Exception ex)
             {
@@ -129,8 +211,7 @@ namespace Juice.EF.Extensions
                     logger.LogError(ex, "[DispatchDataChangeEvents] Error trace: {0}", ex.StackTrace);
                 }
             }
+            return count;
         }
-
-
     }
 }

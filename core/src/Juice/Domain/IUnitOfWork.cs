@@ -19,6 +19,11 @@ namespace Juice.Domain
         void BeginManage();
 
         /// <summary>
+        /// End managing context from outside
+        /// </summary>
+        void EndManage();
+
+        /// <summary>
         /// Commit transaction with specified id
         /// </summary>
         /// <param name="transactionId"></param>
@@ -55,6 +60,8 @@ namespace Juice.Domain
 
         /// <summary>
         /// Delete entity from context and save changes
+        /// <para>When <see cref="IManagable.IsManaged"/> (inside a command handled by a transaction behavior),
+        /// the change is only staged and saved by the behavior together with the outbox.</para>
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="entity"></param>

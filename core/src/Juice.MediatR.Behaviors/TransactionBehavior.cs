@@ -63,6 +63,7 @@ namespace Juice.MediatR.Behaviors
     /// │    - DispatchDomainEvents                                               │
     /// │    - DispatchAuditEvents                                                │
     /// │    - DispatchDataChangeEvents                                           │
+    /// │    - repeated (SaveChanges between rounds) until no new events raised   │
     /// └─────────────────────────────────────────────────────────────────────────┘
     ///                │
     ///                v
@@ -130,12 +131,16 @@ namespace Juice.MediatR.Behaviors
         public async ValueTask<TResponse> Handle(TRequest request, RequestHandlerDelegate<TRequest, TResponse> next, CancellationToken cancellationToken)
         {
             var typeName = request.GetGenericTypeName();
+            var managedHere = false;
 
             try
             {
-                if (_dbContext.HasActiveTransaction)
+                // IsManaged: a nested command sent from an outer command handler — the outer
+                // transaction has not begun yet (it begins after next()), so HasActiveTransaction
+                // alone would let this behavior commit the outer command's pending changes early.
+                if (_dbContext.HasActiveTransaction || _dbContext.IsManaged)
                 {
-                    _logger.LogDebug("DbContext has active transaction");
+                    _logger.LogDebug("DbContext has active transaction or is managed by outer behavior");
                     // The transaction is managed by outer behavior
                     return await next.Invoke(request, cancellationToken);
                 }
@@ -148,6 +153,7 @@ namespace Juice.MediatR.Behaviors
 
                 // Notice DbContext will be managed by behavior
                 _dbContext.BeginManage();
+                managedHere = true;
 
                 var response = await next.Invoke(request, cancellationToken);
                 _?.Dispose();
@@ -156,9 +162,8 @@ namespace Juice.MediatR.Behaviors
                 var transactionId = await ResilientTransaction.New(_dbContext, _logger).ExecuteAsync(async (transaction) =>
                 {
                     await _dbContext.SaveChangesAsync(cancellationToken);
-                    await _mediator.DispatchDomainEventsAsync(_dbContext, false);
-                    await _mediator.DispatchAuditEventsAsync(_dbContext as IAuditableDbContext, false, _logger);
-                    await _mediator.DispatchDataChangeEventsAsync(_dbContext as IAuditableDbContext, false, _logger);
+                    // Repeats until handlers raise no new events (e.g. a handler adding another aggregate)
+                    await _mediator.DispatchEventsUntilStableAsync(_dbContext, _logger, cancellationToken: cancellationToken);
                     await _outboxService.SaveEventsAsync(transaction.TransactionId, cancellationToken);
 
                     // commit transaction if needed
@@ -206,6 +211,15 @@ namespace Juice.MediatR.Behaviors
                 _postCommitActions?.Clear();
 
                 throw;
+            }
+            finally
+            {
+                // Release the context so the next command in the same scope opens its own transaction
+                // and plain SaveChanges() outside commands dispatches events again
+                if (managedHere)
+                {
+                    _dbContext.EndManage();
+                }
             }
         }
 

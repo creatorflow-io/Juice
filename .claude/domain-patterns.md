@@ -114,7 +114,7 @@ Flow: Handler adds event to IOutboxService → TransactionBehavior saves to DB o
 - `abstract ConfigureModel(ModelBuilder)` — entity configuration hook
 
 ### UnitOfWork
-- `IsManaged` — set by `BeginManage()`; tells context it's behavior-managed
+- `IsManaged` — set by `BeginManage()`, reset by `EndManage()` (TransactionBehavior calls both, in `finally`); tells context it's behavior-managed. A nested command sees `IsManaged` and joins the outer transaction.
 - `HasActiveTransaction` — checks `Database.CurrentTransaction` against stored `_committedTransactionId`
 - `BeginManage()`, `BeginTransaction()`, `CommitTransactionAsync(Guid)`, `ClearEvents()`
 - `ResilientTransaction` — wraps EF execution strategy for reliable retry-safe transactions
@@ -130,6 +130,17 @@ Generic repository pattern (abstract base):
 - `ExistsAsync<TKey>(id)` — existence check
 - `Query()` → `DbContext.Set<T>()`
 - `CreateIdPredicate<TKey>(value)` — builds expression tree; finds key via `[Key]` attr → `"Id"` → `"{TypeName}Id"`
+
+### Writes inside a command (IsManaged)
+The save helpers behind `RepositoryBase.AddAsync/UpdateAsync/DeleteAsync` and `UnitOfWork.UpdateAsync/DeleteAsync`
+skip `SaveChangesAsync` while `IsManaged` — changes are staged and saved by `TransactionBehavior` in one
+transaction with the outbox. Outside a command they still save immediately. Consequences inside a command:
+- **Store-generated keys** (identity `int`) are not assigned until the behavior saves — use Guid/client-generated ids if the handler needs the id.
+- **DB errors surface late** — a duplicate key is thrown by the behavior at commit, not returned as `OperationResult.Failed` from `AddAsync`.
+- **DB queries don't see staged rows** (`Query().CountAsync()` after add); same-context `Find`/`Local` do.
+- **To fail a command, throw** — returning a failed result after staging changes still commits them.
+- Event handlers that add/modify aggregates are fine: `DispatchEventsUntilStableAsync` dispatches in rounds (SaveChanges between rounds, max 10).
+- Covered by `core/test/Juice.Integrations.Tests/MultipleEntitiesTransactionTest.cs` (SQLite, no infra).
 
 ### DynamicEntity EF Integration
 - `IsExpandable(EntityTypeBuilder, DbContext)` — adds `Properties` JSON column; PostgreSQL uses `jsonb`

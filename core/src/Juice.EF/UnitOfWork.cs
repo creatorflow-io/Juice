@@ -27,6 +27,11 @@ namespace Juice.EF
             _isManaged = true;
         }
 
+        public void EndManage()
+        {
+            _isManaged = false;
+        }
+
         public virtual async Task<bool> CommitTransactionAsync(Guid transactionId, CancellationToken token = default)
         {
             if (transactionId == _commitedTransactionId)
