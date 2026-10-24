@@ -25,7 +25,17 @@ namespace Microsoft.Extensions.Logging
             _output.WriteLine($"[{entry.LogLevel}] {entry.Category} - {formattedMessage}");
         }
         private List<string> _scopes = new();
+        // scopes are tracked per provider, not per async flow: concurrent handlers must not interleave updates
+        private readonly object _scopesLock = new();
         public override void ScopeStarted<TState>(string category, TState state, IExternalScopeProvider? scopeProvider)
+        {
+            lock (_scopesLock)
+            {
+                StartScope(category, state);
+            }
+        }
+
+        private void StartScope<TState>(string category, TState state)
         {
             _output.WriteLine(category);
             if (state is string scope)
@@ -86,6 +96,14 @@ namespace Microsoft.Extensions.Logging
         }
 
         public override void ScopeDisposed<TState>(string category, TState state, IExternalScopeProvider? scopeProvider)
+        {
+            lock (_scopesLock)
+            {
+                DisposeScope(category, state);
+            }
+        }
+
+        private void DisposeScope<TState>(string category, TState state)
         {
             _output.WriteLine(category);
             if (state is string scope)
