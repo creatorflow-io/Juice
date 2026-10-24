@@ -337,3 +337,4 @@ ASALocalRun/
 .mfractor/
 
 /build/*
+/test/infra/.env

@@ -12,6 +12,11 @@ namespace Juice.Messaging.Internal
         private readonly ILogger _logger;
         private readonly IEnumerable<string> _allowedTypes = [];
         private readonly IEnumerable<string> _allowedAssemblies;
+        // Rejected types already warned about: callers such as the local transport retry with a header-resolved type,
+        // so one warning per type is enough to surface the configuration gap. The names come from the payload, so the
+        // set is capped; later rejections are logged at Debug.
+        private const int MaxWarnedTypes = 64;
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> _warnedTypes = new();
         public MessageSerializer(ILogger<MessageSerializer> logger,
             IOptions<MessageSerializerOptions>? options = null)
         {
@@ -63,6 +68,11 @@ namespace Juice.Messaging.Internal
             }
             catch (Exception ex)
             {
+                if (FindBlockedType(ex) is { } blocked)
+                {
+                    LogBlockedType(ex, blocked);
+                    throw;
+                }
                 _logger.LogError(ex,
                     "Failed to deserialize json for type {TypeName}. JSON: {Json}. {Message}",
                     typeof(T).Name,
@@ -152,6 +162,61 @@ namespace Juice.Messaging.Internal
             }
         }
 
+        private void LogBlockedType(Exception ex, TypeNotAllowedException blocked)
+        {
+            if (_warnedTypes.Count >= MaxWarnedTypes || !_warnedTypes.TryAdd(blocked.TypeName + ", " + blocked.AssemblyName, 0))
+            {
+                _logger.LogDebug(ex, "Message type {TypeName} from assembly {AssemblyName} was rejected by the serializer allow-list.",
+                    blocked.TypeName, blocked.AssemblyName);
+                return;
+            }
+            // A type outside the allow-list is usually a configuration gap, not a corrupt payload: name the option that
+            // fixes it. The advice is never derived from the rejected name, which comes from the payload.
+            if (string.IsNullOrEmpty(blocked.AssemblyName))
+            {
+                _logger.LogWarning(ex,
+                    "Message type {TypeName} was rejected: its $type has no assembly name, so it cannot match MessageSerializerOptions.AllowedAssemblyPrefixes. " +
+                    "The sender must serialize with assembly names, as IMessageSerializer.Serialize does.",
+                    blocked.TypeName);
+                return;
+            }
+            _logger.LogWarning(ex,
+                "Message type {TypeName} from assembly {AssemblyName} was rejected: the assembly is not in MessageSerializerOptions.AllowedAssemblyPrefixes ({AllowedPrefixes}). " +
+                "If the type is yours, add the prefix of your own assemblies, e.g. services.Configure<MessageSerializerOptions>(o => o.AllowedAssemblyPrefixes.Add(\"MyCompany.\")) " +
+                "or AddMessaging().ConfigureSerializer(...). Never add a framework prefix such as \"System.\": it re-enables unsafe type deserialization.",
+                blocked.TypeName, blocked.AssemblyName, string.Join(", ", _allowedAssemblies));
+        }
+
+        private static TypeNotAllowedException? FindBlockedType(Exception? ex)
+        {
+            for (; ex != null; ex = ex.InnerException)
+            {
+                if (ex is TypeNotAllowedException blocked)
+                {
+                    return blocked;
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Thrown by <see cref="KnownTypesBinder"/> when <c>$type</c> names an assembly outside
+        /// <see cref="MessageSerializerOptions.AllowedAssemblyPrefixes"/>.
+        /// </summary>
+        internal sealed class TypeNotAllowedException : JsonSerializationException
+        {
+            public TypeNotAllowedException(string typeName, string? assemblyName)
+                : base($"Type {typeName}{(string.IsNullOrEmpty(assemblyName) ? "" : ", " + assemblyName)} is not in the allowed types list. " +
+                      "Deserialization blocked for security reasons. If the type is yours, add your assembly prefix to MessageSerializerOptions.AllowedAssemblyPrefixes.")
+            {
+                TypeName = typeName;
+                AssemblyName = assemblyName;
+            }
+
+            public string TypeName { get; }
+            public string? AssemblyName { get; }
+        }
+
         /// <summary>
         /// Custom binder for known types to improve deserialization security
         /// </summary>
@@ -187,9 +252,7 @@ namespace Juice.Messaging.Internal
                 // Security check: only allow whitelisted types
                 if (!IsAllowedType(typeName, assemblyName))
                 {
-                    throw new JsonSerializationException(
-                        $"Type {fullTypeName} is not in the allowed types list. " +
-                        $"Deserialization blocked for security reasons.");
+                    throw new TypeNotAllowedException(typeName, assemblyName);
                 }
 
                 var type = Type.GetType(fullTypeName);

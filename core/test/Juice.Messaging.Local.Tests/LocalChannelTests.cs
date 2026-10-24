@@ -496,13 +496,13 @@ namespace Juice.Messaging.Local.Tests
 
         /// <summary>
         /// When no explicit key is provided to <c>Subscribe</c>, the key defaults to
-        /// <c>typeof(TEvent).Name</c> (e.g. <c>"TopicIntegrationEvent"</c>). If the event's
-        /// <c>EventName</c> differs (e.g. <c>"orders.placed"</c>) and neither exact nor wildcard
-        /// matching applies, no handlers are found and the event is silently dropped.
+        /// <c>typeof(TEvent).Name</c> (e.g. <c>"TopicIntegrationEvent"</c>). Dispatch matches the event's
+        /// <c>EventName</c> (e.g. <c>"orders.placed"</c>) and also its type name, so the subscription still
+        /// receives the event.
         /// </summary>
         [IgnoreOnCIFact]
         [InitializeMessageContext]
-        public async Task LocalChannel_does_not_dispatch_when_Subscribe_key_does_not_match_EventNameAsync()
+        public async Task LocalChannel_dispatches_to_type_name_subscription_when_EventName_differsAsync()
         {
             var handlerInvoked = false;
 
@@ -515,8 +515,8 @@ namespace Juice.Messaging.Local.Tests
             services.AddSingleton<IMessagePublishingPolicy>(new FixedRoutePolicy("local-channel", string.Empty));
             services.AddMediatR();
 
-            // No explicit key → registered as "TopicIntegrationEvent" (type name)
-            // IsTopicMatch("orders.placed", "TopicIntegrationEvent") = false → handler not found
+            // No explicit key → registered as "TopicIntegrationEvent" (type name); EventName "orders.placed"
+            // matches no route, but the type-name match still finds the handler
             m.AddLocalConsumer(c => c.Subscribe<TopicIntegrationEvent, TopicSideEffectHandler>());
             services.AddTransient<TopicSideEffectHandler>(_ => new TopicSideEffectHandler(() => handlerInvoked = true));
 
@@ -528,11 +528,11 @@ namespace Juice.Messaging.Local.Tests
             var svc = sp.CreateScope().ServiceProvider.GetRequiredService<IMessageService>();
             await svc.PublishAsync(new TopicIntegrationEvent());
 
-            // Allow background dispatch time to complete (or not)
+            // Allow background dispatch time to complete
             await Task.Delay(300);
 
-            handlerInvoked.Should().BeFalse(
-                "type-name key \"TopicIntegrationEvent\" does not match EventName \"orders.placed\" — explicit key required when EventName differs from type name");
+            handlerInvoked.Should().BeTrue(
+                "a subscription without a route is keyed by the type name, which dispatch matches alongside EventName");
 
             cts.Cancel();
             foreach (var hs in hostedServices) await hs.StopAsync(CancellationToken.None);

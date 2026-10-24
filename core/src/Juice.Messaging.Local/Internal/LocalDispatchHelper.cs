@@ -60,8 +60,11 @@ namespace Juice.Messaging.Local.Internal
 
             if (subscriptionsManager != null)
             {
-                var routeKey = evt.EventName ?? evt.GetType().Name;
-                var types = await subscriptionsManager.GetHandlersForEventAsync(routeKey);
+                // An event may carry its own EventName (often per instance, e.g. a routing key). A subscription made
+                // without a route receives every event of its type; a routed one only the events whose EventName
+                // matches its route.
+                var eventType = evt.GetType();
+                var types = await subscriptionsManager.GetHandlersForEventAsync(evt.EventName ?? eventType.Name, eventType);
                 handlerTypes = types.ToList();
             }
             else

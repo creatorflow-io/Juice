@@ -43,7 +43,8 @@ namespace Microsoft.Extensions.DependencyInjection
                     .CreateLogger(typeof(InMemorySubscriptionsManager).Name + "[local]");
                 var providers = sp.GetServices<ILocalSubscriptionsProvider>()
                     .Cast<ISubscriptionsProvider>();
-                return new InMemorySubscriptionsManager(providers, logger, topicSupport: true);
+                // Local dispatch holds the event instance, so a key need not identify one event type.
+                return new InMemorySubscriptionsManager(providers, logger, topicSupport: true, keysIdentifyEventType: false);
             });
             return services;
         }
