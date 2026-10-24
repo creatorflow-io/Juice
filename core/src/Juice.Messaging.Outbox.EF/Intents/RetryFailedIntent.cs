@@ -14,10 +14,12 @@ namespace Juice.Messaging.Outbox.EF.Intents
         }
         public async Task<IEnumerable<OutboxDelivery>> RetrieveDeliveriesAsync(string publisherKey, DeliveryPolicy policy, CancellationToken cancellationToken)
         {
+            // NextAttemptOn is computed with the app clock, so compare with it rather than the database clock
+            var now = DateTimeOffset.UtcNow;
             return await _context.OutboxDeliveries
                 .AsNoTracking()
                 .Include(d => d.OutboxEvent)
-                .Where(d => d.State == DeliveryState.Failed && d.NextAttemptOn != null && d.NextAttemptOn < DateTimeOffset.Now)
+                .Where(d => d.State == DeliveryState.Failed && d.NextAttemptOn != null && d.NextAttemptOn < now)
                 .Where(d => d.PublisherKey == publisherKey)
                 .OrderBy(d => d.NextAttemptOn)
                 .Take(policy.BatchSize)

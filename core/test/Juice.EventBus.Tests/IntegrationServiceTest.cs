@@ -90,7 +90,18 @@ namespace Juice.EventBus.Tests
             });
 
             await resolver.ServiceProvider.RunHostedServicesAsync();
+            try
+            {
+                await PublishFromOutboxAsync(resolver);
+            }
+            finally
+            {
+                await resolver.ServiceProvider.StopHostedServicesAsync();
+            }
+        }
 
+        private async Task PublishFromOutboxAsync(DependencyResolver resolver)
+        {
             var sharedService = resolver.ServiceProvider.GetRequiredService<HandledService>();
             var logger = resolver.ServiceProvider.GetRequiredService<ILogger<IntegrationServiceTest>>();
 

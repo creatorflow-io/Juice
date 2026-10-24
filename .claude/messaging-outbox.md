@@ -58,12 +58,13 @@ IDeliveryPolicyResolver           — resolves policy for DeliveryContext(publis
 |-----|-------|---------|
 | `send-pending` | `SendPendingIntent<T>` | Queries State=NotPublished, ordered by CreationTime |
 | `retry-failed` | `RetryFailedIntent<T>` | State=Failed AND NextAttemptOn < now |
-| `recover-timeout` | `RecoverTimeoutIntent<T>` | State=InProgress longer than Timeout (stuck) |
+| `recover-timeout` | `RecoverTimeoutIntent<T>` | State=InProgress longer than Timeout (stuck); `DeliveryProcessor` claims these via `ReclaimInProgressAsync` (CAS on ProcessedOn) instead of `MarkAsInProgressAsync`; each reclaim increments RetryCount and past `MaxRetryAttempts` the delivery is marked Failed (no next attempt). `ProcessedOn`/`NextAttemptOn` use the app clock (UTC) |
 
 ### Transport (Broker)
 ```
 ITransportPublisher        — Key (string), PublishAsync(byte[], PublishContext, CT)
 RabbitMQProducer           — implements ITransportPublisher; uses channel pool, Polly retry
+JetStreamProducer          — implements ITransportPublisher (Juice.EventBus.NATS, key "nats"); see "NATS JetStream transport"
 PublishContext             — MessageId, TenantId, Destination (exchange), Headers
 ```
 
@@ -274,6 +275,64 @@ When `TContext` does NOT implement `IOutboxContext`, a separate `IOutboxContext`
 DbContext is used. `OutboxRepository.EnsureAssociatedConnection()` shares the DB
 connection AND transaction via `Database.SetDbConnection()` + `Database.UseTransaction()`.
 This is how atomicity is achieved across two DbContext instances.
+
+---
+
+## NATS JetStream transport (`Juice.EventBus.NATS`, 10.5)
+Second broker transport, same folder layout as `Juice.EventBus.RabbitMQ`. Spec/contracts: `specs/012-nats-jetstream/`.
+No outbox/delivery/dispatcher code changed — the producer is just another keyed `ITransportPublisher`.
+
+### Naming
+| Item | Rule | Example |
+|---|---|---|
+| Subject | `{destination}.{routingKey}` (routing key: `PublishContext.RoutingKey` → `x-routing-key` → `x-message-name` → `x-message-type`) | `content.ContentPublishedIntegrationEvent` |
+| Stream | destination upper-cased, `.`/`-`/space → `_`, subjects `{destination}.>` | `CONTENT` |
+| Parking stream | `{STREAM}_PARKING`, subjects `parking.{destination}.>` (outside the main stream's subjects) | `CONTENT_PARKING` |
+| Filter subject | route `kernel.*` → `{d}.kernel.*`; trailing `#` → `>`; non-trailing `#` → `{d}.>` + in-process topic match | |
+| `Nats-Msg-Id` | `{PublishContext.MessageId}:{subject}` (event id per subject) → JetStream de-duplication within `DuplicateWindow` (10 min default) | |
+
+Headers are strings on the wire (`JetStreamHeaders`): `byte[]` → UTF-8, dates → ISO "O", others invariant `ToString()`.
+
+### Publish
+`JetStreamProducer.PublishAsync` completes only after the stream ack; a `Duplicate` ack is success (outbox retry after a
+lost ack). No stream for the subject → `InvalidOperationException` naming subject + destination.
+
+### Consume (differs from RabbitMQ)
+- Durable **pull** consumer per `AddConsumer(key, stream, durableName, connection)`; instances sharing `durableName` share work.
+- `JetStreamConsumerEngine.HandleAsync`: event name from `x-original-routing-key` ?? `x-message-name` ?? subject suffix;
+  `MessageContext` initialized/cleared per message; `AckProgress` every `AckWait/2` while the handler runs.
+- **Retry = delayed NAK**, attempt = server `NumDelivered` (no retry exchanges/TTL queues). Tiers come from the shared
+  `ConsumeRetryPolicyOptions` with `Source` = consumer destination; tier strings `10s` or RabbitMQ-style `content.retry.10s`.
+- Max reached + parking → publish copy to `{DeadLetterDest ?? parking.{destination}}.{event}` with `x-death-*` headers, then ACK.
+  Parking off / no policy → `AckTerminate`. Not deserializable → park (if policy parking on) else terminate.
+  `NotHandled` → `OnNotHandled(Terminate|Park)`, default terminate.
+- Unexpected processing exception → NAK with a fixed 5 s (`FallbackRedeliveryDelay`). `AddConsumer` always registers
+  `IRetryPolicyProvider<JetStreamRetryPolicy>`; with no `Default`/matching policy, a handler failure is terminated (as RabbitMQ nacks).
+- Test pitfall: `Juice.XUnit.TestOutputLogger` scopes are not thread-safe; concurrent `BeginScope` can throw, which the
+  engine turns into a 5 s NAK (visible as "Index was out of range" warnings in integration test output).
+- The consume loop never blocks on the client enumerator; concurrency is bounded inside each handler task
+  (`MaxConcurrency`) and server-side by `MaxAckPending = MaxConcurrency * 2`.
+- Topology: `Provisioning(VerifyOnly)` (default) fails fast on a missing stream/consumer; `CreateIfMissing` creates.
+  Existing streams/consumers are never updated (filter mismatch is only logged).
+
+### DI
+```csharp
+services.AddEventBus()
+    .AddConsumerRetryPolicies(config.GetSection("ConsumeRetryPolicies"))
+    .AddJetStream(js => js
+        .AddConnection("nats", config.GetSection("Juice:EventBus:Connections:Nats"))
+        .AddProducer("nats", "nats")
+        .AddInfrastructureTopology("nats", t => t.DeclareStream("content").DeclareParkingStream("content"))
+        .AddConsumer("content-worker", "CONTENT", "content-worker", "nats", c => c
+            .Destination("content")
+            .Subscribe<ContentPublishedIntegrationEvent, ContentPublishedHandler>()));
+services.AddHealthChecks().AddJetStreamHealthCheck("nats");   // Open=Healthy, Reconnecting=Degraded
+await app.InitJetStreamInfrastructureAsync();
+```
+
+### Testing
+`core/test/Juice.EventBus.NATS.Tests`: `Unit/` is CI-safe; `Integration/` needs `nats-server -js` on :4222 and, for outbox
+end-to-end tests, SQL Server LocalDB (the outbox delivery queries do not translate on SQLite).
 
 ---
 

@@ -1,0 +1,43 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>$(AppTestTargetFramework)</TargetFrameworks>
+        <OutputType>Exe</OutputType>
+        <Nullable>enable</Nullable>
+
+        <IsPackable>false</IsPackable>
+
+        <UserSecretsId>3f1c2a7e-9b4d-4e61-8a35-0c7d5e2b9f14</UserSecretsId>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdk)" />
+        <PackageReference Include="xunit.v3" Version="$(XUnitV3Version)" />
+        <PackageReference Include="xunit.runner.visualstudio" Version="$(XUnitRunnerVersion)">
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="$(EFVersion)" />
+        <PackageReference Include="coverlet.collector" Version="10.0.0">
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\test\Juice.Tests.Host\Juice.Tests.Host.csproj" />
+        <ProjectReference Include="..\..\src\Juice.EventBus.NATS\Juice.EventBus.NATS.csproj" />
+        <ProjectReference Include="..\..\src\Juice.Extensions.MultiTenant\Juice.Extensions.MultiTenant.csproj" />
+        <ProjectReference Include="..\..\src\Juice.Messaging.Idempotency.Caching\Juice.Messaging.Idempotency.Caching.csproj" />
+        <ProjectReference Include="..\..\src\Juice.Messaging.Outbox.Delivery\Juice.Messaging.Outbox.Delivery.csproj" />
+        <ProjectReference Include="..\..\src\Juice.Messaging.Outbox.EF\Juice.Messaging.Outbox.EF.csproj" />
+        <ProjectReference Include="..\Juice.EF.Tests\Juice.EF.Tests.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Update="appsettings.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+
+</Project>

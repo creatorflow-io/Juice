@@ -74,24 +74,42 @@ namespace Juice.Messaging.Outbox.EF
             _timeTracker?.Checkpoint("SaveChanges");
         }
 
+        // ProcessedOn is written with the app clock, the clock recover-timeout compares it against
         public async ValueTask MarkAsPublishedAsync(Guid deliveryId, CancellationToken cancellationToken = default)
         {
+            var now = DateTimeOffset.UtcNow;
             var query = _outboxContext.OutboxDeliveries
                 .Where(ie => ie.DeliveryId == deliveryId && ie.State != DeliveryState.Published);
             await query.ExecuteUpdateAsync(ie =>
                 ie.SetProperty(e => e.State, e => DeliveryState.Published)
-                  .SetProperty(e => e.ProcessedOn, e => DateTimeOffset.Now)
+                  .SetProperty(e => e.ProcessedOn, e => now)
                 , cancellationToken);
         }
 
         public async ValueTask<int> MarkAsInProgressAsync(Guid deliveryId, CancellationToken cancellationToken = default)
         {
+            var now = DateTimeOffset.UtcNow;
             var query = _outboxContext.OutboxDeliveries
                 .Where(ie => ie.DeliveryId == deliveryId && (ie.State == DeliveryState.NotPublished || ie.State == DeliveryState.Failed));
 
             return await query.ExecuteUpdateAsync(ie =>
                 ie.SetProperty(e => e.State, e => DeliveryState.InProgress)
-                  .SetProperty(e => e.ProcessedOn, e => DateTimeOffset.Now)
+                  .SetProperty(e => e.RetryCount, e => e.State == DeliveryState.Failed ? e.RetryCount + 1 : e.RetryCount)
+                  .SetProperty(e => e.ProcessedOn, e => now)
+                  .SetProperty(e => e.ProcessedBy, e => _nodeIdentity != null ? _nodeIdentity.NodeId : null)
+                , cancellationToken);
+        }
+
+        public async ValueTask<int> ReclaimInProgressAsync(Guid deliveryId, DateTimeOffset? staleProcessedOn, CancellationToken cancellationToken = default)
+        {
+            // compare-and-swap on ProcessedOn: another worker that reclaimed it first has already changed the value
+            var now = DateTimeOffset.UtcNow;
+            var query = _outboxContext.OutboxDeliveries
+                .Where(ie => ie.DeliveryId == deliveryId && ie.State == DeliveryState.InProgress && ie.ProcessedOn == staleProcessedOn);
+
+            return await query.ExecuteUpdateAsync(ie =>
+                ie.SetProperty(e => e.RetryCount, e => e.RetryCount + 1)
+                  .SetProperty(e => e.ProcessedOn, e => now)
                   .SetProperty(e => e.ProcessedBy, e => _nodeIdentity != null ? _nodeIdentity.NodeId : null)
                 , cancellationToken);
         }
@@ -100,25 +118,27 @@ namespace Juice.Messaging.Outbox.EF
             DateTimeOffset? nextAttempt,
             CancellationToken cancellationToken = default)
         {
+            var now = DateTimeOffset.UtcNow;
             var query = _outboxContext.OutboxDeliveries
                 .Where(ie => ie.DeliveryId == deliveryId && ie.State != DeliveryState.Published && ie.State != DeliveryState.Skipped);
             await query.ExecuteUpdateAsync(ie =>
                 ie.SetProperty(e => e.State, e => DeliveryState.Failed)
                   .SetProperty(e => e.LastError, e => error)
                   .SetProperty(e => e.NextAttemptOn, e => nextAttempt)
-                  .SetProperty(e => e.ProcessedOn, e => DateTimeOffset.Now)
+                  .SetProperty(e => e.ProcessedOn, e => now)
                   .SetProperty(e => e.ProcessedBy, e => _nodeIdentity != null ? _nodeIdentity.NodeId : null)
                 , cancellationToken);
         }
 
         public async ValueTask MarkAsSkippedAsync(Guid deliveryId, string reason, CancellationToken cancellationToken = default)
         {
+            var now = DateTimeOffset.UtcNow;
             var query = _outboxContext.OutboxDeliveries
                 .Where(ie => ie.DeliveryId == deliveryId && ie.State != DeliveryState.Published && ie.State != DeliveryState.Skipped);
             await query.ExecuteUpdateAsync(ie =>
                 ie.SetProperty(e => e.State, e => DeliveryState.Skipped)
                   .SetProperty(e => e.LastError, e => reason)
-                  .SetProperty(e => e.ProcessedOn, e => DateTimeOffset.Now)
+                  .SetProperty(e => e.ProcessedOn, e => now)
                   .SetProperty(e => e.ProcessedBy, e => _nodeIdentity != null ? _nodeIdentity.NodeId : null)
                 , cancellationToken);
         }

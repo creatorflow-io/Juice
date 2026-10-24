@@ -68,14 +68,33 @@ namespace Juice.Messaging.Outbox.Delivery.Processing
         {
             using var _ = _logger.BeginScope(new Dictionary<string, object?> { { "TraceId", delivery.DeliveryId } });
             var sw = Stopwatch.StartNew();
+            // RetryCount as stored once this worker has claimed the delivery
+            var retryCount = delivery.RetryCount;
             try
             {
                 DeliveryMetrics.IncrementDeliveryAttempt(delivery.PublisherKey);
 
-                var afftected = await _outbox.MarkAsInProgressAsync(delivery.DeliveryId, cancellationToken);
+                // InProgress here means recover-timeout picked up a delivery whose worker never finished it
+                var reclaim = delivery.State == DeliveryState.InProgress;
+                var afftected = reclaim
+                    ? await _outbox.ReclaimInProgressAsync(delivery.DeliveryId, delivery.ProcessedOn, cancellationToken)
+                    : await _outbox.MarkAsInProgressAsync(delivery.DeliveryId, cancellationToken);
                 if (afftected == 0)
                 {
                     _logger.LogInformation("Delivery {DeliveryId} is already being processed by another worker", delivery.DeliveryId);
+                    return;
+                }
+                if (delivery.State != DeliveryState.NotPublished)
+                {
+                    retryCount++;
+                }
+                if (reclaim && retryCount > _deliveryPolicy.MaxRetryAttempts)
+                {
+                    // a delivery that hangs or crashes its worker must not be reclaimed forever
+                    _logger.LogError("Delivery {DeliveryId} did not finish after {RetryCount} attempts; giving up", delivery.DeliveryId, retryCount);
+                    await _outbox.MarkAsFailedAsync(delivery.DeliveryId,
+                        $"Abandoned: the delivery did not finish within {_deliveryPolicy.Timeout} after {retryCount} attempts", null, cancellationToken);
+                    DeliveryMetrics.IncrementDeliveryFailure(delivery.PublisherKey, "Abandoned");
                     return;
                 }
                 await PublishEventAsync(delivery, cancellationToken);
@@ -95,7 +114,7 @@ namespace Juice.Messaging.Outbox.Delivery.Processing
             }
             catch (Exception ex)
             {
-                await HandleDeliveryFailureAsync(delivery, ex, cancellationToken);
+                await HandleDeliveryFailureAsync(delivery, retryCount, ex, cancellationToken);
                 DeliveryMetrics.IncrementDeliveryFailure(delivery.PublisherKey, ex.GetType().Name);
             }
             finally
@@ -133,7 +152,7 @@ namespace Juice.Messaging.Outbox.Delivery.Processing
             await _outbox.MarkAsSkippedAsync(delivery.DeliveryId, reason, cancellationToken);
         }
 
-        private async Task HandleDeliveryFailureAsync(OutboxDelivery delivery, Exception ex, CancellationToken cancellationToken)
+        private async Task HandleDeliveryFailureAsync(OutboxDelivery delivery, int retryCount, Exception ex, CancellationToken cancellationToken)
         {
             _logger.LogError(ex, "Failed to publish delivery {DeliveryId}: {Message}",
                 delivery.DeliveryId, ex.Message);
@@ -144,7 +163,8 @@ namespace Juice.Messaging.Outbox.Delivery.Processing
                     delivery.DeliveryId, ex.ToString());
             }
 
-            var nextAttempt = _deliveryPolicy.GetNextAttempt(delivery.RetryCount + 1);
+            // null once MaxRetryAttempts retries are used: the delivery stays Failed for good
+            var nextAttempt = _deliveryPolicy.GetNextAttempt(retryCount + 1);
             await _outbox.MarkAsFailedAsync(delivery.DeliveryId, ex.Message, nextAttempt, cancellationToken);
         }
     }
