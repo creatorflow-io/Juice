@@ -76,6 +76,7 @@ namespace Juice.EventBus.Tests
                                     .AddTier("x.logs.retry.1s2", 1002, "#.retry.1s2");
 
                                 icfg.DeclareExchange("x.content.integration", ExchangeType.Direct)
+                                    .DeclareQueue("juice_eventbus_xunit_1")
                                     .BindQueue("juice_eventbus_xunit_1", "x.content.integration", nameof(ContentPublishedIntegrationEvent))
                                     .DeclareQueue("juice_eventbus_xunit_2")
                                     .BindQueue("juice_eventbus_xunit_2", "x.content.integration", nameof(ContentPublishedIntegrationEvent))
@@ -84,6 +85,7 @@ namespace Juice.EventBus.Tests
                                     ;
 
                                 icfg.DeclareExchange("x.content.free", ExchangeType.Direct)
+                                    .DeclareQueue("juice_eventbus_xunit_5")
                                     .BindQueue("juice_eventbus_xunit_5", "x.content.free", nameof(ContentPublishedIntegrationEvent))
                                     ;
                             })
@@ -207,6 +209,7 @@ namespace Juice.EventBus.Tests
             }
             finally
             {
+                await serviceProvider.StopHostedServicesAsync();
             }
         }
 
@@ -266,6 +269,7 @@ namespace Juice.EventBus.Tests
             }
             finally
             {
+                await serviceProvider.StopHostedServicesAsync();
             }
         }
 
@@ -328,6 +332,7 @@ namespace Juice.EventBus.Tests
             }
             finally
             {
+                await serviceProvider.StopHostedServicesAsync();
             }
         }
 
@@ -419,6 +424,7 @@ namespace Juice.EventBus.Tests
             }
             finally
             {
+                await serviceProvider.StopHostedServicesAsync();
             }
         }
     }

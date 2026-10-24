@@ -15,6 +15,38 @@ Define base entity, common, utils, helper, extensions... class
 
 Implement event bus with related feature.
 
+##### Transports → NATS JetStream
+
+`Juice.EventBus.NATS` publishes outbox events to NATS JetStream and consumes them with durable pull consumers.
+The outbox, publishing policies and integration event handlers are unchanged; only the transport registration differs.
+
+```xml
+<PackageReference Include="Juice.EventBus.NATS" Version="10.5.*" />
+```
+
+```csharp
+// publisher
+services.AddEventBus().AddJetStream(js => js
+    .AddConnection("nats", config.GetSection("Juice:EventBus:Connections:Nats"))
+    .AddProducer("nats", "nats")                       // publisher key used by PublishingPolicies
+    .AddInfrastructureTopology("nats", t => t
+        .DeclareStream("content")                      // stream CONTENT, subjects content.>
+        .DeclareParkingStream("content")));            // stream CONTENT_PARKING, subjects parking.content.>
+await app.InitJetStreamInfrastructureAsync();          // verifies streams (default) or creates them
+
+// consumer
+services.AddEventBus()
+    .AddConsumerRetryPolicies(config.GetSection("ConsumeRetryPolicies"))
+    .AddJetStream(js => js
+        .AddConnection("nats", config.GetSection("Juice:EventBus:Connections:Nats"))
+        .AddConsumer("content-worker", stream: "CONTENT", durableName: "content-worker", connectionName: "nats", c => c
+            .Destination("content")
+            .Subscribe<ContentPublishedIntegrationEvent, ContentPublishedHandler>()));
+```
+
+See the [quickstart](specs/012-nats-jetstream/quickstart.md) (including moving from RabbitMQ) and the
+[configuration schema](specs/012-nats-jetstream/contracts/configuration-schema.md).
+
 #### Juice.Extensions.*
 
 Implement logging, configuration, options extenstion.
@@ -72,6 +104,7 @@ Version 6.0
     - [x] Unit of work pattern
 - [x] Microservices pattern
     - [x] RabbitMQ event bus
+    - [x] NATS JetStream event bus (10.5)
     - [x] IntegrationEventLog with EF store
     - [x] MediatR Identified command
 - [x] Extensions

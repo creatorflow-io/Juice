@@ -56,7 +56,19 @@ namespace Juice.EventBus.Tests
             });
 
             await resolver.ServiceProvider.RunHostedServicesAsync();
-            using var scope = resolver.ServiceProvider.CreateScope();
+            try
+            {
+                await SendTopicEventsAsync(resolver.ServiceProvider);
+            }
+            finally
+            {
+                await resolver.ServiceProvider.StopHostedServicesAsync();
+            }
+        }
+
+        private static async Task SendTopicEventsAsync(IServiceProvider serviceProvider)
+        {
+            using var scope = serviceProvider.CreateScope();
             var eventBus = scope.ServiceProvider.GetRequiredService<IEventBus>();
             var handledService = scope.ServiceProvider.GetRequiredService<HandledService>();
 

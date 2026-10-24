@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(AppTargetFramework)</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Description>NATS JetStream implementation for EventBus</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Juice.EventBus\Juice.EventBus.csproj" />
+    <ProjectReference Include="..\Juice\Juice.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NATS.Client.JetStream" Version="2.8.2" />
+  </ItemGroup>
+
+  <ItemGroup Label="AspNetCore">
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Juice.EventBus.NATS.Tests" />
+  </ItemGroup>
+
+</Project>

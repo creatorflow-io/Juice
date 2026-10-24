@@ -1,3 +1,53 @@
+# v10.5.0 - NATS JetStream transport
+
+## Features
+
+### `Juice.EventBus.NATS` (new package)
+- **Producer**: `AddJetStream(js => js.AddConnection(...).AddProducer("nats", ...))` registers a keyed
+  `ITransportPublisher`, so the outbox (`DeliveryHostedService<TContext>`) and publishing policies route to JetStream
+  with no code changes. Messages go to subject `{destination}.{routingKey}`; a publish completes only after the stream
+  acknowledges it, and `{eventId}:{subject}` is sent as `Nats-Msg-Id` so an outbox retry after a lost ack is stored
+  once, while one event routed to two subjects of the same stream is stored on both. Streams declared by the topology
+  builder default to a 10-minute duplicate window, longer than the outbox recover-timeout.
+- **Consumer**: `AddConsumer(key, stream, durableName, connection, c => c.Destination(...).Subscribe<E, H>())` runs a
+  durable pull consumer through the existing `IntegrationEventDispatcher` (idempotency, tenant resolution and
+  `MessageContext` behave as with RabbitMQ). Instances sharing a durable name share the work; RabbitMQ-style routes
+  (`kernel.*`, `kernel.#`) become filter subjects; a filter covered by another is dropped and partially overlapping
+  ones widen to `{destination}.>`, since the server rejects overlapping filters. Long handlers, and messages waiting
+  for a free handler slot, keep their message with progress acks.
+- **Retry and parking**: reuses `ConsumeRetryPolicyOptions` (`Source` = consumer destination). Failures are redelivered
+  with the tier delay (delayed NAK); after the last tier the message is copied to a parking stream
+  (`parking.{destination}.>`) with `x-death-*` headers, or terminated when parking is off. Tiers are parsed when a
+  JetStream source first uses them, so RabbitMQ-only policies in the same options (routing-key tiers) are ignored.
+  A consumer whose `MaxDeliver` does not exceed the retry tiers fails at startup instead of losing messages silently.
+- **Topology**: `AddInfrastructureTopology(...).DeclareStream(...)/DeclareParkingStream(...)` and
+  `InitJetStreamInfrastructureAsync()` verify streams by default (`VerifyOnly`) or create missing ones
+  (`CreateIfMissing`). Existing streams and consumers are never modified.
+- **Operations**: `AddJetStreamHealthCheck("nats")` (Open = Healthy, Reconnecting = Degraded), user/password, token,
+  creds and NKey authentication, TLS, reconnect settings, and the `infra.nats.metrics` meter
+  (publish errors, retries, parked messages). Both `AddConnection` overloads let the last registration of a name win.
+
+No breaking changes: apps that do not reference `Juice.EventBus.NATS` get no new dependency. Spec, contracts and
+quickstart (including moving from RabbitMQ): `specs/012-nats-jetstream/`.
+
+## Fixes
+
+### `Juice.Messaging.Outbox.EF` / `Juice.Messaging.Outbox.Delivery`
+- **Stuck deliveries are now recovered**: a delivery left `InProgress` by a host that stopped or crashed mid-publish
+  stayed there forever, for every transport. `RecoverTimeoutIntent` looked for rows newer than `now + Timeout` instead
+  of older than `now - Timeout`, and `MarkAsInProgressAsync` refused to claim `InProgress` rows. Recovered deliveries
+  are now claimed with the new `IOutboxRepository.ReclaimInProgressAsync`, which only succeeds while `ProcessedOn`
+  still holds the value that was read, so two workers never both re-send it. The method has a default implementation
+  that throws `NotSupportedException`, so custom `IOutboxRepository` implementations still compile; their stuck
+  deliveries are marked `Failed` with that error and handled by retry-failed.
+- **`RetryCount` is now maintained**: it was never incremented, so retry backoff never grew and
+  `OutboxDeliveryHealthCheck` never reported permanently failed deliveries. Claiming a `Failed` delivery and
+  reclaiming an `InProgress` one now increment it; a delivery reclaimed more than `MaxRetryAttempts` times is marked
+  `Failed` without a next attempt instead of being re-sent forever.
+- **One clock for timestamps**: `ProcessedOn` was written with the database clock but compared with the app clock by
+  recover-timeout (and `NextAttemptOn` the other way round by retry-failed). Both now use the app clock (UTC), so clock
+  skew no longer lets a delivery that is still running be reclaimed early.
+
 # v10.4.0 - Atomic multi-aggregate transactions
 
 ## Fixes

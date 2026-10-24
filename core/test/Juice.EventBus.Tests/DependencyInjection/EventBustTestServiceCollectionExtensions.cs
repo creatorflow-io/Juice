@@ -50,5 +50,21 @@ namespace Microsoft.Extensions.DependencyInjection
             }
             return hostedServices.Count();
         }
+
+        /// <summary>
+        /// Stops the hosted services started by <see cref="RunHostedServicesAsync"/> and disposes the provider, so a test's
+        /// consumers do not stay attached to shared queues and take messages meant for later tests.
+        /// </summary>
+        public static async Task StopHostedServicesAsync(this IServiceProvider serviceProvider)
+        {
+            foreach (var hostedService in serviceProvider.GetServices<IHostedService>().Reverse())
+            {
+                await hostedService.StopAsync(CancellationToken.None);
+            }
+            if (serviceProvider is IAsyncDisposable disposable)
+            {
+                await disposable.DisposeAsync();
+            }
+        }
     }
 }

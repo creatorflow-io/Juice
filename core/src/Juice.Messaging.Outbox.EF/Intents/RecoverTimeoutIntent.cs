@@ -15,7 +15,7 @@ namespace Juice.Messaging.Outbox.EF.Intents
 
         public async Task<IEnumerable<OutboxDelivery>> RetrieveDeliveriesAsync(string publisherKey, DeliveryPolicy policy, CancellationToken cancellationToken)
         {
-            var timeoutAt = DateTimeOffset.UtcNow.Add(policy.Timeout);
+            var timeoutAt = DateTimeOffset.UtcNow.Subtract(policy.Timeout);
             return await _context.OutboxDeliveries
                 .AsNoTracking()
                 .Include(d => d.OutboxEvent)

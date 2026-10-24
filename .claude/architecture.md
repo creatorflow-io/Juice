@@ -65,6 +65,7 @@ d:/Workspaces/Juice/Juice/
 | `Juice.EventBus.Contracts` | IIntegrationEvent, IIntegrationEventHandler, IntegrationEvent base |
 | `Juice.EventBus` | IEventBus, EventBusProxy, ITransportPublisher, subscriptions manager, ISubscriptionsProvider |
 | `Juice.EventBus.RabbitMQ` | RabbitMQProducer, RabbitMQConsumerEngine, connection management, retry/DLQ policies, topology builder |
+| `Juice.EventBus.NATS` | JetStream transport (10.5): JetStreamProducer (`ITransportPublisher` key `nats`), durable pull JetStreamConsumerEngine, delayed-NAK retry + parking stream, stream verify/create, health check. Mirrors the RabbitMQ layout |
 
 ### Infrastructure / Extensions
 | Project | Purpose |
@@ -90,6 +91,7 @@ d:/Workspaces/Juice/Juice/
 | `Juice.EF.Tests.PostgreSQL` | EF PostgreSQL specific |
 | `Juice.EF.Tests.Shared` | Shared EF test helpers |
 | `Juice.EventBus.Tests` | EventBus, RabbitMQ producer/consumer |
+| `Juice.EventBus.NATS.Tests` | JetStream: `Unit/` (CI-safe), `Integration/` (needs nats-server -js; outbox tests need SQL Server LocalDB) |
 | `Juice.MediatR.Tests` | Custom mediator, behaviors |
 | `Juice.Messaging.Tests` | Messaging policies, serialization |
 | `Juice.Integrations.Tests` | Full integration: TransactionBehavior → Outbox → RabbitMQ (key test) |
@@ -107,7 +109,7 @@ EF / MediatR / Messaging / EventBus
   ↓
 Behaviors (cross-cuts EF + Messaging + MediatR)
   ↓
-RabbitMQ / Outbox.EF / Idempotency.* (infrastructure)
+RabbitMQ / NATS / Outbox.EF / Idempotency.* (infrastructure)
   ↓
 Extensions.* (MultiTenant, Options, Configuration, Redis, Logging)
   ↓
@@ -120,6 +122,7 @@ AspNetCore (host)
 | Package | Version | Usage |
 |---------|---------|-------|
 | RabbitMQ.Client | 7.1.2 | Message broker |
+| NATS.Client.JetStream | 2.8.2 | NATS JetStream broker (Juice.EventBus.NATS only) |
 | EF Core | 7/8/9 | ORM |
 | Npgsql | 7/8/9 | PostgreSQL EF provider |
 | Finbuckle.MultiTenant | 8.1/9.1 | Multi-tenancy |
