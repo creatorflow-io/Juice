@@ -1,3 +1,45 @@
+# v10.5.1 - Local dispatch by event type, serializer allow-list diagnostics
+
+## Fixes
+
+### `Juice.EventBus` / `Juice.Messaging.Local`
+- **A subscription without a route now receives every event of its type**: `Subscribe<TEvent, THandler>()` was keyed by
+  the type name only, so an event whose `EventName` differs from its type name (a per-instance routing key) was
+  silently dropped on `local` and `local-channel` routes. `SubscriptionInfo.IsRouted` records whether a route was
+  given, and the new `ISubscriptionsManager.GetHandlersForEventAsync(eventName, eventType)` returns the unrouted
+  subscriptions that accept the event type plus the routed ones whose route matches `eventName`. Routes are matched against
+  `EventName` only: a wildcard such as `*` no longer matches the type name, and an explicit route equal to the type name
+  stays a route.
+- Routed subscriptions of other event types (e.g. a `#` catch-all) are no longer handed to the dispatcher, which logged
+  a "not assignable" warning for each on every dispatch.
+- A handler subscribed under several matching routes (e.g. `wf.#` and `wf.content.#`) now runs once per event instead
+  of once per matching route.
+- An exact route no longer hides pattern routes on local dispatch: with `"wf.content.approve.succeeded"` and `"wf.#"`
+  both subscribed, an event of that name reaches both handlers.
+- A subscription without a route to a base event type receives derived events too, as a routed one already did
+  (handlers are contravariant).
+- On the local manager a route may equal another event's type name (`Subscribe<A, H>("B")` beside
+  `Subscribe<B, H2>()`). Broker consumers keep rejecting a key registered for two event types, because they resolve the
+  type to deserialize from it.
+- `InMemorySubscriptionsManager` caches its lookups instead of rebuilding them on every call, and
+  `GetEventTypeByNameAsync` no longer falls through to topic matching when topic support is off.
+- The new interface overload has a default implementation, so custom `ISubscriptionsManager` implementations keep
+  compiling. RabbitMQ and NATS consumers are unchanged: they receive only what their bindings and filter subjects
+  route to them, so a subscription's routing key still decides what arrives there.
+
+### `Juice.Messaging`
+- A `$type` rejected by the serializer allow-list is logged once per type as a Warning naming
+  `MessageSerializerOptions.AllowedAssemblyPrefixes`, instead of an Error that dumped the payload. The advice is never
+  built from the rejected name (it comes from the payload) and warns against adding framework prefixes such as
+  `System.`. Repeats, and new names past the first 64, are logged at Debug, so a flood of crafted names cannot grow
+  memory or the Warning log. A `$type` without an assembly name gets its own message.
+
+## Features
+
+### `Juice.AspNetCore`
+- `app.UseMessageContext(source)` registers `MessageContextMiddleware`, which initializes `MessageContext` for every
+  request. The `IEventBus` "MessageContext must be initialized" error now lists every way to initialize it.
+
 # v10.5.0 - NATS JetStream transport
 
 ## Features

@@ -45,7 +45,8 @@ namespace Juice.EventBus.Internal
             {
                 throw new InvalidOperationException(
                     "MessageContext must be initialized before publishing via IEventBus. " +
-                    "Add UseMessageContext() middleware or the [InitializeMessageContext] attribute at the entry point.");
+                    "Call app.UseMessageContext(appName) (Juice.AspNetCore), put [MessageContext] on the controller or action, " +
+                    "call MessageContext.Initialize(...) at the entry point of a background service, or use [InitializeMessageContext] (Juice.XUnit) in tests.");
             }
             var ctx = MessageContext.Current;
             foreach (var route in routes)
@@ -101,7 +102,8 @@ namespace Juice.EventBus.Internal
             {
                 throw new InvalidOperationException(
                     "MessageContext must be initialized before publishing via IEventBus. " +
-                    "Add UseMessageContext() middleware or the [InitializeMessageContext] attribute at the entry point.");
+                    "Call app.UseMessageContext(appName) (Juice.AspNetCore), put [MessageContext] on the controller or action, " +
+                    "call MessageContext.Initialize(...) at the entry point of a background service, or use [InitializeMessageContext] (Juice.XUnit) in tests.");
             }
             return PublishAsync(@event, publisherKey, context, MessageContext.Current, ct);
         }

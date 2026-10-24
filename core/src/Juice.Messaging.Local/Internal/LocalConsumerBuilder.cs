@@ -32,7 +32,10 @@ namespace Juice.Messaging.Local.Internal
         /// <typeparamref name="TEvent"/> on local and local-channel routes.
         /// </summary>
         /// <param name="key">
-        /// Optional routing key override. Defaults to <c>typeof(TEvent).Name</c>.
+        /// Optional route. Without one the subscription receives every <typeparamref name="TEvent"/>, whatever its
+        /// <c>EventName</c>. With one (exact, or a <c>*</c>/<c>#</c> pattern where topic matching is enabled) it
+        /// receives only the <typeparamref name="TEvent"/> events whose <c>EventName</c> matches, even when the
+        /// route equals the type name.
         /// </param>
         public LocalConsumerBuilder Subscribe<TEvent, THandler>(string? key = null)
             where TEvent : IIntegrationEvent
