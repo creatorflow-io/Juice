@@ -58,7 +58,7 @@ namespace Juice.Messaging.Outbox.Internal
             {
                 _logger.LogDebug("----- Saving {Count} integration events", _messages.Count);
             }
-            _timeTracker?.BeginScope("Saving integration events");
+            using var _ = _timeTracker?.BeginScope("Saving integration events");
 
             _pendingDeliveryIds = new Dictionary<(Guid, string), List<Guid>>();
             var events = new List<OutboxEvent>();

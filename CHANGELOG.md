@@ -1,3 +1,11 @@
+# v10.5.2 - Outbox time-tracking scope fix
+
+## Fixes
+
+### `Juice.Messaging.Outbox`
+- `OutboxEventService` now disposes the "Saving integration events" `ITimeTracker` scope. It was never closed, so
+  its elapsed time was never recorded and every later scope in the same request was reported nested under it.
+
 # v10.5.1 - Local dispatch by event type, serializer allow-list diagnostics
 
 ## Fixes
