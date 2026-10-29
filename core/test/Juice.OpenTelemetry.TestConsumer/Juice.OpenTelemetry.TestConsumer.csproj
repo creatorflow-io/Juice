@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Consumer service run as a separate OS process by Juice.OpenTelemetry.Tests (cross-process trace test). -->
+  <PropertyGroup>
+    <TargetFrameworks>$(AppTestTargetFramework)</TargetFrameworks>
+    <OutputType>Exe</OutputType>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="$(MicrosoftExtensionsVersion)" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="$(OpenTelemetryVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Juice.EventBus.RabbitMQ\Juice.EventBus.RabbitMQ.csproj" />
+    <ProjectReference Include="..\..\src\Juice.Messaging.Idempotency.Caching\Juice.Messaging.Idempotency.Caching.csproj" />
+    <ProjectReference Include="..\..\src\Juice.OpenTelemetry\Juice.OpenTelemetry.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -24,6 +24,12 @@
 - `MessageContextMiddleware` and `[MessageContext]` tag the current HTTP server span (`Activity.Current`) with
   `juice.correlation_id`, `juice.execution_id` and `juice.source`. No second HTTP span is created.
 
+### Tests
+- **Cross-process trace test** (`Juice.OpenTelemetry.Tests`, needs the shared RabbitMQ and SQL Server): an "orders"
+  service in the test process (HTTP → mediator → outbox → delivery → RabbitMQ) and a "billing" consumer started as a
+  separate OS process (`Juice.OpenTelemetry.TestConsumer`) produce one trace; the consumer continues the context stored
+  with the message.
+
 ## Changes
 
 ### `Juice.MediatR.Behaviors`
