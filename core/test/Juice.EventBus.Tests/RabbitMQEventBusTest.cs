@@ -181,7 +181,9 @@ namespace Juice.EventBus.Tests
                     tenantAccessor.Tenant.Should().NotBeNull();
                     _output.WriteLine("TenantInfo: {0} {1}", tenantAccessor.Tenant?.Id, tenantAccessor.Tenant?.Tier);
 
-                    await eventBus.PublishAsync(evt2);
+                    // enterprise tenants route to x.content.vip, which is never declared: the broker refuses it
+                    var refused = async () => await eventBus.PublishAsync(evt2);
+                    await refused.Should().ThrowAsync<InvalidOperationException>().WithMessage("*NOT_FOUND*x.content.vip*");
                 }
 
                 var evt3 = new ContentPublishedIntegrationEvent("Hello tenant B");
@@ -404,7 +406,7 @@ namespace Juice.EventBus.Tests
                             count++;
                         }
                     }
-                    return publisher!.PublishAsync(serializer.SerializeToUtf8Bytes(evt), new PublishContext(evt.MessageId.ToString())
+                    var publish = publisher!.PublishAsync(serializer.SerializeToUtf8Bytes(evt), new PublishContext(evt.MessageId.ToString())
                     {
                         Destination = destination,
                         Headers = new System.Collections.Generic.Dictionary<string, object?>
@@ -414,6 +416,10 @@ namespace Juice.EventBus.Tests
                             { "x-correlation-id", MessageContext.Current.CorrelationId }
                         }
                     }).AsTask();
+                    // x.content.vip is never declared: the broker refuses those publishes, the other ones go through
+                    return idx == 0
+                        ? (Task)publish.Awaiting(p => p).Should().ThrowAsync<InvalidOperationException>().WithMessage("*NOT_FOUND*x.content.vip*")
+                        : publish;
                 });
 
                 await Task.WhenAll(tasks);

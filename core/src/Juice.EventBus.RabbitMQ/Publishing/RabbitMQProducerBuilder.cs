@@ -26,6 +26,21 @@ namespace Juice.EventBus.RabbitMQ.Publishing
             return this;
         }
 
+        /// <summary>
+        /// Whether a message that no queue is bound for fails the publish, or is dropped by the broker (default).
+        /// </summary>
+        public RabbitMQProducerBuilder Mandatory(bool mandatory = true)
+        {
+            _endpoint.SetMandatory(mandatory);
+            return this;
+        }
+
+        public RabbitMQProducerBuilder RetryBaseDelay(TimeSpan delay)
+        {
+            _endpoint.SetRetryBaseDelay(delay);
+            return this;
+        }
+
         public RabbitMQProducerBuilder PoolCapacity(ushort capacity)
         {
             _endpoint.SetPoolCapacity(capacity);

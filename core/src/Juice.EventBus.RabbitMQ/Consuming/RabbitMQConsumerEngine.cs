@@ -82,8 +82,7 @@ namespace Juice.EventBus.RabbitMQ.Consuming
                     await _consumerChannel.CloseAsync();
                     _consumerChannel.Dispose();
                 }
-                _persistentConnection?.Dispose();
-                _persistentConnection = null!;
+                // the connection is a shared keyed singleton (producers, other consumers): the container disposes it
             }
             catch { }
         }
@@ -209,7 +208,8 @@ namespace Juice.EventBus.RabbitMQ.Consuming
 
             _logger.LogInformation("Creating RabbitMQ consumer channel.");
 
-            var channel = await _persistentConnection.CreateChannelAsync(cancellationToken);
+            // publisher confirms: a message moved to a retry tier or parking is only acked once the broker has its copy
+            var channel = await _persistentConnection.CreateChannelAsync(Publishing.ChannelPool.PublisherChannelOptions, cancellationToken);
             if (channel == null) { return null; }
 
             channel.CallbackExceptionAsync += async (sender, ea) =>
@@ -315,22 +315,48 @@ namespace Juice.EventBus.RabbitMQ.Consuming
                     originalRoutingKey, headers["x-attempts"], retryPolicy.Exchange, retryPolicy.RoutingKey);
             }
             // re-publish with updated header
-            await _consumerChannel.BasicPublishAsync(
-                exchange: retryPolicy.Exchange,
-                routingKey: retryPolicy.RoutingKey,
-                mandatory: true,
-                basicProperties: new BasicProperties
+            await MoveAsync(eventArgs, retryPolicy.Exchange, retryPolicy.RoutingKey, mandatory: true, headers);
+        }
+
+        /// <summary>
+        /// Publishes a copy of the message (retry tier or parking) and acks the original only once the broker has
+        /// confirmed the copy. When the copy is refused, the original is requeued instead of lost.
+        /// </summary>
+        private async Task MoveAsync(BasicDeliverEventArgs eventArgs, string exchange, string routingKey, bool mandatory,
+            IDictionary<string, object?> headers)
+        {
+            var channel = _consumerChannel!;
+            try
+            {
+                await channel.BasicPublishAsync(
+                    exchange: exchange,
+                    routingKey: routingKey,
+                    mandatory: mandatory,
+                    basicProperties: new BasicProperties
+                    {
+                        ContentType = eventArgs.BasicProperties.ContentType,
+                        CorrelationId = eventArgs.BasicProperties.CorrelationId,
+                        MessageId = eventArgs.BasicProperties.MessageId,
+                        Timestamp = eventArgs.BasicProperties.Timestamp,
+                        DeliveryMode = DeliveryModes.Persistent,
+                        Headers = headers
+                    },
+                    body: eventArgs.Body);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[{Queue}] Could not move message {MessageId} to {Exchange} with routing key {RoutingKey}; it stays on the queue",
+                    _queueName, eventArgs.BasicProperties.MessageId, exchange, routingKey);
+                // a closed channel gives its unacked messages back to the queue by itself
+                if (channel.IsOpen)
                 {
-                    ContentType = eventArgs.BasicProperties.ContentType,
-                    CorrelationId = eventArgs.BasicProperties.CorrelationId,
-                    MessageId = eventArgs.BasicProperties.MessageId,
-                    Timestamp = eventArgs.BasicProperties.Timestamp,
-                    DeliveryMode = DeliveryModes.Persistent,
-                    Headers = headers
-                },
-                body: eventArgs.Body
-                );
-            await _consumerChannel.BasicAckAsync(eventArgs.DeliveryTag, multiple: false);
+                    // the same topology error would fail again at once: do not spin on it
+                    await Task.Delay(TimeSpan.FromSeconds(1));
+                    await channel.BasicNackAsync(eventArgs.DeliveryTag, multiple: false, requeue: true);
+                }
+                return;
+            }
+            await channel.BasicAckAsync(eventArgs.DeliveryTag, multiple: false);
         }
 
         private async Task SendToDeadLetterQueueAsync(BasicDeliverEventArgs eventArgs, RetryPolicy retryPolicy, string reason)
@@ -353,22 +379,7 @@ namespace Juice.EventBus.RabbitMQ.Consuming
                 originalRoutingKey, routingKey,
                 reason);
 
-            await _consumerChannel.BasicPublishAsync(
-                exchange: retryPolicy.Exchange,
-                routingKey: routingKey,
-                mandatory: false,
-                basicProperties: new BasicProperties
-                {
-                    ContentType = eventArgs.BasicProperties.ContentType,
-                    CorrelationId = eventArgs.BasicProperties.CorrelationId,
-                    MessageId = eventArgs.BasicProperties.MessageId,
-                    Timestamp = eventArgs.BasicProperties.Timestamp,
-                    DeliveryMode = DeliveryModes.Persistent,
-                    Headers = headers
-                },
-                body: eventArgs.Body);
-
-            await _consumerChannel.BasicAckAsync(eventArgs.DeliveryTag, multiple: false);
+            await MoveAsync(eventArgs, retryPolicy.Exchange, routingKey, mandatory: false, headers);
         }
 
         private string GetDeadLetterRoutingKey(string originalRoutingKey)

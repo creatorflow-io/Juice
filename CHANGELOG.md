@@ -1,3 +1,50 @@
+# v10.8.0 - RabbitMQ: confirmed publishing, working retries
+
+## Fixes
+
+### `Juice.EventBus.RabbitMQ`
+- **Publisher confirms.** Producer channels are opened with publisher confirmations and tracking, so `PublishAsync`
+  completes only once the broker has the message. Before, it completed when the frame was written to the socket, and
+  the outbox marked a delivery `Published` even when the broker then dropped the message. A publish now **fails** (and
+  the outbox records the delivery as `Failed` and retries it by its delivery policy) when:
+  - the exchange does not exist (the broker closes the channel with `404`): `InvalidOperationException` "Message … was
+    not published: NOT_FOUND - no exchange …";
+  - the broker nacks the message;
+  - with the new `Mandatory()` producer option only: no queue is bound for the routing key, "Message … is
+    unroutable …".
+- **Retries work.** The publish retry (`MaxRetryAttempts`, default 5) and the connection retry (`ConnectionMaxRetries`)
+  used Polly's synchronous policy with an async lambda, so they never retried. Both are now async. Publishing retries
+  only a dropped connection or channel, with a short delay (new `RetryBaseDelay`, default 0.2s, doubling: 0.2s, 0.4s,
+  0.8s…; was 2s, 4s, 8s… blocking a thread); a missing exchange, access refused, precondition failed and broker
+  refusals are not retried, the outbox owns the long retries. A connection that cannot be opened makes
+  `TryConnectAsync` return `false` instead of throwing.
+- **Route routing key.** `PublishContext.RoutingKey` (the publishing policy route's routing key) was ignored; it now
+  wins over the `x-routing-key`, `x-message-name` and `x-message-type` headers, as for NATS.
+- **Channel pool.** A publish cancelled while waiting for a channel released a pool slot it never held (pool over
+  capacity, or a `SemaphoreFullException` hiding the real error). Channel callbacks no longer dispose a channel that
+  may be in use.
+- **Reconnects.** The client's automatic recovery owns reconnects: on a connection shutdown the connection no longer
+  opens a second connection beside the recovering one (which leaked). Recovery success and errors are logged.
+  `DisconnectAsync` disposes the connection, so the next `TryConnectAsync` opens a new one. Using a disposed
+  connection no longer throws a `NullReferenceException`.
+- **Consumer.** Stopping a consumer no longer disposes the shared connection used by producers and other consumers.
+  The consumer channel has publisher confirms too: a message moved to a retry tier or parking is acked only once the
+  broker has confirmed the copy; if the copy is refused the original is requeued (after 1s) instead of lost.
+
+## Changes
+- `IRabbitMQPersistentConnection` has a new `CreateChannelAsync(CreateChannelOptions?, CancellationToken)` overload.
+  Custom implementations of the interface must add it.
+- `RabbitMQProducerBuilder.RetryBaseDelay(TimeSpan)`.
+- `RabbitMQProducerBuilder.Mandatory(bool = true)`: a message no queue is bound for fails the publish. Off by
+  default, the broker drops it as before: publishing an event nobody subscribes to yet is normal pub/sub. (The
+  producer always set `mandatory: true`, but nothing handled the broker's return, so it had no effect.)
+- **Upgrade note:** publishing to an exchange that does not exist now fails the outbox delivery (it was marked
+  `Published` and the message was lost). Declare the exchange, or fix the route.
+
+### Tests
+- The "multiple exchanges" and "route by tenant" RabbitMQ tests publish some messages to an undeclared exchange
+  (`x.content.vip`); they now expect those publishes to fail with `NOT_FOUND`.
+
 # v10.7.0 - Juice.OpenTelemetry, framework metrics, HTTP context on the server span
 
 ## Features

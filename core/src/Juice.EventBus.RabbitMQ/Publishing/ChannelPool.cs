@@ -13,6 +13,14 @@ namespace Juice.EventBus.RabbitMQ.Publishing
         ChannelManager manager,
         ILogger logger) : IAsyncDisposable
     {
+        /// <summary>
+        /// Publisher confirmations with tracking: <c>BasicPublishAsync</c> completes once the broker has taken the
+        /// message, and throws when it nacks, returns it (mandatory, unroutable) or closes the channel (e.g. no exchange).
+        /// </summary>
+        internal static readonly CreateChannelOptions PublisherChannelOptions = new(
+            publisherConfirmationsEnabled: true,
+            publisherConfirmationTrackingEnabled: true);
+
         private readonly IRabbitMQPersistentConnection _persistentConnection = persistentConnection;
 
         // SemaphoreSlim limits total number of live channels.
@@ -29,43 +37,54 @@ namespace Juice.EventBus.RabbitMQ.Publishing
         private readonly ILogger _logger = logger;
 
 
+        /// <summary>
+        /// Rents an open channel. Every successful rent must be given back with <see cref="ReturnAsync"/>;
+        /// a failed rent holds nothing.
+        /// </summary>
         public async ValueTask<IChannel> RentAsync(CancellationToken ct)
         {
-            // Try to reuse existing channel
             await _semaphore.WaitAsync(ct);
-            while (_channelPool.Reader.TryRead(out var channel))
+            try
             {
-                if (channel.IsOpen)
+                // Try to reuse existing channel
+                while (_channelPool.Reader.TryRead(out var channel))
                 {
-                    if (_logger.IsEnabled(LogLevel.Debug))
-                        _logger.LogDebug("Reusing existing RabbitMQ channel from pool.");
-                    return channel;
+                    if (channel.IsOpen)
+                    {
+                        if (_logger.IsEnabled(LogLevel.Debug))
+                            _logger.LogDebug("Reusing existing RabbitMQ channel from pool.");
+                        return channel;
+                    }
+                    // Dispose closed channel
+                    SafeDispose(channel);
                 }
-                // Dispose closed channel
-                SafeDispose(channel);
+
+                // Create new channel
+                var newChannel = await CreateProducerChannelAsync(ct);
+                if (newChannel == null)
+                    throw new InvalidOperationException("Cannot create channel - connection unavailable");
+                InitializeChannel(newChannel);
+                return newChannel;
             }
-
-            // Create new channel
-            var newChannel = await CreateProducerChannelAsync(ct);
-            if (newChannel == null)
-                throw new InvalidOperationException("Cannot create channel - connection unavailable");
-            InitializeChannel(newChannel);
-            return newChannel;
-
+            catch
+            {
+                _semaphore.Release();
+                throw;
+            }
         }
 
-        public async Task ReturnAsync(IChannel? channel)
+        public async Task ReturnAsync(IChannel channel)
         {
             try
             {
                 // Add back to pool only if still open
-                if (channel?.IsOpen == true)
+                if (channel.IsOpen)
                 {
                     await _channelPool.Writer.WriteAsync(channel);
                 }
                 else
                 {
-                   SafeDispose(channel);
+                    SafeDispose(channel);
                 }
             }
             finally
@@ -81,61 +100,43 @@ namespace Juice.EventBus.RabbitMQ.Publishing
                 return null;
             }
             _logger.LogInformation("Creating RabbitMQ producer channel. Connection: {Connection}", _persistentConnection.Name);
-            return await _persistentConnection.CreateChannelAsync(ct);
+            return await _persistentConnection.CreateChannelAsync(PublisherChannelOptions, ct);
         }
 
         private void InitializeChannel(IChannel channel)
         {
-            // Any channel initialization logic can go here
-            if (channel != null)
+            // The handlers do not dispose the channel: it may be in use by a publish, and a connection-level
+            // close is recovered by the client. A channel that stays closed is dropped on its next rent or return.
+            channel.CallbackExceptionAsync += (_, ea) =>
             {
-                channel.CallbackExceptionAsync += (_, ea) =>
+                _logger.LogWarning(ea.Exception, "RabbitMQ channel callback exception occurred.");
+                _ = Task.Run(() => manager.RaiseChannelFailedAsync(
+                    new ChannelFailureEventArgs(
+                        exchange: destination,
+                        replyCode: 0,
+                        replyText: "CallbackException",
+                        exception: ea.Exception))
+                );
+                return Task.CompletedTask;
+            };
+
+            channel.ChannelShutdownAsync += (sender, ea) =>
+            {
+                _logger.LogWarning("RabbitMQ channel shutdown: ReplyCode={ReplyCode}, ReplyText={ReplyText}",
+                    ea.ReplyCode, ea.ReplyText);
+
+                if (ea.Initiator == ShutdownInitiator.Peer)
                 {
-                    _logger.LogWarning(ea.Exception, "RabbitMQ channel callback exception occurred. Disposing channel.");
-                    _ = Task.Run(() => manager.RaiseChannelFailedAsync(
+                    _ = Task.Run(() =>
+                       manager.RaiseChannelFailedAsync(
                         new ChannelFailureEventArgs(
                             exchange: destination,
-                            replyCode: 0,
-                            replyText: "CallbackException",
-                            exception: ea.Exception))
-                    );
-                    try
-                    {
-                        channel.Dispose();
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Error disposing RabbitMQ channel after callback exception");
-                    }
-                    return Task.CompletedTask;
-                };
-
-                channel.ChannelShutdownAsync += (sender, ea) =>
-                {
-                    _logger.LogWarning("RabbitMQ channel shutdown: ReplyCode={ReplyCode}, ReplyText={ReplyText}",
-                        ea.ReplyCode, ea.ReplyText);
-
-                    if (ea.Initiator == ShutdownInitiator.Peer)
-                    {
-                        _ = Task.Run(() =>
-                           manager.RaiseChannelFailedAsync(
-                            new ChannelFailureEventArgs(
-                                exchange: destination,
-                                replyCode: ea.ReplyCode,
-                                replyText: ea.ReplyText,
-                                exception: ea.Exception)));
-                    }
-                    try
-                    {
-                        channel.Dispose();
-                    }
-                    catch
-                    {
-                    }
-                    return Task.CompletedTask;
-                };
-
-            }
+                            replyCode: ea.ReplyCode,
+                            replyText: ea.ReplyText,
+                            exception: ea.Exception)));
+                }
+                return Task.CompletedTask;
+            };
         }
 
         private void SafeDispose(IChannel? channel)
@@ -188,7 +189,7 @@ namespace Juice.EventBus.RabbitMQ.Publishing
             return pool.RentAsync(ct);
         }
 
-        public async Task ReturnAsync(string destination, IChannel? channel)
+        public async Task ReturnAsync(string destination, IChannel channel)
         {
             if (_pools.TryGetValue(destination, out var pool))
             {
@@ -199,11 +200,11 @@ namespace Juice.EventBus.RabbitMQ.Publishing
                 // No pool found, dispose channel
                 try
                 {
-                    if (channel?.IsOpen ?? false)
+                    if (channel.IsOpen)
                     {
                         await channel.CloseAsync();
                     }
-                    channel?.Dispose();
+                    channel.Dispose();
                 }
                 catch { }
             }

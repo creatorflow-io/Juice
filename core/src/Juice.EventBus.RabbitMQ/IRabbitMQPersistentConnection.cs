@@ -13,5 +13,10 @@ namespace Juice.EventBus.RabbitMQ
         ValueTask DisconnectAsync();
 
         ValueTask<IChannel?> CreateChannelAsync(CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Creates a channel with the given options, e.g. with publisher confirmations enabled.
+        /// </summary>
+        ValueTask<IChannel?> CreateChannelAsync(CreateChannelOptions? options, CancellationToken cancellationToken = default);
     }
 }

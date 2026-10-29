@@ -63,9 +63,17 @@ IDeliveryPolicyResolver           — resolves policy for DeliveryContext(publis
 ### Transport (Broker)
 ```
 ITransportPublisher        — Key (string), PublishAsync(byte[], PublishContext, CT)
-RabbitMQProducer           — implements ITransportPublisher; uses channel pool, Polly retry
+RabbitMQProducer           — implements ITransportPublisher; channel pool with publisher confirms (tracking): PublishAsync completes
+                             only once the broker has the message and throws on nack, basic.return (only with Mandatory(), off by default)
+                             or a channel close (404 no exchange) → the outbox marks the delivery Failed and retries it.
+                             Async Polly retry (MaxRetryAttempts, RetryBaseDelay 0.2s doubling) only for dropped
+                             connections/channels; 403/404/406 and refusals are not retried. Routing key: PublishContext.RoutingKey
+                             (policy route) → x-routing-key → x-message-name → x-message-type (same as NATS)
+DefaultRabbitMQPersistentConnection — first connect with async retries (ConnectionMaxRetries); after that the client's
+                             automatic recovery owns reconnects (no second connection while recovering). Shared keyed
+                             singleton: consumers do not dispose it on stop
 JetStreamProducer          — implements ITransportPublisher (Juice.EventBus.NATS, key "nats"); see "NATS JetStream transport"
-PublishContext             — MessageId, TenantId, Destination (exchange), Headers
+PublishContext             — MessageId, TenantId, Destination (exchange), Headers, RoutingKey
 ```
 
 ### OutboxProxy
@@ -132,7 +140,8 @@ RabbitMQConsumerEngine.Consumer_ReceivedAsync():
   7. Result handling:
      - Success/Duplicated → BasicAckAsync (remove from queue)
      - Failure → Check IRetryPolicyProvider:
-       - Retries remaining → republish to retry exchange with updated x-attempts header
+       - Retries remaining → republish to retry exchange with updated x-attempts header (consumer channel has
+         publisher confirms: the original is acked only after the copy is confirmed; a refused copy → nack requeue after 1s)
        - Max retries reached + parking enabled → route to parking queue (DLQ)
        - Max retries reached + no parking → BasicNackAsync
      - NotHandled → BasicNackAsync
@@ -182,7 +191,7 @@ Relationship: Outbox uses `ITransportPublisher` directly (bypass IEventBus). IEv
 | `x-tenant-id` | Current tenant ID |
 | `x-message-type` | Event class name |
 | `x-message-id` | Event Guid |
-| `x-message-name` | EventName or type name (used as RabbitMQ routing key) |
+| `x-message-name` | EventName or type name (RabbitMQ routing key unless the route sets one) |
 | `x-original-exchange` | Exchange where message was first published |
 | `x-original-routing-key` | Routing key used on publish |
 | `x-attempts` | Retry count (consumer side) |

@@ -1,7 +1,6 @@
 ﻿using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using Polly;
-using Polly.Retry;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using RabbitMQ.Client.Exceptions;
@@ -14,7 +13,7 @@ namespace Juice.EventBus.RabbitMQ
     {
         public string Name { get; init; }
         private IConnectionFactory _connectionFactory;
-        private ILogger _logger;
+        private readonly ILogger _logger;
         private readonly uint _retryCount;
         private IConnection? _connection;
         private bool _disposed;
@@ -30,6 +29,7 @@ namespace Juice.EventBus.RabbitMQ
             var factory = new ConnectionFactory()
             {
                 HostName = options.Connection!,
+                // the client recovers a lost connection and its channels; this class only makes the first connection
                 AutomaticRecoveryEnabled = true,
                 NetworkRecoveryInterval = TimeSpan.FromSeconds(5)
             };
@@ -61,14 +61,17 @@ namespace Juice.EventBus.RabbitMQ
             }
         }
 
-        public async ValueTask<IChannel?> CreateChannelAsync(CancellationToken cancellationToken = default)
+        public ValueTask<IChannel?> CreateChannelAsync(CancellationToken cancellationToken = default)
+            => CreateChannelAsync(null, cancellationToken);
+
+        public async ValueTask<IChannel?> CreateChannelAsync(CreateChannelOptions? options, CancellationToken cancellationToken = default)
         {
             if (!IsConnected)
             {
                 throw new InvalidOperationException("No RabbitMQ connections are available to perform this action");
             }
 
-            return await _connection!.CreateChannelAsync();
+            return await _connection!.CreateChannelAsync(options, cancellationToken);
         }
         #region Disposable
 
@@ -90,7 +93,6 @@ namespace Juice.EventBus.RabbitMQ
                     // dispose managed state (managed objects)
                     _connection?.Dispose();
                     _connection = null!;
-                    _logger = null!;
                     _connectionFactory = null!;
                 }
 
@@ -109,45 +111,49 @@ namespace Juice.EventBus.RabbitMQ
                 _logger.LogInformation("Connect bypassed because RabbitMQ Client is disposed");
                 return false;
             }
+            await sync_root.WaitAsync(cancellationToken);
             try
             {
-                await sync_root.WaitAsync(cancellationToken);
                 if (IsConnected)
                 {
                     return true;
                 }
+                if (_connection != null)
+                {
+                    // a connection that has been open once is recovering: a second one would leak
+                    _logger.LogWarning("RabbitMQ connection is recovering; it is not available yet");
+                    return false;
+                }
                 _logger.LogInformation("RabbitMQ Client is trying to connect");
-                var policy = RetryPolicy.Handle<SocketException>()
+                var policy = Policy.Handle<SocketException>()
                         .Or<BrokerUnreachableException>()
-                        .WaitAndRetry((int)_retryCount, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)), (ex, time) =>
+                        .WaitAndRetryAsync((int)_retryCount, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)), (ex, time) =>
                         {
                             _logger.LogWarning(ex, "RabbitMQ Client could not connect after {TimeOut}s ({ExceptionMessage})", $"{time.TotalSeconds:n1}", ex.Message);
                         }
                     );
 
-                IConnection? connection = null;
-                await policy.Execute(async () =>
-                    {
-                        connection = await _connectionFactory.CreateConnectionAsync(cancellationToken);
-                    });
-
-                if (connection != null)
+                IConnection connection;
+                try
                 {
-                    connection.ConnectionShutdownAsync += OnConnectionShutdownAsync;
-                    connection.CallbackExceptionAsync += OnCallbackExceptionAsync;
-                    connection.ConnectionBlockedAsync += OnConnectionBlockedAsync;
-
-                    _connection = connection;
-                    _logger.LogInformation("RabbitMQ Client acquired a persistent connection to '{HostName}' and is subscribed to failure events", connection.Endpoint.HostName);
-
-                    return true;
+                    connection = await policy.ExecuteAsync(ct => _connectionFactory.CreateConnectionAsync(ct), cancellationToken);
                 }
-                else
+                catch (Exception ex) when (ex is SocketException or BrokerUnreachableException)
                 {
-                    _logger.LogCritical("FATAL ERROR: RabbitMQ connections could not be created and opened");
-
+                    _logger.LogCritical(ex, "FATAL ERROR: RabbitMQ connections could not be created and opened");
                     return false;
                 }
+
+                connection.ConnectionShutdownAsync += OnConnectionShutdownAsync;
+                connection.CallbackExceptionAsync += OnCallbackExceptionAsync;
+                connection.ConnectionBlockedAsync += OnConnectionBlockedAsync;
+                connection.RecoverySucceededAsync += OnRecoverySucceededAsync;
+                connection.ConnectionRecoveryErrorAsync += OnConnectionRecoveryErrorAsync;
+
+                _connection = connection;
+                _logger.LogInformation("RabbitMQ Client acquired a persistent connection to '{HostName}' and is subscribed to failure events", connection.Endpoint.HostName);
+
+                return true;
             }
             finally
             {
@@ -163,22 +169,37 @@ namespace Juice.EventBus.RabbitMQ
             return Task.CompletedTask;
         }
 
-        private async Task OnCallbackExceptionAsync(object? sender, CallbackExceptionEventArgs e)
+        private Task OnCallbackExceptionAsync(object? sender, CallbackExceptionEventArgs e)
         {
-            if (_disposed) { return; }
+            if (_disposed) { return Task.CompletedTask; }
 
-            _logger.LogWarning("A RabbitMQ connection throw exception. Trying to re-connect...");
-
-            await TryConnectAsync(default);
+            _logger.LogWarning(e.Exception, "A RabbitMQ connection callback threw an exception.");
+            return Task.CompletedTask;
         }
 
-        private async Task OnConnectionShutdownAsync(object? sender, ShutdownEventArgs reason)
+        private Task OnConnectionShutdownAsync(object? sender, ShutdownEventArgs reason)
         {
-            if (_disposed || _disposing) { return; }
+            if (_disposed || _disposing) { return Task.CompletedTask; }
 
-            _logger.LogWarning("A RabbitMQ connection is on shutdown. Trying to re-connect...");
+            _logger.LogWarning("A RabbitMQ connection is on shutdown ({ReplyCode} {ReplyText}). Waiting for automatic recovery...",
+                reason.ReplyCode, reason.ReplyText);
+            return Task.CompletedTask;
+        }
 
-            await TryConnectAsync(default);
+        private Task OnRecoverySucceededAsync(object? sender, AsyncEventArgs e)
+        {
+            if (_disposed) { return Task.CompletedTask; }
+
+            _logger.LogInformation("RabbitMQ connection recovered.");
+            return Task.CompletedTask;
+        }
+
+        private Task OnConnectionRecoveryErrorAsync(object? sender, ConnectionRecoveryErrorEventArgs e)
+        {
+            if (_disposed) { return Task.CompletedTask; }
+
+            _logger.LogWarning(e.Exception, "RabbitMQ connection recovery attempt failed; the client keeps retrying.");
+            return Task.CompletedTask;
         }
 
         public async ValueTask DisconnectAsync()
@@ -188,12 +209,18 @@ namespace Juice.EventBus.RabbitMQ
                 _logger.LogInformation("Disconnect bypassed because RabbitMQ Client is disposed");
                 return;
             }
-            if (_connection != null)
+            var connection = _connection;
+            if (connection != null)
             {
-                _connection.ConnectionShutdownAsync -= OnConnectionShutdownAsync;
-                _connection.CallbackExceptionAsync -= OnCallbackExceptionAsync;
-                _connection.ConnectionBlockedAsync -= OnConnectionBlockedAsync;
-                await _connection.CloseAsync();
+                connection.ConnectionShutdownAsync -= OnConnectionShutdownAsync;
+                connection.CallbackExceptionAsync -= OnCallbackExceptionAsync;
+                connection.ConnectionBlockedAsync -= OnConnectionBlockedAsync;
+                connection.RecoverySucceededAsync -= OnRecoverySucceededAsync;
+                connection.ConnectionRecoveryErrorAsync -= OnConnectionRecoveryErrorAsync;
+                // a closed connection does not recover: drop it so the next TryConnectAsync opens a new one
+                _connection = null;
+                await connection.CloseAsync();
+                connection.Dispose();
                 _logger.LogInformation("RabbitMQ Client is disconnected.");
             }
         }
