@@ -186,6 +186,14 @@ Relationship: Outbox uses `ITransportPublisher` directly (bypass IEventBus). IEv
 | `x-original-exchange` | Exchange where message was first published |
 | `x-original-routing-key` | Routing key used on publish |
 | `x-attempts` | Retry count (consumer side) |
+| `traceparent` / `tracestate` | W3C trace context (10.6): the outbox create span, or the producer send span for direct `IEventBus` publishes. Never overwritten once set |
+
+## Tracing (10.6, `Juice.Messaging/Diagnostics`)
+- One `ActivitySource` named `"Juice"` (`JuiceActivitySource`), BCL `System.Diagnostics` only, no OpenTelemetry package in core. Hosts collect with `AddSource(JuiceActivitySource.Name)`.
+- `MessagingActivity` starts/tags every span and does `Inject`/`Extract` through `DistributedContextPropagator.Current` (only `traceparent`/`tracestate`, no baggage). All methods are null-safe and never throw.
+- Spans: `create {Type}` (Producer, `OutboxEventService.SaveEventsAsync`, context stored in `OutboxEvent.Headers`) → `deliver {publisherKey}` (Internal, `DeliveryProcessor`, parent = stored context) → `send {exchange|subject}` (Producer, `RabbitMQProducer`/`JetStreamProducer`/`LocalChannelMessagePublisher`) → `process {queue|destination|Type}` (Consumer: RabbitMQ/NATS engines, `LocalTransportPublisher`, `LocalChannelBackgroundService`) → `handle {Handler}` (Internal, `IntegrationEventDispatcher`).
+- `process` parent = extracted header context, or `Activity.Current` when it is in the same trace (in-process `local` delivery nests under `deliver`). `local-channel` carries the context in `ChannelEnvelope.TraceContext` (the reader loop has no `Activity.Current`).
+- `MessageContext` ids are tags (`juice.correlation_id`, `juice.causation_id`, `juice.execution_id`, `juice.source`), never the trace parent. Tests: `Juice.XUnit.ActivityCollector` (plain `ActivityListener`, filter by trace id).
 
 ---
 

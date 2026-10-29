@@ -3,6 +3,7 @@ using System.Diagnostics;
 using Juice.EventBus.Publishing;
 using Juice.EventBus.Subscriptions;
 using Juice.MediatR;
+using Juice.Messaging.Diagnostics;
 using Juice.Messaging.Integrations;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -122,6 +123,9 @@ namespace Juice.Messaging.Local.Internal
             LocalChannelMetrics.IncrementDeliveryAttempt(Key);
 
             var message = DeserializeMessage(payload, context);
+            // nests under the outbox delivery span, or continues the trace stored with the message
+            using var activity = MessagingActivity.StartProcess(Key, destination: null,
+                message.GetType().Name, context.MessageId, context.Headers);
 
             // Restore MessageContext from outbox headers so that the idempotency key
             // ("{Source}:{MessageId}") matches across immediate dispatch and delivery retry
@@ -140,6 +144,7 @@ namespace Juice.Messaging.Local.Internal
                     executionId: Guid.NewGuid().ToString(),
                     source: TryGetHeader(headers, "x-source") ?? Key);
             }
+            MessagingActivity.EnrichWithMessageContext(activity);
 
             try
             {
@@ -157,6 +162,7 @@ namespace Juice.Messaging.Local.Internal
                     var subsManager = scope.ServiceProvider.GetKeyedService<ISubscriptionsManager>("local");
                     var result = await LocalDispatchHelper.DispatchIntegrationEventAsync(
                         scope.ServiceProvider, _dispatcher, subsManager, integrationEvent, cancellationToken);
+                    MessagingActivity.SetResult(activity, result);
                     if (result == Integrations.EventDispatchResult.Duplicated)
                     {
                         // Phase 1 (LocalChannelBackgroundService) already processed this event but
@@ -187,8 +193,9 @@ namespace Juice.Messaging.Local.Internal
                 LocalChannelMetrics.RecordDeliveryLatency(Key, stopwatch.Elapsed);
                 LocalChannelMetrics.IncrementDeliverySuccess(Key);
             }
-            catch
+            catch (Exception ex)
             {
+                MessagingActivity.SetError(activity, ex);
                 stopwatch.Stop();
                 LocalChannelMetrics.RecordDeliveryLatency(Key, stopwatch.Elapsed);
                 throw;

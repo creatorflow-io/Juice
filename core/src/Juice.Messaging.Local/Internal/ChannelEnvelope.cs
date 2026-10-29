@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Juice.Messaging.Context;
 
 namespace Juice.Messaging.Local.Internal
@@ -17,8 +18,13 @@ namespace Juice.Messaging.Local.Internal
     /// preventing the background delivery processor from re-processing already-handled records.
     /// <c>null</c> for <c>"local-channel"</c> messages (no outbox backing).
     /// </param>
+    /// <param name="TraceContext">
+    /// Trace context of the send span captured at enqueue time, so the dispatch continues the publisher's trace
+    /// (the reader loop does not inherit <see cref="Activity.Current"/>). <c>default</c> when there was none.
+    /// </param>
     internal sealed record ChannelEnvelope(
         IMessage Message,
         MessageContextData? Context,
-        IReadOnlyList<Guid>? LocalDeliveryIds = null);
+        IReadOnlyList<Guid>? LocalDeliveryIds = null,
+        ActivityContext TraceContext = default);
 }

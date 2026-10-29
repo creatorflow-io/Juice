@@ -1,3 +1,44 @@
+# v10.6.0 - Distributed tracing for messaging
+
+## Features
+
+### `Juice.Messaging` (core tracing, no OpenTelemetry dependency)
+- **`JuiceActivitySource`**: one `ActivitySource` named `"Juice"` for all Juice spans, built on `System.Diagnostics`
+  only. Collect them with `AddSource(JuiceActivitySource.Name)` in the host's OpenTelemetry setup; the host keeps
+  choosing exporters and sampling. Without a listener no activity is created.
+- **W3C trace propagation through messages**: `traceparent`/`tracestate` headers are written through
+  `DistributedContextPropagator.Current`, next to the existing `x-correlation-id`/`x-causation-id` headers, which are
+  unchanged. Baggage is not copied into messages. A message keeps the trace context it was created in.
+- **`MessagingActivity`**: starts the messaging spans and copies the `MessageContext` ids onto them as
+  `juice.correlation_id`, `juice.causation_id`, `juice.execution_id` and `juice.source` tags. Payloads are never
+  recorded. Telemetry failures never fail a publish or a dispatch.
+
+### Spans
+- `create {MessageType}` (Producer) when `OutboxEventService` saves an event; its context is stored in
+  `OutboxEvent.Headers` (JSON column, **no migration**), so deliveries hours later continue the same trace.
+- `deliver {publisherKey}` (Internal) per outbox delivery attempt in `DeliveryProcessor`, with the retry count and the
+  outcome (`published`, `failed`, `abandoned`, `claimed_elsewhere`).
+- `send {exchange|subject}` (Producer) in `RabbitMQProducer` and `JetStreamProducer`, `send {MessageType}` in the
+  `local-channel` publisher. For a direct `IEventBus` publish this is the context the message carries.
+- `process {queue|destination|MessageType}` (Consumer) in the RabbitMQ and NATS consumer engines,
+  `LocalTransportPublisher` (`local` route) and `LocalChannelBackgroundService` (`local-channel`), tagged with the
+  dispatch result. `local-channel` carries the context across the in-memory queue in the envelope.
+- `handle {Handler}` (Internal) per integration event handler in `IntegrationEventDispatcher`; a failing handler
+  marks its span as an error with an `exception` event.
+
+### `Juice.XUnit`
+- **`ActivityCollector`** records Juice activities with a plain `ActivityListener` for tests (no SDK), filtered by trace id.
+
+## Fixes
+
+### `Juice.Messaging`
+- `IntegrationEventDispatcher` logs the handler's own exception instead of `TargetInvocationException`
+  ("Exception has been thrown by the target of an invocation") when a handler throws before its first `await`.
+
+### `Juice.EventBus.RabbitMQ`
+- `RabbitMQProducer` no longer writes `x-original-exchange`/`x-original-routing-key` into the caller's header
+  dictionary (for an outbox delivery, the stored event headers); it copies them first, as `JetStreamProducer` does.
+
 # v10.5.3 - Request finish log context, execution time measurement switch
 
 ## Fixes

@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using System.Text;
 using Juice.Measurement;
+using Juice.Messaging.Diagnostics;
 using Juice.Messaging.Extensions;
 using Juice.Messaging.Policies;
 using Juice.MultiTenant;
@@ -86,23 +87,29 @@ namespace Juice.Messaging.Outbox.Internal
                         Encoding.UTF8.GetString(_serializer.SerializeToUtf8Bytes(message))
                         );
                 }
+                var headers = new Dictionary<string, object?>
+                {
+                    { "x-correlation-id", ctx.CorrelationId},
+                    { "x-causation-id", ctx.ExecutionId },
+                    { "x-source", ctx.Source},
+                    { "x-tenant-id", _tenantAccessor?.Tenant?.Id },
+                    { "x-message-type", message.GetType().Name },
+                    { "x-message-clr-type", $"{message.GetType().FullName}, {message.GetType().Assembly.GetName().Name}" },
+                    { "x-message-id", message.MessageId},
+                    { "x-message-name", message is IEvent evt ? evt.EventName : message.GetType().Name },
+                };
+                using (var activity = MessagingActivity.StartCreate(message))
+                {
+                    // the message carries the trace it was created in: deliveries and consumers continue it
+                    MessagingActivity.Inject(headers, activity);
+                }
                 events.Add(new OutboxEvent
                 {
                     EventId = message.MessageId,
                     CreationTime = message.CreatedAt,
                     EventTypeName = message.GetType().Name,
                     PayloadBytes = _serializer.SerializeToUtf8Bytes(message),
-                    Headers = new Dictionary<string, object?>
-                                    {
-                                        { "x-correlation-id", ctx.CorrelationId},
-                                        { "x-causation-id", ctx.ExecutionId },
-                                        { "x-source", ctx.Source},
-                                        { "x-tenant-id", _tenantAccessor?.Tenant?.Id },
-                                        { "x-message-type", message.GetType().Name },
-                                        { "x-message-clr-type", $"{message.GetType().FullName}, {message.GetType().Assembly.GetName().Name}" },
-                                        { "x-message-id", message.MessageId},
-                                        { "x-message-name", message is IEvent evt ? evt.EventName : message.GetType().Name },
-                                    },
+                    Headers = headers,
                     TransactionId = transactionId?.ToString(),
                     TenantId = _tenantAccessor?.Tenant?.Id,
                     Deliveries = [.. routes.Select(route =>

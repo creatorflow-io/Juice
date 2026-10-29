@@ -6,6 +6,7 @@ using Juice.EventBus.NATS.Policies;
 using Juice.EventBus.Policies;
 using Juice.EventBus.Subscriptions;
 using Juice.Messaging;
+using Juice.Messaging.Diagnostics;
 using Juice.Messaging.Integrations;
 using Juice.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -349,6 +350,8 @@ namespace Juice.EventBus.NATS.Consuming
                 var handlers = await _subscriptionsManager.GetHandlersForEventAsync(eventName);
 
                 EventDispatchResult result;
+                // continues the trace carried by the message (traceparent header)
+                using var activity = MessagingActivity.StartProcess("nats", _endpoint.Destination, eventName, messageId, headers, _endpoint.DurableName);
                 using (var progressCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
                 {
                     var progress = SendProgressAsync(msg, progressCts.Token);
@@ -360,8 +363,15 @@ namespace Juice.EventBus.NATS.Consuming
                             executionId: StringIdGenerator.Instance.GenerateUniqueId(),
                             source: _serviceKey
                             );
+                        MessagingActivity.EnrichWithMessageContext(activity);
 
                         result = await _dispatcher.DispatchAsync(integrationEvent, new EventDispatchContext(handlers, eventName, tenantId, _serviceKey));
+                        MessagingActivity.SetResult(activity, result);
+                    }
+                    catch (Exception ex) when (!(ex is OperationCanceledException && cancellationToken.IsCancellationRequested))
+                    {
+                        MessagingActivity.SetError(activity, ex);
+                        throw;
                     }
                     finally
                     {

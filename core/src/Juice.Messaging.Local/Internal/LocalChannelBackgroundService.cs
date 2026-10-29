@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Threading.Channels;
 using Juice.EventBus.Subscriptions;
 using Juice.MediatR;
+using Juice.Messaging.Diagnostics;
 using Juice.Messaging.Integrations;
 using Juice.Messaging.Outbox;
 using Microsoft.Extensions.DependencyInjection;
@@ -65,6 +66,9 @@ namespace Juice.Messaging.Local.Internal
                 {
                     var stopwatch = Stopwatch.StartNew();
                     var message = envelope.Message;
+                    // continues the publisher's trace captured in the envelope
+                    using var activity = MessagingActivity.StartProcess(PublisherKey, destination: null,
+                        message.GetType().Name, message.MessageId.ToString(), envelope.TraceContext);
 
                     // Each dispatch hop establishes a fresh execution context to maintain the
                     // causal chain. When the envelope carries a context snapshot we ALWAYS
@@ -92,6 +96,7 @@ namespace Juice.Messaging.Local.Internal
                             executionId: newExecutionId,
                             source: envelope.Context?.Source ?? string.Empty);
                     }
+                    MessagingActivity.EnrichWithMessageContext(activity);
 
                     try
                     {
@@ -114,6 +119,7 @@ namespace Juice.Messaging.Local.Internal
                             var subsManager = sp.GetKeyedService<ISubscriptionsManager>("local");
                             var result = await LocalDispatchHelper.DispatchIntegrationEventAsync(sp, dispatcher, subsManager, integrationEvent, CancellationToken.None);
                             dispatchSucceeded = result != Integrations.EventDispatchResult.Failure;
+                            MessagingActivity.SetResult(activity, result);
                         }
                         else
                         {
@@ -169,6 +175,7 @@ namespace Juice.Messaging.Local.Internal
                         _logger.LogError(ex,
                             "Error dispatching {MessageType} on {PublisherKey}. {Message}",
                             message.GetType().Name, PublisherKey, ex.Message);
+                        MessagingActivity.SetError(activity, ex);
                         LocalChannelMetrics.IncrementDeliveryFailure(PublisherKey, ex.GetType().Name);
                     }
                     finally

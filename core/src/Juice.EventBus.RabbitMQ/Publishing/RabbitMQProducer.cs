@@ -1,6 +1,7 @@
 ﻿using System.Net.Sockets;
 using System.Text.Json;
 using Juice.EventBus.Publishing;
+using Juice.Messaging.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Polly;
 using RabbitMQ.Client;
@@ -64,7 +65,10 @@ namespace Juice.EventBus.RabbitMQ.Publishing
                 throw new InvalidOperationException("RabbitMQ broker is not connected");
             }
 
-            var headers = context.Headers ?? new Dictionary<string, object?>();
+            // copy: an outbox delivery passes the stored event headers
+            var headers = context.Headers != null
+                ? new Dictionary<string, object?>(context.Headers)
+                : new Dictionary<string, object?>();
             var messageId = context.MessageId;
 
             var policy = Policy.Handle<BrokerUnreachableException>()
@@ -85,47 +89,59 @@ namespace Juice.EventBus.RabbitMQ.Publishing
                 ?? throw new InvalidOperationException(
                     "Missing required header 'x-message-name' or 'x-message-type' for routing key");
 
-            await policy.Execute(async (ct) =>
+            var exchangeName = context?.Destination ?? _defaultExchange;
+            using var activity = MessagingActivity.StartSend("rabbitmq", exchangeName, routingKey, messageId);
+            activity?.SetTag("messaging.rabbitmq.destination.routing_key", routingKey);
+            MessagingActivity.Inject(headers, activity);
+            try
             {
-                if (_disposedValue)
-                    throw new ObjectDisposedException(nameof(RabbitMQProducer));
-
-                IChannel? channel = null;
-                var exchange = context?.Destination ?? _defaultExchange;
-                headers["x-original-exchange"] = exchange;
-                headers["x-original-routing-key"] = routingKey;
-                try
+                await policy.Execute(async (ct) =>
                 {
-                    channel = await _channelManager.RentAsync(exchange, ct);
+                    if (_disposedValue)
+                        throw new ObjectDisposedException(nameof(RabbitMQProducer));
 
-                    var properties = new BasicProperties
+                    IChannel? channel = null;
+                    var exchange = exchangeName;
+                    headers["x-original-exchange"] = exchange;
+                    headers["x-original-routing-key"] = routingKey;
+                    try
                     {
-                        ContentType = "application/json",
-                        CorrelationId = headers.GetHeaderString("x-correlation-id"),
-                        MessageId = messageId,
-                        Timestamp = new AmqpTimestamp(DateTimeOffset.UtcNow.ToUnixTimeSeconds()),
-                        DeliveryMode = DeliveryModes.Persistent,
-                        Headers = headers.ToStandardized()
-                    };
+                        channel = await _channelManager.RentAsync(exchange, ct);
 
-                    if (_logger.IsEnabled(LogLevel.Debug))
-                    {
-                        _logger.LogDebug("Publishing event to {Exchange}: {EventId} {EventName}",
-                            exchange, messageId, routingKey);
+                        var properties = new BasicProperties
+                        {
+                            ContentType = "application/json",
+                            CorrelationId = headers.GetHeaderString("x-correlation-id"),
+                            MessageId = messageId,
+                            Timestamp = new AmqpTimestamp(DateTimeOffset.UtcNow.ToUnixTimeSeconds()),
+                            DeliveryMode = DeliveryModes.Persistent,
+                            Headers = headers.ToStandardized()
+                        };
+
+                        if (_logger.IsEnabled(LogLevel.Debug))
+                        {
+                            _logger.LogDebug("Publishing event to {Exchange}: {EventId} {EventName}",
+                                exchange, messageId, routingKey);
+                        }
+                        await channel.BasicPublishAsync(
+                            exchange: exchange,
+                            routingKey: routingKey,
+                            mandatory: true,
+                            basicProperties: properties,
+                            body: payload,
+                            cancellationToken: ct);
                     }
-                    await channel.BasicPublishAsync(
-                        exchange: exchange,
-                        routingKey: routingKey,
-                        mandatory: true,
-                        basicProperties: properties,
-                        body: payload,
-                        cancellationToken: ct);
-                }
-                finally
-                {
-                    await _channelManager.ReturnAsync(exchange, channel);
-                }
-            }, cancellationToken);
+                    finally
+                    {
+                        await _channelManager.ReturnAsync(exchange, channel);
+                    }
+                }, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                MessagingActivity.SetError(activity, ex);
+                throw;
+            }
         }
 
 

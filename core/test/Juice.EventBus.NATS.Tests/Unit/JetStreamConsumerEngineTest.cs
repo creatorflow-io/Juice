@@ -218,6 +218,37 @@ namespace Juice.EventBus.NATS.Tests.Unit
         }
 
         [Fact]
+        public async Task ConsumerSpanShouldContinueTheMessageTraceAsync()
+        {
+            using var collector = new Juice.XUnit.ActivityCollector();
+            using var h = new Harness(_output);
+            var evt = new ContentPublishedIntegrationEvent("traced");
+            var traceId = System.Diagnostics.ActivityTraceId.CreateRandom();
+            var spanId = System.Diagnostics.ActivitySpanId.CreateRandom();
+            var msg = h.Message(evt, headers: new Dictionary<string, object?>
+            {
+                ["x-message-id"] = evt.MessageId.ToString(),
+                ["x-message-name"] = nameof(ContentPublishedIntegrationEvent),
+                ["x-correlation-id"] = "corr-1",
+                ["traceparent"] = $"00-{traceId}-{spanId}-01"
+            });
+
+            await h.Engine.HandleAsync(msg, CancellationToken.None);
+
+            msg.Final.Should().Be("ack");
+            var trace = collector.InTrace(traceId);
+            var process = trace.Should().ContainSingle(a => a.OperationName == "process " + Destination).Subject;
+            process.Kind.Should().Be(System.Diagnostics.ActivityKind.Consumer);
+            process.ParentSpanId.Should().Be(spanId);
+            process.GetTagItem("messaging.system").Should().Be("nats");
+            process.GetTagItem("messaging.consumer.group.name").Should().Be("durable-1");
+            process.GetTagItem("juice.correlation_id").Should().Be("corr-1");
+            process.GetTagItem("juice.dispatch.result").Should().Be("success");
+            trace.Should().ContainSingle(a => a.OperationName == "handle " + nameof(ProbeHandler))
+                .Which.ParentSpanId.Should().Be(process.SpanId);
+        }
+
+        [Fact]
         public async Task MessageContextShouldUseHeadersAsync()
         {
             using var h = new Harness(_output);

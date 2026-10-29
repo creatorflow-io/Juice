@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Reflection;
+using Juice.Messaging.Diagnostics;
 using Juice.Messaging.Idempotency;
 using Juice.MultiTenant;
 using Microsoft.Extensions.DependencyInjection;
@@ -74,6 +75,7 @@ namespace Juice.Messaging.Integrations
                         continue;
                     }
 
+                    using var activity = MessagingActivity.StartHandle(handlerType, eventName);
                     try
                     {
                         handled = true;
@@ -82,8 +84,11 @@ namespace Juice.Messaging.Integrations
                         await (Task)handleMethod.Invoke(handler, new object[] { evt })!;
                         ok = true;
                     }
-                    catch (Exception ex)
+                    catch (Exception thrown)
                     {
+                        // a handler that throws before its first await surfaces through MethodInfo.Invoke
+                        var ex = thrown is TargetInvocationException { InnerException: { } inner } ? inner : thrown;
+                        MessagingActivity.SetError(activity, ex);
                         _logger.LogError(ex, "{handler} failed to handle event: {EventName}, eventId: {eventId}. {Message}", handler.GetType().Name, eventName, eventId, ex.Message);
                         if (_logger.IsEnabled(LogLevel.Trace))
                         {

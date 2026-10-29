@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Text;
 using Juice.EventBus.Publishing;
+using Juice.Messaging.Diagnostics;
 using Juice.Messaging.Publishing;
 using Microsoft.Extensions.Logging;
 
@@ -67,6 +68,8 @@ namespace Juice.Messaging.Outbox.Delivery.Processing
         private async Task ProcessSingleDeliveryAsync(OutboxDelivery delivery, CancellationToken cancellationToken)
         {
             using var _ = _logger.BeginScope(new Dictionary<string, object?> { { "TraceId", delivery.DeliveryId } });
+            using var activity = MessagingActivity.StartDelivery(delivery.PublisherKey,
+                delivery.OutboxEvent?.EventTypeName, delivery.EventId.ToString(), delivery.OutboxEvent?.Headers);
             var sw = Stopwatch.StartNew();
             // RetryCount as stored once this worker has claimed the delivery
             var retryCount = delivery.RetryCount;
@@ -82,6 +85,7 @@ namespace Juice.Messaging.Outbox.Delivery.Processing
                 if (afftected == 0)
                 {
                     _logger.LogInformation("Delivery {DeliveryId} is already being processed by another worker", delivery.DeliveryId);
+                    activity?.SetTag(MessagingActivity.Tags.DeliveryOutcome, "claimed_elsewhere");
                     return;
                 }
                 if (delivery.State != DeliveryState.NotPublished)
@@ -95,12 +99,16 @@ namespace Juice.Messaging.Outbox.Delivery.Processing
                     await _outbox.MarkAsFailedAsync(delivery.DeliveryId,
                         $"Abandoned: the delivery did not finish within {_deliveryPolicy.Timeout} after {retryCount} attempts", null, cancellationToken);
                     DeliveryMetrics.IncrementDeliveryFailure(delivery.PublisherKey, "Abandoned");
+                    activity?.SetTag(MessagingActivity.Tags.DeliveryOutcome, "abandoned");
+                    activity?.SetStatus(ActivityStatusCode.Error, "Abandoned");
                     return;
                 }
+                activity?.SetTag(MessagingActivity.Tags.RetryCount, retryCount);
                 await PublishEventAsync(delivery, cancellationToken);
                 await _outbox.MarkAsPublishedAsync(delivery.DeliveryId, cancellationToken);
 
                 DeliveryMetrics.IncrementDeliverySuccess(delivery.PublisherKey);
+                activity?.SetTag(MessagingActivity.Tags.DeliveryOutcome, "published");
 
                 if (_logger.IsEnabled(LogLevel.Debug))
                 {
@@ -114,6 +122,8 @@ namespace Juice.Messaging.Outbox.Delivery.Processing
             }
             catch (Exception ex)
             {
+                activity?.SetTag(MessagingActivity.Tags.DeliveryOutcome, "failed");
+                MessagingActivity.SetError(activity, ex);
                 await HandleDeliveryFailureAsync(delivery, retryCount, ex, cancellationToken);
                 DeliveryMetrics.IncrementDeliveryFailure(delivery.PublisherKey, ex.GetType().Name);
             }

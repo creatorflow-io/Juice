@@ -1,5 +1,7 @@
+using System.Diagnostics;
 using System.Threading.Channels;
 using Juice.Messaging.Context;
+using Juice.Messaging.Diagnostics;
 using Juice.Messaging.Publishing;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -47,7 +49,9 @@ namespace Juice.Messaging.Local.Internal
 
         private async ValueTask PublishAsync(IMessage message, MessageContextData? context, CancellationToken cancellationToken, IReadOnlyList<Guid>? localDeliveryIds)
         {
-            var envelope = new ChannelEnvelope(message, context, localDeliveryIds);
+            using var activity = MessagingActivity.StartSend(Key, destination: null, message.GetType().Name, message.MessageId.ToString());
+            var envelope = new ChannelEnvelope(message, context, localDeliveryIds,
+                (activity ?? Activity.Current)?.Context ?? default);
 
             if (_channelWriter.TryWrite(envelope))
             {
@@ -78,6 +82,7 @@ namespace Juice.Messaging.Local.Internal
                     "Local channel full (capacity={Capacity}, mode=DropWrite), {MessageType} (id={MessageId}) dropped",
                     _capacity!.Value, message.GetType().Name, message.MessageId);
                 LocalChannelMetrics.IncrementChannelDropped(Key, message.GetType().Name);
+                activity?.SetStatus(ActivityStatusCode.Error, "Dropped: local channel full");
             }
             else
             {

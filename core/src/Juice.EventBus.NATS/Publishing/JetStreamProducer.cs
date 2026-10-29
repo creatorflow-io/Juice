@@ -1,4 +1,5 @@
 using Juice.EventBus.Publishing;
+using Juice.Messaging.Diagnostics;
 using Microsoft.Extensions.Logging;
 using NATS.Client.JetStream;
 
@@ -53,6 +54,9 @@ namespace Juice.EventBus.NATS.Publishing
                 headers["x-tenant-id"] = context.TenantId;
             }
 
+            using var activity = MessagingActivity.StartSend("nats", destination, routingKey, messageId);
+            MessagingActivity.Inject(headers, activity);
+
             try
             {
                 await _connection.EnsureConnectedAsync(cancellationToken).ConfigureAwait(false);
@@ -89,6 +93,7 @@ namespace Juice.EventBus.NATS.Publishing
             }
             catch (NatsJSPublishNoResponseException ex)
             {
+                MessagingActivity.SetError(activity, ex);
                 JetStreamMetrics.IncrementPublishError(subject);
                 _logger.LogWarning(ex, "Could not publish event: {EventId} to {Subject}. No stream acknowledged it.", messageId, subject);
                 throw new InvalidOperationException(
@@ -96,6 +101,7 @@ namespace Juice.EventBus.NATS.Publishing
             }
             catch (Exception ex)
             {
+                MessagingActivity.SetError(activity, ex);
                 JetStreamMetrics.IncrementPublishError(subject);
                 _logger.LogWarning(ex, "Could not publish event: {EventId} to {Subject} ({ExceptionMessage})", messageId, subject, ex.Message);
                 throw;

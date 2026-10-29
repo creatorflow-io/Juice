@@ -3,6 +3,7 @@ using Juice.EventBus.Policies;
 using Juice.EventBus.RabbitMQ.Policies;
 using Juice.EventBus.Subscriptions;
 using Juice.Messaging;
+using Juice.Messaging.Diagnostics;
 using Juice.Messaging.Integrations;
 using Juice.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -264,6 +265,8 @@ namespace Juice.EventBus.RabbitMQ.Consuming
             var handlers = await _subscriptionsManager.GetHandlersForEventAsync(routingKey);
 
             var tenantId = eventArgs.BasicProperties.Headers?.GetHeaderString("x-tenant-id");
+            // continues the trace carried by the message (traceparent header)
+            using var activity = MessagingActivity.StartProcess("rabbitmq", _queueName, routingKey, messageId, headers, _queueName);
             try
             {
                 MessageContext.Initialize(
@@ -272,8 +275,16 @@ namespace Juice.EventBus.RabbitMQ.Consuming
                     executionId: StringIdGenerator.Instance.GenerateUniqueId(),
                     source: _serviceKey
                     );
+                MessagingActivity.EnrichWithMessageContext(activity);
 
-                return await _dispatcher.DispatchAsync(integrationEvent, new EventDispatchContext(handlers, routingKey, tenantId, _serviceKey));
+                var result = await _dispatcher.DispatchAsync(integrationEvent, new EventDispatchContext(handlers, routingKey, tenantId, _serviceKey));
+                MessagingActivity.SetResult(activity, result);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                MessagingActivity.SetError(activity, ex);
+                throw;
             }
             finally
             {
