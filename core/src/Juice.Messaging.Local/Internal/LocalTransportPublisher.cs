@@ -120,6 +120,9 @@ namespace Juice.Messaging.Local.Internal
             CancellationToken cancellationToken = default)
         {
             var stopwatch = Stopwatch.StartNew();
+            var started = MessagingMetrics.StartTimestamp();
+            // a dispatch that returned a result is counted by that result; only exceptions count as errors
+            var consumedRecorded = false;
             LocalChannelMetrics.IncrementDeliveryAttempt(Key);
 
             var message = DeserializeMessage(payload, context);
@@ -156,6 +159,8 @@ namespace Juice.Messaging.Local.Internal
                             $"IMediator is not registered. Call services.AddMediatR() to dispatch " +
                             $"INotification messages through the '{Key}' transport publisher.");
                     await LocalDispatchHelper.DispatchNotificationAsync(mediator, notification, cancellationToken);
+                    MessagingMetrics.RecordConsumed(Key, null, message.GetType().Name, Integrations.EventDispatchResult.Success, started);
+                    consumedRecorded = true;
                 }
                 else if (message is IIntegrationEvent integrationEvent)
                 {
@@ -163,6 +168,8 @@ namespace Juice.Messaging.Local.Internal
                     var result = await LocalDispatchHelper.DispatchIntegrationEventAsync(
                         scope.ServiceProvider, _dispatcher, subsManager, integrationEvent, cancellationToken);
                     MessagingActivity.SetResult(activity, result);
+                    MessagingMetrics.RecordConsumed(Key, null, message.GetType().Name, result, started);
+                    consumedRecorded = true;
                     if (result == Integrations.EventDispatchResult.Duplicated)
                     {
                         // Phase 1 (LocalChannelBackgroundService) already processed this event but
@@ -196,6 +203,10 @@ namespace Juice.Messaging.Local.Internal
             catch (Exception ex)
             {
                 MessagingActivity.SetError(activity, ex);
+                if (!consumedRecorded)
+                {
+                    MessagingMetrics.RecordConsumeError(Key, null, message.GetType().Name, ex, started);
+                }
                 stopwatch.Stop();
                 LocalChannelMetrics.RecordDeliveryLatency(Key, stopwatch.Elapsed);
                 throw;

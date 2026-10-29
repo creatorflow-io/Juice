@@ -351,6 +351,7 @@ namespace Juice.EventBus.NATS.Consuming
 
                 EventDispatchResult result;
                 // continues the trace carried by the message (traceparent header)
+                var started = MessagingMetrics.StartTimestamp();
                 using var activity = MessagingActivity.StartProcess("nats", _endpoint.Destination, eventName, messageId, headers, _endpoint.DurableName);
                 using (var progressCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
                 {
@@ -367,10 +368,12 @@ namespace Juice.EventBus.NATS.Consuming
 
                         result = await _dispatcher.DispatchAsync(integrationEvent, new EventDispatchContext(handlers, eventName, tenantId, _serviceKey));
                         MessagingActivity.SetResult(activity, result);
+                        MessagingMetrics.RecordConsumed("nats", _endpoint.DurableName, eventName, result, started);
                     }
                     catch (Exception ex) when (!(ex is OperationCanceledException && cancellationToken.IsCancellationRequested))
                     {
                         MessagingActivity.SetError(activity, ex);
+                        MessagingMetrics.RecordConsumeError("nats", _endpoint.DurableName, eventName, ex, started);
                         throw;
                     }
                     finally

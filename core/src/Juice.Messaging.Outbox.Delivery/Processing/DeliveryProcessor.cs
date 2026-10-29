@@ -101,6 +101,7 @@ namespace Juice.Messaging.Outbox.Delivery.Processing
                     DeliveryMetrics.IncrementDeliveryFailure(delivery.PublisherKey, "Abandoned");
                     activity?.SetTag(MessagingActivity.Tags.DeliveryOutcome, "abandoned");
                     activity?.SetStatus(ActivityStatusCode.Error, "Abandoned");
+                    MessagingMetrics.RecordOutboxError(delivery.PublisherKey, delivery.OutboxEvent?.EventTypeName, "Abandoned");
                     return;
                 }
                 activity?.SetTag(MessagingActivity.Tags.RetryCount, retryCount);
@@ -109,6 +110,7 @@ namespace Juice.Messaging.Outbox.Delivery.Processing
 
                 DeliveryMetrics.IncrementDeliverySuccess(delivery.PublisherKey);
                 activity?.SetTag(MessagingActivity.Tags.DeliveryOutcome, "published");
+                MessagingMetrics.RecordOutboxPublished(delivery.PublisherKey, delivery.OutboxEvent?.EventTypeName);
 
                 if (_logger.IsEnabled(LogLevel.Debug))
                 {
@@ -124,6 +126,7 @@ namespace Juice.Messaging.Outbox.Delivery.Processing
             {
                 activity?.SetTag(MessagingActivity.Tags.DeliveryOutcome, "failed");
                 MessagingActivity.SetError(activity, ex);
+                MessagingMetrics.RecordOutboxError(delivery.PublisherKey, delivery.OutboxEvent?.EventTypeName, ex.GetType().FullName ?? ex.GetType().Name);
                 await HandleDeliveryFailureAsync(delivery, retryCount, ex, cancellationToken);
                 DeliveryMetrics.IncrementDeliveryFailure(delivery.PublisherKey, ex.GetType().Name);
             }

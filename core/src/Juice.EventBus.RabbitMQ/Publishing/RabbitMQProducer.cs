@@ -136,10 +136,12 @@ namespace Juice.EventBus.RabbitMQ.Publishing
                         await _channelManager.ReturnAsync(exchange, channel);
                     }
                 }, cancellationToken);
+                MessagingMetrics.RecordPublished("rabbitmq", exchangeName, routingKey);
             }
             catch (Exception ex)
             {
                 MessagingActivity.SetError(activity, ex);
+                MessagingMetrics.RecordPublishError("rabbitmq", exchangeName, routingKey, ex);
                 throw;
             }
         }

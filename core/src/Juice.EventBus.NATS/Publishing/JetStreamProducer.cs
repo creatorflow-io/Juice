@@ -86,14 +86,17 @@ namespace Juice.EventBus.NATS.Publishing
                     {
                         _logger.LogDebug("Event {EventId} was already stored in {Stream}; duplicate ignored.", messageId, ack.Stream);
                     }
+                    MessagingMetrics.RecordPublished("nats", destination, routingKey);
                     return;
                 }
 
                 ack.EnsureSuccess();
+                MessagingMetrics.RecordPublished("nats", destination, routingKey);
             }
             catch (NatsJSPublishNoResponseException ex)
             {
                 MessagingActivity.SetError(activity, ex);
+                MessagingMetrics.RecordPublishError("nats", destination, routingKey, ex);
                 JetStreamMetrics.IncrementPublishError(subject);
                 _logger.LogWarning(ex, "Could not publish event: {EventId} to {Subject}. No stream acknowledged it.", messageId, subject);
                 throw new InvalidOperationException(
@@ -102,6 +105,7 @@ namespace Juice.EventBus.NATS.Publishing
             catch (Exception ex)
             {
                 MessagingActivity.SetError(activity, ex);
+                MessagingMetrics.RecordPublishError("nats", destination, routingKey, ex);
                 JetStreamMetrics.IncrementPublishError(subject);
                 _logger.LogWarning(ex, "Could not publish event: {EventId} to {Subject} ({ExceptionMessage})", messageId, subject, ex.Message);
                 throw;

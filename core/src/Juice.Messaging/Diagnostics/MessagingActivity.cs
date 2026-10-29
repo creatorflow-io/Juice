@@ -221,19 +221,24 @@ namespace Juice.Messaging.Diagnostics
             {
                 return;
             }
-            activity.SetTag(Tags.DispatchResult, result switch
-            {
-                EventDispatchResult.Success => "success",
-                EventDispatchResult.Failure => "failure",
-                EventDispatchResult.Duplicated => "duplicated",
-                EventDispatchResult.NotHandled => "not_handled",
-                _ => result.ToString()
-            });
+            activity.SetTag(Tags.DispatchResult, ToTagValue(result));
             if (result == EventDispatchResult.Failure)
             {
                 activity.SetStatus(ActivityStatusCode.Error, "One or more handlers failed");
             }
         }
+
+        /// <summary>
+        /// The <see cref="Tags.DispatchResult"/> value of <paramref name="result"/>.
+        /// </summary>
+        public static string ToTagValue(EventDispatchResult result) => result switch
+        {
+            EventDispatchResult.Success => "success",
+            EventDispatchResult.Failure => "failure",
+            EventDispatchResult.Duplicated => "duplicated",
+            EventDispatchResult.NotHandled => "not_handled",
+            _ => result.ToString()
+        };
 
         /// <summary>
         /// Marks the span as failed and records the exception as an <c>exception</c> event.

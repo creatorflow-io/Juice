@@ -68,6 +68,7 @@ namespace Juice.Messaging.Local.Internal
                             depth, _capacity!.Value, _fullMode);
                     }
                 }
+                MessagingMetrics.RecordPublished(Key, null, message.GetType().Name);
                 return;
             }
 
@@ -91,6 +92,7 @@ namespace Juice.Messaging.Local.Internal
                     "Local channel full (depth={Depth}/{Capacity}), waiting for capacity",
                     _channelReader.Count, _capacity?.ToString() ?? "∞");
                 await _channelWriter.WriteAsync(envelope, cancellationToken);
+                MessagingMetrics.RecordPublished(Key, null, message.GetType().Name);
             }
         }
     }

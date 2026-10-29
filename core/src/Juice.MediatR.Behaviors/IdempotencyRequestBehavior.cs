@@ -62,7 +62,7 @@ namespace Juice.MediatR.Behaviors
     public class IdempotencyRequestBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
         where TRequest : IRequest<TResponse>, IIdempotentRequest
     {
-        public int Order => int.MinValue; // run very early
+        public int Order => int.MinValue + 10; // run very early, inside the tracing behavior (int.MinValue)
         private readonly ILogger _logger;
         private readonly IIdempotencyService _idempotencyService;
         private readonly IMessageSerializer _serializer;
@@ -130,7 +130,7 @@ namespace Juice.MediatR.Behaviors
     public class IdempotencyRequestBehavior<TRequest> : IPipelineBehavior<TRequest>
         where TRequest : IRequest, IIdempotentRequest
     {
-        public int Order => int.MinValue; // run very early
+        public int Order => int.MinValue + 10; // run very early, inside the tracing behavior (int.MinValue)
         private readonly ILogger _logger;
         private readonly IIdempotencyService _idempotencyService;
         private readonly IMessageSerializer _serializer;

@@ -1,3 +1,35 @@
+# v10.7.0 - Juice.OpenTelemetry, framework metrics, HTTP context on the server span
+
+## Features
+
+### `Juice.OpenTelemetry` (new package, net8.0+)
+- **`AddJuiceInstrumentation()`** on `TracerProviderBuilder` and `MeterProviderBuilder` adds the Juice source and
+  meter to the host's OpenTelemetry providers. It depends on `OpenTelemetry.Api` only: exporters (OTLP or any other),
+  sampling and resource settings stay in the host configuration.
+- **`services.AddJuiceOpenTelemetry(options => ...)`** adds mediator instrumentation: a `mediator {RequestType}` span
+  and the `juice.mediator.requests`, `juice.mediator.errors` and `juice.mediator.request.duration` (s) metrics for every
+  request and notification, tagged with the request type (`juice.operation`) and the `MessageContext` ids. The behavior
+  runs first (`Order = int.MinValue`), so it covers idempotency and the transaction. Options:
+  `EnableMediatorInstrumentation`, `EnableNotificationInstrumentation`, `Filter`.
+
+### `Juice.Messaging`
+- **`JuiceMeter`** (`"Juice"`) with framework metrics recorded by the transports and the outbox:
+  `juice.messaging.published`, `juice.messaging.consumed` (by `juice.dispatch.result`),
+  `juice.messaging.process.duration` (s), `juice.messaging.errors`, `juice.outbox.published`, `juice.outbox.errors`.
+  Dimensions are bounded (transport, destination, consumer group, message type, result, error type); message, tenant
+  and correlation ids are never dimensions. The existing `delivery.metrics`, `infra.rabbitmq.metrics` and
+  `infra.nats.metrics` meters are unchanged.
+
+### `Juice.AspNetCore`
+- `MessageContextMiddleware` and `[MessageContext]` tag the current HTTP server span (`Activity.Current`) with
+  `juice.correlation_id`, `juice.execution_id` and `juice.source`. No second HTTP span is created.
+
+## Changes
+
+### `Juice.MediatR.Behaviors`
+- `IdempotencyRequestBehavior` runs at `Order = int.MinValue + 10` (was `int.MinValue`), so the tracing behavior
+  wraps it and duplicate requests are visible in traces. It still runs before every behavior above that order.
+
 # v10.6.0 - Distributed tracing for messaging
 
 ## Features

@@ -1,4 +1,6 @@
-﻿using Juice.Messaging;
+﻿using System.Diagnostics;
+using Juice.Messaging;
+using Juice.Messaging.Diagnostics;
 using Juice.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,6 +37,8 @@ namespace Juice.Middlewares
                 executionId: StringIdGenerator.Instance.GenerateUniqueId(),
                 source: _source
             );
+            // tag the ASP.NET Core server span (when one is recorded) instead of starting a second HTTP span
+            MessagingActivity.EnrichWithMessageContext(Activity.Current);
 
             // Optional: propagate back to response
             httpContext.Response.Headers[CorrelationHeader] = correlationId;

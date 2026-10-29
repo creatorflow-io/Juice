@@ -10,7 +10,7 @@
     <PackageIconUrl>https://avatars.githubusercontent.com/u/107674950</PackageIconUrl>
     <RepositoryUrl>https://github.com/creatorflow-io/Juice</RepositoryUrl>
 
-    <VersionPrefix>10.6.0</VersionPrefix>
+    <VersionPrefix>10.7.0</VersionPrefix>
     <VersionSuffix>local.$([System.DateTime]::Now.ToString(`yyyyMMdd`)).1</VersionSuffix>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
@@ -28,6 +28,7 @@
     <XUnitV3Version>3.2.*</XUnitV3Version>
     <XUnitRunnerVersion>3.1.*</XUnitRunnerVersion>
     <TestSdk>17.11.*</TestSdk>
+    <OpenTelemetryVersion>1.19.*</OpenTelemetryVersion>
   </PropertyGroup>
 
   <PropertyGroup Label="Versioning" Condition="'$(TargetFramework)' == 'net10.0'">

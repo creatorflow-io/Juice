@@ -266,6 +266,7 @@ namespace Juice.EventBus.RabbitMQ.Consuming
 
             var tenantId = eventArgs.BasicProperties.Headers?.GetHeaderString("x-tenant-id");
             // continues the trace carried by the message (traceparent header)
+            var started = MessagingMetrics.StartTimestamp();
             using var activity = MessagingActivity.StartProcess("rabbitmq", _queueName, routingKey, messageId, headers, _queueName);
             try
             {
@@ -279,11 +280,13 @@ namespace Juice.EventBus.RabbitMQ.Consuming
 
                 var result = await _dispatcher.DispatchAsync(integrationEvent, new EventDispatchContext(handlers, routingKey, tenantId, _serviceKey));
                 MessagingActivity.SetResult(activity, result);
+                MessagingMetrics.RecordConsumed("rabbitmq", _queueName, routingKey, result, started);
                 return result;
             }
             catch (Exception ex)
             {
                 MessagingActivity.SetError(activity, ex);
+                MessagingMetrics.RecordConsumeError("rabbitmq", _queueName, routingKey, ex, started);
                 throw;
             }
             finally

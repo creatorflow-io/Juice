@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using Juice.Messaging;
+using Juice.Messaging.Diagnostics;
 using Juice.Services;
 using Microsoft.AspNetCore.Mvc.Filters;
 
@@ -57,6 +59,7 @@ namespace Juice.AspNetCore.Mvc.Filters
                 causationId: null,
                 executionId: StringIdGenerator.Instance.GenerateUniqueId(),
                 source: Source);
+            MessagingActivity.EnrichWithMessageContext(Activity.Current);
 
             context.HttpContext.Response.Headers[CorrelationHeader] = correlationId;
 

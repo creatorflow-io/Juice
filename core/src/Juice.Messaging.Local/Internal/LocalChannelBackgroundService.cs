@@ -66,6 +66,7 @@ namespace Juice.Messaging.Local.Internal
                 {
                     var stopwatch = Stopwatch.StartNew();
                     var message = envelope.Message;
+                    var started = MessagingMetrics.StartTimestamp();
                     // continues the publisher's trace captured in the envelope
                     using var activity = MessagingActivity.StartProcess(PublisherKey, destination: null,
                         message.GetType().Name, message.MessageId.ToString(), envelope.TraceContext);
@@ -111,6 +112,7 @@ namespace Juice.Messaging.Local.Internal
                             _logger.LogDebug("Dispatching INotification {MessageType}", message.GetType().Name);
                             var publisher = sp.GetRequiredService<IMediator>();
                             await LocalDispatchHelper.DispatchNotificationAsync(publisher, notification, CancellationToken.None);
+                            MessagingMetrics.RecordConsumed(PublisherKey, null, message.GetType().Name, EventDispatchResult.Success, started);
                         }
                         else if (message is IIntegrationEvent integrationEvent)
                         {
@@ -120,6 +122,7 @@ namespace Juice.Messaging.Local.Internal
                             var result = await LocalDispatchHelper.DispatchIntegrationEventAsync(sp, dispatcher, subsManager, integrationEvent, CancellationToken.None);
                             dispatchSucceeded = result != Integrations.EventDispatchResult.Failure;
                             MessagingActivity.SetResult(activity, result);
+                            MessagingMetrics.RecordConsumed(PublisherKey, null, message.GetType().Name, result, started);
                         }
                         else
                         {
@@ -176,6 +179,7 @@ namespace Juice.Messaging.Local.Internal
                             "Error dispatching {MessageType} on {PublisherKey}. {Message}",
                             message.GetType().Name, PublisherKey, ex.Message);
                         MessagingActivity.SetError(activity, ex);
+                        MessagingMetrics.RecordConsumeError(PublisherKey, null, message.GetType().Name, ex, started);
                         LocalChannelMetrics.IncrementDeliveryFailure(PublisherKey, ex.GetType().Name);
                     }
                     finally

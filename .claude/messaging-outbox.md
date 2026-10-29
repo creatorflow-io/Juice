@@ -194,6 +194,9 @@ Relationship: Outbox uses `ITransportPublisher` directly (bypass IEventBus). IEv
 - Spans: `create {Type}` (Producer, `OutboxEventService.SaveEventsAsync`, context stored in `OutboxEvent.Headers`) → `deliver {publisherKey}` (Internal, `DeliveryProcessor`, parent = stored context) → `send {exchange|subject}` (Producer, `RabbitMQProducer`/`JetStreamProducer`/`LocalChannelMessagePublisher`) → `process {queue|destination|Type}` (Consumer: RabbitMQ/NATS engines, `LocalTransportPublisher`, `LocalChannelBackgroundService`) → `handle {Handler}` (Internal, `IntegrationEventDispatcher`).
 - `process` parent = extracted header context, or `Activity.Current` when it is in the same trace (in-process `local` delivery nests under `deliver`). `local-channel` carries the context in `ChannelEnvelope.TraceContext` (the reader loop has no `Activity.Current`).
 - `MessageContext` ids are tags (`juice.correlation_id`, `juice.causation_id`, `juice.execution_id`, `juice.source`), never the trace parent. Tests: `Juice.XUnit.ActivityCollector` (plain `ActivityListener`, filter by trace id).
+- Metrics (10.7): `JuiceMeter` (`"Juice"`) + `MessagingMetrics` record `juice.messaging.*` / `juice.outbox.*` at the same call sites as the spans. Bounded dimensions only (no message/tenant/correlation ids). Old meters (`delivery.metrics`, `infra.*`) kept for dashboards until 11.0.
+- HTTP (10.7): `MessageContextMiddleware`/`[MessageContext]` tag `Activity.Current` (the ASP.NET Core server span); never start an HTTP span.
+- `Juice.OpenTelemetry` (10.7, net8+, `OpenTelemetry.Api` only): `AddJuiceInstrumentation()` on tracer/meter builders = `AddSource`/`AddMeter("Juice")`; `services.AddJuiceOpenTelemetry()` registers mediator behaviors at `Order = int.MinValue` (idempotency moved to `int.MinValue + 10`). Tests in `core/test/Juice.OpenTelemetry.Tests` use the real SDK + in-memory exporters, parallelization disabled (providers listen process wide).
 
 ---
 
