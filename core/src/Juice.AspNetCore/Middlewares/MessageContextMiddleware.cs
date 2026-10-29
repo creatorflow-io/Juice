@@ -54,15 +54,22 @@ namespace Juice.Middlewares
             }
             finally
             {
-                // CRITICAL: avoid context leak
-                MessageContext.Clear();
-                if (logger.IsEnabled(LogLevel.Debug))
+                try
                 {
-                    logger.LogDebug(
-                    "HTTP request finished {@ctx}",
-                    MessageLogContext.ToLogObject(
-                        action: "http.request.finish")
-                    );
+                    // log while the context is still set, so the finish log keeps its correlation
+                    if (logger.IsEnabled(LogLevel.Debug))
+                    {
+                        logger.LogDebug(
+                        "HTTP request finished {@ctx}",
+                        MessageLogContext.ToLogObject(
+                            action: "http.request.finish")
+                        );
+                    }
+                }
+                finally
+                {
+                    // CRITICAL: avoid context leak
+                    MessageContext.Clear();
                 }
             }
         }

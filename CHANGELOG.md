@@ -1,3 +1,19 @@
+# v10.5.3 - Request finish log context, execution time measurement switch
+
+## Fixes
+
+### `Juice.AspNetCore`
+- `MessageContextMiddleware` now writes the "HTTP request finished" debug log before it clears `MessageContext`.
+  The log was written after the clear, so it never carried the correlation id, execution id or source. The context
+  is still cleared when logging throws.
+
+### `Juice.Measurement`
+- **`AddExecutionTimeMeasurement(bool enabled = true)`** can turn measurement off: with `false`, no `ITimeTracker`
+  is registered, and the mediator, `DbContextBase` and the outbox (which resolve it optionally) skip time tracking.
+- The `AddExecutionTimeMeasurement(Action<bool>)` overload is `[Obsolete]`. Its callback received the flag by value,
+  so it could never disable measurement; it keeps registering the tracker as before. Calls without arguments now bind
+  to the new overload with the same behavior.
+
 # v10.5.2 - Outbox time-tracking scope fix
 
 ## Fixes
