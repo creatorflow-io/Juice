@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- Consumer service run as a separate OS process by Juice.OpenTelemetry.Tests (cross-process trace test). -->
+  <!-- Consumer service run as a separate OS process by Juice.OpenTelemetry.Tests (cross-process trace test, RabbitMQ or NATS). -->
   <PropertyGroup>
     <TargetFrameworks>$(AppTestTargetFramework)</TargetFrameworks>
     <OutputType>Exe</OutputType>
@@ -12,9 +12,12 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="$(MicrosoftExtensionsVersion)" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="$(OpenTelemetryVersion)" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.SqlClient" Version="$(OpenTelemetryVersion)" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="$(EFVersion)" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Juice.EventBus.NATS\Juice.EventBus.NATS.csproj" />
     <ProjectReference Include="..\..\src\Juice.EventBus.RabbitMQ\Juice.EventBus.RabbitMQ.csproj" />
     <ProjectReference Include="..\..\src\Juice.Messaging.Idempotency.Caching\Juice.Messaging.Idempotency.Caching.csproj" />
     <ProjectReference Include="..\..\src\Juice.OpenTelemetry\Juice.OpenTelemetry.csproj" />

@@ -65,8 +65,18 @@
   exception messages are exported as thrown.
 - `Juice.OpenTelemetry` now references the `OpenTelemetry` SDK package (for `LogRecord`) instead of
   `OpenTelemetry.Api` only. Exporters still stay with the host.
+- `Juice.XUnit`: **`[IntegrationTheory]`**, a theory that needs brokers or databases. Like `[IgnoreOnCITheory]` it
+  is skipped on CI (`CI=true`), unless the workflow provides the infrastructure and sets
+  `JUICE_INTEGRATION_TESTS=true`.
 
 ### Tests
+- **`CrossProcessTraceTests` covers the whole path, for RabbitMQ and NATS, and runs on CI.** One trace from the HTTP
+  request through the mediator, the outbox insert (SQL), delivery and the broker to a consumer in another OS process,
+  then its mediator request and database write (SQL), for both transports. It asserts each parent link and which
+  spans come from the standard ASP.NET Core and SqlClient instrumentations, and that Juice records no HTTP or database
+  span and no SQL command is recorded twice. The new `integration-tests.yml` workflow starts SQL Server, RabbitMQ and
+  NATS from `test/infra/docker-compose.yml` and runs it on net8.0, net9.0 and net10.0 in parallel (each framework
+  uses its own exchange, stream, queue and databases; they shared one queue before and failed when run together).
 - The "multiple exchanges" and "route by tenant" RabbitMQ tests publish some messages to an undeclared exchange
   (`x.content.vip`); they now expect those publishes to fail with `NOT_FOUND`.
 - `DeliveryMetricsTests` (OpenTelemetry SDK, in-memory exporter): outbox and local-channel deliveries export one

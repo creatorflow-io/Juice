@@ -1,0 +1,86 @@
+name: Integration Tests
+
+# End-to-end trace tests against real brokers and databases (CrossProcessTraceTests: HTTP → mediator → SQL → outbox →
+# RabbitMQ / NATS → consumer process → mediator → SQL). The containers are the ones developers run locally
+# (test/infra/docker-compose.yml). Tests marked [IntegrationTheory] run here because JUICE_INTEGRATION_TESTS is set.
+
+on:
+  push:
+    branches: [ "master", "release/**", "dev/**", "feature/**" ]
+    paths:
+      - 'core/**'
+      - 'test/**'
+      - 'Directory.Build.props'
+      - '.github/workflows/integration-tests.yml'
+  pull_request:
+    paths:
+      - 'core/**'
+      - 'test/**'
+      - 'Directory.Build.props'
+      - '.github/workflows/integration-tests.yml'
+  workflow_dispatch:
+
+jobs:
+  traces:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CI: true
+      JUICE_INTEGRATION_TESTS: true
+      GITHUB_PACKAGE_USERNAME: ${{ github.actor }}
+      GITHUB_PACKAGE_TOKEN: ${{ secrets.GIT_HUB_PAT }}
+      # throwaway containers on the runner; docker compose needs every variable the file references
+      COMPOSE_PROJECT_NAME: juice-ci
+      SQLSERVER_PORT: 1433
+      SQLSERVER_SA_PASSWORD: Juice-CI-Passw0rd
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      REDIS_PORT: 6379
+      RABBITMQ_PORT: 5672
+      RABBITMQ_UI_PORT: 15672
+      RABBITMQ_USER: juice
+      RABBITMQ_PASSWORD: juice
+      NATS_PORT: 4222
+      NATS_MONITOR_PORT: 8222
+      NATS_AUTH_PORT: 4223
+      NATS_AUTH_USER: juice
+      NATS_AUTH_PASSWORD: juice
+      # the settings test/infra/setup-test-infra.ps1 writes to user secrets locally
+      ConnectionStrings__SqlServerConnection: Server=localhost,1433;Database=master;User Id=sa;Password=Juice-CI-Passw0rd;TrustServerCertificate=True
+      Juice__EventBus__Connections__RabbitMQ__Connection: localhost
+      Juice__EventBus__Connections__RabbitMQ__Port: 5672
+      Juice__EventBus__Connections__RabbitMQ__UserName: juice
+      Juice__EventBus__Connections__RabbitMQ__Password: juice
+      Juice__EventBus__Connections__Nats__Url: nats://localhost:4222
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Start SQL Server, RabbitMQ and NATS
+      run: |
+        docker compose -f test/infra/docker-compose.yml up -d --wait sqlserver rabbitmq nats
+        # the health check (ping) can pass before the broker app has finished booting
+        docker exec dev-rabbitmq rabbitmqctl -q await_startup --timeout 120
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: |
+          8.0.x
+          9.0.x
+          10.0.x
+
+    - name: Build
+      run: dotnet build core/test/Juice.OpenTelemetry.Tests --configuration Release
+
+    - name: Trace tests
+      # the three target frameworks run in parallel; each uses its own exchange, stream, queue and databases
+      run: >-
+        dotnet test core/test/Juice.OpenTelemetry.Tests --no-build --configuration Release
+        --filter "FullyQualifiedName~CrossProcessTraceTests"
+        --logger "console;verbosity=normal"
+
+    - name: Container logs
+      if: failure()
+      run: docker compose -f test/infra/docker-compose.yml logs --tail 200 sqlserver rabbitmq nats
