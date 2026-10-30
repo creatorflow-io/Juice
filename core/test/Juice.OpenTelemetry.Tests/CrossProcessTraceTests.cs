@@ -80,11 +80,14 @@ namespace Juice.OpenTelemetry.Tests
                 response.EnsureSuccessStatusCode();
             }
 
-            // billing (the other process): the consumer mediator span stops after its database write
-            await consumer.WaitForSpanAsync(traceId, "handle " + nameof(TracedOrderPlacedHandler));
+            // wait for the outermost span of each side: a parent stops after its children
+            // billing (the other process): the process span stops once the message is acked
+            await consumer.WaitForSpanAsync(traceId, "process " + transportSettings.ConsumerDestination);
             var billing = consumer.ReadSpans().Where(s => s.TraceId == traceId.ToHexString()).ToList();
-            // orders (this process): the delivery span stops after the outbox row is marked published
+            // orders (this process): the delivery span stops after the outbox row is marked published, the server span
+            // once the response has completed
             await WaitForAsync(orders.Spans, traceId, "deliver " + transport);
+            await WaitForAsync(orders.Spans, traceId, "Microsoft.AspNetCore.Hosting.HttpRequestIn");
             var trace = orders.Spans.Snapshot().Where(a => a.TraceId == traceId).ToList();
 
             _output.WriteLine("orders (pid {0}):", Environment.ProcessId);
