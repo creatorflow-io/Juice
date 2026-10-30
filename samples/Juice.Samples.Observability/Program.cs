@@ -14,6 +14,9 @@ using OpenTelemetry.Trace;
 //   dotnet run --project samples/Juice.Samples.Observability -- --no-demo
 // Set OTEL_EXPORTER_OTLP_ENDPOINT to also export everything to an OpenTelemetry Collector.
 
+// the trees use box-drawing characters
+Console.OutputEncoding = System.Text.Encoding.UTF8;
+
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.UseUrls(builder.Configuration["urls"] ?? "http://localhost:5080");
 

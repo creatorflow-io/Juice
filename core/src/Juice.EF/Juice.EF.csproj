@@ -12,6 +12,8 @@
         <PackageReference Include="Microsoft.EntityFrameworkCore" Version="$(EFVersion)" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="$(EFVersion)" />
         <PackageReference Label="severity vulnerability fix" Include="Microsoft.Data.SqlClient" Version="5.2.2" />
+        <!-- Microsoft.Data.SqlClient brings a vulnerable System.Security.Cryptography.Pkcs; use the patched release -->
+        <PackageReference Label="severity vulnerability fix" Include="System.Security.Cryptography.Pkcs" Version="$(MicrosoftExtensionsVersion)" Condition="'$(TargetFramework)' != 'net6.0'" />
         <PackageReference Label="severity vulnerability fix" Include="Microsoft.Extensions.Caching.Memory" Version="8.0.*" Condition="'$(TargetFramework)' == 'net8.0'" />
         <PackageReference Include="System.Drawing.Common" Version="8.0.10" />
     </ItemGroup>

@@ -19,6 +19,11 @@
         <PackageReference Include="Microsoft.Bcl.Memory" Version="9.0.15" />
         <PackageReference Include="Newtonsoft.Json" Version="*" />
         <PackageReference Include="Microsoft.Identity.Web" Version="4.8.0" />
+        <!-- Microsoft.Identity.Web brings vulnerable versions of these (GHSA-2fmv-rv2c-59x7, GHSA-846f-f764-76mx);
+             reference the patched release of each .NET line -->
+        <PackageReference Label="severity vulnerability fix" Include="System.Security.Cryptography.Pkcs" Version="$(MicrosoftExtensionsVersion)" Condition="'$(TargetFramework)' != 'net6.0'" />
+        <PackageReference Label="severity vulnerability fix" Include="System.Security.Cryptography.Xml" Version="$(MicrosoftExtensionsVersion)" Condition="'$(TargetFramework)' != 'net6.0'" />
+        <PackageReference Label="severity vulnerability fix" Include="Microsoft.AspNetCore.DataProtection" Version="$(MicrosoftExtensionsVersion)" Condition="'$(TargetFramework)' != 'net6.0'" />
         <PackageReference Include="Swashbuckle.AspNetCore.Newtonsoft" Version="$(SwashbuckleVersion)" />
     </ItemGroup>
 

@@ -31,6 +31,13 @@
   The consumer channel has publisher confirms too: a message moved to a retry tier or parking is acked only once the
   broker has confirmed the copy; if the copy is refused the original is requeued (after 1s) instead of lost.
 
+## Security
+- **Vulnerable transitive packages replaced** (net8.0 and later): `System.Security.Cryptography.Pkcs` (GHSA-2fmv-rv2c-59x7,
+  GHSA-846f-f764-76mx), `System.Security.Cryptography.Xml` and `Microsoft.AspNetCore.DataProtection`, brought in by
+  `Microsoft.Identity.Web` (`Juice.AspNetCore`) and `Microsoft.Data.SqlClient` (`Juice.EF`). Both packages now reference
+  the patched release of each .NET line (`8.0.*`, `9.0.*`, `10.0.*`: Pkcs 8.0.2 / 9.0.22 / 10.0.14 today), so
+  applications using them get the fix too. `dotnet restore` of the solution reports no known vulnerabilities.
+
 ## Changes
 - `IRabbitMQPersistentConnection` has a new `CreateChannelAsync(CreateChannelOptions?, CancellationToken)` overload.
   Custom implementations of the interface must add it.
@@ -72,7 +79,9 @@
 ### Build and samples
 - Building a single project (`dotnet build path/to/project.csproj`) now writes to this repository's `build/` folder.
   `Directory.Build.props` placed output under `$(SolutionDir)/build`, and `SolutionDir` is empty outside a solution
-  build, so the output went to `/build` at the drive root (and failed on Linux CI).
+  build, so the output went to `/build` at the drive root (and failed on Linux CI). `Configuration` also defaults to
+  `Debug` there, so a project built without `-c` uses `build/bin/Debug/...` like a solution build (it used
+  `build/bin/<project>`).
 - `samples/Juice.Samples.Observability`: a web app, needing no infrastructure, that prints each trace as a tree with
   its logs under the spans that wrote them, and a summary of the Juice metrics. Its README explains how to read
   traces, logs and metrics. Set `OTEL_EXPORTER_OTLP_ENDPOINT` to also export to a Collector.
