@@ -71,6 +71,9 @@
 
 
   <PropertyGroup Label="Build">
+    <!-- building one project (dotnet build path/to/x.csproj) has no solution: keep its output in this repo's build/
+         instead of /build at the drive root -->
+    <SolutionDir Condition="'$(SolutionDir)' == '' Or '$(SolutionDir)' == '*Undefined*'">$(MSBuildThisFileDirectory)</SolutionDir>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <EnableSourceLink>false</EnableSourceLink>
     <BaseIntermediateOutputPath>$(SolutionDir)/build/obj/$(MSBuildProjectName)</BaseIntermediateOutputPath>

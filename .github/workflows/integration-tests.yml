@@ -72,13 +72,12 @@ jobs:
           10.0.x
 
     - name: Build
-      # Directory.Build.props puts output under $(SolutionDir)/build, which is empty for a project build
-      run: dotnet build core/test/Juice.OpenTelemetry.Tests --configuration Release -p:SolutionDir=${{ github.workspace }}/
+      run: dotnet build core/test/Juice.OpenTelemetry.Tests --configuration Release
 
     - name: Trace tests
       # the three target frameworks run in parallel; each uses its own exchange, stream, queue and databases
       run: >-
-        dotnet test core/test/Juice.OpenTelemetry.Tests --no-build --configuration Release -p:SolutionDir=${{ github.workspace }}/
+        dotnet test core/test/Juice.OpenTelemetry.Tests --no-build --configuration Release
         --filter "FullyQualifiedName~CrossProcessTraceTests"
         --logger "console;verbosity=normal"
 

@@ -69,6 +69,14 @@
   is skipped on CI (`CI=true`), unless the workflow provides the infrastructure and sets
   `JUICE_INTEGRATION_TESTS=true`.
 
+### Build and samples
+- Building a single project (`dotnet build path/to/project.csproj`) now writes to this repository's `build/` folder.
+  `Directory.Build.props` placed output under `$(SolutionDir)/build`, and `SolutionDir` is empty outside a solution
+  build, so the output went to `/build` at the drive root (and failed on Linux CI).
+- `samples/Juice.Samples.Observability`: a web app, needing no infrastructure, that prints each trace as a tree with
+  its logs under the spans that wrote them, and a summary of the Juice metrics. Its README explains how to read
+  traces, logs and metrics. Set `OTEL_EXPORTER_OTLP_ENDPOINT` to also export to a Collector.
+
 ### Tests
 - **`CrossProcessTraceTests` covers the whole path, for RabbitMQ and NATS, and runs on CI.** One trace from the HTTP
   request through the mediator, the outbox insert (SQL), delivery and the broker to a consumer in another OS process,

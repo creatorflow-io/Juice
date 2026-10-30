@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- Prints what Juice records with OpenTelemetry (traces, logs, metrics) as readable trees. Needs no infrastructure:
+       the event travels over the in-process local-channel transport. See README.md. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="$(OpenTelemetryVersion)" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="$(OpenTelemetryVersion)" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="$(OpenTelemetryVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\core\src\Juice.AspNetCore\Juice.AspNetCore.csproj" />
+    <ProjectReference Include="..\..\core\src\Juice.Messaging.Idempotency.Caching\Juice.Messaging.Idempotency.Caching.csproj" />
+    <ProjectReference Include="..\..\core\src\Juice.Messaging.Local\Juice.Messaging.Local.csproj" />
+    <ProjectReference Include="..\..\core\src\Juice.Messaging.Outbox.EF\Juice.Messaging.Outbox.EF.csproj" />
+    <ProjectReference Include="..\..\core\src\Juice.OpenTelemetry\Juice.OpenTelemetry.csproj" />
+  </ItemGroup>
+
+</Project>
