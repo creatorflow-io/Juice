@@ -23,11 +23,15 @@ namespace Juice.EventBus.NATS
                 "jetstream_consume_parked_total",
                 description: "Total JetStream messages moved to a parking stream");
 
-        public static void IncrementPublishError(string subject)
+        /// <summary>
+        /// Tagged by the route's destination, not the full subject: a subject includes the routing key, which can
+        /// carry per-tenant or per-entity values.
+        /// </summary>
+        public static void IncrementPublishError(string destination)
         {
             PublishErrorCounter.Add(
                 1,
-                new KeyValuePair<string, object?>("subject", subject));
+                new KeyValuePair<string, object?>("destination", destination));
         }
 
         public static void IncrementRetry(string destination)

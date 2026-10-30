@@ -50,13 +50,18 @@
 - **`AddJuiceDeliveryMetrics()`** (`Juice.OpenTelemetry`, on `MeterProviderBuilder`): collects the meters Juice records
   beside `Juice`: `delivery.metrics`, `infra.rabbitmq.metrics` and `infra.nats.metrics`. Opt-in; use it together with
   `AddJuiceInstrumentation()`, which still adds only the `Juice` meter.
+- **`jetstream_publish_error_total` is tagged by `destination`, not `subject`** (`infra.nats.metrics`). The subject
+  includes the routing key, so per-tenant or per-entity routing keys made the tag unbounded. `destination` is the
+  route's destination, the same tag `jetstream_consume_retry_total` and `jetstream_consume_parked_total` use. Dashboards
+  or alerts that group this counter by `subject` must group by `destination`.
 
 ### Tests
 - The "multiple exchanges" and "route by tenant" RabbitMQ tests publish some messages to an undeclared exchange
   (`x.content.vip`); they now expect those publishes to fail with `NOT_FOUND`.
 - `DeliveryMetricsTests` (OpenTelemetry SDK, in-memory exporter): outbox and local-channel deliveries export one
   stream per shared `delivery.metrics` instrument, with both publishers' values; `AddJuiceDeliveryMetrics()` exports a
-  measurement from each of its three meters, and `AddJuiceInstrumentation()` none of them.
+  measurement from each of its three meters, and `AddJuiceInstrumentation()` none of them; JetStream publish errors
+  carry `destination` and no `subject` tag.
 
 # v10.7.0 - Juice.OpenTelemetry, framework metrics, HTTP context on the server span
 

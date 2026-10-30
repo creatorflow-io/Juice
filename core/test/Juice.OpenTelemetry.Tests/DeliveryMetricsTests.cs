@@ -60,15 +60,14 @@ namespace Juice.OpenTelemetry.Tests
         public void AddJuiceDeliveryMetrics_should_collect_every_meter_outside_the_juice_meter()
         {
             var metrics = new List<Metric>();
-            using (var meter = Sdk.CreateMeterProviderBuilder().AddJuiceDeliveryMetrics().AddInMemoryExporter(metrics).Build())
-            {
-                DeliveryMetrics.IncrementDeliveryAttempt(Outbox);
-                MediatorMetrics.IncrementIdentifiedCommandReceived("DeliveryMetricsTestCommand");
-                RabbitMQMetrics.IncrementChannelError("delivery-metrics-test");
-                JetStreamMetrics.IncrementParked("delivery-metrics-test");
-                meter.ForceFlush();
-            }
+            using var meter = Sdk.CreateMeterProviderBuilder().AddJuiceDeliveryMetrics().AddInMemoryExporter(metrics).Build();
 
+            DeliveryMetrics.IncrementDeliveryAttempt(Outbox);
+            MediatorMetrics.IncrementIdentifiedCommandReceived("DeliveryMetricsTestCommand");
+            RabbitMQMetrics.IncrementChannelError("delivery-metrics-test");
+            JetStreamMetrics.IncrementParked("delivery-metrics-test");
+
+            meter.ForceFlush();
             metrics.Select(m => m.MeterName).Distinct()
                 .Should().BeEquivalentTo(DeliveryMetrics.MeterName, "infra.rabbitmq.metrics", "infra.nats.metrics");
             metrics.Select(m => m.Name).Should().Contain(new[]
@@ -78,16 +77,33 @@ namespace Juice.OpenTelemetry.Tests
         }
 
         [Fact]
+        public void JetStream_publish_errors_should_be_tagged_by_destination_not_subject()
+        {
+            var metrics = new List<Metric>();
+            using var meter = Sdk.CreateMeterProviderBuilder().AddJuiceDeliveryMetrics().AddInMemoryExporter(metrics).Build();
+
+            JetStreamMetrics.IncrementPublishError("delivery-metrics-test");
+
+            meter.ForceFlush();
+            MetricValues.Sum(metrics, "jetstream_publish_error_total", "destination", "delivery-metrics-test").Should().Be(1);
+            var keys = new List<string>();
+            foreach (ref readonly var point in metrics.Single(m => m.Name == "jetstream_publish_error_total").GetMetricPoints())
+            {
+                foreach (var tag in point.Tags) keys.Add(tag.Key);
+            }
+            keys.Should().NotContain("subject", "a subject includes the routing key, which can carry unbounded values");
+        }
+
+        [Fact]
         public void AddJuiceInstrumentation_should_not_collect_the_delivery_meters()
         {
             var metrics = new List<Metric>();
-            using (var meter = Sdk.CreateMeterProviderBuilder().AddJuiceInstrumentation().AddInMemoryExporter(metrics).Build())
-            {
-                DeliveryMetrics.IncrementDeliveryAttempt(Outbox);
-                RabbitMQMetrics.IncrementChannelError("delivery-metrics-test");
-                meter.ForceFlush();
-            }
+            using var meter = Sdk.CreateMeterProviderBuilder().AddJuiceInstrumentation().AddInMemoryExporter(metrics).Build();
 
+            DeliveryMetrics.IncrementDeliveryAttempt(Outbox);
+            RabbitMQMetrics.IncrementChannelError("delivery-metrics-test");
+
+            meter.ForceFlush();
             metrics.Should().NotContain(m => m.MeterName == DeliveryMetrics.MeterName || m.MeterName == "infra.rabbitmq.metrics");
         }
 

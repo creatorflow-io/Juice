@@ -97,7 +97,7 @@ namespace Juice.EventBus.NATS.Publishing
             {
                 MessagingActivity.SetError(activity, ex);
                 MessagingMetrics.RecordPublishError("nats", destination, routingKey, ex);
-                JetStreamMetrics.IncrementPublishError(subject);
+                JetStreamMetrics.IncrementPublishError(destination);
                 _logger.LogWarning(ex, "Could not publish event: {EventId} to {Subject}. No stream acknowledged it.", messageId, subject);
                 throw new InvalidOperationException(
                     $"No JetStream stream acknowledged subject '{subject}' (destination '{destination}'): no stream captures the subject, or the server did not answer in time.", ex);
@@ -106,7 +106,7 @@ namespace Juice.EventBus.NATS.Publishing
             {
                 MessagingActivity.SetError(activity, ex);
                 MessagingMetrics.RecordPublishError("nats", destination, routingKey, ex);
-                JetStreamMetrics.IncrementPublishError(subject);
+                JetStreamMetrics.IncrementPublishError(destination);
                 _logger.LogWarning(ex, "Could not publish event: {EventId} to {Subject} ({ExceptionMessage})", messageId, subject, ex.Message);
                 throw;
             }
