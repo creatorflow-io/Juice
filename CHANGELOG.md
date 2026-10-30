@@ -40,10 +40,20 @@
   producer always set `mandatory: true`, but nothing handled the broker's return, so it had no effect.)
 - **Upgrade note:** publishing to an exchange that does not exist now fails the outbox delivery (it was marked
   `Published` and the message was lost). Declare the exchange, or fix the route.
+- **`delivery.metrics` defined once.** `delivery_attempt_total`, `delivery_success_total`, `delivery_failure_total`
+  and `delivery_latency_ms` now live in the new public `Juice.Messaging.Diagnostics.DeliveryMetrics` (`MeterName`,
+  `Meter`), and outbox delivery and the local transports both record on it; the local-only instruments
+  (`channel_dropped_total`, `local_delivery_phase1_fallback_total`, `channel_queue_depth`) are on the same meter.
+  Before, each created its own `delivery.metrics` meter with identical copies of the four instruments: the
+  OpenTelemetry SDK merged them, but a change to one copy could have split each into two conflicting streams. Meter,
+  instrument names, units and dimensions are unchanged. Collect them with `AddMeter(DeliveryMetrics.MeterName)`;
+  `AddJuiceInstrumentation()` still adds only the `Juice` meter.
 
 ### Tests
 - The "multiple exchanges" and "route by tenant" RabbitMQ tests publish some messages to an undeclared exchange
   (`x.content.vip`); they now expect those publishes to fail with `NOT_FOUND`.
+- `DeliveryMetricsTests` (OpenTelemetry SDK, in-memory exporter): outbox and local-channel deliveries export one
+  stream per shared `delivery.metrics` instrument, with both publishers' values.
 
 # v10.7.0 - Juice.OpenTelemetry, framework metrics, HTTP context on the server span
 

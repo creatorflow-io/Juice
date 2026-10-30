@@ -2,38 +2,16 @@ namespace Juice.Messaging.Local.Internal
 {
     using System.Diagnostics.Metrics;
     using System.Threading.Channels;
+    using Juice.Messaging.Diagnostics;
 
     /// <summary>
     /// Delivery metrics for the local-channel and local transport publisher paths.
-    /// Uses the same meter name ("delivery.metrics") as the outbox delivery infrastructure
-    /// so that all local and broker routes appear in unified metric output.
+    /// The shared delivery instruments are <see cref="DeliveryMetrics"/>'s, so local and broker routes appear in one
+    /// series; the local-only instruments below are on the same <c>delivery.metrics</c> meter.
     /// </summary>
     internal static class LocalChannelMetrics
     {
-        private static readonly Meter _meter = new(
-            name: "delivery.metrics",
-            version: "1.0.0");
-
-        private static readonly Counter<long> DeliveryAttemptCounter =
-            _meter.CreateCounter<long>(
-                "delivery_attempt_total",
-                description: "Total delivery attempts");
-
-        private static readonly Counter<long> DeliverySuccessCounter =
-            _meter.CreateCounter<long>(
-                "delivery_success_total",
-                description: "Total successful deliveries");
-
-        private static readonly Counter<long> DeliveryFailureCounter =
-            _meter.CreateCounter<long>(
-                "delivery_failure_total",
-                description: "Total failed deliveries");
-
-        private static readonly Histogram<double> DeliveryLatencyHistogram =
-            _meter.CreateHistogram<double>(
-                "delivery_latency_ms",
-                unit: "ms",
-                description: "Delivery latency in milliseconds");
+        private static readonly Meter _meter = DeliveryMetrics.Meter;
 
         private static readonly Counter<long> ChannelDroppedCounter =
             _meter.CreateCounter<long>(
@@ -49,33 +27,16 @@ namespace Juice.Messaging.Local.Internal
         private static bool _queueDepthRegistered;
 
         public static void IncrementDeliveryAttempt(string publisherKey)
-        {
-            DeliveryAttemptCounter.Add(
-                1,
-                new KeyValuePair<string, object?>("publisher", publisherKey));
-        }
+            => DeliveryMetrics.IncrementDeliveryAttempt(publisherKey);
 
         public static void IncrementDeliverySuccess(string publisherKey)
-        {
-            DeliverySuccessCounter.Add(
-                1,
-                new KeyValuePair<string, object?>("publisher", publisherKey));
-        }
+            => DeliveryMetrics.IncrementDeliverySuccess(publisherKey);
 
         public static void IncrementDeliveryFailure(string publisherKey, string errorType)
-        {
-            DeliveryFailureCounter.Add(
-                1,
-                new KeyValuePair<string, object?>("publisher", publisherKey),
-                new KeyValuePair<string, object?>("error_type", errorType));
-        }
+            => DeliveryMetrics.IncrementDeliveryFailure(publisherKey, errorType);
 
         public static void RecordDeliveryLatency(string publisherKey, TimeSpan elapsed)
-        {
-            DeliveryLatencyHistogram.Record(
-                elapsed.TotalMilliseconds,
-                new KeyValuePair<string, object?>("publisher", publisherKey));
-        }
+            => DeliveryMetrics.RecordDeliveryLatency(publisherKey, elapsed);
 
         public static void IncrementPhase1Fallback(string publisherKey)
         {
