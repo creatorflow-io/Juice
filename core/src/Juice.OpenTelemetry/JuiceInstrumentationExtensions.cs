@@ -56,7 +56,8 @@ namespace OpenTelemetry.Logs
         /// Adds the Juice log processor: every exported log gets the <c>MessageContext</c> ids
         /// (<c>juice.correlation_id</c>, <c>juice.causation_id</c>, <c>juice.execution_id</c>, <c>juice.source</c>), and
         /// Juice logs lose their payloads unless <see cref="JuiceLogOptions.IncludePayloads"/> is set.
-        /// <para>Call it before adding the exporter: processors run in the order they are added.
+        /// <para>Call it <b>before</b> adding the exporter: processors run in the order they are added, and an exporter
+        /// added first sends records before they are redacted.
         /// <c>services.AddOpenTelemetry().WithLogging(l => l.AddJuiceInstrumentation().AddOtlpExporter())</c>.</para>
         /// </summary>
         public static LoggerProviderBuilder AddJuiceInstrumentation(this LoggerProviderBuilder builder,

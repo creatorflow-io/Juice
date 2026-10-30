@@ -88,6 +88,20 @@ namespace Juice.OpenTelemetry.Tests
         }
 
         [Fact]
+        public void Processor_added_after_the_exporter_should_not_redact()
+        {
+            // documents why AddJuiceInstrumentation() must come first: the exporter has already sent the record
+            var records = new LockedList<LogRecord>();
+            using var services = Logging(l => l.AddInMemoryExporter(records).AddJuiceInstrumentation());
+            var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger(JuiceCategory);
+
+            logger.LogInformation("Publishing outbox event. Payload: {Payload}", Secret);
+
+            Flush(services);
+            Attributes(records.Should().ContainSingle().Subject).Should().Contain("Payload", Secret);
+        }
+
+        [Fact]
         public void IncludePayloads_should_export_Juice_payloads()
         {
             var records = new LockedList<LogRecord>();
@@ -129,9 +143,11 @@ namespace Juice.OpenTelemetry.Tests
             }
             Flush(services);
 
-            // ExportLogsServiceRequest protobuf: look for the raw values rather than decode it
-            var body = requests.Should().ContainSingle("one batch reaches the receiver").Subject;
-            _output.WriteLine($"{body.Length} bytes to {endpoint}");
+            // ExportLogsServiceRequest protobuf: look for the raw values rather than decode it. The batch timer can
+            // split the two logs over two requests, so search them together.
+            requests.Should().NotBeEmpty("the logs reach the receiver");
+            var body = requests.Snapshot().SelectMany(r => r).ToArray();
+            _output.WriteLine($"{requests.Count} request(s), {body.Length} bytes to {endpoint}");
             var traceIdBytes = new byte[16];
             traceId.CopyTo(traceIdBytes);
             body.AsSpan().IndexOf(traceIdBytes).Should().BeGreaterThanOrEqualTo(0, "the log carries the trace id");
@@ -246,6 +262,16 @@ namespace Juice.OpenTelemetry.Tests
                 Release.Wait(TimeSpan.FromSeconds(30));
                 Interlocked.Add(ref _exported, (int)batch.Count);
                 return ExportResult.Failure;
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing)
+                {
+                    Release.Set();
+                    Release.Dispose();
+                }
+                base.Dispose(disposing);
             }
         }
     }

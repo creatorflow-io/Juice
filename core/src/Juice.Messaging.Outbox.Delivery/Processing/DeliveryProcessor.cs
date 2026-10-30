@@ -67,7 +67,9 @@ namespace Juice.Messaging.Outbox.Delivery.Processing
         /// </summary>
         private async Task ProcessSingleDeliveryAsync(OutboxDelivery delivery, CancellationToken cancellationToken)
         {
-            using var _ = _logger.BeginScope(new Dictionary<string, object?> { { "DeliveryId", delivery.DeliveryId } });
+            // "TraceId" is the job key of the Juice.Extensions.Logging providers (one file / log group per delivery),
+            // not the OpenTelemetry trace id
+            using var _ = _logger.BeginScope(new Dictionary<string, object?> { { "TraceId", delivery.DeliveryId } });
             using var activity = MessagingActivity.StartDelivery(delivery.PublisherKey,
                 delivery.OutboxEvent?.EventTypeName, delivery.EventId.ToString(), delivery.OutboxEvent?.Headers);
             var sw = Stopwatch.StartNew();

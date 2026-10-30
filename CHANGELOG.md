@@ -55,8 +55,9 @@
   route's destination, the same tag `jetstream_consume_retry_total` and `jetstream_consume_parked_total` use. Dashboards
   or alerts that group this counter by `subject` must group by `destination`.
 - **Logs: `AddJuiceInstrumentation()` on `LoggerProviderBuilder`** (`Juice.OpenTelemetry`) adds a log processor for the
-  host's OpenTelemetry logging (`WithLogging(l => l.AddJuiceInstrumentation().AddOtlpExporter())`; add it before the
-  exporter). Every exported log gets the `MessageContext` ids with the span tag names (`juice.correlation_id`,
+  host's OpenTelemetry logging (`WithLogging(l => l.AddJuiceInstrumentation().AddOtlpExporter())`). **Add it before
+  the exporter:** processors run in the order they are added, and an exporter added first sends records before they are
+  redacted. Every exported log gets the `MessageContext` ids with the span tag names (`juice.correlation_id`,
   `juice.causation_id`, `juice.execution_id`, `juice.source`); the SDK already adds the trace and span ids. Logs whose
   category starts with `Juice.` lose their payloads: destructured (`{@Command}`) and `Payload` attributes are removed,
   and the formatted message when one was removed (the body keeps the template). Options (`JuiceLogOptions`):
@@ -64,8 +65,6 @@
   exception messages are exported as thrown.
 - `Juice.OpenTelemetry` now references the `OpenTelemetry` SDK package (for `LogRecord`) instead of
   `OpenTelemetry.Api` only. Exporters still stay with the host.
-- The outbox delivery log scope key is `DeliveryId` (was `TraceId`, holding the delivery id), so it no longer reads as
-  the OpenTelemetry trace id when scopes are exported.
 
 ### Tests
 - The "multiple exchanges" and "route by tenant" RabbitMQ tests publish some messages to an undeclared exchange
@@ -75,7 +74,8 @@
   measurement from each of its three meters, and `AddJuiceInstrumentation()` none of them; JetStream publish errors
   carry `destination` and no `subject` tag.
 - `LogExportTests`: a log written in a span carries its trace and span ids and the `MessageContext` ids; Juice logs
-  export no payload by default (application logs keep theirs) and do with `IncludePayloads`; an OTLP/HTTP export to a
+  export no payload by default (application logs keep theirs) and do with `IncludePayloads`, or when the processor is
+  added after the exporter (why it must come first); an OTLP/HTTP export to a
   local receiver delivers the log with the trace id and context and without the payload; an unreachable endpoint does
   not fail logging; with a stalled exporter, 10,000 logs return immediately and at most the queue size plus one batch
   is exported, the rest dropped.
