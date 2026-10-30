@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Juice.EventBus.NATS.Tests" />
+    <InternalsVisibleTo Include="Juice.OpenTelemetry.Tests" />
   </ItemGroup>
 
 </Project>

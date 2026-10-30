@@ -46,14 +46,17 @@
   (`channel_dropped_total`, `local_delivery_phase1_fallback_total`, `channel_queue_depth`) are on the same meter.
   Before, each created its own `delivery.metrics` meter with identical copies of the four instruments: the
   OpenTelemetry SDK merged them, but a change to one copy could have split each into two conflicting streams. Meter,
-  instrument names, units and dimensions are unchanged. Collect them with `AddMeter(DeliveryMetrics.MeterName)`;
-  `AddJuiceInstrumentation()` still adds only the `Juice` meter.
+  instrument names, units and dimensions are unchanged.
+- **`AddJuiceDeliveryMetrics()`** (`Juice.OpenTelemetry`, on `MeterProviderBuilder`): collects the meters Juice records
+  beside `Juice`: `delivery.metrics`, `infra.rabbitmq.metrics` and `infra.nats.metrics`. Opt-in; use it together with
+  `AddJuiceInstrumentation()`, which still adds only the `Juice` meter.
 
 ### Tests
 - The "multiple exchanges" and "route by tenant" RabbitMQ tests publish some messages to an undeclared exchange
   (`x.content.vip`); they now expect those publishes to fail with `NOT_FOUND`.
 - `DeliveryMetricsTests` (OpenTelemetry SDK, in-memory exporter): outbox and local-channel deliveries export one
-  stream per shared `delivery.metrics` instrument, with both publishers' values.
+  stream per shared `delivery.metrics` instrument, with both publishers' values; `AddJuiceDeliveryMetrics()` exports a
+  measurement from each of its three meters, and `AddJuiceInstrumentation()` none of them.
 
 # v10.7.0 - Juice.OpenTelemetry, framework metrics, HTTP context on the server span
 

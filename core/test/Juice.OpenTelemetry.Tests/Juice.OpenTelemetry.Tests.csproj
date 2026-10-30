@@ -40,6 +40,7 @@
     <ProjectReference Include="..\..\src\Juice.Messaging.Outbox.EF\Juice.Messaging.Outbox.EF.csproj" />
     <ProjectReference Include="..\..\src\Juice.Messaging.Outbox.Delivery\Juice.Messaging.Outbox.Delivery.csproj" />
     <ProjectReference Include="..\..\src\Juice.EventBus.RabbitMQ\Juice.EventBus.RabbitMQ.csproj" />
+    <ProjectReference Include="..\..\src\Juice.EventBus.NATS\Juice.EventBus.NATS.csproj" />
     <!-- the consumer service of the cross-process test; also shares the event type -->
     <ProjectReference Include="..\Juice.OpenTelemetry.TestConsumer\Juice.OpenTelemetry.TestConsumer.csproj" />
     <ProjectReference Include="..\..\src\Juice.OpenTelemetry\Juice.OpenTelemetry.csproj" />

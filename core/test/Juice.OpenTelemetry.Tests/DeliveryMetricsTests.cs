@@ -1,4 +1,7 @@
 using FluentAssertions;
+using Juice.EventBus.NATS;
+using Juice.EventBus.RabbitMQ;
+using Juice.MediatR;
 using Juice.Messaging.Diagnostics;
 using Juice.Messaging.Local.Internal;
 using OpenTelemetry;
@@ -51,6 +54,41 @@ namespace Juice.OpenTelemetry.Tests
             }
             metrics.Single(m => m.Name == "delivery_latency_ms").Unit.Should().Be("ms");
             MetricValues.Sum(metrics, "channel_dropped_total", "publisher", Local).Should().Be(1, "local-only instruments stay on delivery.metrics");
+        }
+
+        [Fact]
+        public void AddJuiceDeliveryMetrics_should_collect_every_meter_outside_the_juice_meter()
+        {
+            var metrics = new List<Metric>();
+            using (var meter = Sdk.CreateMeterProviderBuilder().AddJuiceDeliveryMetrics().AddInMemoryExporter(metrics).Build())
+            {
+                DeliveryMetrics.IncrementDeliveryAttempt(Outbox);
+                MediatorMetrics.IncrementIdentifiedCommandReceived("DeliveryMetricsTestCommand");
+                RabbitMQMetrics.IncrementChannelError("delivery-metrics-test");
+                JetStreamMetrics.IncrementParked("delivery-metrics-test");
+                meter.ForceFlush();
+            }
+
+            metrics.Select(m => m.MeterName).Distinct()
+                .Should().BeEquivalentTo(DeliveryMetrics.MeterName, "infra.rabbitmq.metrics", "infra.nats.metrics");
+            metrics.Select(m => m.Name).Should().Contain(new[]
+            {
+                "delivery_attempt_total", "identified_commands_received", "rabbitmq_channel_error_total", "jetstream_consume_parked_total"
+            });
+        }
+
+        [Fact]
+        public void AddJuiceInstrumentation_should_not_collect_the_delivery_meters()
+        {
+            var metrics = new List<Metric>();
+            using (var meter = Sdk.CreateMeterProviderBuilder().AddJuiceInstrumentation().AddInMemoryExporter(metrics).Build())
+            {
+                DeliveryMetrics.IncrementDeliveryAttempt(Outbox);
+                RabbitMQMetrics.IncrementChannelError("delivery-metrics-test");
+                meter.ForceFlush();
+            }
+
+            metrics.Should().NotContain(m => m.MeterName == DeliveryMetrics.MeterName || m.MeterName == "infra.rabbitmq.metrics");
         }
 
         private static MeterProvider Meter(ICollection<Metric> metrics)

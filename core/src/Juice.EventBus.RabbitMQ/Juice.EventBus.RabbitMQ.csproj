@@ -19,5 +19,9 @@
   <ItemGroup Label="AspNetCore">
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
-  
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Juice.OpenTelemetry.Tests" />
+  </ItemGroup>
+
 </Project>
