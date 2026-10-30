@@ -67,7 +67,7 @@ namespace Juice.Messaging.Outbox.Delivery.Processing
         /// </summary>
         private async Task ProcessSingleDeliveryAsync(OutboxDelivery delivery, CancellationToken cancellationToken)
         {
-            using var _ = _logger.BeginScope(new Dictionary<string, object?> { { "TraceId", delivery.DeliveryId } });
+            using var _ = _logger.BeginScope(new Dictionary<string, object?> { { "DeliveryId", delivery.DeliveryId } });
             using var activity = MessagingActivity.StartDelivery(delivery.PublisherKey,
                 delivery.OutboxEvent?.EventTypeName, delivery.EventId.ToString(), delivery.OutboxEvent?.Headers);
             var sw = Stopwatch.StartNew();

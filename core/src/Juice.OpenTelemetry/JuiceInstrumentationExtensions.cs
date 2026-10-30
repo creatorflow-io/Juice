@@ -1,4 +1,6 @@
 ﻿using Juice.Messaging.Diagnostics;
+using Juice.OpenTelemetry;
+using Juice.OpenTelemetry.Logging;
 
 namespace OpenTelemetry.Trace
 {
@@ -43,5 +45,26 @@ namespace OpenTelemetry.Metrics
         /// </summary>
         public static MeterProviderBuilder AddJuiceDeliveryMetrics(this MeterProviderBuilder builder)
             => builder.AddMeter(DeliveryMetrics.MeterName, RabbitMQMeterName, NatsMeterName);
+    }
+}
+
+namespace OpenTelemetry.Logs
+{
+    public static class JuiceLoggerProviderBuilderExtensions
+    {
+        /// <summary>
+        /// Adds the Juice log processor: every exported log gets the <c>MessageContext</c> ids
+        /// (<c>juice.correlation_id</c>, <c>juice.causation_id</c>, <c>juice.execution_id</c>, <c>juice.source</c>), and
+        /// Juice logs lose their payloads unless <see cref="JuiceLogOptions.IncludePayloads"/> is set.
+        /// <para>Call it before adding the exporter: processors run in the order they are added.
+        /// <c>services.AddOpenTelemetry().WithLogging(l => l.AddJuiceInstrumentation().AddOtlpExporter())</c>.</para>
+        /// </summary>
+        public static LoggerProviderBuilder AddJuiceInstrumentation(this LoggerProviderBuilder builder,
+            Action<JuiceLogOptions>? configure = default)
+        {
+            var options = new JuiceLogOptions();
+            configure?.Invoke(options);
+            return builder.AddProcessor(new JuiceLogProcessor(options));
+        }
     }
 }

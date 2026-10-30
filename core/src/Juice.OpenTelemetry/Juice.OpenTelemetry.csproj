@@ -5,12 +5,13 @@
         <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <Description>OpenTelemetry integration for Juice: registers the Juice ActivitySource and Meter with the host's providers and adds mediator spans and metrics. Exporters and sampling stay with the host.</Description>
-        <PackageTags>$(PackageTags); OpenTelemetry; Tracing; Metrics</PackageTags>
+        <Description>OpenTelemetry integration for Juice: registers the Juice ActivitySource and Meter with the host's providers and adds mediator spans and metrics and the Juice context to logs. Exporters and sampling stay with the host.</Description>
+        <PackageTags>$(PackageTags); OpenTelemetry; Tracing; Metrics; Logging</PackageTags>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="OpenTelemetry.Api" Version="$(OpenTelemetryVersion)" />
+        <!-- the SDK for the log processor (LogRecord); exporters stay with the host -->
+        <PackageReference Include="OpenTelemetry" Version="$(OpenTelemetryVersion)" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="$(MicrosoftExtensionsVersion)" />
         <PackageReference Include="Microsoft.Extensions.Options" Version="$(MicrosoftExtensionsVersion)" />
     </ItemGroup>
