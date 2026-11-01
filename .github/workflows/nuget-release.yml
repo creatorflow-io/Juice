@@ -8,6 +8,10 @@ on:
 
 jobs:
     build:
+      # Trusted publishing to nuget.org: shared-publish exchanges a GitHub OIDC token for a temporary API key.
+      permissions:
+        contents: read
+        id-token: write
       uses: creatorflow-io/shared-workflows/.github/workflows/shared-publish.yml@net8
       secrets: inherit
       with:
