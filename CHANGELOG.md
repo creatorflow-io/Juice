@@ -100,6 +100,10 @@
   stream per shared `delivery.metrics` instrument, with both publishers' values; `AddJuiceDeliveryMetrics()` exports a
   measurement from each of its three meters, and `AddJuiceInstrumentation()` none of them; JetStream publish errors
   carry `destination` and no `subject` tag.
+- `MeterRegistrationTests`: one service provider registering `AddJuiceInstrumentation()` and `AddJuiceDeliveryMetrics()`
+  exports a measurement from all four meters (`Juice` through a mediator request, `delivery.metrics`,
+  `infra.rabbitmq.metrics`, `infra.nats.metrics`), and the SDK reports no duplicate instrument for them (its
+  `DuplicateMetricInstrument` event; a second test proves the check catches one).
 - `LogExportTests`: a log written in a span carries its trace and span ids and the `MessageContext` ids; Juice logs
   export no payload by default (application logs keep theirs) and do with `IncludePayloads`, or when the processor is
   added after the exporter (why it must come first); an OTLP/HTTP export to a
