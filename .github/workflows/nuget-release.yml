@@ -8,15 +8,32 @@ on:
 
 jobs:
     build:
-      # Trusted publishing to nuget.org: shared-publish exchanges a GitHub OIDC token for a temporary API key.
-      permissions:
-        contents: read
-        id-token: write
       uses: creatorflow-io/shared-workflows/.github/workflows/shared-publish.yml@net8
       secrets: inherit
       with:
+        PushToNuGet: false
         Target: |
           6.0.x
           8.0.x
           9.0.x
           10.0.x
+
+    # Trusted publishing: nuget.org matches its policy against this workflow file, so the push runs here, not in the
+    # shared workflow. Policy: owner creatorflow-io, this repository, workflow file nuget-release.yml.
+    publish:
+      needs: build
+      runs-on: ubuntu-latest
+      permissions:
+        id-token: write
+      steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: nupkg
+          path: nupkg
+      - name: NuGet login
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ secrets.NUGET_USER }}
+      - name: Push to nuget.org
+        run: dotnet nuget push "nupkg/*.nupkg" --source https://api.nuget.org/v3/index.json --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --skip-duplicate
