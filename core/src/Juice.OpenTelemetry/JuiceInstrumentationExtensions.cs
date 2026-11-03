@@ -8,10 +8,11 @@ namespace OpenTelemetry.Trace
     {
         /// <summary>
         /// Collects the Juice spans (<see cref="JuiceActivitySource.Name"/>): messaging, outbox and, with
-        /// <c>services.AddJuiceOpenTelemetry()</c>, the mediator.
+        /// <c>services.AddJuiceOpenTelemetry()</c>, the mediator. Also collects the <see cref="Juice.Measurement.ITimeTracker"/>
+        /// scopes (<see cref="Juice.Measurement.TimeTrackerActivitySource.Name"/>), with their checkpoints as span events.
         /// </summary>
         public static TracerProviderBuilder AddJuiceInstrumentation(this TracerProviderBuilder builder)
-            => builder.AddSource(JuiceActivitySource.Name);
+            => builder.AddSource(JuiceActivitySource.Name, Juice.Measurement.TimeTrackerActivitySource.Name);
     }
 }
 

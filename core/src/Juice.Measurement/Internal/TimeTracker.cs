@@ -1,58 +1,71 @@
-﻿namespace Juice.Measurement.Internal
+﻿using System.Diagnostics;
+
+namespace Juice.Measurement.Internal
 {
     /// <summary>
-    /// Scoped service to track time.
+    /// Scoped service to track time. Each scope is also a span on <see cref="TimeTrackerActivitySource"/> and each
+    /// checkpoint an event on the current scope's span.
     /// </summary>
 	public class TimeTracker : ITimeTracker
     {
-        private Stack<ExecutionScope> _scopes = new();
-        private ExecutionScope _rootScope = new("root", "", default);
-        private ExecutionScope? _currentScope;
+        private readonly ExecutionScope _rootScope = new("root", "", default);
+        // The open scope of each async flow: parallel branches of a request (Task.WhenAll) nest their own scopes
+        // instead of closing each other's, as Activity.Current does for spans.
+        private readonly AsyncLocal<ExecutionScope?> _currentScope = new();
 
-        private Stack<string> _scopesName = new();
+        /// <summary>
+        /// Execution records. Lock on the list to read it while scopes may still be running.
+        /// </summary>
         public List<ITrackRecord> Records { get; } = new();
+
         public ICollection<ScopeRecord> GetScopes()
-            => Records.OfType<IScope>()
+        {
+            var records = Snapshot();
+            return records.OfType<IScope>()
                 .Where(x => x.ScopeId != null).DistinctBy(x => x.ScopeId!)
                 .Select(s =>
                 {
-                    var start = Records.OfType<ScopeStart>().FirstOrDefault(x => x.ScopeId == s.ScopeId);
-                    var end = Records.OfType<ScopeEnd>().FirstOrDefault(x => x.ScopeId == s.ScopeId);
+                    var start = records.OfType<ScopeStart>().FirstOrDefault(x => x.ScopeId == s.ScopeId);
+                    var end = records.OfType<ScopeEnd>().FirstOrDefault(x => x.ScopeId == s.ScopeId);
                     if (start == null || end == null)
                     {
                         return null;
                     }
                     return new ScopeRecord(start.Name, start.FullName, start.Depth, start.RecordTime, end.ElapsedTime, start.ScopeId!);
                 }).OfType<ScopeRecord>().ToArray();
+        }
 
         public TimeSpan ElapsedTime => _rootScope.ElapsedTime;
 
         /// <inheritdoc />
         public IDisposable BeginScope(string name, string? scopeId = default)
         {
-            _scopesName.Push(name);
-            var scope = new ExecutionScope(name, GetScopeFullName(), scopeId);
+            var parent = _currentScope.Value;
+            var activity = TimeTrackerActivitySource.Source.StartActivity(name);
+            if (scopeId != null)
+            {
+                activity?.SetTag(TimeTrackerActivitySource.ScopeIdTag, scopeId);
+            }
+            var scope = new ExecutionScope(name, parent == null ? name : $"{parent.FullName} > {name}", scopeId)
+            {
+                Activity = activity,
+                Parent = parent,
+                Depth = parent == null ? 0 : parent.Depth + 1,
+            };
             scope.OnDispose += (sender, args) =>
             {
-                if (sender is ExecutionScope scope)
-                {
-                    Records.Add(new ScopeEnd(scope.Name, scope.FullName, _scopesName.Count - 1,
-                        _rootScope.ElapsedTime, scope.ElapsedTime, scope.ScopeId));
-                }
-                _scopesName.Pop();
-                _scopes.Pop();
-                _currentScope = _scopes.Count > 0 ? _scopes.Peek() : null;
-                if (_currentScope == null)
+                Add(new ScopeEnd(scope.Name, scope.FullName, scope.Depth, _rootScope.ElapsedTime, scope.ElapsedTime, scope.ScopeId));
+                _currentScope.Value = scope.Parent;
+                if (scope.Parent == null)
                 {
                     // Reset the checkpoint time.
                     _ = _rootScope.CheckpointTime;
                 }
             };
-            _scopes.Push(scope);
 
-            Records.Add(new ScopeStart(name, scope.FullName, _scopes.Count - 1,
-                _rootScope.ElapsedTime, _currentScope?.ElapsedTime ?? _rootScope.CheckpointTime, scopeId));
-            _currentScope = scope;
+            Add(new ScopeStart(name, scope.FullName, scope.Depth,
+                _rootScope.ElapsedTime, parent?.ElapsedTime ?? _rootScope.CheckpointTime, scopeId));
+            _currentScope.Value = scope;
 
             return scope;
         }
@@ -60,13 +73,31 @@
         /// <inheritdoc />
         public void Checkpoint(string name)
         {
-            if (_currentScope != null)
+            var current = _currentScope.Value;
+            if (current != null)
             {
-                Records.Add(_currentScope.Checkpoint(name, _scopes.Count, _rootScope.ElapsedTime));
+                Add(current.Checkpoint(name, current.Depth + 1, _rootScope.ElapsedTime));
+                current.Activity?.AddEvent(new ActivityEvent(name));
             }
             else
             {
-                Records.Add(new Checkpoint(name, GetScopeFullName(), _scopes.Count, _rootScope.ElapsedTime, _rootScope.CheckpointTime));
+                Add(new Checkpoint(name, "", 0, _rootScope.ElapsedTime, _rootScope.CheckpointTime));
+            }
+        }
+
+        private void Add(ITrackRecord record)
+        {
+            lock (Records)
+            {
+                Records.Add(record);
+            }
+        }
+
+        private List<ITrackRecord> Snapshot()
+        {
+            lock (Records)
+            {
+                return Records.ToList();
             }
         }
 
@@ -77,7 +108,8 @@
         public string ToString(bool humanReadable, int? maxDepth = default, bool checkpoint = true)
         {
             // Create a table to display the execution records.
-            var records = Records
+            var all = Snapshot();
+            var records = all
                 .Where(r => !maxDepth.HasValue || r.Depth <= maxDepth)
                 .Where(r => checkpoint || r is not Internal.Checkpoint)
                 .SelectMany(r => new string[][]
@@ -94,7 +126,7 @@
                 records
                 .Concat(new string[][] { new string[0], new string[] { "Total", "", "", ElapsedTimeToString(ElapsedTime, humanReadable) } }).ToArray());
 
-            var nameMaxLength = Records.Max(r => r.Name.Length + r.Depth + 2); // 2 for the prefix
+            var nameMaxLength = all.Max(r => r.Name.Length + r.Depth + 2); // 2 for the prefix
             var timeMaxLength = records.Max(r => r[3].Length + 2);
             table.Cols = new int[] { nameMaxLength + 2, 10, humanReadable ? 15 : 20, timeMaxLength };
             table.ColsAlign = _colsAlign;
@@ -138,10 +170,6 @@
             return ToString(true);
         }
 
-        private string GetScopeFullName()
-        {
-            return string.Join(" > ", _scopesName.Reverse());
-        }
 
         private bool _disposedValue;
         protected virtual void Dispose(bool disposing)
@@ -151,11 +179,12 @@
                 if (disposing)
                 {
                     // TODO: dispose managed state (managed objects)
-                    _scopesName.Clear();
-                    _scopes.Clear();
-                    _currentScope = null;
+                    _currentScope.Value = null;
                     _rootScope.Dispose();
-                    Records.Clear();
+                    lock (Records)
+                    {
+                        Records.Clear();
+                    }
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override finalizer
