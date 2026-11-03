@@ -31,6 +31,17 @@ namespace Juice.Measurement.Internal
 
         public string? ScopeId { get; init; }
 
+        /// <summary>The scope this one began in, <c>null</c> for a top-level scope.</summary>
+        public ExecutionScope? Parent { get; init; }
+
+        /// <summary>0 for a top-level scope.</summary>
+        public int Depth { get; init; }
+
+        /// <summary>
+        /// The scope's span, when a listener collects <see cref="TimeTrackerActivitySource"/>; stopped with the scope.
+        /// </summary>
+        public Activity? Activity { get; init; }
+
         public ExecutionScope(string scopeName, string scopeFullName, string? scopeId)
         {
             _stopwatch = Stopwatch.StartNew();
@@ -53,6 +64,8 @@ namespace Juice.Measurement.Internal
                     // TODO: dispose managed state (managed objects)
                     _stopwatch?.Stop();
                     _checkpoint?.Stop();
+                    // Restores Activity.Current to the span the scope began under.
+                    Activity?.Dispose();
                     OnDispose?.Invoke(this, EventArgs.Empty);
                 }
 

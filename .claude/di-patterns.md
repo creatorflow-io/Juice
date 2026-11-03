@@ -223,6 +223,7 @@ using (tracker.BeginScope("Operation")) {
 Console.WriteLine(tracker.ToString(humanReadable: true));
 ```
 Scoped service; nested scopes + checkpoints; renders as aligned table.
+Each scope is also a span on the `Juice.Measurement` ActivitySource (`TimeTrackerActivitySource`), checkpoints are span events; `AddJuiceInstrumentation()` collects it.
 Injected into `DbContextBase` when `DbOptions.EnableTimeTracking = true`.
 
 ---

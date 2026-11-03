@@ -1,3 +1,24 @@
+# Unreleased
+
+## Features
+
+### `Juice.Measurement`, `Juice.OpenTelemetry`
+- **Time tracker scopes are spans.** Each `ITimeTracker.BeginScope` starts a span on the new `Juice.Measurement`
+  `ActivitySource` (`TimeTrackerActivitySource`), a child of the current span, and ends it with the scope; a
+  `scopeId` becomes the `juice.measurement.scope_id` tag. Each `Checkpoint` inside a scope is an event on that
+  span; a checkpoint outside any scope stays in the tracker's records only. `AddJuiceInstrumentation()` on
+  `TracerProviderBuilder` now collects this source too, so tracked steps (such as the outbox's "Saving integration
+  events") appear in the trace waterfall without code changes. Without a listener no activity is created. The tracker's
+  records, `ToString()` and `GetScopes()` are unchanged.
+
+## Fixes
+
+### `Juice.Measurement`
+- **Parallel branches.** A tracker kept one stack of open scopes for the whole request, so scopes begun in parallel
+  branches (`Task.WhenAll`) closed each other's and recorded the wrong names, depths and checkpoints. The open scope is
+  now kept per async flow, as `Activity.Current` is: each branch nests its own scopes under the scope it began in.
+  Records are added under a lock on `Records`; lock on it too to read them while scopes may still be running.
+
 # v10.8.0 - RabbitMQ: confirmed publishing, working retries
 
 ## Fixes
