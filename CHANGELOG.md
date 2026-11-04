@@ -11,6 +11,18 @@
   events") appear in the trace waterfall without code changes. Without a listener no activity is created. The tracker's
   records, `ToString()` and `GetScopes()` are unchanged.
 
+### `Juice.Messaging`
+- **Integration event pipeline behaviors.** An `IIntegrationEventPipelineBehavior` runs around the handlers of every
+  integration event, as `IPipelineBehavior` does around a mediator request, in the DI scope the handlers are resolved
+  from, so it shares scoped services with them. Behaviors run by `Order`, the lowest outermost, after the inbox check
+  (duplicates never reach them) and after the tenant is resolved, inside the message's consumer span. They see the
+  dispatch result and, in `EventDispatchContext.HandlerErrors`, the exceptions the handlers threw (still caught and
+  reported as `Failure`); an exception from a behavior fails the delivery. Register with
+  `services.AddIntegrationEventPipelineBehavior<TBehavior>()` or
+  `AddMessaging().AddIntegrationEventPipelineBehavior<TBehavior>()`. `IntegrationEventDispatcher.DispatchAsync` has an
+  overload with a `CancellationToken` for the behaviors; the NATS and local-channel consumers pass theirs. Juice.Audit
+  uses a behavior to audit what message consumers change.
+
 ## Fixes
 
 ### `Juice.Measurement`

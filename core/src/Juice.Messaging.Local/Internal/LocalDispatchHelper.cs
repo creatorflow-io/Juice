@@ -86,7 +86,7 @@ namespace Juice.Messaging.Local.Internal
                 evt.TenantId,
                 source);
 
-            return await dispatcher.DispatchAsync(evt, context);
+            return await dispatcher.DispatchAsync(evt, context, cancellationToken);
         }
     }
 }

@@ -22,8 +22,14 @@ namespace Juice.Messaging.Integrations
             _scopeFactory = scopeFactory;
         }
 
-        public async Task<EventDispatchResult> DispatchAsync(
+        public Task<EventDispatchResult> DispatchAsync(
             IIntegrationEvent evt, EventDispatchContext context)
+            => DispatchAsync(evt, context, CancellationToken.None);
+
+        /// <param name="cancellationToken">Passed to the <see cref="IIntegrationEventPipelineBehavior"/>s; handlers take
+        /// none.</param>
+        public async Task<EventDispatchResult> DispatchAsync(
+            IIntegrationEvent evt, EventDispatchContext context, CancellationToken cancellationToken)
         {
             if(context.Handlers == null || !context.Handlers.Any())
             {
@@ -54,49 +60,16 @@ namespace Juice.Messaging.Integrations
                     _logger.LogDebug("Dispatching event: {EventName}, eventId: {eventId} to {HandlerCount} handlers for tenant: {TenantId}"
                         , eventName, eventId, context.Handlers.Count(), context.TenantId);
                 }
-                bool ok = false, handled = false;
-                foreach (var handlerType in context.Handlers)
-                {
-                    if (!handlerType.IsAssignableTo(concreteType))
-                    {
-                        _logger.LogWarning("Type {typeName} not assignable to {concreteType}", handlerType.Name, concreteType.Name);
-
-                        continue;
-                    }
-                    // Try resolving by concrete type first (e.g. RabbitMQ subscriptions),
-                    // then fall back to resolving by interface (e.g. local-channel handlers).
-                    var handler = scope.ServiceProvider.GetService(handlerType)
-                        ?? scope.ServiceProvider.GetServices(concreteType)
-                            .FirstOrDefault(h => h!.GetType() == handlerType);
-                    if (handler == null)
-                    {
-                        _logger.LogWarning("Type {typeName} not registered as a service", handlerType.Name);
-
-                        continue;
-                    }
-
-                    using var activity = MessagingActivity.StartHandle(handlerType, eventName);
-                    try
-                    {
-                        handled = true;
-                        var handleMethod = _methodCache.GetOrAdd(concreteType, type =>
-                            type.GetMethod(nameof(IIntegrationEventHandler<IIntegrationEvent>.HandleAsync))!);
-                        await (Task)handleMethod.Invoke(handler, new object[] { evt })!;
-                        ok = true;
-                    }
-                    catch (Exception thrown)
-                    {
-                        // a handler that throws before its first await surfaces through MethodInfo.Invoke
-                        var ex = thrown is TargetInvocationException { InnerException: { } inner } ? inner : thrown;
-                        MessagingActivity.SetError(activity, ex);
-                        _logger.LogError(ex, "{handler} failed to handle event: {EventName}, eventId: {eventId}. {Message}", handler.GetType().Name, eventName, eventId, ex.Message);
-                        if (_logger.IsEnabled(LogLevel.Trace))
-                        {
-                            _logger.LogTrace(ex, "Event: {EventName}, eventId: {eventId} exception stack trace: {StackTrace}", eventName, eventId, ex.StackTrace);
-                        }
-                    }
-                }
-                _result =  ok ? EventDispatchResult.Success : handled ? EventDispatchResult.Failure : EventDispatchResult.NotHandled;
+                // As the mediator builds its pipelines: one per behavior type, the lowest Order outermost.
+                var behaviors = scope.ServiceProvider.GetServices<IIntegrationEventPipelineBehavior>()
+                    .DistinctBy(b => b.GetType())
+                    .OrderBy(b => b.Order)
+                    .ToArray();
+                ValueTask<EventDispatchResult> Next(int index, IIntegrationEvent e, EventDispatchContext c, CancellationToken ct)
+                    => index < behaviors.Length
+                        ? behaviors[index].Handle(e, c, (e1, c1, ct1) => Next(index + 1, e1, c1, ct1), ct)
+                        : HandleAsync(e, c, scope.ServiceProvider, concreteType, eventName, eventId);
+                _result = await Next(0, evt, context, cancellationToken);
                 return _result;
             }
             finally {
@@ -106,6 +79,55 @@ namespace Juice.Messaging.Integrations
                     _result == EventDispatchResult.Success,
                     cancellationToken: CancellationToken.None);
             }
+        }
+
+        private async ValueTask<EventDispatchResult> HandleAsync(IIntegrationEvent evt, EventDispatchContext context,
+            IServiceProvider services, Type concreteType, string eventName, Guid eventId)
+        {
+            bool ok = false, handled = false;
+            foreach (var handlerType in context.Handlers)
+            {
+                if (!handlerType.IsAssignableTo(concreteType))
+                {
+                    _logger.LogWarning("Type {typeName} not assignable to {concreteType}", handlerType.Name, concreteType.Name);
+
+                    continue;
+                }
+                // Try resolving by concrete type first (e.g. RabbitMQ subscriptions),
+                // then fall back to resolving by interface (e.g. local-channel handlers).
+                var handler = services.GetService(handlerType)
+                    ?? services.GetServices(concreteType)
+                        .FirstOrDefault(h => h!.GetType() == handlerType);
+                if (handler == null)
+                {
+                    _logger.LogWarning("Type {typeName} not registered as a service", handlerType.Name);
+
+                    continue;
+                }
+
+                using var activity = MessagingActivity.StartHandle(handlerType, eventName);
+                try
+                {
+                    handled = true;
+                    var handleMethod = _methodCache.GetOrAdd(concreteType, type =>
+                        type.GetMethod(nameof(IIntegrationEventHandler<IIntegrationEvent>.HandleAsync))!);
+                    await (Task)handleMethod.Invoke(handler, new object[] { evt })!;
+                    ok = true;
+                }
+                catch (Exception thrown)
+                {
+                    // a handler that throws before its first await surfaces through MethodInfo.Invoke
+                    var ex = thrown is TargetInvocationException { InnerException: { } inner } ? inner : thrown;
+                    MessagingActivity.SetError(activity, ex);
+                    context.AddHandlerError(ex);
+                    _logger.LogError(ex, "{handler} failed to handle event: {EventName}, eventId: {eventId}. {Message}", handler.GetType().Name, eventName, eventId, ex.Message);
+                    if (_logger.IsEnabled(LogLevel.Trace))
+                    {
+                        _logger.LogTrace(ex, "Event: {EventName}, eventId: {eventId} exception stack trace: {StackTrace}", eventName, eventId, ex.StackTrace);
+                    }
+                }
+            }
+            return ok ? EventDispatchResult.Success : handled ? EventDispatchResult.Failure : EventDispatchResult.NotHandled;
         }
     }
 }

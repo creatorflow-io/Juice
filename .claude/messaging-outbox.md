@@ -135,8 +135,11 @@ RabbitMQConsumerEngine.Consumer_ReceivedAsync():
      b. If duplicate → return Duplicated (skip)
      c. Resolve handler types from ISubscriptionsManager
      d. Create DI scope per dispatch
-     e. For each handler: resolve from DI, invoke HandleAsync via reflection cache
-     f. Return: Success (≥1 handler ok) | Failure (all failed) | NotHandled (no handlers)
+     e. Run the IIntegrationEventPipelineBehavior chain (scoped, sorted by Order, lowest outermost, as the mediator does;
+        after the inbox check and tenant resolution, inside the consumer span) around the handlers; handler exceptions
+        go to EventDispatchContext.HandlerErrors. Juice.Audit uses one for message audit
+     f. For each handler: resolve from DI, invoke HandleAsync via reflection cache
+     g. Return: Success (≥1 handler ok) | Failure (all failed) | NotHandled (no handlers)
   7. Result handling:
      - Success/Duplicated → BasicAckAsync (remove from queue)
      - Failure → Check IRetryPolicyProvider:
