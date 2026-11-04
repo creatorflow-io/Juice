@@ -1,4 +1,5 @@
 ﻿using Juice.Messaging;
+using Juice.Messaging.Integrations;
 using Juice.Messaging.Internal;
 using Juice.Messaging.Outbox;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -19,6 +20,17 @@ namespace Microsoft.Extensions.DependencyInjection
             return builder;
         }
 
+        /// <summary>
+        /// Adds an <see cref="IIntegrationEventPipelineBehavior"/> that runs around the handlers of every integration event,
+        /// in their DI scope. Behaviors run by <see cref="IIntegrationEventPipelineBehavior.Order"/>, the lowest outermost;
+        /// adding the same behavior twice has no effect.
+        /// </summary>
+        public static IServiceCollection AddIntegrationEventPipelineBehavior<TBehavior>(this IServiceCollection services)
+            where TBehavior : class, IIntegrationEventPipelineBehavior
+        {
+            services.TryAddEnumerable(ServiceDescriptor.Scoped<IIntegrationEventPipelineBehavior, TBehavior>());
+            return services;
+        }
 
         /// <summary>
         /// Register outbox proxy for specific type.

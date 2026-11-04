@@ -71,6 +71,14 @@ namespace Juice.Messaging
             return this;
         }
 
+        /// <inheritdoc cref="MessagingServiceCollectionExtensions.AddIntegrationEventPipelineBehavior{TBehavior}(IServiceCollection)"/>
+        public MessagingBuilder AddIntegrationEventPipelineBehavior<TBehavior>()
+            where TBehavior : class, IIntegrationEventPipelineBehavior
+        {
+            Services.AddIntegrationEventPipelineBehavior<TBehavior>();
+            return this;
+        }
+
 
         /// <summary>
         /// Configures the message serializer to allow additional assembly prefixes

@@ -366,7 +366,7 @@ namespace Juice.EventBus.NATS.Consuming
                             );
                         MessagingActivity.EnrichWithMessageContext(activity);
 
-                        result = await _dispatcher.DispatchAsync(integrationEvent, new EventDispatchContext(handlers, eventName, tenantId, _serviceKey));
+                        result = await _dispatcher.DispatchAsync(integrationEvent, new EventDispatchContext(handlers, eventName, tenantId, _serviceKey), cancellationToken);
                         MessagingActivity.SetResult(activity, result);
                         MessagingMetrics.RecordConsumed("nats", _endpoint.DurableName, eventName, result, started);
                     }
