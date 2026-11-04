@@ -1,15 +1,6 @@
-# Unreleased
+# v10.9.0 - Integration event pipeline behaviors
 
 ## Features
-
-### `Juice.Measurement`, `Juice.OpenTelemetry`
-- **Time tracker scopes are spans.** Each `ITimeTracker.BeginScope` starts a span on the new `Juice.Measurement`
-  `ActivitySource` (`TimeTrackerActivitySource`), a child of the current span, and ends it with the scope; a
-  `scopeId` becomes the `juice.measurement.scope_id` tag. Each `Checkpoint` inside a scope is an event on that
-  span; a checkpoint outside any scope stays in the tracker's records only. `AddJuiceInstrumentation()` on
-  `TracerProviderBuilder` now collects this source too, so tracked steps (such as the outbox's "Saving integration
-  events") appear in the trace waterfall without code changes. Without a listener no activity is created. The tracker's
-  records, `ToString()` and `GetScopes()` are unchanged.
 
 ### `Juice.Messaging`
 - **Integration event pipeline behaviors.** An `IIntegrationEventPipelineBehavior` runs around the handlers of every
@@ -22,6 +13,19 @@
   `AddMessaging().AddIntegrationEventPipelineBehavior<TBehavior>()`. `IntegrationEventDispatcher.DispatchAsync` has an
   overload with a `CancellationToken` for the behaviors; the NATS and local-channel consumers pass theirs. Juice.Audit
   uses a behavior to audit what message consumers change.
+
+# v10.8.1 - Time tracker scopes as spans
+
+## Features
+
+### `Juice.Measurement`, `Juice.OpenTelemetry`
+- **Time tracker scopes are spans.** Each `ITimeTracker.BeginScope` starts a span on the new `Juice.Measurement`
+  `ActivitySource` (`TimeTrackerActivitySource`), a child of the current span, and ends it with the scope; a
+  `scopeId` becomes the `juice.measurement.scope_id` tag. Each `Checkpoint` inside a scope is an event on that
+  span; a checkpoint outside any scope stays in the tracker's records only. `AddJuiceInstrumentation()` on
+  `TracerProviderBuilder` now collects this source too, so tracked steps (such as the outbox's "Saving integration
+  events") appear in the trace waterfall without code changes. Without a listener no activity is created. The tracker's
+  records, `ToString()` and `GetScopes()` are unchanged.
 
 ## Fixes
 
