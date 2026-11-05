@@ -1,4 +1,5 @@
 ﻿using Juice.Domain;
+using Juice.Domain.Events;
 using Juice.MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -160,6 +161,11 @@ namespace Juice.EF.Extensions
                     {
                         // Publish the Audit event
                         var @event = auditEntry.AuditEvent(ctx.AuditEventType);
+                        // Only a managed context is sure to announce the commit (DbContextBase.CommitTransactionAsync).
+                        if (@event is AuditEvent audit && ctx is DbContextBase { IsManaged: true } managed)
+                        {
+                            audit.SetTransactionId(managed.Database.CurrentTransaction?.TransactionId);
+                        }
                         await mediator.Publish(@event!);
                         if (logger != null && logger.IsEnabled(LogLevel.Debug))
                         {

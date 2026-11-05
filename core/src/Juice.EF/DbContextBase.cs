@@ -163,6 +163,11 @@ namespace Juice.EF
                 return affects;
 
             }
+            catch
+            {
+                ForgetAuditEntriesOfFailedSave();
+                throw;
+            }
             finally
             {
                 await this.DispatchEventsAsync(_mediator, _logger);
@@ -189,9 +194,26 @@ namespace Juice.EF
 
                 return affects;
             }
+            catch
+            {
+                ForgetAuditEntriesOfFailedSave();
+                throw;
+            }
             finally
             {
                 this.DispatchEventsAsync(_mediator, _logger).GetAwaiter().GetResult();
+            }
+        }
+
+        /// <summary>
+        /// The changes of a failed save were not made, so their audit events must not go out. A managed context keeps
+        /// its entries: earlier saves of the transaction are among them, and it reports them only if it commits.
+        /// </summary>
+        private void ForgetAuditEntriesOfFailedSave()
+        {
+            if (!IsManaged)
+            {
+                PendingAuditEntries.Clear();
             }
         }
 
@@ -201,7 +223,12 @@ namespace Juice.EF
         {
             try
             {
-                return await base.CommitTransactionAsync(transactionId, token);
+                var committed = await base.CommitTransactionAsync(transactionId, token);
+                if (committed)
+                {
+                    await AnnounceCommitAsync(transactionId);
+                }
+                return committed;
             }
             finally
             {
@@ -209,6 +236,24 @@ namespace Juice.EF
                 {
                     await _pendingRefreshEntities.RefreshEntriesAsync();
                 }
+            }
+        }
+
+        /// <summary>The data is committed, so a failing handler must not fail the command.</summary>
+        private async Task AnnounceCommitAsync(Guid transactionId)
+        {
+            if (_mediator == null)
+            {
+                return;
+            }
+            try
+            {
+                await _mediator.Publish(new TransactionCommitted(transactionId));
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "Transaction {TransactionId} committed, but announcing it failed: {Message}",
+                    transactionId, ex.Message);
             }
         }
 

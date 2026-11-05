@@ -83,7 +83,8 @@ public class Product : DynamicAuditEntity<Guid>
 ## Domain Events
 ### In-process domain events (via MediatR)
 ```
-AuditEvent<T>                          — fired after SaveChanges, carries AuditRecord
+AuditEvent<T>                          — fired after SaveChanges, carries AuditRecord; inside TransactionBehavior also TransactionId, before the commit
+TransactionCommitted                   — published by DbContextBase after the commit; never on failure
 DataEvent                              — base class; has IsAudit, Entity, AuditRecord
 DataInserted<T>, DataModified<T>, DataDeleted<T>  — typed data change events
 ```

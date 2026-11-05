@@ -1,3 +1,19 @@
+# v10.10.0 - Audit events know their transaction
+
+## Features
+
+### `Juice`, `Juice.EF`
+- **Audit consumers can tell when a change is durable.** An `AuditEvent` published inside a transaction managed by
+  `TransactionBehavior` carries `TransactionId`, and `DbContextBase` publishes `TransactionCommitted` after the commit.
+  A transaction that fails publishes nothing. Audit events are still published before the commit. Outside a managed
+  transaction `TransactionId` is null, including a transaction the app opens itself, whose rollback is not visible.
+
+## Fixes
+
+### `Juice.EF`
+- **A failed `SaveChanges` no longer publishes audit events.** Outside a managed transaction, the changes of a failed
+  save were reported as if they had been made.
+
 # v10.9.0 - Integration event pipeline behaviors
 
 ## Features
