@@ -1,4 +1,4 @@
-# Unreleased
+# v10.11.0 - Outbox delivery keeps up under load
 
 ## Changes
 
