@@ -85,6 +85,31 @@ BenchmarkDotNet v0.15.4, Windows 11 (10.0.26100.6584/24H2/2024Update/HudsonValle
 | SendAsync | 3.513 us | 0.0673 us | 0.0875 us | 0.7782 | 0.1831 |  11.96 KB |
 ```
 
+#### Juice.Messaging.Outbox
+
+Saves integration events in the same transaction as the data, then delivers them to the broker.
+
+Delivery before and after 10.11.0, sending to RabbitMQ with a batch of 100 unless noted:
+
+| | 10.10.1 | 10.11.0 |
+|---|---|---|
+| One instance, no other traffic | 133 messages/s | 1,585 messages/s |
+| Default settings (10 every 5 s) | about 2 messages/s, calculated | 719 messages/s |
+| Delivery at 64 orders/s | 26 messages/s, backlog growing | 63.9 messages/s, keeps up |
+| Commit to broker at 64 orders/s, p95 | kept growing | 243 ms |
+| Client request at 64 orders/s, p95 | 57 ms | 29 ms |
+| Disk flush at 64 orders/s | 11.9 ms | 2.1 ms |
+| Claims lost between two instances | about half, at 64 orders/s | none, with no other traffic |
+
+Measured on one development machine, with the services, SQL Server and RabbitMQ sharing its disk, so these compare the two
+versions and are not production figures. Each order runs through three services in separate processes.
+
+At 128 orders/s, 10.11.0 delivers 127.8 messages/s with a p95 of 400 ms from commit to broker. The consumer of those messages
+falls behind at that rate, so the limit there is no longer delivery. Two instances with no other traffic reach 2,516 messages/s,
+1.59× one instance on this shared machine, which isn't a scaling figure.
+
+Messages of different transactions may now overtake each other: see the [changelog](CHANGELOG.md) for the order rules.
+
 #### Juice.MultiTenant.*
 
 Integrated with [Finbuckle.MultiTenant](https://github.com/Finbuckle/Finbuckle.MultiTenant)
