@@ -42,6 +42,7 @@ builder.Services.AddOpenTelemetry()
         metrics
             .AddJuiceInstrumentation()          // juice.* metrics
             .AddJuiceDeliveryMetrics()          // delivery.metrics (local-channel delivery)
+            .AddMeter("System.Runtime")         // CPU, memory, GC and thread pool (.NET 9+)
             .AddReader(new PeriodicExportingMetricReader(console.Metrics, exportIntervalMilliseconds: 3000));
         if (otlp) metrics.AddOtlpExporter();
     })

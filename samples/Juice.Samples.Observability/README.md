@@ -97,6 +97,7 @@ ids), so they stay cheap to store. Values are cumulative since the app started.
 | `WithTracing(t => t.AddJuiceInstrumentation())` | the Juice spans |
 | `services.AddJuiceOpenTelemetry()` | the mediator spans and `juice.mediator.*` metrics |
 | `WithMetrics(m => m.AddJuiceInstrumentation().AddJuiceDeliveryMetrics())` | the Juice metrics |
+| `WithMetrics(m => m.AddMeter("System.Runtime"))` | CPU, memory, GC and thread pool of the process (.NET 9+), shown beside a trace in Juice Observability |
 | `WithLogging(l => l.AddJuiceInstrumentation())` | the Juice context on logs and payload redaction (before any exporter) |
 | `app.UseMessageContext("orders-api")` | the `MessageContext` for each request, copied onto the HTTP span |
 
