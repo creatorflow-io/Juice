@@ -3,6 +3,13 @@
     public interface ITransportPublisher
     {
         string Key { get; }
+
+        /// <summary>
+        /// Whether outbox delivery may call <see cref="PublishAsync"/> for several messages at once on this instance.
+        /// False by default: delivery then sends one message at a time.
+        /// </summary>
+        bool SupportsConcurrentPublish => false;
+
         /// <summary>
         /// Publish payload to implemented broker like RabbitMQ, Kafka
         /// </summary>

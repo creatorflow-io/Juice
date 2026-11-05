@@ -46,9 +46,9 @@ DefaultEventPublishingPolicy — reads PublishingPolicyOptions (config-driven ru
 ### Delivery (Background Processing)
 ```
 DeliveryHostedService<TContext>   — BackgroundService; one instance per Publisher×Intent combo
-DeliveryProcessor<TContext>       — does MarkInProgress → PublishAsync → MarkPublished/Failed
+DeliveryProcessor<TContext>       — one claim for the batch → PublishAsync, concurrent across transactions → one MarkPublished, MarkFailed per failure
 IDeliveryIntent<TContext>         — RetrieveDeliveriesAsync(publisherKey, policy, ct) → OutboxDelivery[]
-DeliveryPolicy                    — record: Interval, BatchSize, Timeout, InitialRetryDelay, RetryDelayMultiplier, MaxRetryAttempts
+DeliveryPolicy                    — record: Interval, BatchSize, Timeout, InitialRetryDelay, RetryDelayMultiplier, MaxRetryAttempts, MaxConcurrency (init, default 10)
 IDeliveryPolicyProvider           — provides delivery policies
 IDeliveryPolicyResolver           — resolves policy for DeliveryContext(publisher, intent, contextName)
 ```
@@ -62,7 +62,7 @@ IDeliveryPolicyResolver           — resolves policy for DeliveryContext(publis
 
 ### Transport (Broker)
 ```
-ITransportPublisher        — Key (string), PublishAsync(byte[], PublishContext, CT)
+ITransportPublisher        — Key (string), PublishAsync(byte[], PublishContext, CT), SupportsConcurrentPublish (default false; true on RabbitMQ and NATS)
 RabbitMQProducer           — implements ITransportPublisher; channel pool with publisher confirms (tracking): PublishAsync completes
                              only once the broker has the message and throws on nack, basic.return (only with Mandatory(), off by default)
                              or a channel close (404 no exchange) → the outbox marks the delivery Failed and retries it.
@@ -110,15 +110,28 @@ MediatR.Send(Command)
 ```
 DeliveryHostedService<TContext> loop (per Publisher × Intent):
   1. Resolve DeliveryPolicy from IDeliveryPolicyResolver
-  2. Every policy.Interval:
+  2. In a loop, waiting policy.Interval only when the last batch wasn't full or something failed:
      a. Create new DI scope
      b. Resolve IDeliveryIntent<TContext> (keyed by intent name)
      c. Resolve ITransportPublisher (keyed by publisher name)
      d. deliveries = intent.RetrieveDeliveriesAsync(publisher, policy, ct)
      e. DeliveryProcessor.ProcessAsync(deliveries):
-        - MarkAsInProgressAsync (optimistic lock: rowcount check)
-        - ITransportPublisher.PublishAsync(payload, context) → RabbitMQProducer
-        - MarkAsPublishedAsync  OR  MarkAsFailedAsync(nextAttempt)
+        - MarkAsInProgressAsync(ids): one commit, returns the rows this worker won; only those are sent
+        - PublishAsync: groups by TransactionId, up to MaxConcurrency groups at once where the publisher supports it, in order within a group
+        - MarkAsPublishedAsync(ids): one commit, also when stopping; then MarkAsFailedAsync(nextAttempt) per failure
+        - The repository's context is never used during the sends. Reclaimed (InProgress) deliveries go one at a time with a CAS on ProcessedOn
+
+Why batches: a commit waits for the disk. Two per message tied delivery to the flush time (26 messages/s at 64 orders/s on a
+busy dev machine), and more commits made the flush slower for everyone.
+
+Claim: `ExecuteUpdate`'s row count says which rows are ours: all, none, or else read back by `ProcessedOn`. Do not trust the read
+alone: workers starting together write the same microsecond, which sent whole batches twice in `OutboxClaimTest`. A count that
+doesn't match leaves the rows to recover-timeout.
+
+Order: within a transaction only, and a failed message is overtaken even there. Different transactions and different instances
+overtake each other, so consumers that overwrite state should compare a version or a time. MaxConcurrency = 1 on one instance sends
+in the order retrieved. Tests: `DeliveryBatchTest` (fakes), `OutboxClaimTest` (SQLite, plus SQL Server and PostgreSQL when
+`ConnectionStrings__SqlServerConnection` and `ConnectionStrings__PostgreConnection` are set).
 ```
 
 ### Phase 3: Consumption (RabbitMQConsumerEngine)

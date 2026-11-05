@@ -11,6 +11,8 @@ namespace Juice.EventBus.RabbitMQ.Publishing
     internal sealed class RabbitMQProducer : ITransportPublisher, IAsyncDisposable
     {
         public string Key { get; init; }
+        // Limited by the channel pool: a publish waits for a free channel.
+        public bool SupportsConcurrentPublish => true;
         private readonly IRabbitMQPersistentConnection _persistentConnection;
         private string _defaultExchange = "default_exchange";
         private readonly ILogger _logger;

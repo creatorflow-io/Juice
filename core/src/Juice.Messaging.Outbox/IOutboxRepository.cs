@@ -19,6 +19,17 @@
         ValueTask MarkAsPublishedAsync(Guid deliveryId, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// Change the state of several deliveries after publishing them, in one commit where the repository can.
+        /// </summary>
+        async ValueTask MarkAsPublishedAsync(IReadOnlyCollection<Guid> deliveryIds, CancellationToken cancellationToken = default)
+        {
+            foreach (var deliveryId in deliveryIds)
+            {
+                await MarkAsPublishedAsync(deliveryId, cancellationToken);
+            }
+        }
+
+        /// <summary>
         /// Change event state before publish it to the service bus.
         /// Claiming a <see cref="DeliveryState.Failed"/> delivery increments <see cref="OutboxDelivery.RetryCount"/>.
         /// </summary>
@@ -26,6 +37,24 @@
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         ValueTask<int> MarkAsInProgressAsync(Guid deliveryId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Claim several deliveries, in one commit where the repository can.
+        /// Claiming a <see cref="DeliveryState.Failed"/> delivery increments <see cref="OutboxDelivery.RetryCount"/>.
+        /// </summary>
+        /// <returns>The deliveries this call claimed. The others were claimed by another worker.</returns>
+        async ValueTask<IReadOnlyCollection<Guid>> MarkAsInProgressAsync(IReadOnlyCollection<Guid> deliveryIds, CancellationToken cancellationToken = default)
+        {
+            var claimed = new List<Guid>(deliveryIds.Count);
+            foreach (var deliveryId in deliveryIds)
+            {
+                if (await MarkAsInProgressAsync(deliveryId, cancellationToken) > 0)
+                {
+                    claimed.Add(deliveryId);
+                }
+            }
+            return claimed;
+        }
 
         /// <summary>
         /// Re-claim a delivery left <see cref="DeliveryState.InProgress"/> by a worker that stopped or timed out.

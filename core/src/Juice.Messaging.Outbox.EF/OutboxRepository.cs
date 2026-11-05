@@ -13,6 +13,9 @@ namespace Juice.Messaging.Outbox.EF
         private TContext _domainContext;
         private IOutboxContext _outboxContext;
 
+        // Far under the 2,100 parameters of SQL Server, for a batch size no one needs to think about.
+        private const int MaxIdsPerStatement = 1000;
+
         private ITimeTracker? _timeTracker;
         private INodeIdentity? _nodeIdentity;
 
@@ -84,6 +87,59 @@ namespace Juice.Messaging.Outbox.EF
                 ie.SetProperty(e => e.State, e => DeliveryState.Published)
                   .SetProperty(e => e.ProcessedOn, e => now)
                 , cancellationToken);
+        }
+
+        public async ValueTask MarkAsPublishedAsync(IReadOnlyCollection<Guid> deliveryIds, CancellationToken cancellationToken = default)
+        {
+            var now = DateTimeOffset.UtcNow;
+            foreach (var ids in deliveryIds.Chunk(MaxIdsPerStatement))
+            {
+                await _outboxContext.OutboxDeliveries
+                    .Where(ie => ids.Contains(ie.DeliveryId) && ie.State != DeliveryState.Published)
+                    .ExecuteUpdateAsync(ie =>
+                        ie.SetProperty(e => e.State, e => DeliveryState.Published)
+                          .SetProperty(e => e.ProcessedOn, e => now)
+                        , cancellationToken);
+            }
+        }
+
+        public async ValueTask<IReadOnlyCollection<Guid>> MarkAsInProgressAsync(IReadOnlyCollection<Guid> deliveryIds, CancellationToken cancellationToken = default)
+        {
+            var claimed = new List<Guid>(deliveryIds.Count);
+            foreach (var ids in deliveryIds.Chunk(MaxIdsPerStatement))
+            {
+                // Whole microseconds, the finest time every provider stores, so the read below finds the value written.
+                var ticks = DateTimeOffset.UtcNow.Ticks;
+                var now = new DateTimeOffset(ticks - ticks % 10, TimeSpan.Zero);
+                var updated = await _outboxContext.OutboxDeliveries
+                    .Where(ie => ids.Contains(ie.DeliveryId) && (ie.State == DeliveryState.NotPublished || ie.State == DeliveryState.Failed))
+                    .ExecuteUpdateAsync(ie =>
+                        ie.SetProperty(e => e.State, e => DeliveryState.InProgress)
+                          .SetProperty(e => e.RetryCount, e => e.State == DeliveryState.Failed ? e.RetryCount + 1 : e.RetryCount)
+                          .SetProperty(e => e.ProcessedOn, e => now)
+                          .SetProperty(e => e.ProcessedBy, e => _nodeIdentity != null ? _nodeIdentity.NodeId : null)
+                        , cancellationToken);
+                if (updated == ids.Length)
+                {
+                    claimed.AddRange(ids);
+                }
+                else if (updated > 0)
+                {
+                    // Another worker took some of the list, so which rows are ours is told by the time written. Workers
+                    // that start together do write the same time. More rows than we updated means that happened: send none
+                    // of them, because a row sent by both goes out twice. recover-timeout picks up what nobody sends.
+                    var mine = await _outboxContext.OutboxDeliveries
+                        .AsNoTracking()
+                        .Where(ie => ids.Contains(ie.DeliveryId) && ie.State == DeliveryState.InProgress && ie.ProcessedOn == now)
+                        .Select(ie => ie.DeliveryId)
+                        .ToListAsync(cancellationToken);
+                    if (mine.Count == updated)
+                    {
+                        claimed.AddRange(mine);
+                    }
+                }
+            }
+            return claimed;
         }
 
         public async ValueTask<int> MarkAsInProgressAsync(Guid deliveryId, CancellationToken cancellationToken = default)

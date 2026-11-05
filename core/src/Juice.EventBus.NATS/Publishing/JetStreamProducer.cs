@@ -8,6 +8,7 @@ namespace Juice.EventBus.NATS.Publishing
     internal sealed class JetStreamProducer : ITransportPublisher, IAsyncDisposable, IDisposable
     {
         public string Key { get; init; }
+        public bool SupportsConcurrentPublish => true;
         private readonly IJetStreamConnection _connection;
         private readonly JetStreamProducerEndpoint _endpoint;
         private readonly ILogger _logger;

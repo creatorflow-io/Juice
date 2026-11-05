@@ -12,6 +12,12 @@
             RetryDelayMultiplier: 2.0,
             MaxRetryAttempts: 3);
 
+        /// <summary>
+        /// How many transactions' messages to send at the same time, on a publisher that supports it. Messages of one
+        /// transaction are always sent in order. 1 sends every message in order, at a lower rate.
+        /// </summary>
+        public int MaxConcurrency { get; init; } = 10;
+
         public DateTimeOffset? GetNextAttempt(int retryCount)
         {
             if (retryCount <= 0 || retryCount > MaxRetryAttempts)

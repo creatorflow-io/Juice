@@ -108,7 +108,7 @@ namespace Juice.OpenTelemetry.Tests
             var deliver = Juice(trace, "deliver " + transport);
             deliver.ParentSpanId.Should().Be(create.SpanId, "the background delivery continues the context stored in the outbox row");
             deliver.GetTagItem("juice.delivery.outcome").Should().Be("published");
-            ordersSql.Should().Contain(a => a.ParentSpanId == deliver.SpanId, "the delivery state is updated inside the delivery span");
+            ordersSql.Should().NotContain(a => a.ParentSpanId == deliver.SpanId, "one update covers a batch, so it belongs to no message's trace");
             var send = Juice(trace, "send " + transportSettings.Destination);
             send.Kind.Should().Be(ActivityKind.Producer);
             send.ParentSpanId.Should().Be(deliver.SpanId);

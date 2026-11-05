@@ -17,7 +17,7 @@
     public sealed class PolicyConfiguration
     {
         /// <summary>
-        /// Interval between batch processing cycles
+        /// How long to wait when no more deliveries are waiting. A full batch is followed by the next one at once.
         /// </summary>
         public TimeSpan? Interval { get; set; }
         
@@ -45,6 +45,11 @@
         /// Maximum number of retry attempts before giving up
         /// </summary>
         public int? MaxRetryAttempts { get; set; }
+
+        /// <summary>
+        /// How many transactions' messages to send at the same time. 1 sends every message in order.
+        /// </summary>
+        public int? MaxConcurrency { get; set; }
         
         /// <summary>
         /// Converts this configuration to a DeliveryPolicy, merging with defaults
@@ -60,7 +65,10 @@
                 InitialRetryDelay: InitialRetryDelay ?? basePolicy.InitialRetryDelay,
                 RetryDelayMultiplier: RetryDelayMultiplier ?? basePolicy.RetryDelayMultiplier,
                 MaxRetryAttempts: MaxRetryAttempts ?? basePolicy.MaxRetryAttempts
-            );
+            )
+            {
+                MaxConcurrency = MaxConcurrency ?? basePolicy.MaxConcurrency
+            };
         }
     }
 }

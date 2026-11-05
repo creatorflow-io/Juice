@@ -49,7 +49,9 @@ namespace Juice.Messaging.Outbox.Delivery.Processing
         /// <summary>
         /// Retrieves and processes a single batch of deliveries within a new service scope.
         /// </summary>
-        public async Task ExecuteAsync(CancellationToken cancellationToken)
+        /// <returns>True when more deliveries are probably waiting, so the next batch shouldn't wait for
+        /// <see cref="DeliveryPolicy.Interval"/>: this one was full and nothing failed.</returns>
+        public async Task<bool> ExecuteAsync(CancellationToken cancellationToken)
         {
             using var scope = _serviceProvider.CreateScope();
             var intent = scope.ServiceProvider.GetRequiredKeyedService<IDeliveryIntent<TContext>>(Intent);
@@ -57,13 +59,15 @@ namespace Juice.Messaging.Outbox.Delivery.Processing
             var processor = scope.ServiceProvider.GetRequiredService<DeliveryProcessor<TContext>>();
             processor.Configure(publisher, Policy);
 
-            var deliveries = await intent.RetrieveDeliveriesAsync(Publisher, Policy, cancellationToken);
-            _logger.LogInformation("Retrieved {Count} deliveries for Publisher: {Publisher}, Intent: {Intent}",
-                deliveries.Count(), Publisher, Intent);
-            if (deliveries.Any())
+            OutboxDelivery[] deliveries = [.. await intent.RetrieveDeliveriesAsync(Publisher, Policy, cancellationToken)];
+            _logger.LogDebug("Retrieved {Count} deliveries for Publisher: {Publisher}, Intent: {Intent}",
+                deliveries.Length, Publisher, Intent);
+            if (deliveries.Length == 0)
             {
-                await processor.ProcessAsync([.. deliveries], cancellationToken);
+                return false;
             }
+            var clean = await processor.ProcessAsync(deliveries, cancellationToken);
+            return clean && deliveries.Length >= Policy.BatchSize;
         }
     }
 }

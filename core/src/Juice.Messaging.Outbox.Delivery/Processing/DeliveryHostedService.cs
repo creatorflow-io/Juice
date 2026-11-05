@@ -4,7 +4,8 @@ using Microsoft.Extensions.Logging;
 namespace Juice.Messaging.Outbox.Delivery.Processing
 {
     /// <summary>
-    /// Basic background service that polls outbox deliveries on a fixed interval with exponential backoff.
+    /// Basic background service that polls outbox deliveries, keeps going while they are waiting, and waits for the
+    /// interval when they aren't, with exponential backoff on errors.
     /// Delegates all batch logic to an injected <see cref="DeliveryWorker{TContext}"/>.
     /// </summary>
     internal sealed class DeliveryHostedService<TContext> : BackgroundService
@@ -42,9 +43,10 @@ namespace Juice.Messaging.Outbox.Delivery.Processing
 
             while (!stoppingToken.IsCancellationRequested)
             {
+                var moreWaiting = false;
                 try
                 {
-                    await _worker.ExecuteAsync(stoppingToken);
+                    moreWaiting = await _worker.ExecuteAsync(stoppingToken);
                     consecutiveFailures = 0;
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
@@ -62,7 +64,10 @@ namespace Juice.Messaging.Outbox.Delivery.Processing
                     continue;
                 }
 
-                await Task.Delay(_worker.Policy.Interval, stoppingToken);
+                if (!moreWaiting)
+                {
+                    await Task.Delay(_worker.Policy.Interval, stoppingToken);
+                }
             }
         }
     }

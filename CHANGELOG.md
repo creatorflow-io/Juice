@@ -1,3 +1,40 @@
+# Unreleased
+
+## Changes
+
+### `Juice.Messaging.Outbox`, `Juice.Messaging.Outbox.Delivery`, `Juice.Messaging.Outbox.EF`
+- **Outbox delivery keeps up under load.** It handled one message at a time, with two commits each, then always waited the
+  interval. One instance sending to RabbitMQ on one development machine, with SQL Server on the same disk:
+
+  | | Before | After |
+  |---|---|---|
+  | No other traffic, batch of 100 | 133 messages/s | 1,585 messages/s |
+  | Default settings (10 every 5 s) | about 2 messages/s, calculated | 719 messages/s |
+  | With 64 requests/s | 26 messages/s, backlog growing | keeps up, 243 ms p95 from commit to broker |
+
+  - **A full batch is followed by the next one at once.** `Interval` is now how long to wait when nothing is left, or after a
+    failure.
+  - **A batch takes one commit to claim and one to mark as published,** with `IOutboxRepository`'s new overloads of
+    `MarkAsInProgressAsync` and `MarkAsPublishedAsync`. A repository with only the existing calls still works, one at a time.
+  - **Messages are sent concurrently.** The new `MaxConcurrency` setting (default 10) is how many transactions' messages go
+    out at once, on a publisher with `ITransportPublisher.SupportsConcurrentPublish`: RabbitMQ and NATS. `local` stays one at a
+    time. RabbitMQ also waits for a free channel, so raise `PoolCapacity` (default 10) along with it.
+  - **Instances don't get in each other's way.** Two instances no longer lose half their claims; a worker that loses a batch
+    moves straight on to the next.
+
+  ⚠️ **Message order.** Messages of one transaction still go out in order. Messages of different transactions may now overtake
+  each other, so two events about one entity from separate transactions can arrive in either order. A failed message is
+  retried later, as before, so the ones after it overtake it, including in its own transaction, and instances don't coordinate
+  order at all. Consumers that overwrite state should compare a version or a time. Set `MaxConcurrency` to 1 on one instance
+  to send in the order retrieved.
+
+  ⚠️ A crash after sending a batch and before marking it sends the whole batch again after `Timeout`, up from one message.
+  Delivery was already at least once, so consumers must already tolerate this.
+
+  `DeliveryWorker.ExecuteAsync` now returns whether more deliveries are probably waiting. The `deliver` span covers the send
+  and no longer the two status updates, so it's shorter than before; a delivery claimed by another worker has no span.
+  "Retrieved n deliveries" is now logged at `Debug`.
+
 # v10.10.1 - Pooled contexts come back clean
 
 ## Fixes
