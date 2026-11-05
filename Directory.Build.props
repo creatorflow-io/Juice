@@ -2,7 +2,8 @@
   <PropertyGroup Label="Product Infomation">
     <Company>Creatorflow.io</Company>
     <Product>Juice core</Product>
-    <Copyright>© $(Company). All rights reserved.</Copyright>
+    <Copyright>© $(Company)</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <Authors>$(Company)</Authors>
     <JuiceDescription>$(Product) is a media management framework</JuiceDescription>
     <Description>$(Product) - Media Managment System.</Description>

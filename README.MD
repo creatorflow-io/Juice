@@ -139,3 +139,7 @@ Version 6.0
     - [ ] API target
     - [ ] SPA target
     - [ ] Microservice target
+
+## License
+
+[MIT](LICENSE)
