@@ -87,10 +87,24 @@ namespace Juice.EF
             => Set<T>();
         #endregion
 
+        /// <summary>What belongs to one use of the context.</summary>
+        protected void ResetUnitOfWorkState()
+        {
+            _isManaged = false;
+            _commitedTransactionId = null;
+        }
+
+        // Before the base: disposing a pooled context hands it back, and it may be in use by the time the base returns.
         public override void Dispose()
         {
+            ResetUnitOfWorkState();
             base.Dispose();
-            _commitedTransactionId = null;
+        }
+
+        public override ValueTask DisposeAsync()
+        {
+            ResetUnitOfWorkState();
+            return base.DisposeAsync();
         }
     }
 }

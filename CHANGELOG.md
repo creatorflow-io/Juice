@@ -1,3 +1,26 @@
+# v10.10.1 - Pooled contexts come back clean
+
+## Fixes
+
+### `Juice.EF`
+- **A pooled `DbContextBase` kept what its last user left.** Since 10.2.1, its `IResettableService` replaced EF Core's own
+  reset instead of adding to it. On a reused context:
+  - **One tenant could read another's row:** `FindAsync` returned the last tenant's tracked entity, past the tenant filter.
+  - **A transaction left open stayed open** for the next user.
+  - **A row added and never saved was saved by the next user's `SaveChanges`,** and a failed save failed every later one.
+  - **The next user read the last user's copy** of a row, not the stored value.
+  - **Saves slowed down with every use,** because each scanned all the entities the context had ever tracked. A
+    message consumer reuses one context, so it was affected the most.
+
+  `DbContextBase` keeps `IResettableService` and now also runs EF Core's reset. It applies to `IDbContextFactory` and
+  `AddDbContextPool`, with synchronous and asynchronous disposal. Contexts that aren't pooled were not affected.
+- **Disposing no longer touches a context after handing it back.** `Dispose` cleared the context once it was back in the pool,
+  where another request could already be using it, and cleared its schema and logger, which `DisposeAsync` kept.
+- **`IsManaged`, the committed transaction id and `TimeTracker` are cleared on return.**
+
+To clear state of your own on a pooled context, override the new `OnResetState()`. `ResetState()` now ends the context's use
+as EF Core's does, so don't call it during a request.
+
 # v10.10.0 - Audit events know their transaction
 
 ## Features

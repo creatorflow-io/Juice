@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Reflection;
+using System.Security.Claims;
 using Juice.Domain.Events;
 using Juice.EF.Extensions;
 using Juice.Measurement;
@@ -259,35 +260,61 @@ namespace Juice.EF
 
         #endregion
 
-        public virtual void ResetState()
+        #region Pooling
+
+        /// <summary>
+        /// Clears what belongs to one user of the context, on every return to the pool, before anyone else can get it.
+        /// Override it to clear state of your own. <c>Schema</c>, <c>_options</c> and <c>_logger</c> are config-derived and
+        /// stable across requests: they stay, so pooled contexts don't require <c>ConfigureServices()</c> per use.
+        /// </summary>
+        protected virtual void OnResetState()
         {
-            // Per-request state — reset on every pool return
             _mediator = null;
             UserPrincipal = null;
+            TimeTracker = null;
             _pendingRefreshEntities.Clear();
             PendingAuditEntries.Clear();
             PendingDataEvents.Clear();
-            // Schema, _options, _logger, TimeTracker are config-derived and stable across
-            // requests — keep them so pooled contexts don't require ConfigureServices() per use
+            ResetUnitOfWorkState();
         }
 
-        public virtual Task ResetStateAsync(CancellationToken cancellationToken = default)
+        /// <summary>
+        /// EF Core's pool calls this when the context comes back, then makes it available again. It ends this use of the
+        /// context, so it is not for clearing state during one: see <see cref="OnResetState"/>.
+        /// </summary>
+        public virtual void ResetState()
         {
-            ResetState();
-            return Task.CompletedTask;
+            OnResetState();
+            EFCoreReset.Sync(this);
         }
 
-        public override void Dispose()
+        /// <inheritdoc cref="ResetState"/>
+        public virtual async Task ResetStateAsync(CancellationToken cancellationToken = default)
         {
-            base.Dispose();
-
-            _logger?.LogDebug(GetType().Name + " is disposing...");
-            ResetState();
-            _options = null;
-            Schema = null;
-            TimeTracker = null;
-            _logger = null;
+            OnResetState();
+            await EFCoreReset.Async(this, cancellationToken);
         }
 
+        /// <summary>
+        /// DbContext's own reset: the change tracker, the DbSets, the database facade with its connection and transaction, and
+        /// every service of the provider. Declaring <see cref="IResettableService"/> here replaces it, and C# has no way to
+        /// call a base class's explicit interface method, so it is found through the interface map. Without it, a pooled
+        /// context keeps everything it tracked and any open transaction, for the next user.
+        /// </summary>
+        private static class EFCoreReset
+        {
+            private static readonly InterfaceMapping Map = typeof(DbContext).GetInterfaceMap(typeof(IResettableService));
+
+            public static readonly Action<DbContext> Sync =
+                Target(nameof(IResettableService.ResetState)).CreateDelegate<Action<DbContext>>();
+
+            public static readonly Func<DbContext, CancellationToken, Task> Async =
+                Target(nameof(IResettableService.ResetStateAsync)).CreateDelegate<Func<DbContext, CancellationToken, Task>>();
+
+            private static MethodInfo Target(string name)
+                => Map.TargetMethods[Array.FindIndex(Map.InterfaceMethods, m => m.Name == name)];
+        }
+
+        #endregion
     }
 }
