@@ -1,4 +1,4 @@
-# Unreleased
+# v10.12.0 - A failed message gets its retry
 
 ## Fixes
 
