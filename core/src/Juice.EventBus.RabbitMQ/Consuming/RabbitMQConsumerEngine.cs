@@ -110,7 +110,7 @@ namespace Juice.EventBus.RabbitMQ.Consuming
                 }
 
                 var result = await ProcessingEventAsync(eventArgs, routingKey, message);
-                if (_consumerChannel == null)
+                if (_consumerChannel == null || result == null)
                 {
                     return;
                 }
@@ -130,36 +130,7 @@ namespace Juice.EventBus.RabbitMQ.Consuming
                         _logger.LogDebug("No handler processed RabbitMQ event: {EventName}", routingKey);
                     }
                 }
-                #region Retry processing
-                var originalExchange = headers.GetHeaderString("x-original-exchange") ?? eventArgs.Exchange;
-                var attempts = (headers.GetHeaderInt("x-attempts") ?? 0) + 1;
-
-                var retryPolicy = _retryPolicyProvider == null ? null
-                    : await _retryPolicyProvider.GetRetryPolicyForSourceAsync(originalExchange, attempts);
-                if (retryPolicy == null || (retryPolicy.IsMaxRetryReached && !retryPolicy.IsParkingEnabled))
-                {
-                    if (_logger.IsEnabled(LogLevel.Debug))
-                    {
-                        _logger.LogDebug("Max processing retries reached for event: {EventName}, attempts: {Attempts}. Send Nack.", routingKey, attempts);
-                    }
-                    await _consumerChannel.BasicNackAsync(eventArgs.DeliveryTag, multiple: false, requeue: false);
-                    return;
-                }
-                if (retryPolicy.IsMaxRetryReached && retryPolicy.IsParkingEnabled)
-                {
-                    // Route to DLQ after max retries
-
-                    if (_logger.IsEnabled(LogLevel.Debug))
-                    {
-                        _logger.LogDebug("Max processing retries reached for event: {EventName}, attempts: {Attempts}. Send to DLX.", routingKey, attempts);
-                    }
-                    await SendToDeadLetterQueueAsync(eventArgs, retryPolicy, $"MaxRetriesReached_Attempts_{attempts}");
-
-                    return;
-                }
-
-                await RetryAsync(eventArgs, originalExchange, routingKey, retryPolicy, attempts);
-                #endregion
+                await RetryOrParkAsync(eventArgs, routingKey, headers);
             }
             catch (Exception ex)
             {
@@ -168,8 +139,68 @@ namespace Juice.EventBus.RabbitMQ.Consuming
                 {
                     _logger.LogTrace(ex.StackTrace);
                 }
+                // Left unsettled, the message would hold a prefetch slot until the channel closes, then come back.
+                try
+                {
+                    if (_consumerChannel != null)
+                    {
+                        await RetryOrParkAsync(eventArgs, routingKey, headers);
+                    }
+                }
+                catch (Exception settleEx)
+                {
+                    _logger.LogError(settleEx, "[{Queue}] Could not settle message {MessageId}; the broker redelivers it when the channel closes.",
+                        _queueName, eventArgs.BasicProperties.MessageId);
+                }
             }
 
+        }
+
+        /// <summary>A message that wasn't handled: the next retry tier, parking once they run out, otherwise dropped.</summary>
+        private async Task RetryOrParkAsync(BasicDeliverEventArgs eventArgs, string routingKey, IDictionary<string, object?> headers)
+        {
+            var originalExchange = headers.GetHeaderString("x-original-exchange") ?? eventArgs.Exchange;
+            var attempts = (headers.GetHeaderInt("x-attempts") ?? 0) + 1;
+
+            var retryPolicy = _retryPolicyProvider == null ? null
+                : await _retryPolicyProvider.GetRetryPolicyForSourceAsync(originalExchange, attempts);
+            if (retryPolicy == null || (retryPolicy.IsMaxRetryReached && !retryPolicy.IsParkingEnabled))
+            {
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogDebug("Max processing retries reached for event: {EventName}, attempts: {Attempts}. Send Nack.", routingKey, attempts);
+                }
+                await _consumerChannel.BasicNackAsync(eventArgs.DeliveryTag, multiple: false, requeue: false);
+                return;
+            }
+            if (retryPolicy.IsMaxRetryReached && retryPolicy.IsParkingEnabled)
+            {
+                // Route to DLQ after max retries
+
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogDebug("Max processing retries reached for event: {EventName}, attempts: {Attempts}. Send to DLX.", routingKey, attempts);
+                }
+                await SendToDeadLetterQueueAsync(eventArgs, retryPolicy, $"MaxRetriesReached_Attempts_{attempts}");
+
+                return;
+            }
+
+            await RetryAsync(eventArgs, originalExchange, routingKey, retryPolicy, attempts);
+        }
+
+        /// <summary>A message that can't be read won't read better on a retry: parked if the policy allows, otherwise dropped.</summary>
+        private async Task ParkUnreadableAsync(BasicDeliverEventArgs eventArgs)
+        {
+            var source = eventArgs.BasicProperties.Headers.GetHeaderString("x-original-exchange") ?? eventArgs.Exchange;
+            var retryPolicy = _retryPolicyProvider == null ? null
+                : await _retryPolicyProvider.GetRetryPolicyForSourceAsync(source, int.MaxValue);
+            if (retryPolicy is { IsParkingEnabled: true })
+            {
+                await SendToDeadLetterQueueAsync(eventArgs, retryPolicy, "DeserializationFailed");
+                return;
+            }
+            await _consumerChannel!.BasicNackAsync(eventArgs.DeliveryTag, multiple: false, requeue: false);
         }
 
         private async Task StartBasicConsumeAsync()
@@ -231,7 +262,8 @@ namespace Juice.EventBus.RabbitMQ.Consuming
 
         #region Processing
 
-        private async Task<EventDispatchResult> ProcessingEventAsync(BasicDeliverEventArgs eventArgs,
+        /// <returns>What dispatching gave, or <c>null</c> when the message has been settled here.</returns>
+        private async Task<EventDispatchResult?> ProcessingEventAsync(BasicDeliverEventArgs eventArgs,
             string routingKey, string message)
         {
             using var _ = _logger.BeginScope($"Processing integration event: {routingKey}");
@@ -244,11 +276,20 @@ namespace Juice.EventBus.RabbitMQ.Consuming
                 _logger.LogWarning("No event type found for event: {EventName}", routingKey);
                 return EventDispatchResult.NotHandled;
             }
-            var integrationEvent = _eventSerializer.Deserialize<IIntegrationEvent>(message, eventType);
+            IIntegrationEvent? integrationEvent = null;
+            try
+            {
+                integrationEvent = _eventSerializer.Deserialize<IIntegrationEvent>(message, eventType);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to deserialize message to {eventType}: {Message}", eventType.Name, ex.Message);
+            }
             if (integrationEvent == null)
             {
                 _logger.LogWarning("Failed to deserialize message to {eventType}", eventType.Name);
-                return EventDispatchResult.NotHandled;
+                await ParkUnreadableAsync(eventArgs);
+                return null;
             }
             if (_logger.IsEnabled(LogLevel.Debug))
             {

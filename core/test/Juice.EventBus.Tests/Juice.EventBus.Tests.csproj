@@ -40,6 +40,7 @@
         <ProjectReference Include="..\..\..\test\Juice.Tests.Host\Juice.Tests.Host.csproj" />
         <ProjectReference Include="..\..\src\Juice.EventBus.RabbitMQ\Juice.EventBus.RabbitMQ.csproj" />
         <ProjectReference Include="..\..\src\Juice.Extensions.MultiTenant\Juice.Extensions.MultiTenant.csproj" />
+        <ProjectReference Include="..\..\src\Juice.Messaging.Idempotency.Caching\Juice.Messaging.Idempotency.Caching.csproj" />
         <ProjectReference Include="..\..\src\Juice.Messaging.Idempotency.EF\Juice.Messaging.Idempotency.EF.csproj" />
         <ProjectReference Include="..\..\src\Juice.Messaging.Idempotency.Redis\Juice.Messaging.Idempotency.Redis.csproj" />
         <ProjectReference Include="..\..\src\Juice.Messaging.Outbox.Delivery\Juice.Messaging.Outbox.Delivery.csproj" />
