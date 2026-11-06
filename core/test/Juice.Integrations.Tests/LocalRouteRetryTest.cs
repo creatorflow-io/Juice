@@ -35,7 +35,6 @@ namespace Juice.Integrations.Tests
         private readonly HandlerProbe _probe = new();
         private ServiceProvider _services = default!;
         private List<IHostedService> _hosted = default!;
-        private bool _channelClosesRows;
 
         public async ValueTask InitializeAsync()
         {
@@ -51,8 +50,6 @@ namespace Juice.Integrations.Tests
             messaging.AddIdempotencyDistributedCache(); // shared across scopes, as Redis and the database are
             messaging.AddMessageService<RouteContext>();
             services.AddSingleton<IMessagePublishingPolicy>(new LocalRoutePolicy());
-            // The channel only closes rows when an application registers this; AddOutbox registers the generic one alone.
-            services.AddScoped<IOutboxRepository>(sp => _channelClosesRows ? sp.GetRequiredService<IOutboxRepository<RouteContext>>() : null!);
             services.AddSingleton(_probe);
             services.AddTransient<IIntegrationEventHandler<OrderPlaced>, OrderPlacedHandler>();
             services.AddKeyedScoped<IDeliveryIntent<RouteContext>>("send-pending", (sp, _) => new WaitingRows(sp.GetRequiredService<RouteContext>()));
@@ -127,7 +124,6 @@ namespace Juice.Integrations.Tests
         [Fact(DisplayName = "A row isn't closed by a dispatch that found delivery already running")]
         public async Task The_channel_leaves_the_row_to_a_running_dispatchAsync()
         {
-            _channelClosesRows = true;
             var order = new OrderPlaced();
             using var guard = _services.CreateScope();
             var idempotency = guard.ServiceProvider.GetRequiredService<IIdempotencyService>();
@@ -145,6 +141,22 @@ namespace Juice.Integrations.Tests
 
             _probe.Succeeded.Should().Be(1);
             (await StateAsync()).Should().Be(DeliveryState.Published);
+        }
+
+        [Theory(DisplayName = "A successful dispatch closes its row, so delivery has nothing left to do")]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task A_successful_dispatch_closes_its_rowAsync(bool managed)
+        {
+            _probe.Gate.SetResult();
+
+            await PublishAsync(managed);
+            await _probe.Finished.Task.WaitAsync(Wait);
+            await WaitForDispatchToSettleAsync();
+
+            (await StateAsync()).Should().Be(DeliveryState.Published);
+            await DeliverAsync();
+            _probe.Attempts.Should().Be(1, "delivery found nothing waiting");
         }
 
         [Theory(DisplayName = "A dispatch that succeeds while delivery runs is handled once")]

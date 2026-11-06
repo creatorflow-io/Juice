@@ -13,7 +13,7 @@ namespace Juice.Messaging.Local.Internal
     /// <param name="Context">Optional message context snapshot captured at enqueue time.</param>
     /// <param name="LocalDeliveryIds">
     /// Outbox delivery IDs for <c>"local"</c> route messages. When non-null,
-    /// <see cref="LocalChannelBackgroundService"/> resolves <see cref="Juice.Messaging.Outbox.IOutboxRepository"/>
+    /// <see cref="LocalChannelBackgroundService"/> resolves the repository of <paramref name="OutboxContextType"/>, or an application's own non-generic one,
     /// and calls <c>MarkAsPublishedAsync</c> for each ID after a successful dispatch,
     /// preventing the background delivery processor from re-processing already-handled records.
     /// <c>null</c> for <c>"local-channel"</c> messages (no outbox backing).
@@ -22,9 +22,11 @@ namespace Juice.Messaging.Local.Internal
     /// Trace context of the send span captured at enqueue time, so the dispatch continues the publisher's trace
     /// (the reader loop does not inherit <see cref="Activity.Current"/>). <c>default</c> when there was none.
     /// </param>
+    /// <param name="OutboxContextType">The outbox context <paramref name="LocalDeliveryIds"/> belong to.</param>
     internal sealed record ChannelEnvelope(
         IMessage Message,
         MessageContextData? Context,
         IReadOnlyList<Guid>? LocalDeliveryIds = null,
-        ActivityContext TraceContext = default);
+        ActivityContext TraceContext = default,
+        Type? OutboxContextType = null);
 }

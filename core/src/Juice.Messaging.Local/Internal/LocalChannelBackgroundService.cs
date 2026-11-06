@@ -129,6 +129,8 @@ namespace Juice.Messaging.Local.Internal
                         }
                         else
                         {
+                            // Nothing handled it, so its row stays for delivery to report.
+                            closeDeliveries = false;
                             _logger.LogWarning("Message type {MessageType} is neither INotification nor IIntegrationEvent — skipped",
                                 message.GetType().Name);
                         }
@@ -141,7 +143,11 @@ namespace Juice.Messaging.Local.Internal
                         // and the delivery processor will pick them up on its next cycle.
                         if (closeDeliveries && envelope.LocalDeliveryIds is { Count: > 0 })
                         {
-                            var repo = sp.GetService<IOutboxRepository>();
+                            // An application's own non-generic repository still wins; otherwise the one of the message's outbox.
+                            var repo = sp.GetService<IOutboxRepository>()
+                                ?? (envelope.OutboxContextType is { } outboxContext
+                                    ? sp.GetService(typeof(IOutboxRepository<>).MakeGenericType(outboxContext)) as IOutboxRepository
+                                    : null);
                             if (repo != null)
                             {
                                 try

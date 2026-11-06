@@ -23,6 +23,13 @@ namespace Juice.Messaging.Publishing
         /// </summary>
         virtual ValueTask PublishAsync(IMessage message, MessageContextData? context, IReadOnlyList<Guid>? localDeliveryIds, CancellationToken cancellationToken = default)
             => PublishAsync(message, context, cancellationToken);
+
+        /// <summary>
+        /// As <see cref="PublishAsync(IMessage, MessageContextData?, IReadOnlyList{Guid}?, CancellationToken)"/>, also naming the
+        /// outbox context the records belong to, since an application can have several. The default implementation ignores it.
+        /// </summary>
+        virtual ValueTask PublishAsync(IMessage message, MessageContextData? context, IReadOnlyList<Guid>? localDeliveryIds, Type? outboxContextType, CancellationToken cancellationToken = default)
+            => PublishAsync(message, context, localDeliveryIds, cancellationToken);
     }
 
 }

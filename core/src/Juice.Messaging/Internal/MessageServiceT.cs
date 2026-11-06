@@ -121,7 +121,8 @@ namespace Juice.Messaging.Internal
                     // for immediate local dispatch.
                     if (hasLocalOutbox && _postCommitActions != null)
                     {
-                        _postCommitActions.Add(async () => await PublishLocalMessageAsync(message, true, CancellationToken.None));
+                        // The delivery IDs exist only once TransactionBehavior has saved the events.
+                        _postCommitActions.Add(async () => await PublishLocalMessageAsync(message, true, LocalDeliveryIds(message), CancellationToken.None));
                     }
                     return;
                 }
@@ -136,8 +137,7 @@ namespace Juice.Messaging.Internal
                 // Published after a successful dispatch, preventing phase-2 re-processing.
                 if (hasLocalOutbox)
                 {
-                    var localDeliveryIds = _outboxService.GetPendingDeliveryIds(message.MessageId, "local");
-                    await PublishLocalMessageAsync(message, true, localDeliveryIds.Count > 0 ? localDeliveryIds : null, cancellationToken);
+                    await PublishLocalMessageAsync(message, true, LocalDeliveryIds(message), cancellationToken);
                 }
             }
         }
@@ -152,6 +152,12 @@ namespace Juice.Messaging.Internal
                 TenantIdentifier = _tenantAccessor?.Tenant?.Identifier,
                 TenantTier = _tenantAccessor?.Tenant?.Tier
             });
+        }
+
+        private IReadOnlyList<Guid>? LocalDeliveryIds(IMessage message)
+        {
+            var ids = _outboxService!.GetPendingDeliveryIds(message.MessageId, "local");
+            return ids.Count > 0 ? ids : null;
         }
 
         private Task PublishLocalMessageAsync(IMessage message, bool hasOutboxRoutes, CancellationToken cancellationToken)
@@ -176,7 +182,7 @@ namespace Juice.Messaging.Internal
                 }
                 return;
             }
-            await messagePublisher.PublishAsync(message, contextSnapshot, localDeliveryIds, cancellationToken);
+            await messagePublisher.PublishAsync(message, contextSnapshot, localDeliveryIds, typeof(TContext), cancellationToken);
         }
     }
 }

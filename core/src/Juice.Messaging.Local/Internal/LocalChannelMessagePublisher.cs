@@ -44,14 +44,17 @@ namespace Juice.Messaging.Local.Internal
         public ValueTask PublishAsync(IMessage message, MessageContextData? context, IReadOnlyList<Guid>? localDeliveryIds, CancellationToken cancellationToken = default)
             => PublishAsync(message, context, cancellationToken, localDeliveryIds);
 
+        public ValueTask PublishAsync(IMessage message, MessageContextData? context, IReadOnlyList<Guid>? localDeliveryIds, Type? outboxContextType, CancellationToken cancellationToken = default)
+            => PublishAsync(message, context, cancellationToken, localDeliveryIds, outboxContextType);
+
         public async ValueTask PublishAsync(IMessage message, MessageContextData? context, CancellationToken cancellationToken = default)
             => await PublishAsync(message, context, cancellationToken, localDeliveryIds: null);
 
-        private async ValueTask PublishAsync(IMessage message, MessageContextData? context, CancellationToken cancellationToken, IReadOnlyList<Guid>? localDeliveryIds)
+        private async ValueTask PublishAsync(IMessage message, MessageContextData? context, CancellationToken cancellationToken, IReadOnlyList<Guid>? localDeliveryIds, Type? outboxContextType = null)
         {
             using var activity = MessagingActivity.StartSend(Key, destination: null, message.GetType().Name, message.MessageId.ToString());
             var envelope = new ChannelEnvelope(message, context, localDeliveryIds,
-                (activity ?? Activity.Current)?.Context ?? default);
+                (activity ?? Activity.Current)?.Context ?? default, outboxContextType);
 
             if (_channelWriter.TryWrite(envelope))
             {
