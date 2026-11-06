@@ -65,10 +65,7 @@ namespace Juice.Messaging.Local.Tests
             var outboxTracker = new OutboxTracker();
             var provider = BuildServicesWithTracking("local-channel", outboxTracker);
 
-            using var cts = new CancellationTokenSource();
-            var hostedServices = provider.GetServices<IHostedService>().ToList();
-            foreach (var hs in hostedServices) await hs.StartAsync(cts.Token);
-
+            // The hosted services stay stopped: the channel's background reader would race this test for the message.
             var channel = provider.GetRequiredService<ChannelReader<ChannelEnvelope>>();
 
             using var scope = provider.CreateScope();
@@ -80,9 +77,6 @@ namespace Juice.Messaging.Local.Tests
             channel.TryRead(out _).Should().BeTrue("local-channel route should enqueue to in-memory channel");
             outboxTracker.AddEventCalled.Should().BeFalse("local-channel route must NOT write to outbox");
             outboxTracker.SaveEventsCalled.Should().BeFalse("local-channel route must NOT call SaveEventsAsync");
-
-            cts.Cancel();
-            foreach (var hs in hostedServices) await hs.StopAsync(CancellationToken.None);
         }
 
         /// <summary>
