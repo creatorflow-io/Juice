@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Juice.Extensions;
 using Juice.Messaging;
 using Juice.Messaging.Idempotency;
+using Juice.Messaging.Integrations;
 using Microsoft.Extensions.Logging;
 
 namespace Juice.MediatR.Behaviors
@@ -100,6 +101,13 @@ namespace Juice.MediatR.Behaviors
 
                 // Created: execute, then capture the result for future replays.
                 TResponse result = await next.Invoke(request, cancellationToken);
+                // An HTTP caller's repeat gets the same answer, a failure included. A message's retry is there to try again.
+                if (MessageDispatchScope.IsActive && result is IOperationResult { Succeeded: false })
+                {
+                    await _idempotencyService.TryCompleteRequestAsync(scope, request.IdempotencyKey, false, cancellationToken: cancellationToken);
+                    MediatorMetrics.IncrementIdentifiedCommandFailed(commandName);
+                    return result;
+                }
                 await _idempotencyService.TryCompleteRequestAsync(scope, request.IdempotencyKey, true, result, cancellationToken);
                 MediatorMetrics.IncrementIdentifiedCommandProcessed(commandName);
                 return result;

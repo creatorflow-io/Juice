@@ -51,6 +51,43 @@ namespace Juice.Messaging.Local.Tests
             journal.Errors.Should().ContainSingle().Which.Message.Should().Be("boom");
         }
 
+        [Theory]
+        [InlineData(typeof(RecordingHandler), typeof(FailingHandler))]
+        [InlineData(typeof(FailingHandler), typeof(RecordingHandler))]
+        public async Task One_failed_handler_fails_the_event_even_when_another_succeeds_Async(Type first, Type second)
+        {
+            using var provider = Build(_ => { });
+
+            var result = await provider.GetRequiredService<IntegrationEventDispatcher>().DispatchAsync(new PipelineEvent(),
+                new EventDispatchContext([first, second], nameof(PipelineEvent), null, "test"));
+
+            result.Should().Be(EventDispatchResult.Failure);
+            provider.GetRequiredService<Journal>().Entries.Should().Contain("handler", "the handler that can succeed still runs");
+        }
+
+        [Fact]
+        public async Task A_handler_runs_inside_the_message_dispatch_scope_Async()
+        {
+            MessageDispatchScope.IsActive.Should().BeFalse();
+            using var provider = Build(s => s.AddScoped<ScopeCheckingHandler>());
+
+            await DispatchAsync(provider, new PipelineEvent(), typeof(ScopeCheckingHandler));
+
+            ScopeCheckingHandler.Seen.Should().BeTrue();
+            MessageDispatchScope.IsActive.Should().BeFalse("the mark ends with the handler");
+        }
+
+        private sealed class ScopeCheckingHandler : IIntegrationEventHandler<PipelineEvent>
+        {
+            public static bool Seen;
+
+            public Task HandleAsync(PipelineEvent @event)
+            {
+                Seen = MessageDispatchScope.IsActive;
+                return Task.CompletedTask;
+            }
+        }
+
         [Fact]
         public async Task Behavior_gets_the_dispatch_cancellation_token_Async()
         {

@@ -43,6 +43,7 @@
     <ItemGroup>
         <ProjectReference Include="..\..\src\Juice.MediatR.Behaviors\Juice.MediatR.Behaviors.csproj" />
         <ProjectReference Include="..\..\src\Juice.MediatR\Juice.MediatR.csproj" />
+        <ProjectReference Include="..\..\src\Juice.Messaging.Idempotency.Caching\Juice.Messaging.Idempotency.Caching.csproj" />
         <ProjectReference Include="..\..\src\Juice.Messaging.Idempotency.EF.PostgreSQL\Juice.Messaging.Idempotency.EF.PostgreSQL.csproj" />
         <ProjectReference Include="..\..\src\Juice.Messaging.Idempotency.EF.SqlServer\Juice.Messaging.Idempotency.EF.SqlServer.csproj" />
         <ProjectReference Include="..\..\src\Juice.Messaging.Idempotency.EF\Juice.Messaging.Idempotency.EF.csproj" />

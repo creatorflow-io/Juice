@@ -87,7 +87,8 @@ namespace Juice.Messaging.Integrations
         private async ValueTask<EventDispatchResult> HandleAsync(IIntegrationEvent evt, EventDispatchContext context,
             IServiceProvider services, Type concreteType, string eventName, Guid eventId)
         {
-            bool ok = false, handled = false;
+            // Every handler has to succeed: one that failed gets its retry, even if another one succeeded.
+            bool failed = false, handled = false;
             foreach (var handlerType in context.Handlers)
             {
                 if (!handlerType.IsAssignableTo(concreteType))
@@ -114,12 +115,15 @@ namespace Juice.Messaging.Integrations
                     handled = true;
                     var handleMethod = _methodCache.GetOrAdd(concreteType, type =>
                         type.GetMethod(nameof(IIntegrationEventHandler<IIntegrationEvent>.HandleAsync))!);
-                    await (Task)handleMethod.Invoke(handler, new object[] { evt })!;
-                    ok = true;
+                    using (MessageDispatchScope.Enter())
+                    {
+                        await (Task)handleMethod.Invoke(handler, new object[] { evt })!;
+                    }
                 }
                 catch (Exception thrown)
                 {
                     // a handler that throws before its first await surfaces through MethodInfo.Invoke
+                    failed = true;
                     var ex = thrown is TargetInvocationException { InnerException: { } inner } ? inner : thrown;
                     MessagingActivity.SetError(activity, ex);
                     context.AddHandlerError(ex);
@@ -130,7 +134,7 @@ namespace Juice.Messaging.Integrations
                     }
                 }
             }
-            return ok ? EventDispatchResult.Success : handled ? EventDispatchResult.Failure : EventDispatchResult.NotHandled;
+            return failed ? EventDispatchResult.Failure : handled ? EventDispatchResult.Success : EventDispatchResult.NotHandled;
         }
     }
 }
