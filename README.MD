@@ -93,7 +93,7 @@ Delivery before and after 10.11.0, sending to RabbitMQ with a batch of 100 unles
 
 | | 10.10.1 | 10.11.0 |
 |---|---|---|
-| One instance, no other traffic | 133 messages/s | 1,585 messages/s |
+| One instance, no other traffic | 133 messages/s | about 1,400-1,500 messages/s |
 | Default settings (10 every 5 s) | about 2 messages/s, calculated | 719 messages/s |
 | Delivery at 64 orders/s | 26 messages/s, backlog growing | 63.9 messages/s, keeps up |
 | Commit to broker at 64 orders/s, p95 | kept growing | 243 ms |

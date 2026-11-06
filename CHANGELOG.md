@@ -8,7 +8,7 @@
 
   | | Before | After |
   |---|---|---|
-  | No other traffic, batch of 100 | 133 messages/s | 1,585 messages/s |
+  | No other traffic, batch of 100 | 133 messages/s | about 1,400-1,500 messages/s |
   | Default settings (10 every 5 s) | about 2 messages/s, calculated | 719 messages/s |
   | With 64 requests/s | 26 messages/s, backlog growing | keeps up, 243 ms p95 from commit to broker |
 
