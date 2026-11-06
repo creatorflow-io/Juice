@@ -209,7 +209,25 @@ Main exchange (direct) → main queue
     → retry.5m queue (TTL, DLX→main)
   on max retries → parking queue (no consumer)
 ```
-Configured via `ConsumeRetryPolicyOptions` → `RetryPolicyProvider`.
+Configured via `ConsumeRetryPolicyOptions` → `RetryPolicyProvider`. Without a policy, a failed message is nacked without requeue: it's
+gone unless its queue has a dead-letter exchange.
+
+A policy belongs to an exchange, not a queue, and a tier's key is the key the message comes back on. So several queues on one exchange
+can't share tiers: a retried message would reach all of them. With one consuming queue per exchange in a host, give the tiers that
+queue's name and bind it to them:
+```csharp
+var retries = topology.DeclareRetryTopology(exchange, parking: true);
+foreach (var (tier, delay) in new[] { ($"{queue}.retry.1s", 1_000), ($"{queue}.retry.10s", 10_000), ($"{queue}.retry.60s", 60_000) })
+{
+    retries.AddTier(tier, delay, tier);
+    topology.BindQueue(queue, exchange, tier);
+}
+eventBus.AddConsumerRetryPolicies(r => r.AddPolicy(new()
+{
+    Source = exchange, DeadLetterDest = $"{exchange}.retry", IsParkingEnabled = true,
+    RetryTiers = [$"{queue}.retry.1s", $"{queue}.retry.10s", $"{queue}.retry.60s"],
+}));
+```
 
 ---
 

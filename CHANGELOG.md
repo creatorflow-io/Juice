@@ -1,3 +1,30 @@
+# Unreleased
+
+## Fixes
+
+### `Juice.Messaging`, `Juice.Messaging.Local`
+- **The local channel closes the outbox rows it handled.** It asked for a non-generic `IOutboxRepository` that nothing registers,
+  and messages published in a managed transaction didn't pass their delivery ids at all, so after every successful dispatch on the
+  `local` route the row stayed open, and outbox delivery picked it up and found a duplicate. The row now closes after a successful
+  dispatch. A failed dispatch, or one that finds another still running, leaves it for delivery, as before. A non-generic repository
+  an application registered itself still takes priority. `IMessagePublisher` gets a new `PublishAsync` overload naming the outbox
+  context, with a default implementation.
+
+### `Juice.EventBus.RabbitMQ`
+- **A message that can't be read no longer sticks.** Malformed JSON stayed unacknowledged until the channel closed and then came
+  back, and enough of them used up the prefetch and stopped the consumer. It now goes straight to parking if the policy allows,
+  otherwise it's dropped, as NATS does. An unexpected error while processing takes the retry path instead of leaving the message
+  unsettled.
+
+### `Juice.Messaging`
+- **A failed handler is retried even when another handler of the event succeeded.** ⚠️ The event used to count as handled, and the
+  failure was lost. It now fails, so handlers that succeeded run again on the retry: they need to be safe to repeat.
+
+### `Juice.MediatR.Behaviors`
+- **A command that fails inside an integration event handler can run again.** `IdempotencyRequestBehavior` stored a returned failed
+  `IOperationResult` as completed, so the message's retry replayed the failure. Requests outside a handler still replay it, so an
+  HTTP caller's repeat gets the same answer. `MessageDispatchScope` tells the two apart.
+
 # v10.11.0 - Outbox delivery keeps up under load
 
 ## Changes
