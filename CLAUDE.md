@@ -18,3 +18,12 @@ Detailed architectural notes are in `.claude/`. Read them before making changes:
 - `[Domain("X")]` attribute on events controls policy routing domain
 - `MessageContext` (AsyncLocal) must be initialized at every entry point
 - Tests: `[InitializeMessageContext]` attribute, `IgnoreOnCIFact` for infra-dependent tests
+
+## Releases
+Applies to this repo and the packages built on it (Juice.Audit, Juice.Observability, the services).
+
+- **Test on alphas.** Every push publishes alpha packages, so check a change on those. A stable release is not a step in testing.
+- **Release stable versions in batches,** when a set of work is finished. Don't suggest a release or a version bump after each fix.
+- **The exception is a security or data-loss bug:** say so, and it can go out on its own.
+- **Hold dependent releases** until they can move to the framework version they need, so each gets one release instead of two.
+- **Leave published versions alone.** NuGet can't delete them, and unlisting only hides versions someone may depend on.
