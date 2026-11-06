@@ -107,6 +107,7 @@ namespace Juice.Messaging.Local.Internal
                         var sp = scope.ServiceProvider;
 
                         var dispatchSucceeded = true;
+                        var closeDeliveries = true;
                         if (message is INotification notification)
                         {
                             _logger.LogDebug("Dispatching INotification {MessageType}", message.GetType().Name);
@@ -121,6 +122,8 @@ namespace Juice.Messaging.Local.Internal
                             var subsManager = sp.GetKeyedService<ISubscriptionsManager>("local");
                             var result = await LocalDispatchHelper.DispatchIntegrationEventAsync(sp, dispatcher, subsManager, integrationEvent, CancellationToken.None);
                             dispatchSucceeded = result != Integrations.EventDispatchResult.Failure;
+                            // Delivery got there first and is still handling it: that outcome decides the row, not this one.
+                            closeDeliveries = dispatchSucceeded && result != Integrations.EventDispatchResult.InProgress;
                             MessagingActivity.SetResult(activity, result);
                             MessagingMetrics.RecordConsumed(PublisherKey, null, message.GetType().Name, result, started);
                         }
@@ -136,7 +139,7 @@ namespace Juice.Messaging.Local.Internal
                         // the records remain NotPublished and the delivery processor will retry.
                         // If marking fails (e.g. DB unavailable), the records remain NotPublished
                         // and the delivery processor will pick them up on its next cycle.
-                        if (dispatchSucceeded && envelope.LocalDeliveryIds is { Count: > 0 })
+                        if (closeDeliveries && envelope.LocalDeliveryIds is { Count: > 0 })
                         {
                             var repo = sp.GetService<IOutboxRepository>();
                             if (repo != null)

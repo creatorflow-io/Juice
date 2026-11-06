@@ -114,7 +114,7 @@ namespace Juice.EventBus.RabbitMQ.Consuming
                 {
                     return;
                 }
-                if (result == EventDispatchResult.Success || result == EventDispatchResult.Duplicated)
+                if (result == EventDispatchResult.Success || result == EventDispatchResult.Duplicated || result == EventDispatchResult.InProgress)
                 {
                     // Even on exception we take the message off the queue.
                     // in a REAL WORLD app this should be handled with a Dead Letter _defaultExchange (DLX). 

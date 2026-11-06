@@ -88,6 +88,9 @@ namespace Juice.Messaging.Local.Tests
             await handled.Task.WaitAsync(TimeSpan.FromSeconds(5));
             invocationCount.Should().Be(1, "handler should have been invoked once via channel dispatch");
 
+            // The dispatcher completes its idempotency guard just after the handler returns; until then this is InProgress
+            await Task.Delay(200);
+
             // 2. Simulate DeliveryHostedService retry via LocalTransportPublisher
             //    with the same message (same MessageId).
             var scope = provider.CreateScope().ServiceProvider;

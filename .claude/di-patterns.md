@@ -197,7 +197,7 @@ RabbitMQConsumerEngine receives message
       → IIdempotencyService check (key: "{EventName}:{Source}:{MessageId}")
       → Resolve handler(s) from ISubscriptionsManager
       → Execute handler(s) in new DI scope
-  → Result: Success/Duplicated → BasicAck | Failure → Retry/DLQ
+  → Result: Success/Duplicated/InProgress → BasicAck | Failure → Retry/DLQ
 ```
 
 ### Retry Topology (RabbitMQ)

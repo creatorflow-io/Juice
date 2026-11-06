@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Juice.Messaging;
 using Juice.Messaging.Outbox;
+using Juice.Messaging.Outbox.Delivery;
 using Juice.Messaging.Outbox.EF;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -103,6 +104,69 @@ namespace Juice.Integrations.Tests
             await repository.MarkAsPublishedAsync((IReadOnlyCollection<Guid>)ids);
 
             (await database.StatesAsync()).Should().OnlyContain(d => d.State == DeliveryState.Published);
+        }
+
+        [Theory(DisplayName = "A deferred delivery can be claimed again, without using a retry")]
+        [MemberData(nameof(Providers))]
+        public async Task Deferring_uses_no_retryAsync(string provider)
+        {
+            await using var database = await TestDatabase.CreateAsync(provider);
+            var ids = await database.AddAsync(2);
+            using var scope = database.Services.CreateScope();
+            var repository = scope.ServiceProvider.GetRequiredService<IOutboxRepository<ClaimContext>>();
+            var retried = ids[0];
+            await repository.MarkAsFailedAsync(retried, "refused", DateTimeOffset.UtcNow);
+            await repository.MarkAsInProgressAsync(ids);
+
+            await repository.DeferAsync(retried, "busy", DateTimeOffset.UtcNow);
+            await repository.DeferAsync(ids[1], "busy", DateTimeOffset.UtcNow);
+            var rows = (await database.StatesAsync()).ToDictionary(d => d.DeliveryId);
+            rows[retried].State.Should().Be(DeliveryState.NotPublished);
+            rows[retried].LastError.Should().Be("busy");
+            rows[retried].NextAttemptOn.Should().NotBeNull();
+
+            (await repository.MarkAsInProgressAsync(ids)).Should().BeEquivalentTo(ids);
+
+            rows = (await database.StatesAsync()).ToDictionary(d => d.DeliveryId);
+            rows[retried].RetryCount.Should().Be(1, "only the retry it already had");
+            rows[ids[1]].RetryCount.Should().Be(0);
+        }
+
+        [Theory(DisplayName = "Deferring leaves a closed delivery closed")]
+        [MemberData(nameof(Providers))]
+        public async Task Deferring_doesnt_reopen_a_closed_deliveryAsync(string provider)
+        {
+            await using var database = await TestDatabase.CreateAsync(provider);
+            var ids = await database.AddAsync(1);
+            using var scope = database.Services.CreateScope();
+            var repository = scope.ServiceProvider.GetRequiredService<IOutboxRepository<ClaimContext>>();
+            await repository.MarkAsInProgressAsync(ids[0]);
+            await repository.MarkAsPublishedAsync(ids[0]);
+
+            await repository.DeferAsync(ids[0], "busy", DateTimeOffset.UtcNow);
+
+            (await database.StatesAsync()).Single().State.Should().Be(DeliveryState.Published);
+        }
+
+        // Only these two: the query orders by a DateTimeOffset, which EF Core can't do on SQLite
+        [Theory(DisplayName = "send-pending skips a deferred delivery until it's due")]
+        [InlineData("SqlServer")]
+        [InlineData("PostgreSQL")]
+        public async Task Send_pending_waits_for_a_deferred_deliveryAsync(string provider)
+        {
+            await using var database = await TestDatabase.CreateAsync(provider);
+            var ids = await database.AddAsync(3);
+            using var scope = database.Services.CreateScope();
+            var repository = scope.ServiceProvider.GetRequiredService<IOutboxRepository<ClaimContext>>();
+            var intent = scope.ServiceProvider.GetRequiredKeyedService<IDeliveryIntent<ClaimContext>>(DeliveryIntents.SendPending);
+            var (later, due, untouched) = (ids[0], ids[1], ids[2]);
+            await repository.MarkAsInProgressAsync([later, due]);
+            await repository.DeferAsync(later, "busy", DateTimeOffset.UtcNow.AddHours(1));
+            await repository.DeferAsync(due, "busy", DateTimeOffset.UtcNow.AddSeconds(-1));
+
+            var retrieved = await intent.RetrieveDeliveriesAsync("test", DeliveryPolicy.Default, default);
+
+            retrieved.Select(d => d.DeliveryId).Should().BeEquivalentTo(new[] { due, untouched });
         }
 
         public sealed class ClaimContext(DbContextOptions<ClaimContext> options) : DbContext(options), IOutboxContext

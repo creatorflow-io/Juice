@@ -183,6 +183,12 @@ namespace Juice.Messaging.Local.Internal
                         LocalChannelMetrics.IncrementPhase1Fallback(Key);
                         // Do not throw — DeliveryProcessor marks the record Published via the normal path.
                     }
+                    else if (result == Integrations.EventDispatchResult.InProgress)
+                    {
+                        // The immediate dispatch is still running and can still fail, and nothing would retry a closed row.
+                        throw new DeliveryDeferredException(
+                            $"Event {integrationEvent.GetType().Name} (MessageId={integrationEvent.MessageId}) is still being handled");
+                    }
                     else if (result == Integrations.EventDispatchResult.Failure)
                     {
                         throw new InvalidOperationException(
@@ -199,6 +205,12 @@ namespace Juice.Messaging.Local.Internal
                 stopwatch.Stop();
                 LocalChannelMetrics.RecordDeliveryLatency(Key, stopwatch.Elapsed);
                 LocalChannelMetrics.IncrementDeliverySuccess(Key);
+            }
+            catch (DeliveryDeferredException)
+            {
+                stopwatch.Stop();
+                LocalChannelMetrics.RecordDeliveryLatency(Key, stopwatch.Elapsed);
+                throw;
             }
             catch (Exception ex)
             {

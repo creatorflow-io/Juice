@@ -83,6 +83,14 @@
             CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// Put a claimed delivery back to wait until <paramref name="nextAttempt"/>, without counting a failure or using up a
+        /// retry. A delivery closed in the meantime stays closed.
+        /// </summary>
+        /// <remarks>A repository without this marks the delivery failed instead, which does use up a retry.</remarks>
+        ValueTask DeferAsync(Guid deliveryId, string reason, DateTimeOffset nextAttempt, CancellationToken cancellationToken = default)
+            => MarkAsFailedAsync(deliveryId, reason, nextAttempt, cancellationToken);
+
+        /// <summary>
         /// Change event state to skipped
         /// </summary>
         /// <param name="deliveryId"></param>

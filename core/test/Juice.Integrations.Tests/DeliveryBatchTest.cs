@@ -107,6 +107,51 @@ namespace Juice.Integrations.Tests
             moreWaiting.Should().BeFalse("a full batch with a failure waits, so a broker outage doesn't spin");
         }
 
+        [Fact(DisplayName = "A deferred delivery waits, without counting as a failure")]
+        public async Task A_deferred_delivery_is_not_a_failureAsync()
+        {
+            var deliveries = Enumerable.Range(0, 10).Select(_ => Delivery(null)).ToArray();
+            var waiting = deliveries[3];
+            var repository = new FakeRepository();
+            var publisher = new RecordingPublisher { DeferFor = waiting.EventId };
+
+            var before = DateTimeOffset.UtcNow;
+            var moreWaiting = await RunAsync(deliveries, publisher, repository, Policy);
+
+            repository.Deferred.Keys.Should().Equal(waiting.DeliveryId);
+            repository.Deferred[waiting.DeliveryId].Should().BeOnOrAfter(before + Policy.InitialRetryDelay);
+            repository.Failed.Should().BeEmpty();
+            repository.Published.Should().BeEquivalentTo(deliveries.Except([waiting]).Select(d => d.DeliveryId));
+            moreWaiting.Should().BeTrue("retrieval skips it until it's due, so the rest of the queue doesn't have to wait");
+        }
+
+        [Fact(DisplayName = "A reclaimed delivery can be deferred too")]
+        public async Task A_reclaimed_delivery_can_be_deferredAsync()
+        {
+            var delivery = Delivery(null);
+            delivery.UpdateState(DeliveryState.InProgress);
+            var repository = new FakeRepository();
+
+            await RunAsync([delivery], new RecordingPublisher { DeferFor = delivery.EventId }, repository, Policy);
+
+            repository.Deferred.Keys.Should().Equal(delivery.DeliveryId);
+            repository.Failed.Should().BeEmpty();
+            repository.Published.Should().BeEmpty();
+        }
+
+        [Fact(DisplayName = "A repository that can't defer marks the delivery failed, to be retried")]
+        public async Task Repository_without_deferAsync()
+        {
+            var repository = new SingleCallRepository();
+            var delivery = Delivery(null);
+
+            await RunAsync([delivery], new RecordingPublisher { DeferFor = delivery.EventId }, repository, Policy);
+
+            repository.Published.Should().BeEmpty();
+            repository.Failed.Keys.Should().Equal(delivery.DeliveryId);
+            repository.Failed[delivery.DeliveryId].Should().NotBeNull("it gets another attempt");
+        }
+
         [Fact(DisplayName = "Stopping keeps a record of what the broker already has")]
         public async Task Stopping_still_marks_what_was_sentAsync()
         {
@@ -241,6 +286,7 @@ namespace Juice.Integrations.Tests
             public bool SupportsConcurrentPublish { get; init; }
             public TimeSpan Delay { get; init; }
             public Guid? FailFor { get; init; }
+            public Guid? DeferFor { get; init; }
             public CancellationTokenSource? CancelAfterFirst { get; init; }
             private readonly ConcurrentQueue<Guid> _sent = new();
             public Guid[] Sent => _sent.ToArray();
@@ -260,6 +306,10 @@ namespace Juice.Integrations.Tests
                     {
                         throw new InvalidOperationException("The broker refused it");
                     }
+                    if (id == DeferFor)
+                    {
+                        throw new DeliveryDeferredException("Not yet");
+                    }
                     _sent.Enqueue(id);
                     CancelAfterFirst?.Cancel();
                 }
@@ -278,6 +328,13 @@ namespace Juice.Integrations.Tests
             public List<Guid> Published { get; } = [];
             public List<Guid> Reclaimed { get; } = [];
             public Dictionary<Guid, DateTimeOffset?> Failed { get; } = [];
+            public Dictionary<Guid, DateTimeOffset> Deferred { get; } = [];
+
+            public ValueTask DeferAsync(Guid deliveryId, string reason, DateTimeOffset nextAttempt, CancellationToken cancellationToken = default)
+            {
+                Deferred[deliveryId] = nextAttempt;
+                return ValueTask.CompletedTask;
+            }
 
             public ValueTask<IReadOnlyCollection<Guid>> MarkAsInProgressAsync(IReadOnlyCollection<Guid> deliveryIds, CancellationToken cancellationToken = default)
             {
@@ -321,6 +378,7 @@ namespace Juice.Integrations.Tests
         {
             public Guid Lost { get; set; }
             public List<Guid> Published { get; } = [];
+            public Dictionary<Guid, DateTimeOffset?> Failed { get; } = [];
 
             public ValueTask<int> MarkAsInProgressAsync(Guid deliveryId, CancellationToken cancellationToken = default)
                 => ValueTask.FromResult(deliveryId == Lost ? 0 : 1);
@@ -331,7 +389,12 @@ namespace Juice.Integrations.Tests
                 return ValueTask.CompletedTask;
             }
 
-            public ValueTask MarkAsFailedAsync(Guid deliveryId, string error, DateTimeOffset? nextAttempt, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+            public ValueTask MarkAsFailedAsync(Guid deliveryId, string error, DateTimeOffset? nextAttempt, CancellationToken cancellationToken = default)
+            {
+                Failed[deliveryId] = nextAttempt;
+                return ValueTask.CompletedTask;
+            }
+
             public ValueTask MarkAsSkippedAsync(Guid deliveryId, string reason, CancellationToken cancellationToken = default) => throw new NotSupportedException();
             public ValueTask SaveEventsAsync(OutboxEvent[] @event, CancellationToken cancellationToken = default) => throw new NotSupportedException();
             public void Dispose() { }

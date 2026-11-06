@@ -145,7 +145,9 @@ RabbitMQConsumerEngine.Consumer_ReceivedAsync():
   5. Resolve tenant context via IScopedTenantResolver (from x-tenant-id header)
   6. IntegrationEventDispatcher.DispatchAsync():
      a. Check IIdempotencyService (key: "{EventName}:{Source}:{MessageId}")
-     b. If duplicate → return Duplicated (skip)
+     b. If completed → return Duplicated; if another dispatch holds the guard → return InProgress (skip, both).
+        LocalTransportPublisher defers an InProgress delivery (DeliveryDeferredException → IOutboxRepository.DeferAsync:
+        NotPublished with NextAttemptOn, no retry used) because that dispatch can still fail
      c. Resolve handler types from ISubscriptionsManager
      d. Create DI scope per dispatch
      e. Run the IIntegrationEventPipelineBehavior chain (scoped, sorted by Order, lowest outermost, as the mediator does;
@@ -154,7 +156,7 @@ RabbitMQConsumerEngine.Consumer_ReceivedAsync():
      f. For each handler: resolve from DI, invoke HandleAsync via reflection cache
      g. Return: Success (≥1 handler ok) | Failure (all failed) | NotHandled (no handlers)
   7. Result handling:
-     - Success/Duplicated → BasicAckAsync (remove from queue)
+     - Success/Duplicated/InProgress → BasicAckAsync (remove from queue)
      - Failure → Check IRetryPolicyProvider:
        - Retries remaining → republish to retry exchange with updated x-attempts header (consumer channel has
          publisher confirms: the original is acked only after the copy is confirmed; a refused copy → nack requeue after 1s)

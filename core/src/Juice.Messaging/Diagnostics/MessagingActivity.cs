@@ -237,6 +237,7 @@ namespace Juice.Messaging.Diagnostics
             EventDispatchResult.Failure => "failure",
             EventDispatchResult.Duplicated => "duplicated",
             EventDispatchResult.NotHandled => "not_handled",
+            EventDispatchResult.InProgress => "in_progress",
             _ => result.ToString()
         };
 

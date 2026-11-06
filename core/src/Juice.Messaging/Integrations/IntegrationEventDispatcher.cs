@@ -41,11 +41,14 @@ namespace Juice.Messaging.Integrations
             using var scope = _scopeFactory.CreateScope();
             var idempotencyService = scope.ServiceProvider.GetRequiredService<IIdempotencyService>();
             // Inbox dedup: begin the request under the (EventName, Source:MessageId) guard. No fingerprint is
-            // supplied, so only Created lets us proceed — InProgress/Completed both mean another delivery owns it.
+            // supplied, so only Created lets us proceed. InProgress isn't Completed: that dispatch can still fail, so the
+            // caller mustn't treat the message as handled.
             var begin = await idempotencyService.TryBeginRequestAsync(context.EventName, $"{context.Source}:{evt.MessageId}");
             if (begin.Outcome != IdempotencyOutcome.Created)
             {
-                return EventDispatchResult.Duplicated;
+                return begin.Outcome == IdempotencyOutcome.InProgress
+                    ? EventDispatchResult.InProgress
+                    : EventDispatchResult.Duplicated;
             }
             EventDispatchResult _result = EventDispatchResult.NotHandled;
             try

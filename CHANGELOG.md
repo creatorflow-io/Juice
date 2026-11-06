@@ -35,6 +35,22 @@
   and no longer the two status updates, so it's shorter than before; a delivery claimed by another worker has no span.
   "Retrieved n deliveries" is now logged at `Debug`.
 
+## Fixes
+
+### `Juice.Messaging`, `Juice.Messaging.Local`, `Juice.Messaging.Outbox`, `Juice.Messaging.Outbox.EF`, `Juice.EventBus`
+- **A failed handler could lose a message on the `local` route.** A message is dispatched straight after it's saved. If outbox
+  delivery picked it up while that dispatch was running, it was reported as a duplicate and the row was closed. If the handler
+  then failed, nothing retried it. Delivery now waits for the outcome: the row goes back to `NotPublished` until
+  `InitialRetryDelay` has passed, without counting a failure or using up a retry.
+  - The same applied when the idempotency store couldn't be reached.
+  - A message whose dispatch crashed now waits for its guard to expire (`InFlightTtl`), then runs again. Before, its row was
+    closed without the message being handled.
+
+  `EventDispatchResult` has a new value, `InProgress`, for what was reported as `Duplicated` while the other dispatch was still
+  running; code that calls `IntegrationEventDispatcher` directly should handle it. RabbitMQ and NATS consumers treat it as they
+  treated `Duplicated`, acknowledging the message. A publisher can throw the new `DeliveryDeferredException` to defer a delivery.
+  A custom `IOutboxRepository` without the new `DeferAsync` marks the delivery failed instead, which does use up a retry.
+
 # v10.10.1 - Pooled contexts come back clean
 
 ## Fixes

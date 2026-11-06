@@ -77,6 +77,21 @@ namespace Juice.Messaging.Local.Tests
                 "outer before", "handler", "outer after Success");
         }
 
+        [Fact]
+        public async Task A_dispatch_still_running_is_not_reported_as_completed_Async()
+        {
+            using var provider = Build(s => s.AddIntegrationEventPipelineBehavior<OuterBehavior>());
+            var evt = new PipelineEvent();
+            using var scope = provider.CreateScope();
+            await scope.ServiceProvider.GetRequiredService<Juice.Messaging.Idempotency.IIdempotencyService>()
+                .TryBeginRequestAsync(nameof(PipelineEvent), $"test:{evt.MessageId}");
+
+            var second = await DispatchAsync(provider, evt, typeof(RecordingHandler));
+
+            second.Should().Be(EventDispatchResult.InProgress);
+            provider.GetRequiredService<Journal>().Entries.Should().BeEmpty();
+        }
+
         private static ServiceProvider Build(Action<IServiceCollection> configure)
         {
             var services = new ServiceCollection();

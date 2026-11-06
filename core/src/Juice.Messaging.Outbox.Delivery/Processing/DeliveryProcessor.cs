@@ -97,6 +97,7 @@ namespace Juice.Messaging.Outbox.Delivery.Processing
 
             var published = new ConcurrentBag<Guid>();
             var failures = new ConcurrentBag<DeliveryFailure>();
+            var deferred = new ConcurrentBag<DeliveryFailure>();
 
             async ValueTask SendGroupAsync(OutboxDelivery[] group, CancellationToken token)
             {
@@ -108,6 +109,10 @@ namespace Juice.Messaging.Outbox.Delivery.Processing
                     if (failure is null)
                     {
                         published.Add(delivery.DeliveryId);
+                    }
+                    else if (failure.Exception is DeliveryDeferredException)
+                    {
+                        deferred.Add(failure);
                     }
                     else
                     {
@@ -144,8 +149,13 @@ namespace Juice.Messaging.Outbox.Delivery.Processing
                 {
                     await HandleDeliveryFailureAsync(failure.Delivery, failure.RetryCount, failure.Exception, CancellationToken.None);
                 }
+                foreach (var waiting in deferred)
+                {
+                    await DeferAsync(waiting, CancellationToken.None);
+                }
             }
 
+            // A deferred delivery says nothing about the transport, and retrieval skips it until it's due
             return failures.IsEmpty;
         }
 
@@ -180,6 +190,11 @@ namespace Juice.Messaging.Outbox.Delivery.Processing
             }
 
             var failure = await SendAsync(delivery, retryCount, cancellationToken);
+            if (failure?.Exception is DeliveryDeferredException)
+            {
+                await DeferAsync(failure, cancellationToken);
+                return true;
+            }
             if (failure is not null)
             {
                 await HandleDeliveryFailureAsync(delivery, retryCount, failure.Exception, cancellationToken);
@@ -244,6 +259,12 @@ namespace Juice.Messaging.Outbox.Delivery.Processing
                 _logger.LogInformation("Delivery {DeliveryId} cancelled", delivery.DeliveryId);
                 throw;
             }
+            catch (DeliveryDeferredException ex)
+            {
+                activity?.SetTag(MessagingActivity.Tags.DeliveryOutcome, "deferred");
+                _logger.LogInformation("Delivery {DeliveryId} deferred: {Reason}", delivery.DeliveryId, ex.Message);
+                return new DeliveryFailure(delivery, retryCount, ex);
+            }
             catch (Exception ex)
             {
                 activity?.SetTag(MessagingActivity.Tags.DeliveryOutcome, "failed");
@@ -287,6 +308,10 @@ namespace Juice.Messaging.Outbox.Delivery.Processing
             _logger.LogWarning("Skipping delivery {DeliveryId}: {Reason}", delivery.DeliveryId, reason);
             await _outbox.MarkAsSkippedAsync(delivery.DeliveryId, reason, cancellationToken);
         }
+
+        private async ValueTask DeferAsync(DeliveryFailure deferred, CancellationToken cancellationToken)
+            => await _outbox.DeferAsync(deferred.Delivery.DeliveryId, deferred.Exception.Message,
+                DateTimeOffset.UtcNow.Add(_deliveryPolicy.InitialRetryDelay), cancellationToken);
 
         private async Task HandleDeliveryFailureAsync(OutboxDelivery delivery, int retryCount, Exception ex, CancellationToken cancellationToken)
         {

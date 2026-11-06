@@ -393,6 +393,7 @@ namespace Juice.EventBus.NATS.Consuming
                 {
                     case EventDispatchResult.Success:
                     case EventDispatchResult.Duplicated:
+                    case EventDispatchResult.InProgress:
                         await msg.AckAsync(cancellationToken);
                         break;
                     case EventDispatchResult.NotHandled:

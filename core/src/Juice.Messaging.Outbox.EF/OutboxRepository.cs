@@ -186,6 +186,21 @@ namespace Juice.Messaging.Outbox.EF
                 , cancellationToken);
         }
 
+        // Back to NotPublished rather than Failed: a claim only adds to RetryCount for a Failed row
+        public async ValueTask DeferAsync(Guid deliveryId, string reason, DateTimeOffset nextAttempt, CancellationToken cancellationToken = default)
+        {
+            var now = DateTimeOffset.UtcNow;
+            var query = _outboxContext.OutboxDeliveries
+                .Where(ie => ie.DeliveryId == deliveryId && ie.State == DeliveryState.InProgress);
+            await query.ExecuteUpdateAsync(ie =>
+                ie.SetProperty(e => e.State, e => DeliveryState.NotPublished)
+                  .SetProperty(e => e.LastError, e => reason)
+                  .SetProperty(e => e.NextAttemptOn, e => nextAttempt)
+                  .SetProperty(e => e.ProcessedOn, e => now)
+                  .SetProperty(e => e.ProcessedBy, e => _nodeIdentity != null ? _nodeIdentity.NodeId : null)
+                , cancellationToken);
+        }
+
         public async ValueTask MarkAsSkippedAsync(Guid deliveryId, string reason, CancellationToken cancellationToken = default)
         {
             var now = DateTimeOffset.UtcNow;
