@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -60,14 +61,38 @@ namespace Juice.EventBus.Tests
         [Fact(DisplayName = "Should apply exponmential backoff on retry")]
         public void Should_Apply_Exponential_Backoff_On_Retry()
         {
-            // Test retry delays
             var policy = DeliveryPolicy.Default;
 
-            var retry1 = policy.GetNextAttempt(1); // 5s
-            var retry2 = policy.GetNextAttempt(2); // 10s
-            var retry3 = policy.GetNextAttempt(3); // 20s
+            policy.GetRetryDelay(1).Should().Be(TimeSpan.FromSeconds(5));
+            policy.GetRetryDelay(2).Should().Be(TimeSpan.FromSeconds(10));
+            policy.GetRetryDelay(3).Should().Be(TimeSpan.FromSeconds(20));
+            policy.GetRetryDelay(7).Should().Be(TimeSpan.FromMinutes(5), "the delay is capped at MaxRetryDelay");
+            policy.GetRetryDelay(1000).Should().Be(TimeSpan.FromMinutes(5), "a large retry count must not overflow");
 
-            // Assert backoff timing
+            var before = DateTimeOffset.UtcNow;
+            policy.GetNextAttempt(2).Should().BeOnOrAfter(before + TimeSpan.FromSeconds(10));
+            policy.GetNextAttempt(policy.MaxRetryAttempts + 1).Should().BeNull();
+        }
+
+        [Fact(DisplayName = "The default policy keeps retrying through an hour-long outage")]
+        public void Default_rides_out_an_outage()
+        {
+            var policy = DeliveryPolicy.Default;
+
+            var total = Enumerable.Range(1, policy.MaxRetryAttempts)
+                .Aggregate(TimeSpan.Zero, (sum, retry) => sum + policy.GetRetryDelay(retry));
+
+            total.Should().BeGreaterThan(TimeSpan.FromHours(1));
+        }
+
+        [Fact(DisplayName = "MaxRetryDelay can be configured")]
+        public void Max_retry_delay_is_configurable()
+        {
+            var policy = new PolicyConfiguration { MaxRetryDelay = TimeSpan.FromSeconds(30) }.ToPolicy();
+
+            policy.MaxRetryDelay.Should().Be(TimeSpan.FromSeconds(30));
+            policy.GetRetryDelay(5).Should().Be(TimeSpan.FromSeconds(30));
+            new PolicyConfiguration().ToPolicy(policy).MaxRetryDelay.Should().Be(TimeSpan.FromSeconds(30), "it comes from the base policy");
         }
 
         [Fact(DisplayName = "Multiple AddDeliveryPolicies(delegate) calls merge policies")]

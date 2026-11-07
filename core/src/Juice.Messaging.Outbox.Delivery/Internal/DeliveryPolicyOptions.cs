@@ -47,6 +47,11 @@
         public int? MaxRetryAttempts { get; set; }
 
         /// <summary>
+        /// The longest wait between two attempts of a delivery
+        /// </summary>
+        public TimeSpan? MaxRetryDelay { get; set; }
+
+        /// <summary>
         /// How many transactions' messages to send at the same time. 1 sends every message in order.
         /// </summary>
         public int? MaxConcurrency { get; set; }
@@ -67,7 +72,8 @@
                 MaxRetryAttempts: MaxRetryAttempts ?? basePolicy.MaxRetryAttempts
             )
             {
-                MaxConcurrency = MaxConcurrency ?? basePolicy.MaxConcurrency
+                MaxConcurrency = MaxConcurrency ?? basePolicy.MaxConcurrency,
+                MaxRetryDelay = MaxRetryDelay ?? basePolicy.MaxRetryDelay
             };
         }
     }
