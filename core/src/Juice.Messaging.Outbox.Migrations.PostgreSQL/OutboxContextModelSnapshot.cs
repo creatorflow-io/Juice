@@ -72,7 +72,7 @@ namespace Juice.Messaging.Outbox.Migrations.PostgreSQL
 
                     b.HasIndex("CreationTime")
                         .HasDatabaseName("IX_OutboxDeliveries_Pending")
-                        .HasFilter("[State] = 0")
+                        .HasFilter("\"State\" = 0")
                         .HasAnnotation("SqlServer:Include", new[] { "EventId", "PublisherKey" });
 
                     NpgsqlIndexBuilderExtensions.IncludeProperties(b.HasIndex("CreationTime"), new[] { "EventId", "PublisherKey" });
@@ -81,14 +81,14 @@ namespace Juice.Messaging.Outbox.Migrations.PostgreSQL
 
                     b.HasIndex("NextAttemptOn")
                         .HasDatabaseName("IX_OutboxDeliveries_Retry")
-                        .HasFilter("[State] = 3 AND [NextAttemptOn] IS NOT NULL")
+                        .HasFilter("\"State\" = 3 AND \"NextAttemptOn\" IS NOT NULL")
                         .HasAnnotation("SqlServer:Include", new[] { "EventId", "PublisherKey" });
 
                     NpgsqlIndexBuilderExtensions.IncludeProperties(b.HasIndex("NextAttemptOn"), new[] { "EventId", "PublisherKey" });
 
                     b.HasIndex("ProcessedOn")
                         .HasDatabaseName("IX_OutboxDeliveries_Recovery")
-                        .HasFilter("[State] = 1")
+                        .HasFilter("\"State\" = 1")
                         .HasAnnotation("SqlServer:Include", new[] { "EventId", "PublisherKey" });
 
                     NpgsqlIndexBuilderExtensions.IncludeProperties(b.HasIndex("ProcessedOn"), new[] { "EventId", "PublisherKey" });
