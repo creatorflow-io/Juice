@@ -13,7 +13,7 @@ namespace Juice.Messaging.Idempotency.EF
         {
             Scope = scope;
             Key = key;
-            CreatedAt = DateTimeOffset.Now;
+            CreatedAt = DateTimeOffset.UtcNow;
             State = RequestState.New;
         }
         public string Key { get; private set; }

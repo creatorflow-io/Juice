@@ -49,7 +49,6 @@ namespace Juice.Messaging.Idempotency.Tests
             {
                 if (provider == "PostgreSQL")
                 {
-                    AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
                     o.UseNpgsql(cs);
                 }
                 else

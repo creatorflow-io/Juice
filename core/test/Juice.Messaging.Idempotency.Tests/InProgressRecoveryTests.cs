@@ -39,7 +39,7 @@ namespace Juice.Messaging.Idempotency.Tests
             {
                 var ctx = s.ServiceProvider.GetRequiredService<IdempotencyContext>();
                 await ctx.IdempotencyRecords.Where(r => r.Scope == scope && r.Key == key)
-                    .ExecuteUpdateAsync(u => u.SetProperty(r => r.LockedAt, DateTimeOffset.Now.AddHours(-1)));
+                    .ExecuteUpdateAsync(u => u.SetProperty(r => r.LockedAt, DateTimeOffset.UtcNow.AddHours(-1)));
             }
 
             var (recovered, _) = await CreatePurge(fixture).RunOnceAsync(CancellationToken.None);

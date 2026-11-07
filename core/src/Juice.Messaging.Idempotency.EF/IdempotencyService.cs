@@ -31,7 +31,7 @@ namespace Juice.Messaging.Idempotency.EF
             {
                 var res = _serializer.Serialize(result);
                 var nodeId = _nodeIdentity?.NodeId;
-                var now = DateTimeOffset.Now;
+                var now = DateTimeOffset.UtcNow;
                 // On success the record is retained (and replayable) for CompletedRetention; on failure the
                 // in-flight expiry set at begin is preserved so the key stays retryable then purges.
                 DateTimeOffset? completedExpiry = now + _options.CompletedRetention;
@@ -56,7 +56,7 @@ namespace Juice.Messaging.Idempotency.EF
         public async ValueTask<IdempotencyResult> TryBeginRequestAsync(string scope, string key,
             string? requestHash = null, CancellationToken cancellationToken = default)
         {
-            var now = DateTimeOffset.Now;
+            var now = DateTimeOffset.UtcNow;
             var staleBefore = now - _options.InFlightTtl;
 
             var record = await _context.IdempotencyRecords.AsNoTracking()

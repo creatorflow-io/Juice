@@ -67,7 +67,7 @@ namespace Juice.Messaging.Idempotency.EF
             using var scope = _scopeFactory.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<IdempotencyContext>();
 
-            var now = DateTimeOffset.Now;
+            var now = DateTimeOffset.UtcNow;
             var staleBefore = now - _options.InFlightTtl;
 
             // Recover crashed in-flight records to a retryable state.

@@ -31,7 +31,7 @@ namespace Juice.Messaging.Idempotency.Tests
             {
                 var ctx = s.ServiceProvider.GetRequiredService<IdempotencyContext>();
                 await ctx.IdempotencyRecords.Where(r => r.Scope == scope && r.Key == key)
-                    .ExecuteUpdateAsync(u => u.SetProperty(r => r.ExpiresAt, DateTimeOffset.Now.AddHours(-1)));
+                    .ExecuteUpdateAsync(u => u.SetProperty(r => r.ExpiresAt, DateTimeOffset.UtcNow.AddHours(-1)));
             }
 
             var purge = new IdempotencyPurgeHostedService(

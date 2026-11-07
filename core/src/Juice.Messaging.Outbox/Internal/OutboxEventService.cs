@@ -106,7 +106,7 @@ namespace Juice.Messaging.Outbox.Internal
                 events.Add(new OutboxEvent
                 {
                     EventId = message.MessageId,
-                    CreationTime = message.CreatedAt,
+                    CreationTime = message.CreatedAt.ToUniversalTime(),
                     EventTypeName = message.GetType().Name,
                     PayloadBytes = _serializer.SerializeToUtf8Bytes(message),
                     Headers = headers,

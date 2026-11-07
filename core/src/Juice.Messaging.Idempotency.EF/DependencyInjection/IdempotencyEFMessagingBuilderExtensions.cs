@@ -50,7 +50,6 @@ namespace Microsoft.Extensions.DependencyInjection
                 switch (provider)
                 {
                     case "PostgreSQL":
-                        AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
                         options.UseNpgsql(
                            configuration.GetConnectionString(connectionName),
                             x =>
