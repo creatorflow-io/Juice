@@ -17,6 +17,14 @@ namespace Juice.Messaging.Internal
         // set is capped; later rejections are logged at Debug.
         private const int MaxWarnedTypes = 64;
         private readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> _warnedTypes = new();
+        // Dates are read with the offset they were written with. Newtonsoft's default (DateParseHandling.DateTime) turns
+        // "...+00:00" into a local DateTime, so a DateTimeOffset came back in the host's offset. Settings passed here are
+        // applied over JsonConvert.DefaultSettings, so a host's defaults still hold.
+        private static readonly JsonSerializerSettings ReadSettings = new()
+        {
+            DateParseHandling = DateParseHandling.DateTimeOffset
+        };
+
         public MessageSerializer(ILogger<MessageSerializer> logger,
             IOptions<MessageSerializerOptions>? options = null)
         {
@@ -33,7 +41,7 @@ namespace Juice.Messaging.Internal
             {
                 if (eventType == typeof(T))
                 {
-                    return JsonConvert.DeserializeObject<T>(payload);
+                    return JsonConvert.DeserializeObject<T>(payload, ReadSettings);
                 }
 
                 if (eventType != null)
@@ -42,19 +50,19 @@ namespace Juice.Messaging.Internal
                     {
                         throw new InvalidCastException($"Type {eventType.Name} can not be casted to {typeof(T).Name}");
                     }
-                    return (T?)JsonConvert.DeserializeObject(payload, eventType);
+                    return (T?)JsonConvert.DeserializeObject(payload, eventType, ReadSettings);
                 }
 
                 // Handle object type
                 if (typeof(T) == typeof(object))
                 {
-                    return (T)(object)JsonConvert.DeserializeObject<object>(payload)!;
+                    return (T)(object)JsonConvert.DeserializeObject<object>(payload, ReadSettings)!;
                 }
 
                 // Handle value types
                 if (typeof(T).IsValueType)
                 {
-                    return JsonConvert.DeserializeObject<T>(payload)!;
+                    return JsonConvert.DeserializeObject<T>(payload, ReadSettings)!;
                 }
 
                 // Handle interfaces and abstract types
@@ -64,7 +72,7 @@ namespace Juice.Messaging.Internal
                 }
 
                 // Handle concrete types
-                return JsonConvert.DeserializeObject<T>(payload);
+                return JsonConvert.DeserializeObject<T>(payload, ReadSettings);
             }
             catch (Exception ex)
             {
@@ -109,6 +117,7 @@ namespace Juice.Messaging.Internal
                 TypeNameHandling = TypeNameHandling.All,
                 TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Simple,
                 MetadataPropertyHandling = MetadataPropertyHandling.ReadAhead,
+                DateParseHandling = DateParseHandling.DateTimeOffset,
                 SerializationBinder = new KnownTypesBinder(_allowedTypes, _allowedAssemblies),
                 Converters = [new InterfaceConverter<TResponse>()]
             };
