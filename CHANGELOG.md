@@ -1,3 +1,31 @@
+# Unreleased
+
+## Fixes
+
+### `Juice.Messaging.Outbox`, `Juice.Messaging.Outbox.Delivery`
+- **The default delivery policy rides out an outage.** ⚠️ It retried 3 times (5, 10, 20 s) and then left a delivery `Failed`
+  for good, so a database restart or consumer deploy of more than about 35 seconds lost messages. It now retries 20 times,
+  doubling from 5 s up to a new `MaxRetryDelay` (5 minutes by default, configurable per policy): about 75 minutes. A policy that
+  sets its own `MaxRetryAttempts` keeps it, but its waits are now capped at `MaxRetryDelay` too. (#123)
+
+### `Juice.Messaging`
+- **A date in a message keeps its offset.** `MessageSerializer` read dates with Newtonsoft's default, so a `DateTimeOffset`
+  written as `+00:00`, such as an event's `CreatedAt`, came back in the host's offset. Npgsql then refused to store it, but only
+  on a host not running in UTC. Dates are now read as written. Dates in an untyped (`object`) payload come back as
+  `DateTimeOffset` instead of `DateTime`. (#122)
+
+### `Juice.Messaging.Outbox.EF`, `Juice.Messaging.Outbox.Migrations.PostgreSQL`
+- **`ConfigureOutbox` works on PostgreSQL.** The partial-index filters were written for SQL Server (`[State] = 0`), so a
+  PostgreSQL context holding the outbox got a migration PostgreSQL rejected. They now follow the context's provider and column
+  names, including a naming convention. The PostgreSQL migrations' snapshot is updated to match the database, so no new
+  migration is needed. (#121)
+
+### `Juice.Messaging.Idempotency.EF`, `Juice.Messaging.Outbox.Migrations`
+- **PostgreSQL no longer turns on Npgsql's legacy timestamps for the whole process.** `AddIdempotencyEF` and the outbox
+  migrations set `Npgsql.EnableLegacyTimestampBehavior`, which changed how every other context in the host reads and writes
+  `timestamp with time zone`. They now write UTC and need no switch. A host that relied on the switch without setting it itself
+  needs to set it. (#120)
+
 # v10.12.0 - A failed message gets its retry
 
 ## Fixes
