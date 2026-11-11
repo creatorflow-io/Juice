@@ -51,7 +51,11 @@ namespace Juice.EventBus.RabbitMQ
             }
             _connectionFactory = factory;
             _retryCount = options.ConnectionMaxRetries;
+            UserName = factory.UserName;
         }
+
+        /// <summary>The broker user of the connection factory (its <c>guest</c> default included).</summary>
+        public string? UserName { get; }
 
         public bool IsConnected
         {

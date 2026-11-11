@@ -35,6 +35,18 @@ namespace Juice.EventBus.RabbitMQ.Publishing
             return this;
         }
 
+        /// <summary>
+        /// Stamp the connection's broker user as each message's <c>user_id</c>, which RabbitMQ validates, so consumers know the publisher
+        /// (<see cref="RabbitMQProducerEndpoint.StampUserId"/>).
+        /// </summary>
+        public RabbitMQProducerBuilder StampUserId(bool stamp = true)
+        {
+            _endpoint.SetStampUserId(stamp);
+            return this;
+        }
+
+        internal bool StampsUserId => _endpoint.StampUserId;
+
         public RabbitMQProducerBuilder RetryBaseDelay(TimeSpan delay)
         {
             _endpoint.SetRetryBaseDelay(delay);

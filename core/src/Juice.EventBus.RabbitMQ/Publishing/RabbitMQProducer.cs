@@ -18,6 +18,8 @@ namespace Juice.EventBus.RabbitMQ.Publishing
         private readonly ILogger _logger;
         private readonly IAsyncPolicy _retryPolicy;
         private readonly bool _mandatory;
+        /// <summary>The broker user stamped as <c>user_id</c> (<see cref="RabbitMQProducerEndpoint.StampUserId"/>); null when not stamped.</summary>
+        private readonly string? _userId;
 
         private readonly ChannelManager _channelManager;
 
@@ -40,6 +42,8 @@ namespace Juice.EventBus.RabbitMQ.Publishing
             }
             _logger = loggerFactory.CreateLogger(logCategory);
             _mandatory = endpoint.Mandatory;
+            _userId = !endpoint.StampUserId ? null : _persistentConnection.UserName is { Length: > 0 } userName ? userName
+                : throw new InvalidOperationException($"Producer '{endpoint.Key}': StampUserId needs the connection's broker user name, and the connection '{_persistentConnection.Name}' doesn't report one.");
 
             // Short retries for a dropped connection or channel only; the outbox owns the long retries.
             _retryPolicy = Policy.Handle<BrokerUnreachableException>()
@@ -117,6 +121,8 @@ namespace Juice.EventBus.RabbitMQ.Publishing
                             MessageId = messageId,
                             Timestamp = new AmqpTimestamp(DateTimeOffset.UtcNow.ToUnixTimeSeconds()),
                             DeliveryMode = DeliveryModes.Persistent,
+                            // RabbitMQ refuses a user_id that isn't this connection's user: consumers can trust it as the publisher
+                            UserId = _userId,
                             Headers = headers.ToStandardized()
                         };
 
@@ -143,7 +149,12 @@ namespace Juice.EventBus.RabbitMQ.Publishing
             }
             catch (Exception ex)
             {
-                var error = Describe(ex, messageId, exchangeName, routingKey);
+                var error = _userId is not null && IsUserIdRefusal(ex)
+                    // The broker checks user_id against the user it signed the connection in as: a refusal means they differ.
+                    ? new InvalidOperationException($"Message {messageId} was not published: the broker refused user_id '{_userId}', so the "
+                        + $"connection '{_persistentConnection.Name}' doesn't sign in as that user. StampUserId needs password authentication, where "
+                        + "the configured user name is the one signed in.", ex)
+                    : Describe(ex, messageId, exchangeName, routingKey);
                 MessagingActivity.SetError(activity, error);
                 MessagingMetrics.RecordPublishError("rabbitmq", exchangeName, routingKey, error);
                 if (ReferenceEquals(error, ex))
@@ -153,6 +164,14 @@ namespace Juice.EventBus.RabbitMQ.Publishing
                 throw error;
             }
         }
+
+        /// <summary>
+        /// The broker's refusal of our <c>user_id</c> ("PRECONDITION_FAILED - user_id property set to 'x' but authenticated user was 'y'"),
+        /// as opposed to the other 406s, such as a message over the size limit.
+        /// </summary>
+        internal static bool IsUserIdRefusal(Exception ex)
+            => ex is OperationInterruptedException { ShutdownReason: { ReplyCode: Constants.PreconditionFailed, ReplyText: var text } }
+                && text?.Contains("user_id property set to", StringComparison.Ordinal) == true;
 
         /// <summary>
         /// A channel closed by a hard, deterministic error (the exchange does not exist, access refused,

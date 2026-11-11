@@ -315,7 +315,8 @@ namespace Juice.EventBus.RabbitMQ.Consuming
                     correlationId: correlationId,
                     causationId: messageId,
                     executionId: StringIdGenerator.Instance.GenerateUniqueId(),
-                    source: _serviceKey
+                    source: _serviceKey,
+                    publisherId: Publisher(eventArgs.BasicProperties.UserId)
                     );
                 MessagingActivity.EnrichWithMessageContext(activity);
 
@@ -335,6 +336,14 @@ namespace Juice.EventBus.RabbitMQ.Consuming
                 MessageContext.Clear();
             }
         }
+
+        /// <summary>
+        /// Who published the message, as the broker vouches: its <c>user_id</c>, which RabbitMQ only accepts from a connection signed in as
+        /// that user (producers opt in with <c>StampUserId</c>). Null without one, as on the copies this engine republishes for retries and
+        /// parking, which carry no <c>user_id</c>. A message the broker dead-letters itself (a queue's <c>x-dead-letter-exchange</c>)
+        /// keeps its <c>user_id</c>.
+        /// </summary>
+        internal static string? Publisher(string? userId) => string.IsNullOrEmpty(userId) ? null : userId;
 
         private async Task RetryAsync(BasicDeliverEventArgs eventArgs,
             string originalExchange, string originalRoutingKey,

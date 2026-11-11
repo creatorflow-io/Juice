@@ -1,5 +1,24 @@
 # Unreleased
 
+## Features
+
+### `Juice.EventBus.RabbitMQ`, `Juice.Messaging`
+- **A consumer can know who published a message.** `MessageContext.Current.PublisherId` is the message's RabbitMQ `user_id`, which the
+  broker only accepts from a connection signed in as that user (validated user-id), so unlike a header it can't name someone else. A
+  producer opts in with `AddProducer(..., p => p.StampUserId())`, stamping its connection's broker user.
+
+  What the guarantee rests on, and where it stops:
+  - **Password authentication**, where the configured user name is the one the broker signs in. Otherwise the broker refuses the
+    `user_id`, and the producer's publishes fail with an error saying so.
+  - **No `impersonator` tag and no federation link with `trust-user-id`** for users that publish to these queues: RabbitMQ doesn't
+    check `user_id` for them.
+  - A message without `user_id` has no publisher (null), whatever its headers say. So has the copy the consumer republishes for a retry
+    or for parking, which goes out without `user_id`: a consumer that must know the publisher refuses those. A message the broker
+    dead-letters itself (a queue's `x-dead-letter-exchange`) keeps its `user_id`.
+
+  `IRabbitMQPersistentConnection.UserName` is new, with a default implementation (null: a stamping producer then throws when it is first
+  resolved), and `MessageContext.Initialize` has a new overload taking the publisher.
+
 ## Fixes
 
 ### `Juice.Messaging.Outbox`, `Juice.Messaging.Outbox.Delivery`

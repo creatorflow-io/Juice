@@ -27,6 +27,18 @@
         /// </summary>
         public bool Mandatory { get; private set; }
 
+        /// <summary>
+        /// Stamp each message's <c>user_id</c> with the connection's broker user. RabbitMQ refuses a <c>user_id</c> that isn't the
+        /// connection's own, so consumers can trust it as the publisher (<c>MessageContext.Current.PublisherId</c>). Off by default: turn it on
+        /// where a consumer must know which service published, and only with password authentication, where the user name is the one signed in.
+        /// </summary>
+        public bool StampUserId { get; private set; }
+
+        public void SetStampUserId(bool stamp)
+        {
+            StampUserId = stamp;
+        }
+
         public void SetMandatory(bool mandatory)
         {
             Mandatory = mandatory;

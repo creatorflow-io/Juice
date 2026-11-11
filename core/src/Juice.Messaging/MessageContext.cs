@@ -32,6 +32,17 @@ namespace Juice.Messaging
             _current.Value = null;
         }
 
+        /// <summary>An entry point that knows the message's validated publisher (<see cref="MessageContextData.PublisherId"/>).</summary>
+        public static void Initialize(
+            string correlationId,
+            string? causationId,
+            string executionId,
+            string source,
+            string? publisherId)
+        {
+            _current.Value = new MessageContextData(correlationId, causationId, executionId, source) { PublisherId = publisherId };
+        }
+
         public static void InitializeTestContext()
             => Initialize(
                 correlationId: Guid.NewGuid().ToString(),
