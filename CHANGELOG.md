@@ -1,4 +1,4 @@
-# Unreleased
+# v10.13.0 - A failed commit no longer loses data
 
 ## Features
 
