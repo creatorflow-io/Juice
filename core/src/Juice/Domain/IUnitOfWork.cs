@@ -26,9 +26,15 @@ namespace Juice.Domain
         /// <summary>
         /// Commit transaction with specified id
         /// </summary>
+        /// <remarks>
+        /// A failed commit throws (in Juice.EF, <c>TransactionCommitFailedException</c> with the provider's error inside it), and a cancelled one
+        /// throws <see cref="OperationCanceledException"/>. Neither always means "not committed": when the connection broke or the request was
+        /// cancelled while <c>COMMIT</c> was in flight, the transaction may have committed. Make a command safe to run twice (an idempotency key,
+        /// a unique constraint) before running it again.
+        /// </remarks>
         /// <param name="transactionId"></param>
         /// <param name="cancellationToken"></param>
-        /// <returns></returns>
+        /// <returns>True when this call committed the transaction; false when it was already committed.</returns>
         Task<bool> CommitTransactionAsync(Guid transactionId, CancellationToken cancellationToken = default);
 
         /// <summary>

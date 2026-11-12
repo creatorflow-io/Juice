@@ -21,6 +21,30 @@
 
 ## Fixes
 
+### `Juice.EF`
+- **A failed commit reports its own error, and is never retried.** ⚠️ When `UnitOfWork.CommitTransactionAsync` failed, it rolled
+  back, and an error from that rollback replaced the real one. Npgsql completes the transaction when the server rejects `COMMIT`
+  (a deferred constraint, a serialization failure), so the rollback threw "This NpgsqlTransaction has completed" and callers
+  couldn't recognize a conflict. A failed commit now throws the new `TransactionCommitFailedException`, with the provider's error
+  as its `InnerException`, whatever the rollback does. Code that catches a provider exception from a commit should inspect
+  `InnerException` instead.
+
+  The wrapper is what keeps a commit failure out of a retrying execution strategy (`EnableRetryOnFailure`). Such a strategy re-runs
+  the work inside `ResilientTransaction` after `SaveChanges` has already accepted the changes, so it committed an empty transaction
+  and reported success: the command's data was lost. Before, this could happen whenever the rollback succeeded and the commit's
+  error counted as transient. To retry a failed commit, run the whole command again. A cancelled commit still throws
+  `OperationCanceledException`. Neither always means "not committed": when the connection broke or the request was cancelled while
+  `COMMIT` was in flight, the transaction may have committed, so make a command safe to run twice before running it again.
+
+  The outcome of a failed commit can still be "committed" when the connection broke during `COMMIT`; a rollback that fails for that
+  reason is now logged as a warning. After a failed commit, the context no longer keeps the dead transaction as its current one.
+
+  A failing `OnTransactionCommittedAsync`, or a failing reload of entities after the commit (`DbContextBase`), is now logged as a
+  warning instead of failing a commit that succeeded. Before, `TransactionBehavior` treated that as a rollback: it failed the command,
+  dropped the post-commit actions (local dispatch) and skipped the `TransactionCommitted` announcement. `DbContextBase` now reloads
+  entities only after a successful commit, before announcing it, and one at a time so one failure doesn't skip the rest. It used to
+  reload after a failed commit too, and to reload every earlier commit's entities again at each commit.
+
 ### `Juice.Messaging.Outbox`, `Juice.Messaging.Outbox.Delivery`
 - **The default delivery policy rides out an outage.** ⚠️ It retried 3 times (5, 10, 20 s) and then left a delivery `Failed`
   for good, so a database restart or consumer deploy of more than about 35 seconds lost messages. It now retries 20 times,

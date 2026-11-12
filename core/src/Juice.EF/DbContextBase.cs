@@ -220,22 +220,51 @@ namespace Juice.EF
 
         #region UnitOfWork
 
+        protected override ILogger? CommitLogger => _logger ?? base.CommitLogger;
+
         public override async Task<bool> CommitTransactionAsync(Guid transactionId, CancellationToken token = default)
         {
+            bool committed;
             try
             {
-                var committed = await base.CommitTransactionAsync(transactionId, token);
-                if (committed)
-                {
-                    await AnnounceCommitAsync(transactionId);
-                }
-                return committed;
+                committed = await base.CommitTransactionAsync(transactionId, token);
             }
-            finally
+            catch (Exception ex) when (ex is TransactionCommitFailedException || ex is OperationCanceledException)
             {
-                if (_pendingRefreshEntities != null)
+                // The commit was tried and failed: nothing to reload, possibly on a broken connection. (A wrong transaction id throws before any
+                // commit, and the transaction that will commit keeps its entries.)
+                _pendingRefreshEntities.Clear();
+                throw;
+            }
+            if (committed)
+            {
+                // Before the announcement: handlers see the reloaded entities, and entries a handler's own transaction adds wait for its commit.
+                await RefreshPendingEntriesAsync(transactionId);
+                await AnnounceCommitAsync(transactionId);
+            }
+            return committed;
+        }
+
+        /// <summary>Reloads entities whose database-side values the transaction changed. Logged, never thrown: the data is committed.</summary>
+        private async Task RefreshPendingEntriesAsync(Guid transactionId)
+        {
+            if (_pendingRefreshEntities.Count == 0)
+            {
+                return;
+            }
+            var entries = _pendingRefreshEntities.ToList();
+            _pendingRefreshEntities.Clear();
+            foreach (var entry in entries)
+            {
+                // One by one, so one entity failing to reload doesn't leave the others stale.
+                try
                 {
-                    await _pendingRefreshEntities.RefreshEntriesAsync();
+                    await entry.ReloadAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogWarning(ex, "Reloading {EntityType} after transaction {TransactionId} failed: {Message}",
+                        entry.Metadata.DisplayName(), transactionId, ex.Message);
                 }
             }
         }
