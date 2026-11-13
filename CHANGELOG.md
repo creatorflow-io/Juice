@@ -1,4 +1,4 @@
-# Unreleased
+# v10.13.1 - RabbitMQ consumers that stay consuming
 
 ## Features
 
