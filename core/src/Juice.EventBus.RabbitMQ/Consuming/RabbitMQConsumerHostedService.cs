@@ -1,9 +1,14 @@
-﻿using Juice.EventBus.Subscriptions;
+using Juice.EventBus.Subscriptions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace Juice.EventBus.RabbitMQ.Consuming
 {
+    /// <summary>
+    /// Runs one consumer. Its start is retried until it consumes or the host stops (the broker or the queue may not be there yet), so the
+    /// host's start isn't held up and a consumer is never left stopped. On shutdown it stops taking messages and waits, within the host's
+    /// shutdown timeout, for those being handled.
+    /// </summary>
     internal sealed class RabbitMQConsumerHostedService : BackgroundService
     {
         private readonly string _serviceKey;
@@ -11,12 +16,14 @@ namespace Juice.EventBus.RabbitMQ.Consuming
         private readonly RabbitMQConsumerEndpoint _endpoint;
         private readonly ILogger<RabbitMQConsumerHostedService> _logger;
         private readonly ISubscriptionsManager _subscriptionsManager;
+        private readonly RabbitMQConsumerStatus _status;
 
         public RabbitMQConsumerHostedService(
             string serviceKey,
             RabbitMQConsumerEngine engine,
             RabbitMQConsumerEndpoint endpoint,
             ISubscriptionsManager subscriptionsManager,
+            RabbitMQConsumerStatus status,
             ILogger<RabbitMQConsumerHostedService> logger)
         {
             _serviceKey = serviceKey;
@@ -24,6 +31,7 @@ namespace Juice.EventBus.RabbitMQ.Consuming
             _endpoint = endpoint;
             _logger = logger;
             _subscriptionsManager = subscriptionsManager;
+            _status = status;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -32,20 +40,21 @@ namespace Juice.EventBus.RabbitMQ.Consuming
                 "[RabbitMQ:{Queue}] HostedService starting",
                 _endpoint.Queue);
 
-            stoppingToken.Register(async () =>
+            await _engine.RunAsync(_serviceKey, _endpoint, _subscriptionsManager, _status, stoppingToken);
+        }
+
+        public override async Task StopAsync(CancellationToken cancellationToken)
+        {
+            _logger.LogInformation(
+                "[RabbitMQ:{Queue}] HostedService stopping",
+                _endpoint.Queue);
+            try
             {
-                _logger.LogInformation(
-                    "[RabbitMQ:{Queue}] HostedService stopping",
-                    _endpoint.Queue);
-
-               await _engine.StopAsync();
-            });
-
-            var ok = await _engine.StartAsync(_serviceKey, _endpoint, _subscriptionsManager, stoppingToken);
-            if (!ok) {
-                _logger.LogError(
-                    "[RabbitMQ:{Queue}] HostedService failed to start the consumer engine",
-                    _endpoint.Queue);
+                await base.StopAsync(cancellationToken);
+            }
+            finally
+            {
+                await _engine.StopAsync(cancellationToken);
             }
         }
     }

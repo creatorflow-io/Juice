@@ -4,6 +4,11 @@ using RabbitMQ.Client;
 
 namespace Juice.EventBus.RabbitMQ.HealthChecks
 {
+    /// <summary>
+    /// Checks a connection: connected (reconnecting if it can) and able to open a channel. A failure reports the registration's failure status
+    /// (Unhealthy unless it says otherwise), so a host can keep a broker outage from making it unready. It says nothing about consumers:
+    /// see <see cref="RabbitMQConsumerHealthCheck"/>.
+    /// </summary>
     public class RabbitMQHealthCheck : IHealthCheck
     {
         private readonly IServiceProvider _serviceProvider;
@@ -19,14 +24,14 @@ namespace Juice.EventBus.RabbitMQ.HealthChecks
             HealthCheckContext context,
             CancellationToken cancellationToken = default)
         {
+            var failure = context.Registration?.FailureStatus ?? HealthStatus.Unhealthy;
             try
             {
                 var connection = _serviceProvider.GetKeyedService<IRabbitMQPersistentConnection>(_connectionName);
 
                 if (connection == null)
                 {
-                    return HealthCheckResult.Unhealthy(
-                        $"RabbitMQ connection '{_connectionName}' not registered");
+                    return new HealthCheckResult(failure, $"RabbitMQ connection '{_connectionName}' not registered");
                 }
 
                 if (!connection.IsConnected)
@@ -34,13 +39,13 @@ namespace Juice.EventBus.RabbitMQ.HealthChecks
                     var reconnected = await connection.TryConnectAsync(cancellationToken);
                     if (!reconnected)
                     {
-                        return HealthCheckResult.Unhealthy(
+                        return new HealthCheckResult(failure,
                             $"RabbitMQ connection '{_connectionName}' is not connected and reconnection failed");
                     }
                 }
 
                 // Test channel creation
-                var channel = await connection.CreateChannelAsync(cancellationToken);
+                using var channel = await connection.CreateChannelAsync(cancellationToken);
                 if (channel == null)
                 {
                     return HealthCheckResult.Degraded(
@@ -48,14 +53,13 @@ namespace Juice.EventBus.RabbitMQ.HealthChecks
                 }
 
                 await channel.CloseAsync();
-                channel.Dispose();
 
                 return HealthCheckResult.Healthy(
                     $"RabbitMQ connection '{_connectionName}' is healthy");
             }
             catch (Exception ex)
             {
-                return HealthCheckResult.Unhealthy(
+                return new HealthCheckResult(failure,
                     $"RabbitMQ connection '{_connectionName}' health check failed: {ex.Message}",
                     ex);
             }

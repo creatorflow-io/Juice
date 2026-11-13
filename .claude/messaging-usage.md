@@ -139,8 +139,14 @@ services.AddEventBus()
         cfg.AddProducer("rabbitmq", config.GetSection("RabbitMQ"));
         cfg.AddConsumer("my-exchange", "my-queue", "rabbitmq", consumer => {
             consumer.Subscribe<MyEvent, MyEventHandler>("my.routing.key");
+            // consumer.ConfigureQos(10);                        // prefetch (default 10), set before consuming
+            // consumer.ParkAfter(5, "my-queue.parking");       // broker-made retries (queue DLX): park after 5 attempts
         });
     });
+// Readiness that sees the consumer, not just the connection (status: GetRequiredKeyedService<RabbitMQConsumerStatus>("my-exchange")):
+// services.AddHealthChecks().AddRabbitMQConsumerHealthCheck("my-exchange", failureStatus: HealthStatus.Degraded, tags: ["ready"]);
+// The consumer retries its start, restarts when the broker cancels it or closes its channel (the client recovers a lost connection
+// itself), and drains on shutdown within the host's timeout. Consumer keys are unique per host.
 
 // Background delivery
 services.AddDelivery(delivery => {

@@ -231,7 +231,7 @@ namespace Juice.EventBus.Tests
             var configuration = new DependencyResolver { CurrentDirectory = AppContext.BaseDirectory }.ServiceProvider
                 .GetRequiredService<IConfigurationService>().GetConfiguration(GetType().Assembly).GetSection("Juice:EventBus:Connections:RabbitMQ");
             var host = configuration["Connection"] ?? "localhost";
-            var vhost = configuration["VirtualHost"] ?? "/";
+            var vhost = string.IsNullOrEmpty(configuration["VirtualHost"]) ? "/" : configuration["VirtualHost"]!;
             var management = new HttpClient { BaseAddress = new Uri($"http://{host}:15672/") };
             management.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic",
                 Convert.ToBase64String(Encoding.UTF8.GetBytes($"{configuration["UserName"]}:{configuration["Password"]}")));

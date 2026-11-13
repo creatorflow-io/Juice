@@ -1,3 +1,44 @@
+# Unreleased
+
+## Features
+
+### `Juice.EventBus.RabbitMQ`
+- **Readiness can see a consumer, not just its connection.** A connection can be up while nothing is consumed: the consumer never
+  started, its queue was deleted, or the broker closed its channel. `RabbitMQConsumerStatus`, resolved by the consumer's key
+  (`GetRequiredKeyedService<RabbitMQConsumerStatus>(key)`), says whether it is `Starting`, `Consuming`, `Recovering` or `Stopped`,
+  and why. `AddRabbitMQConsumerHealthCheck(key, ...)` reports it, and never touches the broker. Two consumers can no longer share a
+  key: they used to share their subscriptions too, and now `AddConsumer` throws.
+- **A queue whose retries the broker makes can park what keeps failing.** With a queue's `x-dead-letter-exchange` routing a
+  rejected message back to it through a delay queue (the way to retry without losing the message's `user_id`), a message that
+  fails every time came back for ever. `ParkAfter(attempts, exchange)` moves it to that exchange once the broker's `x-death`
+  record shows that many rejections from the queue, and moves a message that can't be read at once. The copy keeps the headers,
+  with `x-death`, but not `user_id`. The consumer doesn't start until the parking exchange exists (its status says so). A retry
+  policy covering the queue's source still takes precedence.
+
+## Fixes
+
+### `Juice.EventBus.RabbitMQ`
+- **Prefetch holds.** ⚠️ The consumer set its prefetch after it started consuming, and a per-consumer prefetch only applies to
+  consumers created after it, so the broker sent the whole queue ahead, unacknowledged. After an outage a consumer held its whole
+  backlog in memory, and one that couldn't work through it before the broker's `consumer_timeout` (30 minutes) had its channel
+  closed. `ConfigureQos` (10 by default) now applies.
+- **A consumer starts when it can, and comes back when the broker drops it.** A consumer that couldn't connect, or whose queue
+  wasn't there, at start logged an error and never consumed. It now retries, from 1 s doubling up to 30 s, without holding up the
+  host's start. When the broker cancels it (its queue deleted) or closes its channel (an ack timeout, say), which the client doesn't
+  recover, it starts again the same way. A lost connection is still left to the client's recovery, which brings back the same
+  consumer, and it only starts a new one when the connection is back and the old consumer still isn't.
+- **Shutdown waits for the message being handled.** The consumer's channel was closed from an unawaited callback, so the host
+  didn't wait for it, and a message being handled was cut off and redelivered. Stopping now cancels the consumer (messages sent
+  ahead go back to the queue), waits for those being handled until the host's shutdown timeout, then closes the channel. A message
+  still running at the timeout is redelivered, as before.
+- **A message is settled on the channel that delivered it**, so one finishing after its channel was replaced can't ack a delivery
+  tag on the new channel (a channel error).
+- **No more test hook in the consumer.** A message whose body contained `throw-fake-exception`, in any field, failed on purpose.
+  It is now handled like any other.
+- **`RabbitMQHealthCheck` honors the registration's failure status** (`AddRabbitMQHealthCheck(..., failureStatus: Degraded)`),
+  instead of always reporting Unhealthy, and closes its test channel even when the check fails. A readiness probe registered
+  with `Degraded` now passes during a broker outage, as it asked to.
+
 # v10.13.0 - A failed commit no longer loses data
 
 ## Features
