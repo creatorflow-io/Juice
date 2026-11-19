@@ -2,6 +2,14 @@
 
 ## Features
 
+### `Juice.Messaging`
+- **Delivery metrics under prefixed names.** `delivery_attempt_total`, `delivery_success_total`, `delivery_failure_total`
+  and `delivery_latency_ms` have no prefix, so another library can export the same names into the same backend. The
+  same counts are now also recorded on the `Juice` meter, and `AddJuiceInstrumentation()` collects them:
+  `juice.delivery.attempts`, `juice.delivery.successes`, `juice.delivery.failures` (with `error.type`) and
+  `juice.delivery.duration` (seconds), told apart by `juice.publisher`. They cover outbox delivery and the local routes,
+  like the old names, which are unchanged for existing dashboards. `juice.outbox.*` still counts outbox deliveries only.
+
 ### `Juice.EventBus.RabbitMQ`
 - **Readiness can see a consumer, not just its connection.** A connection can be up while nothing is consumed: the consumer never
   started, its queue was deleted, or the broker closed its channel. `RabbitMQConsumerStatus`, resolved by the consumer's key
