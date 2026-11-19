@@ -1,13 +1,16 @@
 ﻿# Juice Framework — Claude Instructions
 
-## Memory Files
-Detailed architectural notes are in `.claude/`. Read them before making changes:
+## Architecture Notes
+The detailed notes (projects and layers, messaging and the outbox, domain patterns, DI, extensions) are in the `juice`
+skill of the [juice-claude](https://github.com/creatorflow-io/juice-claude) plugin, which also covers the services, the
+Observability platform and juice-docs. Install it once and Claude loads it in any Juice repo:
 
-- `.claude/architecture.md` — all projects, layers, external dependencies
-- `.claude/messaging-outbox.md` — outbox/messaging pipeline (most complex area)
-- `.claude/domain-patterns.md` — domain model, EF conventions, DDD patterns
-- `.claude/di-patterns.md` — DI builder patterns, service lifetimes, extension methods
-- `.claude/extensions.md` — Extensions projects deep-dive (MultiTenant, Options, Configuration, Redis, Logging, AspNetCore)
+```
+/plugin marketplace add creatorflow-io/juice-claude
+/plugin install juice@juice-claude
+```
+
+Without it, read the notes at `skills/juice/references/framework/` in that repo before making changes.
 
 ## Key Facts (Quick Reference)
 - Custom `IMediator` in `Juice.MediatR` — NOT the MediatR NuGet package

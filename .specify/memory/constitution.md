@@ -207,7 +207,8 @@ framework version is planned.
 review time. The `## Constitution Check` gate in `plan.md` MUST be completed
 before Phase 0 research and re-verified after Phase 1 design.
 
-Runtime development guidance lives in `.claude/` (architecture.md,
-messaging-outbox.md, domain-patterns.md, di-patterns.md, extensions.md).
+Runtime development guidance lives in the `juice` skill of the juice-claude plugin
+(https://github.com/creatorflow-io/juice-claude): architecture, messaging and the outbox,
+domain patterns, DI, extensions.
 
 **Version**: 1.1.0 | **Ratified**: 2026-02-24 | **Last Amended**: 2026-07-12
