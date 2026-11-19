@@ -57,6 +57,31 @@ namespace Juice.OpenTelemetry.Tests
         }
 
         [Fact]
+        public void Deliveries_should_also_export_prefixed_names_on_the_juice_meter()
+        {
+            const string outbox = "delivery-metrics-test-juice-outbox", local = "delivery-metrics-test-juice-local";
+            var metrics = new List<Metric>();
+            using var meter = Sdk.CreateMeterProviderBuilder().AddJuiceInstrumentation().AddInMemoryExporter(metrics).Build();
+
+            DeliveryMetrics.IncrementDeliveryAttempt(outbox);
+            DeliveryMetrics.IncrementDeliveryFailure(outbox, "TestError");
+            DeliveryMetrics.RecordDeliveryLatency(outbox, TimeSpan.FromMilliseconds(250));
+            LocalChannelMetrics.IncrementDeliveryAttempt(local);
+            LocalChannelMetrics.IncrementDeliverySuccess(local);
+
+            meter.ForceFlush();
+            // AddJuiceInstrumentation alone: none of the unprefixed names, which another library may also export.
+            metrics.Should().NotContain(m => m.Name.StartsWith("delivery_"));
+            MetricValues.Sum(metrics, "juice.delivery.attempts", "juice.publisher", outbox).Should().Be(1);
+            MetricValues.Sum(metrics, "juice.delivery.failures", "juice.publisher", outbox).Should().Be(1);
+            MetricValues.Sum(metrics, "juice.delivery.attempts", "juice.publisher", local).Should().Be(1, "the local route counts as one more publisher");
+            MetricValues.Sum(metrics, "juice.delivery.successes", "juice.publisher", local).Should().Be(1);
+            MetricValues.Count(metrics, "juice.delivery.duration", "juice.publisher", outbox).Should().Be(1);
+            metrics.Single(m => m.Name == "juice.delivery.duration").Unit.Should().Be("s");
+            metrics.Single(m => m.Name == "juice.delivery.failures").MeterName.Should().Be(JuiceMeter.Name);
+        }
+
+        [Fact]
         public void AddJuiceDeliveryMetrics_should_collect_every_meter_outside_the_juice_meter()
         {
             var metrics = new List<Metric>();
