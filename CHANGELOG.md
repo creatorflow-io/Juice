@@ -1,4 +1,4 @@
-# v10.13.1 - RabbitMQ consumers that stay consuming
+# v10.14.0 - Delivery metrics a backend can tell apart
 
 ## Features
 
@@ -9,6 +9,10 @@
   `juice.delivery.attempts`, `juice.delivery.successes`, `juice.delivery.failures` (with `error.type`) and
   `juice.delivery.duration` (seconds), told apart by `juice.publisher`. They cover outbox delivery and the local routes,
   like the old names, which are unchanged for existing dashboards. `juice.outbox.*` still counts outbox deliveries only.
+
+# v10.13.1 - RabbitMQ consumers that stay consuming
+
+## Features
 
 ### `Juice.EventBus.RabbitMQ`
 - **Readiness can see a consumer, not just its connection.** A connection can be up while nothing is consumed: the consumer never
