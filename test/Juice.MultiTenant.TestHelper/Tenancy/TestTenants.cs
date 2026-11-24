@@ -9,7 +9,7 @@ namespace Juice.MultiTenant.Testing
     public static class TestTenants
     {
         public static readonly Guid A = Guid.Parse("0193f0aa-0000-7000-8000-0000000000a1");
-        public static readonly Guid B = Guid.Parse("0193f0aa-0000-7000-8000-0000000000b2");
+        public static readonly Guid B = Guid.Parse("0193f0aa-0000-7000-8000-0000000000e5"); // not the local realm's second tenant (…b2), which is active
         public static readonly Guid C = Guid.Parse("0193f0aa-0000-7000-8000-0000000000c3");
         public static readonly Guid Unknown = Guid.Parse("0193f0aa-0000-7000-8000-0000000000ff");
 
