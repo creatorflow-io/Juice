@@ -5,8 +5,11 @@ using Newtonsoft.Json.Linq;
 
 namespace Juice.Extensions.MultiTenant
 {
-    public class TenantInfo : DynamicModel, ITenant, ITenantInfo
+    public class TenantInfo : DynamicModel, ITenant, ITenantInfo, ITenantStatus
     {
+        /// <summary>The tenant's status by juice-tenants' names (<c>Active</c>, <c>Suspended</c>…), when its store gives one; none is active.</summary>
+        public string? Status { get; set; }
+
         public TenantInfo() { }
         public TenantInfo(
             string id,

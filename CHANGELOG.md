@@ -1,3 +1,70 @@
+# v10.15.0 - One tenant pattern
+
+## Features
+
+### `Juice.MultiTenant.AspNetCore` (new, .NET 8 or later)
+- **The tenant pattern in one call.** Every Juice service finds its request's tenant the same way (the tenant pattern decision
+  record in juice-docs). Set it up with `services.AddJuiceTenancy(configuration).WithStore<TenantInfo>()`, then call
+  `app.UseJuiceTenancy()` after `UseRouting()` and `UseAuthentication()` and before `UseAuthorization()`. It refuses to start
+  without a directory. The tenant is its Id, a GUID:
+  - **A caller whose token names a tenant** (the `platform_tenant` claim) is in it. Naming another tenant in the route
+    (`/tenants/{tenantId}`) or the header (`X-Tenant-Id`) is refused with 403 `tenant_forbidden`, and so is a claim that isn't a
+    tenant Id. A caller signed in by an endpoint's own scheme (a gRPC service's JWT scheme) is signed in with it first, so the
+    tenant is decided for the real caller.
+  - **A platform admin** (`platform-admin`), or a service with one of `CrossTenantRoles`, names the tenant in the route or header.
+  - **A signed-in caller whose token names no tenant** (a service's own token) may name one, and the endpoint decides what it may
+    do there. `RequireClaim` refuses such callers instead.
+  - **An anonymous caller** may not name a tenant unless `AnonymousMayNameTenant` is set. Even then, whatever is wrong with the
+    tenant is the same 403, so nothing about it is revealed.
+  - **A single-tenant deployment** (`WithFixedTenant(id)`) is always in its tenant.
+  - **Then the tenant is checked:**
+    - An unknown tenant is 404 `tenant_not_found` to whoever may see every tenant, and the same 403 as another tenant to the rest.
+    - A tenant still being set up is 503 `tenant_starting`.
+    - Any other tenant that isn't active is 403 `tenant_inactive`.
+  - **Finbuckle:** with `WithStore<TTenant>()`, the tenant found is also set as Finbuckle's (without asking the store again), so
+    per-tenant options and `Juice.EF.MultiTenant` see it. Don't also run Finbuckle's `UseMultiTenant()` after it.
+- **One access check.** `ITenantAccess` (`IsMemberAsync`, `CanAdministerAsync`, `AdministeredAsync`) answers from the token by
+  default (`ClaimTenantAccess`):
+  - A platform admin administers every tenant, but is a member of none.
+  - The service's `TenantAdminRole` administers the one tenant its claim names.
+
+  Endpoints ask for it in one of three ways:
+  - **Minimal APIs:** `RequireTenant()`, `RequireTenantMember()` or `RequireTenantAdmin()`.
+  - **Controllers:** `[RequireTenant(TenantRequirement.Member)]`.
+  - **gRPC services and anything else authorization reaches:** the policies `TenancyPolicies.Tenant`, `.Member` and `.Admin`.
+    A policy that fails is a plain 403 (gRPC `PermissionDenied`), whose failure reason carries the code.
+- **A cached tenant directory.** `ITenantDirectory` finds a tenant by Id (or by Identifier, for browser apps), with its
+  availability.
+  - `WithStore<TTenant>()` reads the Finbuckle stores (juice-tenants' gRPC store), asking by the Id's standard form and then by
+    its old base32 form. It remembers a tenant for a minute in a cache of its own, or until `ITenantDirectoryCache.Invalidate(id)`.
+  - `WithTenants(...)` holds a fixed list, for tests and local stacks. `WithTenants(configuration)` reads it from
+    `Tenancy:Tenants`.
+  - For background work, `AvailabilityAsync(id)` says whether a tenant is active. The caller holds work for an inactive tenant
+    rather than dropping it.
+- **Problem answers** are problem documents with the code as `code`; register an `ITenantRejectionWriter` for another shape.
+
+### `Juice.Contracts`
+- **`TenantIds`** reads a tenant Id in GUID form, or in the 26-character base32 form juice-tenants once issued
+  (`StringIdGenerator.GenerateUniqueId`), which is the same GUID. `Format` and `Normalize` give the standard form, for rewriting
+  stored Ids to it, and `FormatBase32` gives the old form.
+- **`TenantAvailability`** and `TenantStatuses.Availability(status)` say whether a tenant may be served, from juice-tenants'
+  status names. A tenant whose store knows its status implements `ITenantStatus`.
+
+### `Juice.Extensions.MultiTenant`
+- **`TenantInfo.Status`** carries the status juice-tenants' gRPC store sends, so the directory knows a suspended tenant.
+
+### `Juice.MultiTenant.TestHelper`
+- **The shared tenant checks** (.NET 8 or later, namespace `Juice.MultiTenant.Testing`):
+  - `TestTenants`: fixed tenants A (active, the local stacks' tenant `0193f0aa-0000-7000-8000-0000000000a1`), B (suspended) and
+    C (starting), with `WithTestTenants()`.
+  - `TestCaller` and `AddTestCallers()`, a test authentication scheme.
+  - `TenantConformance.CheckAsync(client, target)`, the checks every service passes: another tenant, an unknown tenant, a
+    suspended or starting one, a platform admin, a tenant admin.
+
+## Deprecations
+- **The `__tenant__` header** (`Constants.TenantToken`) carried the tenant's Identifier between services. The tenant pattern reads
+  `X-Tenant-Id`, and reads `__tenant__` only when it holds an Id; the next major version stops reading it.
+
 # v10.14.0 - Delivery metrics a backend can tell apart
 
 ## Features

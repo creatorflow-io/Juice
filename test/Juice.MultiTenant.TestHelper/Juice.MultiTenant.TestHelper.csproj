@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <TargetFrameworks>$(AppTargetFramework)</TargetFrameworks>
@@ -11,5 +11,14 @@
     <ItemGroup>
         <ProjectReference Include="..\..\core\src\Juice.Extensions.MultiTenant\Juice.Extensions.MultiTenant.csproj" />
         <ProjectReference Include="..\..\core\src\Juice\Juice.csproj" />
+    </ItemGroup>
+
+    <!-- The tenant pattern's test support (Tenancy/), for .NET 8 or later like Juice.MultiTenant.AspNetCore. -->
+    <ItemGroup Condition="'$(TargetFramework)' != 'net6.0'">
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+        <ProjectReference Include="..\..\core\src\Juice.MultiTenant.AspNetCore\Juice.MultiTenant.AspNetCore.csproj" />
+    </ItemGroup>
+    <ItemGroup Condition="'$(TargetFramework)' == 'net6.0'">
+        <Compile Remove="Tenancy\**" />
     </ItemGroup>
 </Project>

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <!-- Endpoint filters need .NET 7 or later. -->
+        <TargetFrameworks>$(AppTestTargetFramework)</TargetFrameworks>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <RootNamespace>Juice.MultiTenant.AspNetCore</RootNamespace>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <NoWarn>$(NoWarn);1591</NoWarn>
+        <Description>The Juice tenant pattern for ASP.NET Core services: the tenant by its Id from the route, header, claim or a fixed deployment tenant; one access check; tenant status answers; a cached tenant directory.</Description>
+    </PropertyGroup>
+
+    <ItemGroup Label="AspNetCore">
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Juice.Contracts\Juice.Contracts.csproj" />
+        <ProjectReference Include="..\Juice.Extensions.MultiTenant\Juice.Extensions.MultiTenant.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Juice.MultiTenant.AspNetCore.Tests" />
+    </ItemGroup>
+</Project>
