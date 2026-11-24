@@ -147,12 +147,16 @@ namespace Juice.MultiTenant.AspNetCore
             }
             var authorizeData = endpoint.Metadata.GetOrderedMetadata<IAuthorizeData>();
             var endpointPolicies = endpoint.Metadata.GetOrderedMetadata<AuthorizationPolicy>();
-            if (authorizeData.Count == 0 && endpointPolicies.Count == 0)
+            var provider = http.RequestServices.GetRequiredService<IAuthorizationPolicyProvider>();
+            // An endpoint with no authorization of its own falls under the fallback policy, if the host sets one (as the authorization
+            // middleware does).
+            var policy = authorizeData.Count == 0 && endpointPolicies.Count == 0
+                ? await provider.GetFallbackPolicyAsync()
+                : await AuthorizationPolicy.CombineAsync(provider, authorizeData, endpointPolicies);
+            if (policy is null)
             {
                 return true;
             }
-            var provider = http.RequestServices.GetRequiredService<IAuthorizationPolicyProvider>();
-            var policy = await AuthorizationPolicy.CombineAsync(provider, authorizeData, endpointPolicies);
             if (policy is not null && policy.AuthenticationSchemes.Count > 0)
             {
                 // Sets http.User to the schemes' principal (merged), as PolicyEvaluator does for the authorization middleware.

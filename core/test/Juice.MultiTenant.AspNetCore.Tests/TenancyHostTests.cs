@@ -140,6 +140,14 @@ namespace Juice.MultiTenant.AspNetCore.Tests
             await using var app = await Host();
             // An endpoint needing a signed-in caller answers 401 (sign in again), not a tenant answer.
             (await Send(app, Get($"/tenants/{TestTenants.B}/me"))).Status.Should().Be(HttpStatusCode.Unauthorized);
+
+            // So does one under the host's fallback policy, with no authorization of its own.
+            await using var fallback = await Host(tenancy: t =>
+            {
+                t.WithTestTenants();
+                t.Services.AddAuthorizationBuilder().SetFallbackPolicy(new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
+            });
+            (await Send(fallback, Get($"/public/{TestTenants.A}"))).Status.Should().Be(HttpStatusCode.Unauthorized);
             foreach (var tenant in new[] { TestTenants.A, TestTenants.B, TestTenants.Unknown })
             {
                 var response = await Send(app, Get($"/public/{tenant}"));
