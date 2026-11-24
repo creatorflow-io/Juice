@@ -192,6 +192,18 @@ namespace Juice.MultiTenant.AspNetCore.Tests
         }
 
         [Fact]
+        public async Task A_caller_the_service_says_acts_across_tenants_isnt_bound_by_its_claim()
+        {
+            // A producer's own token whose claim names its deployment (not a tenant it is limited to).
+            await using var app = await Host(options: o => o.CrossTenantCaller = user => user.FindFirst("sub")?.Value == "service");
+            var producer = new TestCaller("service", TestTenants.B);
+            var response = await Send(app, Get($"/tenants/{TestTenants.A}/produce", producer));
+            response.Status.Should().Be(HttpStatusCode.OK);
+            response.Body.Should().Contain(TestTenants.A.ToString("D"));
+            (await Send(app, Get($"/tenants/{TestTenants.A}/produce", TestCaller.Member(TestTenants.B)))).Status.Should().Be(HttpStatusCode.Forbidden);
+        }
+
+        [Fact]
         public async Task An_endpoint_with_its_own_scheme_has_its_caller_decided_before_the_tenant()
         {
             // No default scheme: the caller is signed in only by the endpoint's scheme, as a gRPC service's JWT scheme would.

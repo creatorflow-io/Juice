@@ -11,7 +11,8 @@
     (`/tenants/{tenantId}`) or the header (`X-Tenant-Id`) is refused with 403 `tenant_forbidden`, and so is a claim that isn't a
     tenant Id. A caller signed in by an endpoint's own scheme (a gRPC service's JWT scheme) is signed in with it first, so the
     tenant is decided for the real caller.
-  - **A platform admin** (`platform-admin`), or a service with one of `CrossTenantRoles`, names the tenant in the route or header.
+  - **A platform admin** (`platform-admin`), a service with one of `CrossTenantRoles`, or a caller `CrossTenantCaller` picks (a
+    service's own token, say) names the tenant in the route or header, whatever its claim says.
   - **A signed-in caller whose token names no tenant** (a service's own token) may name one, and the endpoint decides what it may
     do there. `RequireClaim` refuses such callers instead.
   - **An anonymous caller** may not name a tenant unless `AnonymousMayNameTenant` is set. Even then, whatever is wrong with the

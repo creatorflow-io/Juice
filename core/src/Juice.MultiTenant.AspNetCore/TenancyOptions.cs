@@ -34,6 +34,13 @@ namespace Juice.MultiTenant.AspNetCore
         public IList<string> CrossTenantRoles { get; set; } = [];
 
         /// <summary>
+        /// Other callers that act across tenants, by what their token shows (a service's own client-credentials token, whose claim, if any,
+        /// names its own deployment rather than a tenant it is limited to). Like <see cref="CrossTenantRoles"/>: the claim doesn't bind them,
+        /// they name the tenant, and the service decides what they may do in it. Set in code; not bound from configuration.
+        /// </summary>
+        public Func<System.Security.Claims.ClaimsPrincipal, bool>? CrossTenantCaller { get; set; }
+
+        /// <summary>
         /// A single-tenant deployment's tenant (Juice.Observability's <c>JUICE_PLATFORM_TENANT_ID</c>): every request is in it, a token for
         /// another tenant is refused, and a route or header naming another tenant is too.
         /// </summary>

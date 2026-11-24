@@ -68,6 +68,7 @@ namespace Juice.MultiTenant.AspNetCore
 
         /// <summary>A platform admin, or a cross-tenant service: it names the tenant explicitly and isn't bound to a claim.</summary>
         public static bool ActsAcrossTenants(ClaimsPrincipal? user, TenancyOptions options)
-            => user is not null && (user.IsInRole(options.PlatformAdminRole) || options.CrossTenantRoles.Any(user.IsInRole));
+            => user is not null && (user.IsInRole(options.PlatformAdminRole) || options.CrossTenantRoles.Any(user.IsInRole)
+                || (options.CrossTenantCaller?.Invoke(user) ?? false));
     }
 }
