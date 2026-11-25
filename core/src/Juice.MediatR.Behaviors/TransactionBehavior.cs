@@ -70,7 +70,7 @@ namespace Juice.MediatR.Behaviors
     ///                v
     /// ┌─────────────────────────────────────────────────────────────────────────┐
     /// │ 7) Save Outbox in the same DbContext as IOutboxContext                  │
-    /// |    or using DbContext#2 (IntegrationEventLog)                           │
+    /// |    or using DbContext#2 (an outbox context)                             │
     /// │    - DbContext#2 uses SAME DbConnection, DbTransaction as DbContext#1   │
     /// └─────────────────────────────────────────────────────────────────────────┘
     ///                │

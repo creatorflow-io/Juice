@@ -61,7 +61,7 @@ namespace Juice.Messaging.Outbox.EF
             }
             catch (InvalidOperationException ex)
             {
-                throw new InvalidOperationException("Please verify that your DBContext is in same scope with IntegrationEventLogContext or call IIntegrationEventLogService.EnsureAssociatedConnection(your DBContext) before.", ex);
+                throw new InvalidOperationException($"The outbox context could not join the transaction of {typeof(TContext).Name}. Resolve the outbox context in the same scope as {typeof(TContext).Name}, or pass a factory to the outbox repository that creates it for that context.", ex);
             }
         }
         public async ValueTask SaveEventsAsync(OutboxEvent[] @events, CancellationToken cancellationToken)
