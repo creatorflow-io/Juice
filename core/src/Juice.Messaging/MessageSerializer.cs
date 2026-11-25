@@ -301,9 +301,136 @@ namespace Juice.Messaging.Internal
                     {
                         return true;
                     }
+                    if (FrameworkAssemblies.Contains(assemblyName))
+                    {
+                        return IsAllowedFrameworkType(typeName);
+                    }
                 }
 
                 return false;
+            }
+
+            // A message's List<T> or Dictionary<string, T> is written with the BCL's assembly name, so the prefixes alone reject it
+            // even when T is allowed. A framework type is allowed only when it is a plain value (a string, a number, a Guid, ...),
+            // an array of one, or one of these collections, and every type argument is allowed in its own right. Nothing else from
+            // the framework is: those are the types an unsafe payload would name.
+            private static readonly HashSet<string> FrameworkAssemblies =
+            [
+                "System.Private.CoreLib", "mscorlib", "netstandard", "System.Runtime",
+                "System.Collections", "System.Collections.Concurrent", "System.ObjectModel"
+            ];
+
+            private static readonly HashSet<string> FrameworkCollections =
+            [
+                "System.Collections.Generic.List`1",
+                "System.Collections.Generic.Dictionary`2",
+                "System.Collections.Generic.HashSet`1",
+                "System.Collections.Generic.SortedDictionary`2",
+                "System.Collections.Generic.SortedList`2",
+                "System.Collections.Generic.SortedSet`1",
+                "System.Collections.Generic.LinkedList`1",
+                "System.Collections.Generic.Queue`1",
+                "System.Collections.Generic.Stack`1",
+                "System.Collections.Generic.KeyValuePair`2",
+                "System.Collections.ObjectModel.Collection`1",
+                "System.Collections.ObjectModel.ReadOnlyCollection`1",
+                "System.Collections.ObjectModel.ObservableCollection`1",
+                "System.Collections.ObjectModel.ReadOnlyDictionary`2",
+                "System.Collections.Concurrent.ConcurrentDictionary`2",
+                "System.Collections.Concurrent.ConcurrentBag`1",
+                "System.Collections.Concurrent.ConcurrentQueue`1",
+                "System.Nullable`1"
+            ];
+
+            private static readonly HashSet<string> FrameworkValues =
+            [
+                "System.Object", "System.String", "System.Boolean", "System.Char",
+                "System.Byte", "System.SByte", "System.Int16", "System.UInt16", "System.Int32", "System.UInt32",
+                "System.Int64", "System.UInt64", "System.Single", "System.Double", "System.Decimal",
+                "System.DateTime", "System.DateTimeOffset", "System.TimeSpan", "System.DateOnly", "System.TimeOnly", "System.Guid"
+            ];
+
+            private bool IsAllowedFrameworkType(string typeName)
+            {
+                var open = typeName.IndexOf('[');
+                if (open < 0)
+                {
+                    return FrameworkValues.Contains(typeName);
+                }
+                // An array: "System.String[]", "System.Int32[,]"
+                if (typeName.EndsWith("]") && !typeName.Contains("[["))
+                {
+                    return FrameworkValues.Contains(typeName[..open]) && typeName[open..].All(c => c is '[' or ']' or ',');
+                }
+                // A generic: "System.Collections.Generic.List`1[[Name, Assembly, Version=...]]"
+                if (!FrameworkCollections.Contains(typeName[..open]) || !typeName.EndsWith("]"))
+                {
+                    return false;
+                }
+                var arguments = SplitTypeArguments(typeName[(open + 1)..^1]);
+                return arguments != null && arguments.Count > 0 && arguments.All(argument =>
+                {
+                    var (argumentType, argumentAssembly) = SplitAssemblyQualifiedName(argument);
+                    return IsAllowedType(argumentType, argumentAssembly);
+                });
+            }
+
+            /// <summary>Splits "[A, a],[B, b]" into "A, a" and "B, b"; null when the brackets don't balance.</summary>
+            private static List<string>? SplitTypeArguments(string arguments)
+            {
+                var result = new List<string>();
+                var depth = 0;
+                var start = -1;
+                for (var i = 0; i < arguments.Length; i++)
+                {
+                    switch (arguments[i])
+                    {
+                        case '[':
+                            if (depth++ == 0)
+                            {
+                                start = i + 1;
+                            }
+                            break;
+                        case ']':
+                            if (--depth < 0)
+                            {
+                                return null;
+                            }
+                            if (depth == 0)
+                            {
+                                result.Add(arguments[start..i]);
+                            }
+                            break;
+                        case ',' when depth == 0:
+                        case ' ' when depth == 0:
+                            break;
+                        default:
+                            if (depth == 0)
+                            {
+                                return null;
+                            }
+                            break;
+                    }
+                }
+                return depth == 0 ? result : null;
+            }
+
+            /// <summary>Splits "Ns.Type`1[[...]], Assembly, Version=..." at the first comma outside brackets.</summary>
+            private static (string TypeName, string? AssemblyName) SplitAssemblyQualifiedName(string name)
+            {
+                var depth = 0;
+                for (var i = 0; i < name.Length; i++)
+                {
+                    switch (name[i])
+                    {
+                        case '[': depth++; break;
+                        case ']': depth--; break;
+                        case ',' when depth == 0:
+                            var assembly = name[(i + 1)..].Split(',')[0].Trim();
+                            return (name[..i].Trim(), assembly.Length == 0 ? null : assembly);
+                    }
+                }
+                return (name.Trim(), null);
             }
 
             public void BindToName(Type serializedType, out string? assemblyName, out string? typeName)

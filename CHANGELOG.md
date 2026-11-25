@@ -6,6 +6,16 @@
 - **`AuditEvent.ContextType`** is the type of the DbContext that made the change, so an audit handler can resolve that context's
   outbox (`IOutboxService<TContext>`) instead of matching transaction ids. It is not serialized. (#129)
 
+## Fixes
+
+### `Juice.Messaging`
+- **The serializer allow-list accepts framework collections of allowed types.** `List<T>`, `Dictionary<TKey, TValue>`,
+  `HashSet<T>` and the other BCL collections are written with the framework's assembly name, so the allow-list rejected them even
+  when `T` was allowed, and the local transport deserialized such messages from the `x-message-clr-type` header after a failed
+  attempt and a warning pointing at `AllowedAssemblyPrefixes`. A framework type is now allowed when it is a plain value (a string,
+  a number, a `Guid`, a date), an array of one, or one of the BCL collections (and `Nullable<T>`, `KeyValuePair<TKey, TValue>`),
+  and each of its type arguments is allowed. Other framework types are still rejected. (#128)
+
 # v10.15.0 - One tenant pattern
 
 ## Features
