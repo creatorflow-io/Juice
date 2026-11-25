@@ -161,10 +161,14 @@ namespace Juice.EF.Extensions
                     {
                         // Publish the Audit event
                         var @event = auditEntry.AuditEvent(ctx.AuditEventType);
-                        // Only a managed context is sure to announce the commit (DbContextBase.CommitTransactionAsync).
-                        if (@event is AuditEvent audit && ctx is DbContextBase { IsManaged: true } managed)
+                        if (@event is AuditEvent audit)
                         {
-                            audit.SetTransactionId(managed.Database.CurrentTransaction?.TransactionId);
+                            audit.SetContextType(ctx.GetType());
+                            // Only a managed context is sure to announce the commit (DbContextBase.CommitTransactionAsync).
+                            if (ctx is DbContextBase { IsManaged: true } managed)
+                            {
+                                audit.SetTransactionId(managed.Database.CurrentTransaction?.TransactionId);
+                            }
                         }
                         await mediator.Publish(@event!);
                         if (logger != null && logger.IsEnabled(LogLevel.Debug))

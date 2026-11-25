@@ -1,3 +1,11 @@
+# Unreleased
+
+## Features
+
+### `Juice` (`Juice.EF`)
+- **`AuditEvent.ContextType`** is the type of the DbContext that made the change, so an audit handler can resolve that context's
+  outbox (`IOutboxService<TContext>`) instead of matching transaction ids. It is not serialized. (#129)
+
 # v10.15.0 - One tenant pattern
 
 ## Features

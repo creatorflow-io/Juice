@@ -20,6 +20,20 @@ namespace Juice.Domain.Events
             TransactionId = transactionId;
             return this;
         }
+
+        /// <summary>
+        /// The type of the DbContext that made the change, null when the event was not raised by one. A handler that writes to the
+        /// outbox of the change's transaction resolves <c>IOutboxService&lt;TContext&gt;</c> for it.
+        /// </summary>
+        [Newtonsoft.Json.JsonIgnore]
+        [System.Text.Json.Serialization.JsonIgnore]
+        public Type? ContextType { get; private set; }
+
+        public AuditEvent SetContextType(Type? contextType)
+        {
+            ContextType = contextType;
+            return this;
+        }
     }
 
     /// <summary>
