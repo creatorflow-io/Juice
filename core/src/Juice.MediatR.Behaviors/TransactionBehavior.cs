@@ -1,4 +1,5 @@
-﻿using Juice.Domain;
+﻿using System.Runtime.ExceptionServices;
+using Juice.Domain;
 using Juice.EF;
 using Juice.EF.Extensions;
 using Juice.Extensions;
@@ -159,32 +160,46 @@ namespace Juice.MediatR.Behaviors
                 var response = await next.Invoke(request, cancellationToken);
                 _?.Dispose();
 
+                ExceptionDispatchInfo? failedAfterSave = null;
                 var transactionId = await ResilientTransaction.New(_dbContext, _logger).ExecuteAsync(async (transaction) =>
                 {
+                    // A retrying execution strategy runs this again after a transient failure, but a replay is only sound
+                    // while nothing of it has been saved: SaveChanges accepts what it saves, so a replay after it would save
+                    // none of the command's changes, then save the outbox and commit, and report success. A failure after
+                    // the first save is therefore kept from the strategy (no retry) and thrown once the transaction is
+                    // rolled back. The caller may send the command again: the failure clears the scope (below).
                     await _dbContext.SaveChangesAsync(cancellationToken);
-                    // Repeats until handlers raise no new events (e.g. a handler adding another aggregate)
-                    await _mediator.DispatchEventsUntilStableAsync(_dbContext, _logger, cancellationToken: cancellationToken);
-                    await _outboxService.SaveEventsAsync(transaction.TransactionId, cancellationToken);
-
-                    // commit transaction if needed
-                    if (!_dbContext.HasActiveTransaction)
+                    try
                     {
-                        return;
-                    }
-                    if (_logger?.IsEnabled(LogLevel.Debug) ?? false)
-                    {
-                        _logger.LogDebug("----- Committing transaction {TransactionId}", transaction.TransactionId);
-                    }
+                        // Repeats until handlers raise no new events (e.g. a handler adding another aggregate)
+                        await _mediator.DispatchEventsUntilStableAsync(_dbContext, _logger, cancellationToken: cancellationToken);
+                        await _outboxService.SaveEventsAsync(transaction.TransactionId, cancellationToken);
 
-                    await _dbContext.CommitTransactionAsync(transaction.TransactionId, cancellationToken);
-                    committed = true;
+                        // commit transaction if needed
+                        if (!_dbContext.HasActiveTransaction)
+                        {
+                            return;
+                        }
+                        if (_logger?.IsEnabled(LogLevel.Debug) ?? false)
+                        {
+                            _logger.LogDebug("----- Committing transaction {TransactionId}", transaction.TransactionId);
+                        }
 
-                    if (_logger?.IsEnabled(LogLevel.Debug) ?? false)
-                    {
-                        _logger.LogDebug("----- Transaction {TransactionId} committed", transaction.TransactionId);
+                        await _dbContext.CommitTransactionAsync(transaction.TransactionId, cancellationToken);
+                        committed = true;
+
+                        if (_logger?.IsEnabled(LogLevel.Debug) ?? false)
+                        {
+                            _logger.LogDebug("----- Transaction {TransactionId} committed", transaction.TransactionId);
+                        }
+                        _dbContext.ClearEvents();
                     }
-                    _dbContext.ClearEvents();
+                    catch (Exception ex) when (!committed)
+                    {
+                        failedAfterSave = ExceptionDispatchInfo.Capture(ex);
+                    }
                 }, cancellationToken);
+                failedAfterSave?.Throw();
 
                 // Flush deferred local dispatch actions (e.g., channel enqueue
                 // for "local" routes) only after a successful commit.

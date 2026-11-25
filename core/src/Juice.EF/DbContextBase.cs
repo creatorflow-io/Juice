@@ -145,6 +145,7 @@ namespace Juice.EF
 
         public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default(CancellationToken))
         {
+            var pending = (PendingAuditEntries.Count, PendingDataEvents.Count);
             this.TrackingChanges(_logger);
 
             try
@@ -166,7 +167,7 @@ namespace Juice.EF
             }
             catch
             {
-                ForgetAuditEntriesOfFailedSave();
+                ForgetEntriesOfFailedSave(pending);
                 throw;
             }
             finally
@@ -177,6 +178,7 @@ namespace Juice.EF
 
         public override int SaveChanges(bool acceptAllChangesOnSuccess)
         {
+            var pending = (PendingAuditEntries.Count, PendingDataEvents.Count);
             this.TrackingChanges(_logger);
             try
             {
@@ -197,7 +199,7 @@ namespace Juice.EF
             }
             catch
             {
-                ForgetAuditEntriesOfFailedSave();
+                ForgetEntriesOfFailedSave(pending);
                 throw;
             }
             finally
@@ -207,14 +209,24 @@ namespace Juice.EF
         }
 
         /// <summary>
-        /// The changes of a failed save were not made, so their audit events must not go out. A managed context keeps
-        /// its entries: earlier saves of the transaction are among them, and it reports them only if it commits.
+        /// The changes of a failed save were not made, so their audit events must not go out. A managed context keeps the
+        /// entries of the transaction's earlier saves, reported only if it commits, but forgets the failed save's own: the
+        /// save is tried again (by a retrying execution strategy, or the caller), and would record them a second time.
         /// </summary>
-        private void ForgetAuditEntriesOfFailedSave()
+        private void ForgetEntriesOfFailedSave((int AuditEntries, int DataEvents) before)
         {
             if (!IsManaged)
             {
                 PendingAuditEntries.Clear();
+                return;
+            }
+            if (PendingAuditEntries.Count > before.AuditEntries)
+            {
+                PendingAuditEntries.RemoveRange(before.AuditEntries, PendingAuditEntries.Count - before.AuditEntries);
+            }
+            if (PendingDataEvents.Count > before.DataEvents)
+            {
+                PendingDataEvents.RemoveRange(before.DataEvents, PendingDataEvents.Count - before.DataEvents);
             }
         }
 

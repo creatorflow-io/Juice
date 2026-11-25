@@ -100,6 +100,46 @@ namespace Juice.Integrations.Tests
             Events.OfType<AuditEvent<Note>>().Should().ContainSingle();
         }
 
+        [Fact(DisplayName = "A transient failure of the first save is retried, and the command is saved and audited once")]
+        public async Task Transient_first_save_is_retried_Async()
+        {
+            using var scope = _provider.CreateScope();
+            _saves.Fail(FirstSave, () => new TransientFailure());
+            var command = new AddNote(Guid.NewGuid());
+
+            await scope.ServiceProvider.GetRequiredService<IMediator>().Send(command);
+
+            _saves.Calls.Should().Be(3, "the first save failed and was tried again, then the outbox was saved");
+            (await NoteIdsAsync()).Should().Equal(command.Id);
+            (await OutboxEventIdsAsync()).Should().Equal(command.EventId);
+            var audit = Events.OfType<AuditEvent<Note>>().Should().ContainSingle().Subject;
+            audit.TransactionId.Should().Be(Events.OfType<TransactionCommitted>().Single().TransactionId);
+            audit.ContextType.Should().Be(typeof(NoteContext));
+        }
+
+        [Fact(DisplayName = "A transient failure after the first save is not retried, nothing is saved, and the command can be sent again")]
+        public async Task Transient_failure_after_the_first_save_is_not_retried_Async()
+        {
+            using var scope = _provider.CreateScope();
+            var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+            _saves.Fail(OutboxSave, () => new TransientFailure());
+            var command = new AddNote(Guid.NewGuid());
+
+            var send = async () => await mediator.Send(command);
+
+            await send.Should().ThrowAsync<TransientFailure>();
+            _saves.Calls.Should().Be(OutboxSave, "a replay would save none of the command's changes and still commit");
+            (await NoteIdsAsync()).Should().BeEmpty();
+            (await OutboxEventIdsAsync()).Should().BeEmpty();
+            Events.OfType<TransactionCommitted>().Should().BeEmpty();
+
+            _saves.Reset();
+            await mediator.Send(command);
+
+            (await NoteIdsAsync()).Should().Equal(command.Id);
+            (await OutboxEventIdsAsync()).Should().Equal(command.EventId);
+        }
+
         private async Task<List<Guid>> NoteIdsAsync()
         {
             using var scope = _provider.CreateScope();

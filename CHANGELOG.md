@@ -17,6 +17,16 @@
   scope's context tracks, including ones loaded before the command: load them again to keep working after a failure.
   `IOutboxService.ClearPendingEvents()` is new, with a default that does nothing for other implementations, and the EF outbox
   repository forgets the rows of a save that failed. (#126)
+- **A retrying execution strategy no longer loses a command's data.** With `EnableRetryOnFailure`, a transient failure after the
+  command's first save (a save between dispatch rounds, or the outbox save) re-ran the transaction's work over changes the first
+  save had already accepted: the replay saved none of them, saved the outbox and committed, and the command reported success
+  while its data was lost. A failure after the first save is now never retried: the transaction is rolled back and the original
+  exception is thrown, and the command can be sent again. A transient failure of the first save is still retried. (#127)
+
+### `Juice.EF`
+- **A retried save no longer audits its changes twice.** A save that failed in a managed context kept the audit entries and data
+  events it had recorded, so when it was tried again (a retrying strategy, or the caller) they were recorded a second time. It
+  now forgets its own and keeps those of the transaction's earlier saves. (#127)
 
 ### `Juice.Messaging`
 - **The serializer allow-list accepts framework collections of allowed types.** `List<T>`, `Dictionary<TKey, TValue>`,
