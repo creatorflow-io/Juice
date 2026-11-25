@@ -20,6 +20,12 @@
         /// <returns>A <see cref="Task"/> that represents the asynchronous save operation.</returns>
         ValueTask SaveEventsAsync(Guid? transactionId, CancellationToken cancellationToken = default);
 
+        /// <summary>
+        /// Drops the events added since the last successful <see cref="SaveEventsAsync"/>. <c>TransactionBehavior</c> calls it when
+        /// its command fails, so the next command in the same scope doesn't save and publish them as its own.
+        /// </summary>
+        void ClearPendingEvents() { }
+
     }
     public interface IOutboxService<out TContext> : IOutboxService
     {

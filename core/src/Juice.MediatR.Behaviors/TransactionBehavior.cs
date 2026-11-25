@@ -132,6 +132,7 @@ namespace Juice.MediatR.Behaviors
         {
             var typeName = request.GetGenericTypeName();
             var managedHere = false;
+            var committed = false;
 
             try
             {
@@ -158,7 +159,6 @@ namespace Juice.MediatR.Behaviors
                 var response = await next.Invoke(request, cancellationToken);
                 _?.Dispose();
 
-                var committed = false;
                 var transactionId = await ResilientTransaction.New(_dbContext, _logger).ExecuteAsync(async (transaction) =>
                 {
                     await _dbContext.SaveChangesAsync(cancellationToken);
@@ -210,6 +210,11 @@ namespace Juice.MediatR.Behaviors
                 // not fire since the domain data was rolled back.
                 _postCommitActions?.Clear();
 
+                if (managedHere && !committed)
+                {
+                    ForgetFailedCommand();
+                }
+
                 throw;
             }
             finally
@@ -220,6 +225,26 @@ namespace Juice.MediatR.Behaviors
                 {
                     _dbContext.EndManage();
                 }
+            }
+        }
+
+        /// <summary>
+        /// Nothing of a failed command was committed, but its work is still on the scope's context and outbox: left there, the
+        /// next command sent in the same scope (a retry, a batch, a consumer's next message) would save, audit and publish it
+        /// as its own. Entities the scope loaded before the command are detached too; load them again to keep working.
+        /// </summary>
+        private void ForgetFailedCommand()
+        {
+            try
+            {
+                _dbContext.ClearEvents();
+                _dbContext.ChangeTracker.Clear();
+                _outboxService.ClearPendingEvents();
+            }
+            catch (Exception ex)
+            {
+                // The command's own error is the one to report.
+                _logger.LogWarning(ex, "Clearing the work of a failed command failed: {Message}", ex.Message);
             }
         }
 

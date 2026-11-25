@@ -50,6 +50,12 @@ namespace Juice.Messaging.Outbox.Internal
             return ValueTask.CompletedTask;
         }
 
+        public void ClearPendingEvents()
+        {
+            _messages.Clear();
+            _pendingDeliveryIds = new Dictionary<(Guid, string), List<Guid>>();
+        }
+
         public IReadOnlyList<Guid> GetPendingDeliveryIds(Guid messageId, string publisherKey)
             => _pendingDeliveryIds.TryGetValue((messageId, publisherKey), out var ids) ? ids : [];
 

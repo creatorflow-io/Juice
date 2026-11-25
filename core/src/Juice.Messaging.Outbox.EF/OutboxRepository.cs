@@ -73,8 +73,32 @@ namespace Juice.Messaging.Outbox.EF
             EnsureAssociatedConnection();
             _timeTracker?.Checkpoint("EnsureAssociatedConnection");
             await _outboxContext.Outbox.AddRangeAsync(@events, cancellationToken);
-            await ((DbContext)_outboxContext).SaveChangesAsync(cancellationToken);
+            try
+            {
+                await ((DbContext)_outboxContext).SaveChangesAsync(cancellationToken);
+            }
+            catch
+            {
+                // The rows were not saved: left tracked as Added, the next save in this scope would insert them as its own.
+                // The service still holds the messages, so a call that tries again adds them again.
+                Forget(@events);
+                throw;
+            }
             _timeTracker?.Checkpoint("SaveChanges");
+        }
+
+        private void Forget(OutboxEvent[] @events)
+        {
+            var context = (DbContext)_outboxContext;
+            foreach (var @event in @events)
+            {
+                // Detaching a delivery takes it out of the navigation
+                foreach (var delivery in @event.Deliveries.ToList())
+                {
+                    context.Entry(delivery).State = EntityState.Detached;
+                }
+                context.Entry(@event).State = EntityState.Detached;
+            }
         }
 
         // ProcessedOn is written with the app clock, the clock recover-timeout compares it against

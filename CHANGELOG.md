@@ -8,6 +8,16 @@
 
 ## Fixes
 
+### `Juice.MediatR.Behaviors`, `Juice.Messaging.Outbox`
+- **A failed command leaves nothing for the next one in its scope.** When `TransactionBehavior` failed (in the handler, a save,
+  the outbox save or the commit), its tracked changes, pending audit and data events, domain events and outbox messages stayed on
+  the scope's context and outbox. The next command sent in the same scope (a retry loop, a batch, a consumer handling several
+  messages in one scope) saved the rolled-back rows, audited them and published their integration events as its own. The
+  behavior that began managing the context now clears all of it when the command fails. ⚠️ Clearing detaches every entity the
+  scope's context tracks, including ones loaded before the command: load them again to keep working after a failure.
+  `IOutboxService.ClearPendingEvents()` is new, with a default that does nothing for other implementations, and the EF outbox
+  repository forgets the rows of a save that failed. (#126)
+
 ### `Juice.Messaging`
 - **The serializer allow-list accepts framework collections of allowed types.** `List<T>`, `Dictionary<TKey, TValue>`,
   `HashSet<T>` and the other BCL collections are written with the framework's assembly name, so the allow-list rejected them even
