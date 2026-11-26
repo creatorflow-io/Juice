@@ -2,6 +2,7 @@
 using System.Reflection;
 using Juice.Measurement;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Juice.MediatR.Internal;
 public sealed class Mediator : IMediator
@@ -10,10 +11,12 @@ public sealed class Mediator : IMediator
     private readonly IServiceProvider _provider;
     private readonly ITimeTracker? _timeTracker = null;
     private readonly ConcurrentDictionary<Type, object> _cache = new();
+    private readonly NotificationPublishStrategy _defaultPublishStrategy;
     public Mediator(IServiceProvider provider)
     {
         _provider = provider;
         _timeTracker = provider.GetService<ITimeTracker>();
+        _defaultPublishStrategy = provider.GetService<IOptions<MediatorOptions>>()?.Value.DefaultPublishStrategy ?? NotificationPublishStrategy.Parallel;
     }
 
     #region Request
@@ -233,13 +236,15 @@ public sealed class Mediator : IMediator
         var method = GetType()
             .GetMethod(nameof(InvokeNotificationPipelineAsync), BindingFlags.NonPublic | BindingFlags.Static)!
             .MakeGenericMethod(notificationType);
-        // build delegate: (TNotification n, CancellationToken ct) => InvokeNotificationPipelineAsync<TNotification>(handlers, behaviors, n, ct)
-        return (n, ct) => (ValueTask)method.Invoke(null, new object[] { handlers, behaviors, n, ct })!;
+        // build delegate: (TNotification n, CancellationToken ct) => InvokeNotificationPipelineAsync<TNotification>(handlers, behaviors, strategy, n, ct)
+        var strategy = _defaultPublishStrategy;
+        return (n, ct) => (ValueTask)method.Invoke(null, new object[] { handlers, behaviors, strategy, n, ct })!;
     }
 
     private static async ValueTask InvokeNotificationPipelineAsync<TNotification>(
     INotificationHandler<TNotification>[] handlers,
     INotificationPipelineBehavior<TNotification>[] behaviors,
+    NotificationPublishStrategy defaultStrategy,
     TNotification notification,
     CancellationToken ct)
     where TNotification : INotification
@@ -277,11 +282,14 @@ public sealed class Mediator : IMediator
             {
                 return behaviors[index].Handle(notification, new NotificationHandlerDelegate<TNotification>((n, c) => Next(index + 1)), ct);
             }
+            // The markers decide; a notification with none takes the mediator's default (MediatorOptions).
             return notification is ISequenceNotification
                 ? Sequential()
                 : notification is IFireAndForgetNotification
                     ? FireAndForget()
-                    : RunParallel();
+                    : defaultStrategy == NotificationPublishStrategy.Sequential
+                        ? Sequential()
+                        : RunParallel();
         }
 
         await Next(0).ConfigureAwait(false);
