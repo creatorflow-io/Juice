@@ -376,6 +376,46 @@ namespace Juice.Messaging.Tests
             ], routes);
         }
 
+        [Fact]
+        public async Task OneContributor_GivingARouteTwice_ReturnsItOnceAsync()
+        {
+            // The only contributor: no merge, and still one delivery per route.
+            var services = new ServiceCollection();
+            services.AddMessaging()
+                .AddPublishingPolicies<TwiceLocalRoutePolicy>();
+
+            var sp = services.BuildServiceProvider();
+            var policy = sp.GetRequiredService<IMessagePublishingPolicy>();
+
+            var routes = await policy.ResolveAsync(new PolicyResolveContext { EventType = "AnyEvent" });
+
+            Assert.Equal([new PublishRoute("local", string.Empty)], routes);
+        }
+
+        [Fact]
+        public async Task ConfigRules_NamingTheSamePublisherTwice_ReturnItOnceAsync()
+        {
+            var configValues = new Dictionary<string, string?>
+            {
+                ["P:Rules:0:Priority"] = "5",
+                ["P:Rules:0:Match:Domain"] = "Billing",
+                ["P:Rules:0:Publishers:0:Key"] = "rabbitmq",
+                ["P:Rules:0:Publishers:0:Destination"] = "billing-exchange",
+                ["P:Rules:0:Publishers:1:Key"] = "rabbitmq",
+                ["P:Rules:0:Publishers:1:Destination"] = "billing-exchange",
+            };
+            var configuration = new ConfigurationBuilder().AddInMemoryCollection(configValues).Build();
+            var services = new ServiceCollection();
+            services.AddMessaging().AddPublishingPolicies(configuration.GetSection("P"));
+
+            var sp = services.BuildServiceProvider();
+            var policy = sp.GetRequiredService<IMessagePublishingPolicy>();
+
+            var routes = await policy.ResolveAsync(new PolicyResolveContext { Domain = "Billing", EventType = "InvoiceEvent" });
+
+            Assert.Equal([new PublishRoute("rabbitmq", "billing-exchange")], routes);
+        }
+
         // -----------------------------------------------------------------------
         // All overloads together
         // -----------------------------------------------------------------------
@@ -503,6 +543,15 @@ namespace Juice.Messaging.Tests
             public ValueTask<IReadOnlyCollection<PublishRoute>> ResolveAsync(PolicyResolveContext context)
             {
                 IReadOnlyCollection<PublishRoute> routes = [new PublishRoute("local", string.Empty)];
+                return ValueTask.FromResult(routes);
+            }
+        }
+
+        private sealed class TwiceLocalRoutePolicy : IMessagePublishingPolicy
+        {
+            public ValueTask<IReadOnlyCollection<PublishRoute>> ResolveAsync(PolicyResolveContext context)
+            {
+                IReadOnlyCollection<PublishRoute> routes = [new PublishRoute("local", string.Empty), new PublishRoute("local", string.Empty)];
                 return ValueTask.FromResult(routes);
             }
         }
