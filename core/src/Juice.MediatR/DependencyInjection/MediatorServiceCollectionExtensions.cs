@@ -102,6 +102,18 @@ namespace Microsoft.Extensions.DependencyInjection
             }
         }
 
+        /// <summary>
+        /// How a notification's handlers run when it isn't an <see cref="ISequenceNotification"/> or an <see cref="IFireAndForgetNotification"/>
+        /// (<see cref="MediatorOptions.DefaultPublishStrategy"/>; <see cref="NotificationPublishStrategy.Parallel"/> unless set). A host whose
+        /// handlers share a scoped <c>DbContext</c> sets <see cref="NotificationPublishStrategy.Sequential"/>. It is the container's setting: the
+        /// last call wins.
+        /// </summary>
+        public MediatorBuilder UseDefaultPublishStrategy(NotificationPublishStrategy strategy)
+        {
+            Services.Configure<MediatorOptions>(options => options.DefaultPublishStrategy = strategy);
+            return this;
+        }
+
         public MediatorBuilder AddOpenBehavior(Type type)
         {
             if (type == null)
