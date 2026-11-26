@@ -25,7 +25,10 @@ namespace Juice.Messaging.Policies.Internal
 
     /// <summary>
     /// Composes all registered <see cref="IMessagePublishingPolicy"/> contributors.
-    /// Routes from every policy are merged and returned together (fan-out).
+    /// Routes from every policy are merged and returned together (fan-out), each distinct route once
+    /// (same publisher, destination and routing key), in the order first given: two contributors
+    /// answering the same route (two modules each routing everything to "local") must not make two
+    /// outbox deliveries of one message, which would be handled twice.
     /// </summary>
     internal sealed class CompositeMessagePublishingPolicy : IMessagePublishingPolicy
     {
@@ -42,8 +45,15 @@ namespace Juice.Messaging.Policies.Internal
                 return await _policies[0].ResolveAsync(context);
 
             var routes = new List<PublishRoute>();
+            var seen = new HashSet<PublishRoute>();
             foreach (var policy in _policies)
-                routes.AddRange(await policy.ResolveAsync(context));
+            {
+                foreach (var route in await policy.ResolveAsync(context))
+                {
+                    if (seen.Add(route))
+                        routes.Add(route);
+                }
+            }
             return routes;
         }
     }
